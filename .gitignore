@@ -1,0 +1,26 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# builds
+dist/
+.next/
+.open-next/
+out/
+*.tsbuildinfo
+
+# cloudflare / wrangler
+.wrangler/
+.dev.vars
+
+# env
+.env
+.env.*
+!.env.example
+
+# test / coverage
+coverage/
+
+# misc
+.DS_Store
+*.log

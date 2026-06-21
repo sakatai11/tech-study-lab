@@ -1,0 +1,10 @@
+name = "tech-study-lab"
+main = "src/index.ts"
+compatibility_date = "2025-01-09"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "tech-study-lab"
+database_id = "REPLACE_WITH_REAL_D1_ID"
+migrations_dir = "drizzle/migrations"
