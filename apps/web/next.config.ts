@@ -1,10 +1,16 @@
-import type { NextConfig } from 'next'
+import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
+import type { NextConfig } from "next";
+import path from "node:path";
 
-const nextConfig: NextConfig = {}
+// pnpm monorepo のルートを明示し、Turbopack がホームディレクトリの
+// package-lock.json を誤検知するのを防ぐ
+// path.resolve で正規化しないと Turbopack がパスを誤計算する
+const nextConfig: NextConfig = {
+  turbopack: {
+    root: path.resolve(import.meta.dirname, "../.."),
+  },
+};
 
-export default nextConfig
+export default nextConfig;
 
-// OpenNext: next dev 中も Cloudflare のバインディングへアクセスできるようにする
-import { initOpenNextCloudflareForDev } from '@opennextjs/cloudflare'
-
-initOpenNextCloudflareForDev()
+initOpenNextCloudflareForDev();

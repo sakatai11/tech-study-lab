@@ -13,6 +13,7 @@
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
     "build": "pnpm -r build",
+    "dev": "pnpm --parallel --filter @tsl/api --filter @tsl/web dev",
     "dev:web": "pnpm --filter @tsl/web dev",
     "dev:api": "pnpm --filter @tsl/api dev",
     "content:sync": "pnpm --filter @tsl/api content:sync"
