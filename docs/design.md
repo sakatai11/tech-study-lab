@@ -193,11 +193,11 @@ apps/web/src/
 │   ├── quiz/                 # components / hooks / server / api / mapper / view-model
 │   └── review/               # components / hooks / server / api / mapper / view-model
 ├── components/ui/            # 汎用UI（Button / Card 等）。Tailwind 実装
-└── lib/                      # hc クライアントファクトリ / content ローダー / env
+└── lib/                      # hc クライアントファクトリ / API response helper / content ローダー / env
 ```
 
-- **Quiz コンポーネント**は `features/quiz` に置く。`question_id[]` を受け取り 1 問ずつ回す純粋部品とし、`/quiz`（レッスン全問）・`/review`（due 問題）・`wrongOnly`（間違えonly）で供給元だけ差し替えて再利用する（7.2 の方針を実体化）。
-- feature 内の通信責務は `api/`・`server/`・`hooks/` に分ける。`api/` は Hono RPC（`hc`）呼び出しの薄い wrapper、`server/` は page / Server Component から呼ぶ初回取得と ViewModel 化、`hooks/` は Client Component から呼ぶ mutation・再取得・UI state を担当する。`server/` 配下のファイルには `import 'server-only'` を置き、Client Component からの誤 import を防ぐ。
+- **Quiz コンポーネント**は `apps/web/src/features/quiz` に置く。`question_id[]` を受け取り 1 問ずつ回す純粋部品とし、`/quiz`（レッスン全問）・`/review`（due 問題）・`wrongOnly`（間違えonly）で供給元だけ差し替えて再利用する（7.2 の方針を実体化）。
+- feature 内の通信責務は `api/`・`server/`・`hooks/` に分ける。`api/` は Hono RPC（`hc`）呼び出しの薄い wrapper、`server/` は page / Server Component から呼ぶ初回取得と ViewModel 化、`hooks/` は Client Component から呼ぶ mutation・再取得・UI state を担当する。`apps/web/src/features/*/server` 配下のファイルには `import 'server-only'` を置き、Client Component からの誤 import を防ぐ。
 - `apps/web` 側では `_DAL` / `dal` という名前を使わない。DB へ直接アクセスしないため、Data Access Layer は `apps/api` 側の Drizzle / D1 アクセス層として定義する。
 - 共通 UI は**必要になった時点で** `components/ui` に薄く切り出す（先回りして作らない）。
 
@@ -209,6 +209,8 @@ apps/web/src/
 - frontmatter に問題（`questions[]`。スキーマは4.4節と同一の `{ id, type:'mcq', prompt, choices[], answerIndex, explanation }`）、本文は Markdown 本体。
 - ビルド時に `gray-matter` でパースし、`packages/shared` の Zod（`schema/content`）で検証してから**型付きデータとしてインライン化**する。
 - 本文描画は `react-markdown` 等のレンダラを用いる（RSC で完結）。MDX は採用しない（ビルド設定と frontmatter 抽出が複雑化するため）。
+- content 参照は `apps/web/src/lib/content.ts` に集約する。`getLessonContent(lessonId)`・`getLessonsByTopic(domain, topic)`・`getBundledQuestions()`・`getQuestionById(questionId)` を最初から共通関数として用意し、page / Server loader / mapper から同じ経路で参照する。
+- `getBundledQuestions()` は `/review` の `question_id` 解決用に `questionId` index を返せる形にする。各 feature で frontmatter 配列を直接走査しない。
 - **同じパース経路を `content/` → D1 seed/upsert スクリプトでも再利用**し、フロント表示と D1 配信を単一ソースから導く（4.2 の責務分離を維持）。
 
 ### 8.3 Server / Client コンポーネント境界
@@ -216,7 +218,7 @@ apps/web/src/
 - **教材系（`/`・`/learn/...`）= RSC**。ビルド時バンドル済みデータを読む。ダッシュボードの due 件数のような初回表示に必要な軽い集計値は page / Server loader から `hc` で読む。教材本文ページは **API 不要**。
 - **演習系（Quiz / Review）= Client Component**。状態（現在の問題・採点結果・ロック）を持つため。
 - **レイアウト / ヘッダー = Server**。
-- 実行場所はディレクトリ名ではなく import 境界で決まる。`features/*/server` は `app/**/page.tsx` など Server Component から import する限りサーバー側で実行される。誤用防止のため `import 'server-only'` を必須にする。
+- 実行場所はディレクトリ名ではなく import 境界で決まる。`apps/web/src/features/*/server` は `apps/web/src/app/**/page.tsx` など Server Component から import する限りサーバー側で実行される。誤用防止のため `import 'server-only'` を必須にする。
 - Server Actions は使わず、動的データは Hono API に一本化する。初回取得は page / Server loader から `hc` で実行し、mutation・再取得は Client hook から `hc` を叩く（API 契約を `apps/api` に一本化し、RPC 型を素直に効かせる）。
   - **不採用の根拠**：変更系を Hono に一本化することで ①契約（`AppType`）と `user_id` 注入点（§7.2）を単一ソースに保てる、②Hono+Cloudflare の学習目的（§2）を素通りしない。Server Actions の利点（フォームのプログレッシブエンハンスメント等）は、即時採点の Client 主導 Quiz・変更系が `POST /answers` ほぼ一択の本アプリでは恩恵が小さい。重いフォームが必要になった時点で再検討する。
 
@@ -225,6 +227,8 @@ apps/web/src/
 - `apps/api` が `AppType` をエクスポート → `apps/web` は `hc<AppType>` で型安全クライアントを生成（既存 `apps/api/src/client.ts` のファクトリを利用）。
 - `apps/web/src/lib/api.ts` に**クライアント生成を集約**。baseURL は env（Workers バインディング / 環境変数）から解決し、ハードコードしない。
 - feature の `api/` は `hc` の path・method 呼び出しを薄く包む。server / client 両方から使うため、`server-only`・cookies・headers・秘密情報など環境専用処理を入れない。
+- `res.ok` チェックと `res.json()` 変換は `apps/web/src/lib/api-response.ts` の `requestJson` に共通化する。feature の `api/` は path・method・引数・エラーメッセージだけを持つ。
+- `hc` の path 呼び出し自体は文字列パスの汎用 fetch に置き換えない。`client.review.queue.$get()` のような endpoint ごとの wrapper を残すことで、Hono RPC の型推論を維持する。
 - 初回表示に必要な `GET /dashboard/due-count`・`GET /review/queue` は page / Server loader から呼び、ViewModel に整形して Client Component へ props で渡す。
 - ユーザー操作後の `POST /answers`・`GET /review/queue` 再取得は Client hook から呼ぶ。初回表示で不要なスピナーを出さない。
 
@@ -307,11 +311,26 @@ export default function LessonPage({ params }: Props) {
 - `/review`：Server loader で `GET /review/queue` を呼び、返却された `question_id` を content の問題本文・解説へ join して VM 化する。
 
 ```typescript
+// lib/api-response.ts
+type JsonResponse<T> = Response & {
+  json(): Promise<T>;
+};
+
+export async function requestJson<T>(
+  request: () => Promise<JsonResponse<T>>,
+  errorMessage: string,
+): Promise<T> {
+  const res = await request();
+  if (!res.ok) throw new Error(errorMessage);
+  return res.json();
+}
+
 // features/review/api/review-api.ts
 export async function fetchReviewQueue(client: ApiClient): Promise<ReviewQueueDTO> {
-  const res = await client.review.queue.$get();
-  if (!res.ok) throw new Error('Failed to fetch review queue');
-  return res.json();
+  return requestJson(
+    () => client.review.queue.$get(),
+    'Failed to fetch review queue',
+  );
 }
 
 // features/review/server/load-review-queue.ts
@@ -358,7 +377,7 @@ export function ReviewRunner({ initialViewModel }: Props) {
 
 - **初回＝page 側で VM 化**。`/quiz` は content のみ、`/review` は API queue + content join。loader も hook も同じ mapper を通すため、整形ロジックは一本のまま（§9.1 の原則）。
 - **Client hook は初期 VM を props で受け取り**、`useState` の初期値に据える。以降の再取得・楽観更新のみ hook が受け持つ。
-- **RPC 呼び出しは `features/*/api` の薄い wrapper 経由**。Server loader と Client hook は同じ wrapper を使い、実行環境ごとの client 生成だけを差し替える。
+- **RPC 呼び出しは `apps/web/src/features/*/api` の薄い wrapper 経由**。Server loader と Client hook は同じ wrapper を使い、実行環境ごとの client 生成だけを差し替える。HTTP レスポンス処理は `requestJson` に寄せ、feature 側では重複させない。
 - **初回スピナー不要**（本節冒頭で述べた原則の実装上の帰結）：ウォーターフォールを回避し初回表示が速い。ローディング表示が要るのは再取得中のみ。
 - **将来：**TanStack Query 等へ置き換える際、mapper・ViewModel 型・page は変わらず、hook 内部だけ差し替わる（契約保証）。TanStack Query の `initialData` に props の VM を渡す形へ自然に移行できる。
 
@@ -385,14 +404,22 @@ apps/web/src/
 │       │   └── load-quiz.ts        # 初回取得・ViewModel 化
 │       └── components/
 │           └── quiz-interactive.tsx
+├── features/shared/
+│   └── quiz-question.ts            # content question -> quiz表示用データの小さい純粋変換
+└── lib/
+    ├── api.ts                      # createServerApiClient / createBrowserApiClient
+    ├── api-response.ts             # requestJson
+    └── content.ts                  # content loader / question index
 ```
 
 - **Content data / DTO は shared**（複数パッケージで共有、単一ソース）。
-- **ViewModel は web/features 配下**（表示都合なので web 固有）。
-- **mapper は feature 単位で配置**（同じ DTO を複数 feature で使う場合も各 feature で mapper を持つ、または共有 util に集約してもよし）。
-- **web/features/*/api は RPC wrapper**。`hc` の path・method 呼び出し、`res.ok` チェック、`res.json()` までを薄く閉じ込める。ViewModel 化・UI state はここに入れない。
-- **web/features/*/server は初回取得**。page / Server Component から呼ばれ、content data や API DTO を mapper に通して ViewModel を返す。ファイル先頭に `import 'server-only'` を置く。
-- **web/features/*/hooks は Client 専用**。初期 ViewModel を props で受け取り、ユーザー操作後の mutation・再取得・loading/error state を扱う。
+- **ViewModel は `apps/web/src/features` 配下**（表示都合なので web 固有）。
+- **mapper は feature 単位で配置**。同じ DTO / content data を複数 feature で使う場合も、ViewModel 全体の mapper は各 feature に置く。重複した小さい純粋変換だけを `apps/web/src/features/shared` に逃がす。
+- **`apps/web/src/features/*/api` は RPC wrapper**。`hc` の path・method 呼び出しと endpoint 固有の引数だけを薄く閉じ込める。`res.ok` チェック・`res.json()` は `apps/web/src/lib/api-response.ts` の共通関数に寄せる。ViewModel 化・UI state はここに入れない。
+- **`apps/web/src/features/*/server` は初回取得**。page / Server Component から呼ばれ、content data や API DTO を mapper に通して ViewModel を返す。ファイル先頭に `import 'server-only'` を置く。
+- **`apps/web/src/features/*/hooks` は Client 専用**。初期 ViewModel を props で受け取り、ユーザー操作後の mutation・再取得・loading/error state を扱う。
+- **`apps/web/src/features/shared` は小さい純粋変換だけ**。`contentQuestionToQuizQuestion` のように `/quiz` と `/review` の両方で同じ表示用 question 形へ変換する helper はここへ置く。ViewModel 全体・loader・hook は共有しない。
+- **`apps/web/src/lib` は横断インフラだけ**。API client 生成、HTTP response 処理、content index など feature 非依存の関数を置く。画面都合の整形は feature mapper に残す。
 
 #### API 側の DAL 配置
 
@@ -477,12 +504,19 @@ export type QuizViewModel = {
   explanations: Record<string, string>;  // questionId → 解説
 };
 
+// features/shared/quiz-question.ts
+export function contentQuestionToQuizQuestion(question: LessonContentQuestion) {
+  return {
+    id: question.id,
+    prompt: question.prompt,
+    choices: question.choices,
+  };
+}
+
 // features/quiz/mapper.ts — 入力はビルド時バンドルの content データ
 export function quizContentToViewModel(content: LessonContent): QuizViewModel {
   return {
-    questions: content.questions.map(q => ({
-      id: q.id, prompt: q.prompt, choices: q.choices,
-    })),
+    questions: content.questions.map(contentQuestionToQuizQuestion),
     explanations: Object.fromEntries(
       content.questions.map(q => [q.id, q.explanation])
     ),
@@ -526,15 +560,15 @@ export function QuizInteractive({ initialViewModel }: Props) {
 content frontmatter が変わった場合（例：lesson に新フィールド `difficulty: 'easy'|'medium'|'hard'` が追加）：
 
 1. `packages/shared/schema/content.ts` の LessonContent Zod スキーマを更新。
-2. `apps/web/features/lesson/view-model.ts` で ViewModel にフィールド追加（必要に応じて）。
-3. `apps/web/features/lesson/mapper.ts` で mapper の変換ロジックを更新。
+2. `apps/web/src/features/lesson/view-model.ts` で ViewModel にフィールド追加（必要に応じて）。
+3. `apps/web/src/features/lesson/mapper.ts` で mapper の変換ロジックを更新。
 4. page コンポーネントはそのまま（ViewModel が contract を満たしていれば）。
 
 API DTO が変わった場合（例：review queue に `dueAt` が追加）：
 
 1. `packages/shared/schema/api.ts` の該当 DTO Zod スキーマを更新。
-2. `apps/web/features/review/view-model.ts` で ViewModel にフィールド追加（必要に応じて）。
-3. `apps/web/features/review/mapper.ts` で API DTO + content data の join / 変換ロジックを更新。
+2. `apps/web/src/features/review/view-model.ts` で ViewModel にフィールド追加（必要に応じて）。
+3. `apps/web/src/features/review/mapper.ts` で API DTO + content data の join / 変換ロジックを更新。
 4. page / Client component はそのまま（ViewModel が contract を満たしていれば）。
 
 **変更の影響が mapper に局所化**され、page は変わらない。複数 feature が同じ DTO を使う場合、各々の mapper を独立更新。
@@ -578,17 +612,18 @@ export function ReviewRunner({ initialViewModel }: Props) {
 同じ content data / DTO を複数ページが使う場合（例：復習（`/review`）と演習（`/quiz`）が同じ bundled questions を使用）：
 
 ```
-features/
+apps/web/src/features/
 ├── quiz/
 │   ├── view-model.ts           # QuizViewModel（演習特有）
 │   └── mapper.ts
 ├── review/
 │   ├── view-model.ts           # ReviewViewModel（復習特有、異なるページ 組成）
 │   └── mapper.ts
-└── shared/                     # 共通 util（省略可）
+└── shared/
+    └── quiz-question.ts        # 小さい純粋変換のみ
 ```
 
-ViewModel・mapper は feature ごとに独立させ、同じ DTO の使い方が feature ごとに異なることを認める。必要に応じて `features/shared` を作って共通 ViewModel を持つことも可（但し責務を明確に）。
+ViewModel・mapper は feature ごとに独立させ、同じ DTO の使い方が feature ごとに異なることを認める。`apps/web/src/features/shared` は共通 ViewModel を持つ場所ではなく、`contentQuestionToQuizQuestion` のような小さい純粋変換だけを置く場所とする。
 
 ### 9.8 次回の実装テーマ
 
