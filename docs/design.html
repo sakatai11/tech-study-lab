@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>tech-study-lab 設計文書</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1f2328;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --accent: #2563eb;
+    --accent-bg: #eff6ff;
+    --code-bg: #f6f8fa;
+    --sidebar-bg: #fafafa;
+    --sidebar-width: 300px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN",
+      "Yu Gothic", "Meiryo", "Segoe UI", sans-serif;
+    color: var(--fg);
+    background: var(--bg);
+    line-height: 1.8;
+    font-size: 16px;
+  }
+  .layout {
+    display: flex;
+    align-items: flex-start;
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+  /* サイドバー（目次） */
+  #toc-container {
+    position: sticky;
+    top: 0;
+    width: var(--sidebar-width);
+    flex: 0 0 var(--sidebar-width);
+    height: 100vh;
+    overflow-y: auto;
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border);
+    padding: 20px 16px 60px;
+  }
+  #toc-container h2 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    margin: 0 0 12px 4px;
+  }
+  #toc a {
+    display: block;
+    padding: 5px 8px;
+    border-radius: 6px;
+    color: var(--fg);
+    text-decoration: none;
+    font-size: 13.5px;
+    white-space: normal;
+    word-break: keep-all;
+  }
+  #toc a:hover { background: var(--accent-bg); }
+  #toc a.active { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
+  #toc .toc-h2 > a { font-weight: 600; margin-top: 6px; }
+  #toc .toc-h3 > a { padding-left: 20px; color: var(--muted); }
+  #toc .toc-h4 > a { padding-left: 34px; font-size: 12.5px; color: var(--muted); }
+
+  /* メインコンテンツ */
+  main {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 48px 64px 120px;
+  }
+  .doc-header {
+    margin-bottom: 32px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .doc-header .badge {
+    display: inline-block;
+    font-size: 12px;
+    color: var(--accent);
+    background: var(--accent-bg);
+    padding: 3px 10px;
+    border-radius: 999px;
+    margin-bottom: 10px;
+  }
+  .markdown-body h1 {
+    font-size: 28px;
+    margin: 0 0 8px;
+  }
+  .markdown-body h2 {
+    font-size: 22px;
+    margin: 48px 0 16px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+    scroll-margin-top: 16px;
+  }
+  .markdown-body h1 ~ h2:first-of-type { border-top: none; margin-top: 32px; }
+  .markdown-body h3 {
+    font-size: 18px;
+    margin: 32px 0 12px;
+    scroll-margin-top: 16px;
+  }
+  .markdown-body h4 {
+    font-size: 15px;
+    margin: 24px 0 8px;
+    color: #374151;
+    scroll-margin-top: 16px;
+  }
+  .markdown-body p { margin: 12px 0; }
+  .markdown-body ul, .markdown-body ol {
+    padding-left: 1.4em;
+    margin: 12px 0;
+  }
+  .markdown-body li { margin: 6px 0; }
+  .markdown-body li > ul, .markdown-body li > ol { margin: 6px 0; }
+  .markdown-body strong { color: #111827; }
+  .markdown-body code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    background: var(--code-bg);
+    padding: 0.15em 0.4em;
+    border-radius: 4px;
+    font-size: 0.88em;
+    border: 1px solid var(--border);
+  }
+  .markdown-body pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    overflow-x: auto;
+    margin: 16px 0;
+  }
+  .markdown-body pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    white-space: pre;
+  }
+  .markdown-body table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 16px 0;
+    font-size: 14.5px;
+  }
+  .markdown-body th, .markdown-body td {
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    text-align: left;
+    vertical-align: top;
+  }
+  .markdown-body th {
+    background: var(--code-bg);
+    font-weight: 600;
+  }
+  .markdown-body tr:nth-child(even) td { background: #fcfcfd; }
+  .markdown-body a { color: var(--accent); }
+  .markdown-body hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+
+  #back-to-top {
+    position: fixed;
+    right: 28px;
+    bottom: 28px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    cursor: pointer;
+    font-size: 18px;
+    color: var(--accent);
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+  #back-to-top.show { display: flex; }
+
+  @media (max-width: 900px) {
+    #toc-container { display: none; }
+    main { padding: 32px 20px 100px; }
+  }
+
+  @media print {
+    #toc-container, #back-to-top { display: none; }
+    main { padding: 0; max-width: none; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside id="toc-container">
+    <h2>目次</h2>
+    <nav id="toc"></nav>
+  </aside>
+
+  <main>
+    <div class="doc-header">
+      <span class="badge">一次ソース（Single Source of Truth）</span>
+    </div>
+    <article class="markdown-body" id="content">
+<h1>tech-study-lab 設計文書</h1>
+<p>ソフトウェア学習アプリ。個人エンジニアが「セキュリティ / フロントエンド・バックエンドのフレームワーク / アーキテクチャ設計」を、読み物（教材）と4択問題演習で学ぶ。解答ログを分析し、SRS（間隔反復）アルゴリズムで出題を最適化する。開発自体をAI駆動で進めることを主目的とし、その基盤を構築する。</p>
+<p>本書は <strong>一次ソース（Single Source of Truth）</strong> であり、仕様駆動開発（Spec-Driven）の起点となる。実装判断に迷ったときは本書に従い、本書と実装が乖離した場合は本書を先に更新する。</p>
+<h2>1. プロダクト方針</h2>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>決定</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ユーザー</td>
+<td>個人（自分）から開始 → <strong>将来公開</strong>。データ分離は最初から意識する</td>
+</tr>
+<tr>
+<td>学習領域</td>
+<td>セキュリティ / FE・BEフレームワーク / アーキテクチャ設計</td>
+</tr>
+<tr>
+<td>学習形態</td>
+<td>読み物（教材）＋ <strong>4択</strong>問題演習</td>
+</tr>
+<tr>
+<td>適応学習</td>
+<td><strong>出題制御型</strong>（SRS／弱点優先）。コンテンツ自体の自動生成はしない</td>
+</tr>
+<tr>
+<td>SRS単位</td>
+<td><strong>問題ごと</strong>（弱点を問題粒度で追跡）</td>
+</tr>
+<tr>
+<td>コンテンツ供給</td>
+<td>既存教材の構造化取込 ＋ 手書き骨子＋AI補助執筆</td>
+</tr>
+</tbody></table>
+<h3>スコープ外（現時点）</h3>
+<ul>
+<li>コンテンツ生成型の適応学習（解答傾向からLLMが問題・解説を自動生成・改訂する仕組み）</li>
+<li>記述式・コードリーディング問題の採点（データモデル上は拡張ポイントとして確保）</li>
+<li>マルチユーザー公開機能（認証・課金等）。ただしデータ設計はユーザー分離を前提にする</li>
+</ul>
+<h2>2. 技術スタック</h2>
+<p>フルCloudflare構成。Hono と Cloudflare を学習目的で採用する（このアプリ開発自体をドッグフーディングの場とする）。</p>
+<table>
+<thead>
+<tr>
+<th>レイヤー</th>
+<th>技術</th>
+<th>補足</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>フロント</td>
+<td>Next.js（App Router）</td>
+<td>Cloudflare Workers（OpenNext）へデプロイ</td>
+</tr>
+<tr>
+<td>API</td>
+<td>Hono</td>
+<td>Cloudflare Workers。<strong>主要APIを一通り担当</strong></td>
+</tr>
+<tr>
+<td>DB</td>
+<td>Cloudflare D1（SQLite）</td>
+<td>ORM は Drizzle</td>
+</tr>
+<tr>
+<td>型・バリデーション</td>
+<td>TypeScript strict / Zod</td>
+<td>Honoの <code>zValidator</code> とフロントで共有</td>
+</tr>
+<tr>
+<td>Lint/Format</td>
+<td>Biome</td>
+<td>設定一元化・高速</td>
+</tr>
+<tr>
+<td>テスト</td>
+<td>Vitest</td>
+<td>SRSロジックは純粋関数で重点的にテスト</td>
+</tr>
+<tr>
+<td>CI</td>
+<td>GitHub Actions</td>
+<td>型・lint・test・build を PR ゲート化</td>
+</tr>
+<tr>
+<td>パッケージ管理</td>
+<td>pnpm workspaces</td>
+<td>monorepo</td>
+</tr>
+</tbody></table>
+<h3>既知のリスク</h3>
+<ul>
+<li>Next.js の Cloudflare デプロイ（<code>@opennextjs/cloudflare</code>）は Vercel 比でハマりどころが残る。これは「Cloudflareを学ぶ」目的の一部として許容する。</li>
+</ul>
+<h2>3. リポジトリ構成</h2>
+<p>pnpm workspaces による monorepo。</p>
+<pre><code>tech-study-lab/
+├── apps/
+│   ├── web/          # Next.js（App Router）— 画面
+│   │   └── src/      # App Router ファイル（src/ 構成）
+│   └── api/          # Hono — 主要API（Cloudflare Workers）
+├── packages/
+│   └── shared/       # Drizzleスキーマ・Zodスキーマ・共有型（単一ソース）
+├── content/          # 教材・問題（Markdown + frontmatter）= 一次ソース
+├── docs/
+│   └── design.md     # 本書
+└── CLAUDE.md         # AI駆動開発のコンテキスト・規約
+</code></pre>
+<p><code>apps/web/src</code> 配下のより詳細な構成（<code>features</code> / <code>components/ui</code> / <code>lib</code> 等）は第8.1章で確定する。</p>
+<ul>
+<li>フロント ⇔ API は Hono の <code>hc</code>（型安全RPC）で接続。</li>
+<li>Drizzle スキーマと Zod スキーマを <code>packages/shared</code> に集約し、フロント・API・DBで単一ソース化する。</li>
+</ul>
+<h2>4. データモデル</h2>
+<h3>4.1 コンテンツ階層</h3>
+<pre><code>領域（domain）
+└── トピック（topic）       例：XSS, 認証認可, 状態管理
+    └── レッスン（lesson）   教材1本 = Markdown
+        └── 問題（question） 複数。4択
+</code></pre>
+<h3>4.2 持ち方（ハイブリッド）</h3>
+<table>
+<thead>
+<tr>
+<th>データ</th>
+<th>保存先</th>
+<th>役割</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>教材・問題</td>
+<td><strong>Git管理の Markdown + frontmatter</strong>（<code>content/</code>）</td>
+<td>一次ソース。AIが執筆・改訂、PRでレビュー</td>
+</tr>
+<tr>
+<td>解答ログ・SRS状態</td>
+<td><strong>D1</strong></td>
+<td>動的データ。ユーザーごとに分離</td>
+</tr>
+</tbody></table>
+<ul>
+<li>デプロイ/ビルド時に <code>content/</code> をパースして D1 へ <strong>seed/upsert</strong> する同期スクリプトを設ける（このスクリプト自体も学習材料）。</li>
+<li>「ファイルが一次ソース、D1は配信・集計用キャッシュ」と責務を明確にする。</li>
+</ul>
+<h3>4.3 問題形式</h3>
+<ul>
+<li>初期は <strong>4択（多肢選択）に統一</strong>。自動採点でき、解答ログが構造化され、SRSが即動く。</li>
+<li>記述式・コード問題は <code>question.type</code> フィールドで<strong>後から追加できる拡張ポイント</strong>として確保する。</li>
+</ul>
+<h3>4.4 スキーマ草案（確定は実装時）</h3>
+<p>content（frontmatter）側:</p>
+<ul>
+<li><code>domain</code>: 領域キー（例 <code>security</code>）</li>
+<li><code>topic</code>: トピックキー（例 <code>xss</code>）</li>
+<li><code>lesson</code>: レッスンID・タイトル・本文（Markdown本体）</li>
+<li><code>questions[]</code>: <code>{ id, type: 'mcq', prompt, choices[], answerIndex, explanation }</code></li>
+</ul>
+<p>D1 側（動的）:</p>
+<ul>
+<li><code>users</code>: 将来公開用。初期は単一ユーザーでも user_id を持つ</li>
+<li><code>answer_logs</code>: <code>{ id, user_id, question_id, is_correct, answered_at }</code></li>
+<li><code>srs_states</code>: <code>{ user_id, question_id, ease, interval, due_at, reps, lapses }</code>（SRSパラメータ。アルゴリズムは実装時に SM-2 ベースを想定）</li>
+</ul>
+<h2>5. AI駆動開発の基盤</h2>
+<h3>方針</h3>
+<ul>
+<li><strong>目標</strong>：仕様駆動・スキル化・ガードレールの <strong>統合</strong>。</li>
+<li><strong>整備順</strong>：<ol>
+<li><strong>ガードレール（C）</strong> — 型安全・テスト・CI。「動くが間違ったコード」を最初に防ぐ土台</li>
+<li><strong>仕様駆動（A）</strong> — 本書を一次ソースに、機能の意図を文書化。AIのコンテキストと人間のレビュー基準を揃える</li>
+<li><strong>スキル化（B）</strong> — 反復作業（教材取込・問題追加・マイグレーション等）が見えた段階でスキル/サブエージェント化</li>
+</ol>
+</li>
+</ul>
+<h3>ガードレールの中身</h3>
+<ul>
+<li>TypeScript strict、型は <code>packages/shared</code> に集約</li>
+<li>Biome による lint/format（差分を安定させAIの編集と相性良く）</li>
+<li>Vitest。<strong>SRSロジックは純粋関数として切り出し重点テスト</strong></li>
+<li>Zod でスキーマ駆動バリデーション（<code>zValidator</code> ＋ フロント共有）</li>
+<li>GitHub Actions で型チェック・lint・test・build を <strong>PR ゲート</strong>化</li>
+</ul>
+<h2>6. 最初のマイルストーン（Walking Skeleton）</h2>
+<p>スタック全体が繋がることを最小構成で実証する「歩ける骨格」。</p>
+<ul>
+<li><strong>対象スライス</strong>：<code>セキュリティ領域 &gt; XSS トピック &gt; 教材1本 + 4択3問</code></li>
+<li><strong>貫通する動線</strong>：<ol>
+<li>教材を表示（Next.js が <code>content/</code> から読む）</li>
+<li>4択に回答</li>
+<li>正誤を D1 に記録（<code>hc</code> → Hono → Drizzle → D1）</li>
+<li>SRS が次回出題日を算出し、再訪時に出題</li>
+</ol>
+</li>
+<li><strong>同時に効かせるもの</strong>：CI（型・lint・test・build）、<code>hc</code> 型安全RPC、content→D1 同期</li>
+</ul>
+<p>このスライスが1本通れば、以降はトピック・機能を<strong>同じパターンの繰り返し</strong>で増やせる。これがAI駆動の反復に最適な土台となる。</p>
+<h2>7. フロントエンド画面構成</h2>
+<p><code>apps/web</code>（Next.js App Router）の画面・ルーティング設計。Walking Skeleton（セキュリティ &gt; XSS &gt; 教材1本 + 4択3問）を貫通させる最小構成として 5 ルートを置く。</p>
+<h3>7.1 ルート構成</h3>
+<table>
+<thead>
+<tr>
+<th>ルート</th>
+<th>役割</th>
+<th>データ経路</th>
+<th>主導線</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>/</code> ダッシュボード</td>
+<td><strong>今日の復習（due）が主役</strong>。学習継続・領域ナビは従。due 0 件時は新規レッスンへフォールバック</td>
+<td>due 件数のみ API（Server loader → <code>hc</code>）</td>
+<td>「復習を始める」→ <code>/review</code></td>
+</tr>
+<tr>
+<td><code>/learn/[domain]/[topic]</code> レッスン一覧</td>
+<td>トピック内のレッスン一覧（初期は XSS 1本）</td>
+<td>ビルド時バンドル済み content（RSC）</td>
+<td>各レッスンへ</td>
+</tr>
+<tr>
+<td><code>/learn/[domain]/[topic]/[lesson]</code> 教材本文</td>
+<td>Markdown 本文表示</td>
+<td>ビルド時バンドル済み content（RSC）・<strong>API 不要</strong></td>
+<td>「問題を解く →」<code>/quiz/[lesson]</code></td>
+</tr>
+<tr>
+<td><code>/quiz/[lesson]</code> 演習</td>
+<td>レッスン全問を 1 問ずつ即時採点</td>
+<td>問題＝content / 解答記録＝API</td>
+<td>完了 → 「次のレッスンへ」</td>
+</tr>
+<tr>
+<td><code>/review</code> 復習</td>
+<td>due 問題をレッスン横断で収集</td>
+<td>queue＝API / 問題本文＝content / 記録＝API</td>
+<td>完了 → 「ホームへ」</td>
+</tr>
+</tbody></table>
+<h3>7.2 横断する設計判断</h3>
+<ul>
+<li><strong>データ取得（ハイブリッド）</strong>：教材・問題はビルド時バンドル済み content を RSC / Server loader から読む。解答記録・SRS・due など動的データのみ Hono API を <code>hc</code> で呼ぶ。D1 への seed は配信・集計用キャッシュとして維持し、表示の主経路は content。</li>
+<li><strong>演習フロー</strong>：1 問ずつ表示 → 即時に正誤＋解説 → 確定で選択肢をロック → 末尾に結果サマリ。<strong>1 問解答＝1 <code>answer_log</code> POST</strong>（SRS は問題粒度で更新）。</li>
+<li><strong>Quiz コンポーネント</strong>：<code>question_id</code> の配列を受け取り 1 問ずつ回す純粋部品として設計。<code>/quiz</code>（レッスン全問）・<code>/review</code>（due 問題）・「間違えた問題だけ」（<code>wrongOnly</code>）で再利用する。問題セットの供給元だけが異なる。</li>
+<li><strong>結果サマリの動線（出し分け）</strong>：<code>/quiz</code> は学習の前進が目的 → 「次のレッスンへ」。<code>/review</code> は due 消化が目的 → 「ホームへ」（残があれば継続）。両者で「間違えた問題だけ復習」を提供。</li>
+<li><strong>ID 設計</strong>：<code>lessonId</code> / <code>questionId</code> は<strong>グローバル一意</strong>。学習導線は階層 URL（<code>/learn/...</code>）、演習・復習はフラット URL（<code>/quiz/[lesson]</code>・<code>/review</code>）。</li>
+<li><strong>レイアウト</strong>：上部ヘッダーのみ（<strong>ロゴ / 復習 / 学習</strong> の 3 リンク）。本文は中央 1 カラム。サイドバーは持たない（トピック増加後に後付け可）。</li>
+<li><strong>ユーザー</strong>：ログイン UI なし。API（Hono）側が固定 <code>user_id</code> を権威的に注入する。将来公開時は「固定値を返す関数」を「認証から <code>user_id</code> を引く関数」に差し替えるだけで、画面・API 契約は不変。</li>
+<li><strong>スタイリング</strong>：Tailwind CSS。共通コンポーネント（ボタン・カード等）は必要になった時点で薄く切り出す。</li>
+</ul>
+<h3>7.3 画面構成から要請される API（参考）</h3>
+<p><code>apps/api</code>（Hono）に以下を想定。本文はファイル一次ソースのため、API は ID・SRS メタ・集計値のみ返す。</p>
+<ul>
+<li><code>POST /answers</code> — 1 問解答の記録 → SRS 更新</li>
+<li><code>GET /review/queue</code> — due 問題の <code>question_id</code> ＋ SRS メタを返す（本文はフロントがバンドル済みデータから解決）</li>
+<li><code>GET /dashboard/due-count</code> — ダッシュボードの due 件数</li>
+</ul>
+<h3>7.4 → 第8章へ</h3>
+<p>本章は画面・ルーティング（What/Where）を定義した。フロントエンドのアーキテクチャ（How）は <strong>第8章</strong> で確定する。</p>
+<h2>8. フロントエンドアーキテクチャ（How）</h2>
+<p>第7章の画面・ルーティング（What/Where）を、<code>apps/web</code> 上でどう構造化して実装するか（How）を確定する。設計哲学は本書全体と同じ：<strong>ハイブリッド（教材＝ファイル一次ソース／動的データ＝D1）</strong>・<strong><code>packages/shared</code> を単一ソース</strong>・<strong>Workers 制約を前提</strong>。</p>
+<h3>8.1 ディレクトリ構成</h3>
+<p><code>features + components/ui</code> 型を採用。<code>src/app</code> は薄く保ち、ロジックは <code>features</code> に寄せる。</p>
+<pre><code>apps/web/src/
+├── app/                      # ルートのみ（page.tsx / layout.tsx）。薄く保つ
+│   ├── layout.tsx            # ヘッダー（ロゴ/復習/学習）＋中央1カラム
+│   ├── page.tsx              # / ダッシュボード
+│   ├── learn/[domain]/[topic]/...   # レッスン一覧・教材本文（RSC）
+│   ├── quiz/[lesson]/        # 演習
+│   └── review/               # 復習
+├── features/                 # 機能集約（状態・ロジックを持つ単位）
+│   ├── quiz/                 # components / hooks / server / api / mapper / view-model
+│   └── review/               # components / hooks / server / api / mapper / view-model
+├── components/ui/            # 汎用UI（Button / Card 等）。Tailwind 実装
+└── lib/                      # hc クライアントファクトリ / content ローダー / env
+</code></pre>
+<ul>
+<li><strong>Quiz コンポーネント</strong>は <code>features/quiz</code> に置く。<code>question_id[]</code> を受け取り 1 問ずつ回す純粋部品とし、<code>/quiz</code>（レッスン全問）・<code>/review</code>（due 問題）・<code>wrongOnly</code>（間違えonly）で供給元だけ差し替えて再利用する（7.2 の方針を実体化）。</li>
+<li>feature 内の通信責務は <code>api/</code>・<code>server/</code>・<code>hooks/</code> に分ける。<code>api/</code> は Hono RPC（<code>hc</code>）呼び出しの薄い wrapper、<code>server/</code> は page / Server Component から呼ぶ初回取得と ViewModel 化、<code>hooks/</code> は Client Component から呼ぶ mutation・再取得・UI state を担当する。<code>server/</code> 配下のファイルには <code>import 'server-only'</code> を置き、Client Component からの誤 import を防ぐ。</li>
+<li><code>apps/web</code> 側では <code>_DAL</code> / <code>dal</code> という名前を使わない。DB へ直接アクセスしないため、Data Access Layer は <code>apps/api</code> 側の Drizzle / D1 アクセス層として定義する。</li>
+<li>共通 UI は<strong>必要になった時点で</strong> <code>components/ui</code> に薄く切り出す（先回りして作らない）。</li>
+</ul>
+<h3>8.2 content ロード方式（ビルド時バンドル）</h3>
+<p><strong>素 Markdown + frontmatter</strong> を <strong>ビルド時にバンドル</strong>する。</p>
+<ul>
+<li><strong>Workers 制約</strong>：Cloudflare Workers では <code>node:fs</code> のランタイム読みが使えない。教材・問題は<strong>ランタイム fs 読みではなくビルド時インライン化</strong>する。</li>
+<li>frontmatter に問題（<code>questions[]</code>。スキーマは4.4節と同一の <code>{ id, type:'mcq', prompt, choices[], answerIndex, explanation }</code>）、本文は Markdown 本体。</li>
+<li>ビルド時に <code>gray-matter</code> でパースし、<code>packages/shared</code> の Zod（<code>schema/content</code>）で検証してから<strong>型付きデータとしてインライン化</strong>する。</li>
+<li>本文描画は <code>react-markdown</code> 等のレンダラを用いる（RSC で完結）。MDX は採用しない（ビルド設定と frontmatter 抽出が複雑化するため）。</li>
+<li><strong>同じパース経路を <code>content/</code> → D1 seed/upsert スクリプトでも再利用</strong>し、フロント表示と D1 配信を単一ソースから導く（4.2 の責務分離を維持）。</li>
+</ul>
+<h3>8.3 Server / Client コンポーネント境界</h3>
+<ul>
+<li><strong>教材系（<code>/</code>・<code>/learn/...</code>）= RSC</strong>。ビルド時バンドル済みデータを読む。ダッシュボードの due 件数のような初回表示に必要な軽い集計値は page / Server loader から <code>hc</code> で読む。教材本文ページは <strong>API 不要</strong>。</li>
+<li><strong>演習系（Quiz / Review）= Client Component</strong>。状態（現在の問題・採点結果・ロック）を持つため。</li>
+<li><strong>レイアウト / ヘッダー = Server</strong>。</li>
+<li>実行場所はディレクトリ名ではなく import 境界で決まる。<code>features/*/server</code> は <code>app/**/page.tsx</code> など Server Component から import する限りサーバー側で実行される。誤用防止のため <code>import 'server-only'</code> を必須にする。</li>
+<li>Server Actions は使わず、動的データは Hono API に一本化する。初回取得は page / Server loader から <code>hc</code> で実行し、mutation・再取得は Client hook から <code>hc</code> を叩く（API 契約を <code>apps/api</code> に一本化し、RPC 型を素直に効かせる）。<ul>
+<li><strong>不採用の根拠</strong>：変更系を Hono に一本化することで ①契約（<code>AppType</code>）と <code>user_id</code> 注入点（§7.2）を単一ソースに保てる、②Hono+Cloudflare の学習目的（§2）を素通りしない。Server Actions の利点（フォームのプログレッシブエンハンスメント等）は、即時採点の Client 主導 Quiz・変更系が <code>POST /answers</code> ほぼ一択の本アプリでは恩恵が小さい。重いフォームが必要になった時点で再検討する。</li>
+</ul>
+</li>
+</ul>
+<h3>8.4 <code>hc</code> クライアントの取り回し</h3>
+<ul>
+<li><code>apps/api</code> が <code>AppType</code> をエクスポート → <code>apps/web</code> は <code>hc&lt;AppType&gt;</code> で型安全クライアントを生成（既存 <code>apps/api/src/client.ts</code> のファクトリを利用）。</li>
+<li><code>apps/web/src/lib/api.ts</code> に<strong>クライアント生成を集約</strong>。baseURL は env（Workers バインディング / 環境変数）から解決し、ハードコードしない。</li>
+<li>feature の <code>api/</code> は <code>hc</code> の path・method 呼び出しを薄く包む。server / client 両方から使うため、<code>server-only</code>・cookies・headers・秘密情報など環境専用処理を入れない。</li>
+<li>初回表示に必要な <code>GET /dashboard/due-count</code>・<code>GET /review/queue</code> は page / Server loader から呼び、ViewModel に整形して Client Component へ props で渡す。</li>
+<li>ユーザー操作後の <code>POST /answers</code>・<code>GET /review/queue</code> 再取得は Client hook から呼ぶ。初回表示で不要なスピナーを出さない。</li>
+</ul>
+<h3>8.5 演習（Quiz）の状態管理</h3>
+<ul>
+<li><strong>クライアント state のみ</strong>（<code>useState</code> で Quiz コンポーネント内に閉じる）。MVP として最小化。<ul>
+<li>MVP フローは「1 問表示 → 選択 → 即時採点 → ロック → 解説表示 → 次問」で線形・シンプルなため、<code>useState</code> で充分。複雑な状態遷移が出現（例：問題セット内での再検索・フィルタ等）したら、その時点で <code>useReducer</code> へ段階的にリファクタリング。</li>
+</ul>
+</li>
+<li><strong>リロードで進捗はリセット（許容）</strong>。ただし「1 問解答＝1 <code>answer_log</code> POST」（7.2 で定義済みの原則）なので、解答そのものは即サーバーに残る。途中復帰（sessionStorage）やサーバー復元は将来拡張ポイントとして留保。</li>
+<li>フロー：1 問表示 → 即時採点（正誤＋解説）→ 選択肢ロック → 末尾に結果サマリ → 出し分け動線（<code>/quiz</code>=次のレッスンへ／<code>/review</code>=ホームへ、両者「間違えonly」提供）。</li>
+</ul>
+<h3>8.6 <code>packages/shared</code> の Zod 利用パターン</h3>
+<ul>
+<li>スキーマは <code>packages/shared</code> に集約し二重定義しない（既存 <code>schema/content</code>・<code>db/schema</code>・<code>srs/sm2</code> を土台に拡張）。</li>
+<li>同一スキーマを <strong>3 経路で共有</strong>：①content のビルド時パース検証、②API 入力の <code>zValidator</code>、③フロントの型（<code>z.infer</code>）。</li>
+<li>フロントは API レスポンス・content データとも <code>z.infer</code> で型を引き、独自の型定義を持たない。</li>
+</ul>
+<h3>8.7 スタイリング（Tailwind 移行）</h3>
+<ul>
+<li><strong>Tailwind CSS を導入</strong>し、スタイルを Tailwind に寄せる。</li>
+<li>現状の scaffold 残骸（<code>*.module.css</code>、<code>*.disabled</code> ファイル群）は<strong>撤去対象</strong>として整理する。</li>
+<li>共通スタイルは <code>components/ui</code> のコンポーネントに集約し、ページ側はユーティリティクラスで組む。</li>
+</ul>
+<h3>8.8 → 第9章へ</h3>
+<p>本章で How を確定した。content/API データの整形フロー（Content data / API DTO → ViewModel → page）は <strong>第9章</strong> で詳細化する。</p>
+<h2>9. データフェッチング・整形フロー</h2>
+<p>第8章は app ファイル・コンポーネント構成を決めた。本章は <strong>content / API から page へ至るまでのデータの流れ</strong>—Content data / DTO / ViewModel / Mapper / loader・hook—を設計する。原則は <strong>page は表示のみ</strong>。データの形成と変換は層を分けて、content 構造や API 変更の影響を mapper に閉じ込める。</p>
+<h3>9.1 層構造（Content data / DTO → Mapper → ViewModel → page）</h3>
+<pre><code>content（ビルド時バンドル） または API（Hono）
+    ↓ Content data または serializable DTO（shared @tsl/shared）
+  Mapper（純粋関数、web 固有）
+    ↓ ViewModel（web 固有型）
+  Server loader / Client hook
+    ↓
+  page / component（表示）
+</code></pre>
+<p>この図は責務の分離順を表しており、実行時の呼び出し順とは異なる。実装上は Server loader / Client hook が fetch（content 取得または DTO 取得）と Mapper 呼び出しの両方を内包する呼び出し元であり、9.2 のコード例の通り「loader/hook が fetch→mapper を呼び、ViewModel を得て page/component へ渡す」という順序で実行される。</p>
+<ul>
+<li><strong>Content data</strong>：<code>content/</code> の Markdown + frontmatter をビルド時にパース・検証した型付きデータ。教材本文・問題本文・解説の主経路。</li>
+<li><strong>DTO</strong>：API レスポンス型。<code>packages/shared</code> の Zod スキーマ（§8.6）から型推論、AppType に含まれる。due queue・answer 結果・集計値など動的データの契約。</li>
+<li><strong>Mapper</strong>：<code>content/API data -&gt; ViewModel</code> 形の純粋関数。content 構造や API 仕様変更の影響は<strong>ここで吸収</strong>。複数ページで同じデータを使う場合、mapper も共有。</li>
+<li><strong>ViewModel</strong>：web 固有の表示形態。「page で即座に使える形」に正規化済み（selector・filter・sort 済み）の<strong>純データ</strong>。<code>loading</code>・<code>error</code> は VM に含めず、Client hook の返り値として別に扱う。</li>
+</ul>
+<h3>9.2 二系統：Server loader と Client hook</h3>
+<h4>Server 系（教材系）</h4>
+<p><code>/learn/[domain]/[topic]/[lesson]</code> など RSC ページ：</p>
+<pre><code class="language-typescript">// features/lesson/server/load-lesson.ts
+import 'server-only';
+
+export function loadLesson(lessonId: string): LessonViewModel {
+  const content = getLessonContent(lessonId); // ビルド時バンドル済み content
+  return lessonContentToViewModel(content);
+}
+
+// app/learn/[domain]/[topic]/[lesson]/page.tsx
+export default function LessonPage({ params }: Props) {
+  const vm = loadLesson(params.lesson);
+  return &lt;LessonDisplay viewModel={vm} /&gt;;
+}
+</code></pre>
+<ul>
+<li>loader はビルド時バンドル済み content を取得し、mapper を噛ませて ViewModel を page へ渡す。教材本文ページは API を呼ばない。</li>
+<li>エラーは throw → <code>error.tsx</code>・<code>Suspense</code> で処理。</li>
+</ul>
+<h4>Client 系（演習・復習系）</h4>
+<p><code>/quiz/[lesson]</code>・<code>/review</code> などインタラクションを持つページ。<strong>初回データは page 側で ViewModel 化して props で渡し、Client hook はその初期 VM を受け取り、以降の再取得・mutation のみ担当</strong>する（＝初回レンダリング時にスピナーを出さない）。</p>
+<ul>
+<li><code>/quiz</code>：content から問題・解説を解決し、API GET はしない。Client hook は <code>POST /answers</code> のみ担当。</li>
+<li><code>/review</code>：Server loader で <code>GET /review/queue</code> を呼び、返却された <code>question_id</code> を content の問題本文・解説へ join して VM 化する。</li>
+</ul>
+<pre><code class="language-typescript">// features/review/api/review-api.ts
+export async function fetchReviewQueue(client: ApiClient): Promise&lt;ReviewQueueDTO&gt; {
+  const res = await client.review.queue.$get();
+  if (!res.ok) throw new Error('Failed to fetch review queue');
+  return res.json();
+}
+
+// features/review/server/load-review-queue.ts
+import 'server-only';
+
+export async function loadReviewQueue(): Promise&lt;ReviewViewModel&gt; {
+  const dto = await fetchReviewQueue(createServerApiClient());
+  return reviewQueueDTOToViewModel(dto, getBundledQuestions());
+}
+
+// app/review/page.tsx（Server）— 初回データは page で整形して取得
+export default async function ReviewPage() {
+  const initialVm = await loadReviewQueue();  // API queue + content join 済み VM
+  return &lt;ReviewRunner initialViewModel={initialVm} /&gt;;
+}
+
+// features/review/hooks/use-review-queue.ts（Client）
+'use client';
+export function useReviewQueue(initialVm: ReviewViewModel) {
+  const [vm, setVm] = useState&lt;ReviewViewModel&gt;(initialVm);  // ← 初回は props、スピナー不要
+  const [error, setError] = useState&lt;Error | null&gt;(null);
+
+  // 再取得（例：完了後に次の due を引き直す）だけを Client が担当
+  const refetch = useCallback(async () =&gt; {
+    try {
+      const dto = await fetchReviewQueue(createBrowserApiClient());
+      setVm(reviewQueueDTOToViewModel(dto, getBundledQuestions()));
+    } catch (e) {
+      setError(e as Error);
+    }
+  }, []);
+
+  return { vm, error, refetch };
+}
+
+// features/review/components/review-runner.tsx（Client）
+'use client';
+export function ReviewRunner({ initialViewModel }: Props) {
+  const { vm, error, refetch } = useReviewQueue(initialViewModel);
+  if (error) return &lt;ErrorDisplay error={error} retry={refetch} /&gt;;
+  return &lt;QuizRenderer viewModel={vm} /&gt;;  // 初回から即描画（スピナーなし）
+}
+</code></pre>
+<ul>
+<li><strong>初回＝page 側で VM 化</strong>。<code>/quiz</code> は content のみ、<code>/review</code> は API queue + content join。loader も hook も同じ mapper を通すため、整形ロジックは一本のまま（§9.1 の原則）。</li>
+<li><strong>Client hook は初期 VM を props で受け取り</strong>、<code>useState</code> の初期値に据える。以降の再取得・楽観更新のみ hook が受け持つ。</li>
+<li><strong>RPC 呼び出しは <code>features/*/api</code> の薄い wrapper 経由</strong>。Server loader と Client hook は同じ wrapper を使い、実行環境ごとの client 生成だけを差し替える。</li>
+<li><strong>初回スピナー不要</strong>（本節冒頭で述べた原則の実装上の帰結）：ウォーターフォールを回避し初回表示が速い。ローディング表示が要るのは再取得中のみ。</li>
+<li><strong>将来：</strong>TanStack Query 等へ置き換える際、mapper・ViewModel 型・page は変わらず、hook 内部だけ差し替わる（契約保証）。TanStack Query の <code>initialData</code> に props の VM を渡す形へ自然に移行できる。</li>
+</ul>
+<h3>9.3 DTO / ViewModel の分離と配置</h3>
+<h4>型の配置</h4>
+<pre><code>packages/shared/src/
+├── schema/api.ts      # API レスポンス Zod（DTO型推論元）。API チーム＝contract
+├── schema/content.ts  # content frontmatter Zod（Content data 型推論元）
+└── ...
+
+apps/web/src/
+├── features/
+│   └── quiz/
+│       ├── view-model.ts           # type QuizViewModel = { ... }
+│       ├── mapper.ts               # quizContentToViewModel(content) {...}
+│       ├── api/
+│       │   └── quiz-api.ts         # hc 呼び出しの薄い wrapper（POST /answers 等）
+│       ├── hooks/
+│       │   └── use-quiz-data.ts    # mutation・再取得・UI state
+│       ├── server/
+│       │   └── load-quiz.ts        # 初回取得・ViewModel 化
+│       └── components/
+│           └── quiz-interactive.tsx
+</code></pre>
+<ul>
+<li><strong>Content data / DTO は shared</strong>（複数パッケージで共有、単一ソース）。</li>
+<li><strong>ViewModel は web/features 配下</strong>（表示都合なので web 固有）。</li>
+<li><strong>mapper は feature 単位で配置</strong>（同じ DTO を複数 feature で使う場合も各 feature で mapper を持つ、または共有 util に集約してもよし）。</li>
+<li><strong>web/features/*/api は RPC wrapper</strong>。<code>hc</code> の path・method 呼び出し、<code>res.ok</code> チェック、<code>res.json()</code> までを薄く閉じ込める。ViewModel 化・UI state はここに入れない。</li>
+<li><strong>web/features/*/server は初回取得</strong>。page / Server Component から呼ばれ、content data や API DTO を mapper に通して ViewModel を返す。ファイル先頭に <code>import 'server-only'</code> を置く。</li>
+<li><strong>web/features/*/hooks は Client 専用</strong>。初期 ViewModel を props で受け取り、ユーザー操作後の mutation・再取得・loading/error state を扱う。</li>
+</ul>
+<h4>API 側の DAL 配置</h4>
+<p><code>apps/api</code> は D1 / Drizzle に直接触るため、必要に応じて <code>dal/</code> を置く。Hono route は HTTP 契約、service はユースケース、dal は永続化アクセスに責務を分ける。</p>
+<pre><code>apps/api/src/
+├── routes/
+│   ├── answers.ts
+│   └── review.ts
+├── services/
+│   ├── answer-service.ts
+│   └── srs-service.ts
+└── dal/
+    ├── answer-log-repository.ts
+    └── srs-state-repository.ts
+</code></pre>
+<h3>9.4 共通パターンと例</h3>
+<h4>教材（Server）</h4>
+<pre><code class="language-typescript">// features/lesson/view-model.ts
+export type LessonViewModel = {
+  id: string;
+  title: string;
+  markdownBody: string;
+  questions: Array&lt;{
+    id: string;
+    prompt: string;
+    choices: string[];
+  }&gt;;  // 教材本文ページでは解説を表示しない。Quiz/Review VM は content 由来の解説を持つ。
+};
+
+// features/lesson/mapper.ts
+export function lessonContentToViewModel(content: LessonContent): LessonViewModel {
+  return {
+    id: content.id,
+    title: content.title,
+    markdownBody: content.markdownBody,
+    questions: content.questions.map(q =&gt; ({
+      id: q.id,
+      prompt: q.prompt,
+      choices: q.choices,
+    })),
+  };
+}
+
+// features/lesson/server/load-lesson.ts
+import 'server-only';
+
+export function loadLesson(lessonId: string): LessonViewModel {
+  const content = getLessonContent(lessonId);  // ビルド時バンドル
+  return lessonContentToViewModel(content);
+}
+
+// app/learn/[domain]/[topic]/[lesson]/page.tsx
+export default function LessonPage({ params }: Props) {
+  const vm = loadLesson(params.lesson);
+  return (
+    &lt;article className="prose"&gt;
+      &lt;h1&gt;{vm.title}&lt;/h1&gt;
+      &lt;ReactMarkdown&gt;{vm.markdownBody}&lt;/ReactMarkdown&gt;
+    &lt;/article&gt;
+  );
+}
+</code></pre>
+<h4>演習（Client）</h4>
+<p><code>/quiz</code> は問題自体がビルド時バンドル（§8.2）なので初回 GET は不要。page（Server）で VM を組み立てて props で渡し、Client は解答（<code>POST /answers</code>）だけを担当する。</p>
+<pre><code class="language-typescript">// features/quiz/view-model.ts
+export type QuizViewModel = {
+  questions: Array&lt;{
+    id: string;
+    prompt: string;
+    choices: string[];
+  }&gt;;
+  explanations: Record&lt;string, string&gt;;  // questionId → 解説
+};
+
+// features/quiz/mapper.ts — 入力はビルド時バンドルの content データ
+export function quizContentToViewModel(content: LessonContent): QuizViewModel {
+  return {
+    questions: content.questions.map(q =&gt; ({
+      id: q.id, prompt: q.prompt, choices: q.choices,
+    })),
+    explanations: Object.fromEntries(
+      content.questions.map(q =&gt; [q.id, q.explanation])
+    ),
+  };
+}
+
+// app/quiz/[lesson]/page.tsx（Server）— 初回 VM を page で組み立てて渡す
+export default function QuizPage({ params }: Props) {
+  const content = getLessonContent(params.lesson);   // ビルド時バンドル
+  const vm = quizContentToViewModel(content);
+  return &lt;QuizInteractive initialViewModel={vm} /&gt;;
+}
+
+// features/quiz/components/quiz-interactive.tsx（Client）
+'use client';
+export function QuizInteractive({ initialViewModel }: Props) {
+  const [vm] = useState(initialViewModel);              // 初回から即描画（スピナーなし）
+  const { submitAnswer, results } = useAnswerSubmit();  // POST /answers を担当
+
+  return (
+    &lt;div className="space-y-6"&gt;
+      {vm.questions.map(q =&gt; (
+        &lt;QuestionCard
+          key={q.id}
+          question={q}
+          explanation={vm.explanations[q.id]}
+          onAnswer={submitAnswer}
+          result={results[q.id]}
+        /&gt;
+      ))}
+    &lt;/div&gt;
+  );
+}
+</code></pre>
+<ul>
+<li><code>/quiz</code> の初回は <strong>API GET なし</strong>（問題はビルド時バンドル、page で VM 化）。Client hook は <code>POST /answers</code>（mutation）だけを持つ。</li>
+<li><code>/review</code> の初回は <strong>Server loader で GET</strong>（due queue）→ props 渡し（§9.2 参照）。</li>
+</ul>
+<h3>9.5 content / API 変更時の対応フロー</h3>
+<p>content frontmatter が変わった場合（例：lesson に新フィールド <code>difficulty: 'easy'|'medium'|'hard'</code> が追加）：</p>
+<ol>
+<li><code>packages/shared/schema/content.ts</code> の LessonContent Zod スキーマを更新。</li>
+<li><code>apps/web/features/lesson/view-model.ts</code> で ViewModel にフィールド追加（必要に応じて）。</li>
+<li><code>apps/web/features/lesson/mapper.ts</code> で mapper の変換ロジックを更新。</li>
+<li>page コンポーネントはそのまま（ViewModel が contract を満たしていれば）。</li>
+</ol>
+<p>API DTO が変わった場合（例：review queue に <code>dueAt</code> が追加）：</p>
+<ol>
+<li><code>packages/shared/schema/api.ts</code> の該当 DTO Zod スキーマを更新。</li>
+<li><code>apps/web/features/review/view-model.ts</code> で ViewModel にフィールド追加（必要に応じて）。</li>
+<li><code>apps/web/features/review/mapper.ts</code> で API DTO + content data の join / 変換ロジックを更新。</li>
+<li>page / Client component はそのまま（ViewModel が contract を満たしていれば）。</li>
+</ol>
+<p><strong>変更の影響が mapper に局所化</strong>され、page は変わらない。複数 feature が同じ DTO を使う場合、各々の mapper を独立更新。</p>
+<h3>9.6 エラー・ローディング処理</h3>
+<h4>Server（教材系）</h4>
+<pre><code class="language-typescript">// app/learn/[domain]/[topic]/[lesson]/error.tsx
+'use client';
+export default function Error({ error }: { error: Error }) {
+  return &lt;ErrorPage message={error.message} /&gt;;
+}
+
+// features/lesson/server/load-lesson.ts の content 未検出・検証失敗 throw が自動で error.tsx へ
+</code></pre>
+<h4>Client（演習・復習系）</h4>
+<p>初回データは page 側で VM 化済みのため（9.2 参照）、<strong>初回にローディング表示は出ない</strong>。Client 側で扱うのは以下の 2 つ：</p>
+<ul>
+<li><strong>初回データ形成の失敗</strong>：content 未検出・検証失敗、または <code>/review</code> の初回 queue 取得失敗 → ルートの <code>error.tsx</code> で捕捉（Server 系と同じ経路）。</li>
+<li><strong>再取得・mutation の失敗/待機</strong>：hook が返す <code>error</code>・（再取得中の）状態を component で出し分ける。</li>
+</ul>
+<pre><code class="language-typescript">// features/review/components/review-runner.tsx
+'use client';
+export function ReviewRunner({ initialViewModel }: Props) {
+  const { vm, error, refetch } = useReviewQueue(initialViewModel);
+
+  // 初回は props で描画済み。ここで扱うのは再取得エラーのみ
+  if (error) return &lt;ErrorDisplay error={error} retry={refetch} /&gt;;
+
+  return &lt;QuizRenderer viewModel={vm} /&gt;;  // 初回からスピナーなしで描画
+}
+</code></pre>
+<h3>9.7 mapper・ViewModel の共有戦略</h3>
+<p>同じ content data / DTO を複数ページが使う場合（例：復習（<code>/review</code>）と演習（<code>/quiz</code>）が同じ bundled questions を使用）：</p>
+<pre><code>features/
+├── quiz/
+│   ├── view-model.ts           # QuizViewModel（演習特有）
+│   └── mapper.ts
+├── review/
+│   ├── view-model.ts           # ReviewViewModel（復習特有、異なるページ 組成）
+│   └── mapper.ts
+└── shared/                     # 共通 util（省略可）
+</code></pre>
+<p>ViewModel・mapper は feature ごとに独立させ、同じ DTO の使い方が feature ごとに異なることを認める。必要に応じて <code>features/shared</code> を作って共通 ViewModel を持つことも可（但し責務を明確に）。</p>
+<h3>9.8 次回の実装テーマ</h3>
+<p>本章でデータフロー（Content data / API DTO → Mapper → ViewModel → page）を確定した。次回は実装フェーズ：Walking Skeleton（<code>セキュリティ &gt; XSS &gt; 教材1本 + 4択3問</code>、第6章）を、第8章の構成（8.1〜8.7）・本章のデータフロー（9.1〜9.7）に沿って縦に 1 本貫通させる。</p>
+    </article>
+  </main>
+</div>
+
+<button id="back-to-top" title="トップへ戻る">↑</button>
+
+<script>
+(function () {
+  var content = document.getElementById('content');
+  var toc = document.getElementById('toc');
+  var headings = content.querySelectorAll('h2, h3, h4');
+  var usedIds = Object.create(null);
+
+  function slugify(text) {
+    var base = text.trim().replace(/\s+/g, '-');
+    if (!(base in usedIds)) {
+      usedIds[base] = 0;
+      return base;
+    }
+    usedIds[base] += 1;
+    return base + '-' + usedIds[base];
+  }
+
+  headings.forEach(function (h) {
+    var id = slugify(h.textContent);
+    h.id = id;
+    var a = document.createElement('a');
+    a.href = '#' + id;
+    a.textContent = h.textContent;
+    var item = document.createElement('div');
+    item.className = 'toc-' + h.tagName.toLowerCase();
+    item.appendChild(a);
+    toc.appendChild(item);
+  });
+
+  var tocLinks = Array.prototype.slice.call(toc.querySelectorAll('a'));
+
+  var observer = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      if (!entry.isIntersecting) return;
+      var id = entry.target.id;
+      tocLinks.forEach(function (link) {
+        link.classList.toggle('active', link.getAttribute('href') === '#' + id);
+      });
+    });
+  }, { rootMargin: '0px 0px -70% 0px', threshold: 0 });
+
+  headings.forEach(function (h) { observer.observe(h); });
+
+  var backToTop = document.getElementById('back-to-top');
+  window.addEventListener('scroll', function () {
+    backToTop.classList.toggle('show', window.scrollY > 400);
+  });
+  backToTop.addEventListener('click', function () {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+})();
+</script>
+</body>
+</html>

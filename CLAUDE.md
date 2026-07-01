@@ -30,7 +30,7 @@ apps/api/        # Hono — 主要API（Cloudflare Workers）
   src/index.ts   # エントリ・AppType エクスポート
   src/client.ts  # hc 型安全クライアントファクトリ
 packages/shared/ # Drizzleスキーマ・Zodスキーマ・共有型（単一ソース）
-content/         # 教材・問題（MDX/Markdown + frontmatter）= 一次ソース
+content/         # 教材・問題（Markdown + frontmatter）= 一次ソース
 docs/design.md   # 設計文書（一次ソース）
 ```
 
