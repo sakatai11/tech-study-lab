@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>tech-study-lab フロントエンドアーキテクチャ</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1f2328;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --accent: #2563eb;
+    --accent-bg: #eff6ff;
+    --code-bg: #f6f8fa;
+    --server: #eef6ff;
+    --client: #fff7ed;
+    --api: #ecfdf5;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN",
+      "Yu Gothic", "Meiryo", "Segoe UI", sans-serif;
+    color: var(--fg);
+    background: var(--bg);
+    line-height: 1.8;
+    font-size: 16px;
+  }
+  main {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 48px 28px 96px;
+  }
+  header {
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 32px;
+    padding-bottom: 20px;
+  }
+  h1 { font-size: 28px; margin: 0 0 10px; }
+  h2 {
+    font-size: 22px;
+    margin: 48px 0 16px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+  h3 { font-size: 18px; margin: 28px 0 12px; }
+  p { margin: 10px 0; }
+  a { color: var(--accent); }
+  code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.15em 0.4em;
+    font-size: 0.88em;
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    overflow-x: auto;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 14.5px;
+  }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th { background: var(--code-bg); }
+  .lead { color: var(--muted); max-width: 840px; }
+  .nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 16px;
+  }
+  .nav a {
+    display: inline-block;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 10px;
+    text-decoration: none;
+    font-size: 14px;
+  }
+  .note {
+    background: var(--accent-bg);
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin: 18px 0;
+  }
+  .flow {
+    display: grid;
+    gap: 12px;
+    margin: 16px 0 28px;
+  }
+  .lane {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: 12px;
+    align-items: stretch;
+  }
+  .lane-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fafafa;
+    font-weight: 600;
+    color: #374151;
+    min-height: 52px;
+    text-align: center;
+  }
+  .steps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+  .step {
+    min-width: 170px;
+    max-width: 230px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    background: #fff;
+  }
+  .step.server { background: var(--server); }
+  .step.client { background: var(--client); }
+  .step.api { background: var(--api); }
+  .step strong {
+    display: block;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .step span {
+    display: block;
+    color: var(--muted);
+    font-size: 12.5px;
+    line-height: 1.5;
+    margin-top: 3px;
+  }
+  .arrow {
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 10px 0 20px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .diagram {
+    margin: 16px 0 32px;
+  }
+  .diagram p {
+    color: var(--muted);
+    font-size: 14px;
+    margin: 8px 0 10px;
+  }
+  .diagram-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 10px 0;
+  }
+  .diagram-toolbar button {
+    appearance: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--fg);
+    cursor: pointer;
+    font: inherit;
+    font-size: 13px;
+    line-height: 1.4;
+    padding: 5px 10px;
+  }
+  .diagram-toolbar button:hover {
+    background: var(--accent-bg);
+    border-color: #bfdbfe;
+  }
+  .mermaid {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    overflow-x: auto;
+    line-height: 1.5;
+  }
+  .chip {
+    width: 14px;
+    height: 14px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    display: inline-block;
+  }
+  @media (max-width: 760px) {
+    main { padding: 32px 18px 72px; }
+    .lane { grid-template-columns: 1fr; }
+    .lane-label { justify-content: flex-start; padding: 10px 12px; }
+    .steps { display: grid; grid-template-columns: 1fr; }
+    .arrow { display: none; }
+    .step { max-width: none; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>フロントエンドアーキテクチャ</h1>
+    <p class="lead">このページは <a href="design.html">docs/design.html</a> の第8章・第9章を、実装時に参照しやすいようにフロー図とディレクトリ責務へ再構成した補助資料です。一次ソースは <a href="design.md">docs/design.md</a> です。</p>
+    <nav class="nav" aria-label="関連ドキュメント">
+      <a href="design.html">設計文書 HTML</a>
+      <a href="design.md">設計文書 Markdown</a>
+    </nav>
+  </header>
+
+  <section>
+    <h2>基本方針</h2>
+    <ul>
+      <li><code>apps/web/src/app</code> は routing と page 組み立てに限定し、ロジックは <code>apps/web/src/features</code> に寄せる。</li>
+      <li>教材・問題は <code>content/</code> を一次ソースとし、RSC / Server loader からビルド時バンドル済みデータを読む。</li>
+      <li>解答ログ・SRS・due queue などの動的データだけを Hono API に集約し、フロントからは <code>hc</code> の型安全RPCで呼ぶ。</li>
+      <li>初回表示は Server loader で ViewModel 化して props 渡し、Client hook は mutation・再取得・loading/error state を担当する。</li>
+    </ul>
+    <div class="note">ディレクトリ名だけで実行場所は決まりません。<code>apps/web/src/features/*/server</code> は <code>apps/web/src/app/**/page.tsx</code> など Server Component から import されることでサーバー側で実行されます。誤 import 防止として <code>import 'server-only'</code> を置きます。</div>
+  </section>
+
+  <section>
+    <h2>フロー図</h2>
+    <div class="legend">
+      <span><i class="chip" style="background: var(--server);"></i>Server / RSC</span>
+      <span><i class="chip" style="background: var(--client);"></i>Client</span>
+      <span><i class="chip" style="background: var(--api);"></i>Hono API / D1</span>
+    </div>
+
+    <h3>教材ページ初回表示</h3>
+    <div class="diagram">
+      <p>教材本文は content を一次ソースとして Server / RSC 内で完結し、API を呼びません。</p>
+      <div class="diagram-toolbar" aria-label="教材ページ初回表示の図操作">
+        <button type="button" data-zoom-action="in">拡大</button>
+        <button type="button" data-zoom-action="out">縮小</button>
+        <button type="button" data-zoom-action="reset">リセット</button>
+      </div>
+      <pre class="mermaid">flowchart LR
+  classDef server fill:#eef6ff,stroke:#93c5fd,color:#1f2328;
+  classDef content fill:#f6f8fa,stroke:#d1d5db,color:#1f2328;
+
+  subgraph server["Server / RSC"]
+    content["content/\nMarkdown + frontmatter"]:::content
+    loader["apps/web/src/lib/content.ts\ngetLessonContent"]:::server
+    feature["features/lesson/server\nloadLesson + mapper"]:::server
+    page["app/learn/.../page.tsx\nLessonDisplayへprops渡し"]:::server
+  end
+
+  content -->|load| loader -->|map| feature -->|props| page</pre>
+    </div>
+
+    <h3>復習ページ初回表示</h3>
+    <div class="diagram">
+      <p>Server / RSC は1つの実行領域です。APIからは due queue のIDとSRSメタだけを受け取り、本文・解説は content index へ join します。</p>
+      <div class="diagram-toolbar" aria-label="復習ページ初回表示の図操作">
+        <button type="button" data-zoom-action="in">拡大</button>
+        <button type="button" data-zoom-action="out">縮小</button>
+        <button type="button" data-zoom-action="reset">リセット</button>
+      </div>
+      <pre class="mermaid">flowchart LR
+  classDef server fill:#eef6ff,stroke:#93c5fd,color:#1f2328;
+  classDef api fill:#ecfdf5,stroke:#86efac,color:#1f2328;
+  classDef client fill:#fff7ed,stroke:#fdba74,color:#1f2328;
+  classDef content fill:#f6f8fa,stroke:#d1d5db,color:#1f2328;
+
+  subgraph server["Server / RSC"]
+    page["app/review/page.tsx\n初回取得の入口"]:::server
+    serverLoader["features/review/server\nloadReviewQueue"]:::server
+    rpcWrapper["features/review/api\nfetchReviewQueue"]:::server
+    contentIndex["apps/web/src/lib/content.ts\nquestion_idを本文・解説へjoin"]:::content
+    mapper["features/review/mapper.ts\nReviewViewModel化"]:::server
+  end
+
+  subgraph api["Hono API / D1"]
+    endpoint["GET /review/queue\ndue question_id + SRS meta"]:::api
+    service["services/ + dal/\nDrizzle / D1"]:::api
+    dto["ReviewQueueDTO\nserializable response"]:::api
+  end
+
+  runner["ReviewRunner\ninitialViewModel props"]:::client
+
+  page -->|calls| serverLoader -->|uses wrapper| rpcWrapper -->|hc $get| endpoint
+  endpoint -->|query| service -->|returns| dto
+  dto -->|join by question_id| contentIndex -->|map| mapper -->|props| runner</pre>
+    </div>
+
+    <h3>クライアント更新処理</h3>
+    <div class="diagram">
+      <p>ユーザー操作後は Client hook から Hono API を呼び、D1への記録とSRS更新をAPI側に閉じます。</p>
+      <div class="diagram-toolbar" aria-label="クライアント更新処理の図操作">
+        <button type="button" data-zoom-action="in">拡大</button>
+        <button type="button" data-zoom-action="out">縮小</button>
+        <button type="button" data-zoom-action="reset">リセット</button>
+      </div>
+      <pre class="mermaid">flowchart LR
+  classDef client fill:#fff7ed,stroke:#fdba74,color:#1f2328;
+  classDef api fill:#ecfdf5,stroke:#86efac,color:#1f2328;
+
+  subgraph client["Client"]
+    ui["QuizInteractive / ReviewRunner\n選択・採点表示"]:::client
+    hook["features/quiz/hooks\nuseAnswerSubmit"]:::client
+    apiWrapper["features/quiz/api\npostAnswer"]:::client
+  end
+
+  subgraph api["Hono API / D1"]
+    endpoint["POST /answers\nanswer_log記録"]:::api
+    srs["SRS更新\npure function + repository"]:::api
+  end
+
+  ui -->|submit| hook -->|calls wrapper| apiWrapper -->|hc $post| endpoint -->|update| srs</pre>
+    </div>
+  </section>
+
+  <section>
+    <h2>ディレクトリの役割</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>パス</th>
+          <th>役割</th>
+          <th>置かないもの</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>apps/web/src/app</code></td>
+          <td>App Router の page / layout / error。Server loader を呼び、ViewModel を component に渡す薄い入口。</td>
+          <td>DTO変換、APIレスポンス処理、複雑なUI state。</td>
+        </tr>
+        <tr>
+          <td><code>apps/web/src/features/*/components</code></td>
+          <td>feature 固有の表示コンポーネント。必要に応じて Client Component とする。</td>
+          <td>DBアクセス、Hono route 直書き、content の直接走査。</td>
+        </tr>
+        <tr>
+          <td><code>apps/web/src/features/*/hooks</code></td>
+          <td>Client 専用。mutation、再取得、loading/error state、UI state を扱う。</td>
+          <td>初回取得の必須データ形成、<code>server-only</code> import。</td>
+        </tr>
+        <tr>
+          <td><code>apps/web/src/features/*/server</code></td>
+          <td>Server loader。初回取得、content/API DTO の取得、mapper 呼び出し、ViewModel 生成。</td>
+          <td>Client Component からの import、ブラウザ専用API。</td>
+        </tr>
+        <tr>
+          <td><code>apps/web/src/features/*/api</code></td>
+          <td><code>hc</code> の endpoint wrapper。path・method・引数・エラーメッセージだけを持つ。</td>
+          <td>ViewModel 化、UI state、cookies/headers など環境専用処理。</td>
+        </tr>
+        <tr>
+          <td><code>apps/web/src/features/*/mapper.ts</code></td>
+          <td>Content data / DTO を ViewModel へ変換する純粋関数。</td>
+          <td>fetch、DBアクセス、副作用。</td>
+        </tr>
+        <tr>
+          <td><code>apps/web/src/features/*/view-model.ts</code></td>
+          <td>web 表示都合の型。page/component がそのまま使える形を定義する。</td>
+          <td>API契約の一次定義。DTO は <code>packages/shared</code> 由来。</td>
+        </tr>
+        <tr>
+          <td><code>apps/web/src/features/shared</code></td>
+          <td><code>contentQuestionToQuizQuestion</code> のような小さい純粋変換。</td>
+          <td>共通 ViewModel、loader、hook、feature 全体の抽象化。</td>
+        </tr>
+        <tr>
+          <td><code>apps/web/src/components/ui</code></td>
+          <td>Button / Card などの汎用UI。Tailwind 実装を集約する。</td>
+          <td>feature 固有ロジック、データ取得。</td>
+        </tr>
+        <tr>
+          <td><code>apps/web/src/lib/api.ts</code></td>
+          <td><code>createServerApiClient</code> / <code>createBrowserApiClient</code> などの Hono client 生成。</td>
+          <td>endpoint ごとの business wrapper。</td>
+        </tr>
+        <tr>
+          <td><code>apps/web/src/lib/api-response.ts</code></td>
+          <td><code>requestJson</code>。<code>res.ok</code> チェックと <code>res.json()</code> を共通化する。</td>
+          <td>Hono path の文字列汎用 fetch 化。</td>
+        </tr>
+        <tr>
+          <td><code>apps/web/src/lib/content.ts</code></td>
+          <td>ビルド時バンドル済み content の参照口。lesson と question index を提供する。</td>
+          <td>feature 固有 ViewModel への変換。</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>API層との境界</h2>
+    <pre><code>apps/api/src/
+├── routes/       # Hono route。HTTP契約と zValidator
+├── services/     # ユースケース。SRS更新などの処理
+└── dal/          # Drizzle / D1 への永続化アクセス</code></pre>
+    <p><code>apps/web</code> 側では <code>_DAL</code> / <code>dal</code> を置きません。DB に直接触る責務は <code>apps/api</code> 側に閉じ、フロントは Hono RPC wrapper 経由で DTO を受け取ります。</p>
+  </section>
+</main>
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: 'base',
+    securityLevel: 'strict',
+    themeVariables: {
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif',
+      primaryColor: '#eef6ff',
+      primaryBorderColor: '#93c5fd',
+      lineColor: '#6b7280',
+      textColor: '#1f2328'
+    }
+  });
+
+  await mermaid.run({ querySelector: '.mermaid' });
+
+  document.querySelectorAll('.diagram').forEach(function (diagram) {
+    var scale = 1;
+    var svg = diagram.querySelector('.mermaid svg');
+    if (!svg) return;
+
+    function applyScale(nextScale) {
+      scale = Math.min(2, Math.max(0.6, nextScale));
+      svg.style.width = Math.round(scale * 100) + '%';
+      svg.style.maxWidth = 'none';
+      svg.style.height = 'auto';
+    }
+
+    diagram.querySelectorAll('[data-zoom-action]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var action = button.getAttribute('data-zoom-action');
+        if (action === 'in') applyScale(scale + 0.2);
+        if (action === 'out') applyScale(scale - 0.2);
+        if (action === 'reset') applyScale(1);
+      });
+    });
+  });
+</script>
+</body>
+</html>

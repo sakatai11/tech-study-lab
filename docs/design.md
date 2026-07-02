@@ -177,6 +177,8 @@ D1 側（動的）:
 
 第7章の画面・ルーティング（What/Where）を、`apps/web` 上でどう構造化して実装するか（How）を確定する。設計哲学は本書全体と同じ：**ハイブリッド（教材＝ファイル一次ソース／動的データ＝D1）**・**`packages/shared` を単一ソース**・**Workers 制約を前提**。
 
+フロントエンドアーキテクチャのフロー図と各ディレクトリの役割は、補助資料として [`docs/frontend-architecture.html`](./frontend-architecture.html) に整理する。本章と第9章を一次ソースとし、補助資料は実装時に参照しやすい形へ再構成したものとする。
+
 ### 8.1 ディレクトリ構成
 
 `features + components/ui` 型を採用。`src/app` は薄く保ち、ロジックは `features` に寄せる。
