@@ -97,6 +97,71 @@
     padding: 12px 14px;
     margin: 18px 0;
   }
+  .grid {
+    display: grid;
+    gap: 14px;
+    margin: 16px 0 24px;
+  }
+  .grid.two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .grid.three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    background: #fff;
+  }
+  .card h3 {
+    margin: 0 0 8px;
+    font-size: 16px;
+  }
+  .card p,
+  .card ul {
+    margin: 8px 0 0;
+  }
+  .card ul {
+    padding-left: 1.2em;
+  }
+  .card li {
+    margin: 3px 0;
+  }
+  .callout-title {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .good {
+    border-color: #86efac;
+    background: #f0fdf4;
+  }
+  .bad {
+    border-color: #fecaca;
+    background: #fef2f2;
+  }
+  .example-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 22px 0 8px;
+  }
+  .example-title h3 {
+    margin: 0;
+  }
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 2px 8px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.5;
+    white-space: nowrap;
+  }
   .flow {
     display: grid;
     gap: 12px;
@@ -213,6 +278,8 @@
   }
   @media (max-width: 760px) {
     main { padding: 32px 18px 72px; }
+    .grid.two,
+    .grid.three { grid-template-columns: 1fr; }
     .lane { grid-template-columns: 1fr; }
     .lane-label { justify-content: flex-start; padding: 10px 12px; }
     .steps { display: grid; grid-template-columns: 1fr; }
@@ -234,6 +301,20 @@
 
   <section>
     <h2>基本方針</h2>
+    <div class="grid three">
+      <article class="card">
+        <h3>app は URL の入口</h3>
+        <p><code>src/app</code> は App Router の規約を置く場所です。URL、layout、metadata、error、route params を扱い、feature の loader に引き渡します。</p>
+      </article>
+      <article class="card">
+        <h3>features は画面価値の単位</h3>
+        <p><code>features</code> は lesson、quiz、review のような機能単位です。表示部品、ViewModel、mapper、初回取得、再取得を近くに置きます。</p>
+      </article>
+      <article class="card">
+        <h3>lib は横断インフラ</h3>
+        <p><code>lib</code> は API client、response helper、content index など feature 非依存の関数だけを置きます。画面都合の整形は置きません。</p>
+      </article>
+    </div>
     <ul>
       <li><code>apps/web/src/app</code> は routing と page 組み立てに限定し、ロジックは <code>apps/web/src/features</code> に寄せる。</li>
       <li>教材・問題は <code>content/</code> を一次ソースとし、RSC / Server loader からビルド時バンドル済みデータを読む。</li>
@@ -241,6 +322,62 @@
       <li>初回表示は Server loader で ViewModel 化して props 渡し、Client hook は mutation・再取得・loading/error state を担当する。</li>
     </ul>
     <div class="note">ディレクトリ名だけで実行場所は決まりません。<code>apps/web/src/features/*/server</code> は <code>apps/web/src/app/**/page.tsx</code> など Server Component から import されることでサーバー側で実行されます。誤 import 防止として <code>import 'server-only'</code> を置きます。</div>
+  </section>
+
+  <section>
+    <h2>判断基準</h2>
+    <p>迷った時は「どこから呼ばれるか」ではなく「何の責務か」で置き場所を決めます。</p>
+    <table>
+      <thead>
+        <tr>
+          <th>迷う処理</th>
+          <th>置き場所</th>
+          <th>理由</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>route params から <code>lessonId</code> を取り出す</td>
+          <td><code>app/**/page.tsx</code></td>
+          <td>App Router の URL 境界そのものだから。</td>
+        </tr>
+        <tr>
+          <td>lesson content を読み、LessonViewModel に変換する</td>
+          <td><code>features/lesson/server</code></td>
+          <td>lesson feature の初回データ形成だから。page に置くと page が厚くなる。</td>
+        </tr>
+        <tr>
+          <td>review queue DTO と content question を join する</td>
+          <td><code>features/review/server</code> + <code>features/review/mapper.ts</code></td>
+          <td>review 画面の表示要件に合わせた ViewModel 化だから。</td>
+        </tr>
+        <tr>
+          <td><code>client.review.queue.$get()</code> を呼ぶ</td>
+          <td><code>features/review/api</code></td>
+          <td>Hono RPC の endpoint wrapper として feature 単位に閉じるため。</td>
+        </tr>
+        <tr>
+          <td><code>res.ok</code> チェックと <code>res.json()</code></td>
+          <td><code>lib/api-response.ts</code></td>
+          <td>全 endpoint で同じ横断処理だから。</td>
+        </tr>
+        <tr>
+          <td>ボタン、カード、入力欄などの汎用見た目</td>
+          <td><code>components/ui</code></td>
+          <td>feature と無関係に再利用できる UI だから。</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="grid two">
+      <div class="card good">
+        <span class="callout-title">採用する考え方</span>
+        <p><code>app</code> は薄い controller、<code>features/*/server</code> は Server 専用 loader、<code>mapper</code> は純粋変換として分ける。</p>
+      </div>
+      <div class="card bad">
+        <span class="callout-title">避ける考え方</span>
+        <p>「page からしか呼ばないから page に全部書く」と判断する。これは URL 境界と機能ロジックを混ぜる原因になる。</p>
+      </div>
+    </div>
   </section>
 
   <section>
@@ -408,6 +545,145 @@
         </tr>
       </tbody>
     </table>
+  </section>
+
+  <section>
+    <h2>コード例</h2>
+    <p>以下は実装イメージです。実コードでは import path や型名を既存ファイルに合わせます。</p>
+
+    <div class="example-title">
+      <h3>教材ページ: page は loader を呼ぶだけ</h3>
+      <span class="tag">app → features/server → mapper</span>
+    </div>
+    <pre><code class="language-tsx">// apps/web/src/app/learn/[domain]/[topic]/[lesson]/page.tsx
+import { LessonDisplay } from '@/features/lesson/components/lesson-display';
+import { loadLesson } from '@/features/lesson/server/load-lesson';
+
+type Props = {
+  params: {
+    domain: string;
+    topic: string;
+    lesson: string;
+  };
+};
+
+export default function LessonPage({ params }: Props) {
+  const viewModel = loadLesson(params.lesson);
+
+  return &lt;LessonDisplay viewModel={viewModel} /&gt;;
+}</code></pre>
+
+    <pre><code class="language-ts">// apps/web/src/features/lesson/server/load-lesson.ts
+import 'server-only';
+
+import { getLessonContent } from '@/lib/content';
+import { lessonContentToViewModel } from '../mapper';
+import type { LessonViewModel } from '../view-model';
+
+export function loadLesson(lessonId: string): LessonViewModel {
+  const content = getLessonContent(lessonId);
+  return lessonContentToViewModel(content);
+}</code></pre>
+
+    <pre><code class="language-ts">// apps/web/src/features/lesson/mapper.ts
+import type { LessonContent } from '@tsl/shared/schema/content';
+import type { LessonViewModel } from './view-model';
+
+export function lessonContentToViewModel(content: LessonContent): LessonViewModel {
+  return {
+    id: content.id,
+    title: content.title,
+    markdownBody: content.markdownBody,
+    questions: content.questions.map((question) =&gt; ({
+      id: question.id,
+      prompt: question.prompt,
+      choices: question.choices,
+    })),
+  };
+}</code></pre>
+
+    <div class="example-title">
+      <h3>復習ページ: 初回は Server、操作後は Client</h3>
+      <span class="tag">server loader + client hook</span>
+    </div>
+    <pre><code class="language-ts">// apps/web/src/features/review/api/review-api.ts
+import type { ApiClient } from '@/lib/api';
+import { requestJson } from '@/lib/api-response';
+import type { ReviewQueueDTO } from '@tsl/shared/schema/review';
+
+export function fetchReviewQueue(client: ApiClient): Promise&lt;ReviewQueueDTO&gt; {
+  return requestJson(
+    () =&gt; client.review.queue.$get(),
+    'Failed to fetch review queue',
+  );
+}</code></pre>
+
+    <pre><code class="language-ts">// apps/web/src/features/review/server/load-review-queue.ts
+import 'server-only';
+
+import { createServerApiClient } from '@/lib/api';
+import { getBundledQuestions } from '@/lib/content';
+import { fetchReviewQueue } from '../api/review-api';
+import { reviewQueueDTOToViewModel } from '../mapper';
+import type { ReviewViewModel } from '../view-model';
+
+export async function loadReviewQueue(): Promise&lt;ReviewViewModel&gt; {
+  const dto = await fetchReviewQueue(createServerApiClient());
+  return reviewQueueDTOToViewModel(dto, getBundledQuestions());
+}</code></pre>
+
+    <pre><code class="language-ts">// apps/web/src/features/review/hooks/use-review-queue.ts
+'use client';
+
+import { useCallback, useState } from 'react';
+import { createBrowserApiClient } from '@/lib/api';
+import { getBundledQuestions } from '@/lib/content';
+import { fetchReviewQueue } from '../api/review-api';
+import { reviewQueueDTOToViewModel } from '../mapper';
+import type { ReviewViewModel } from '../view-model';
+
+export function useReviewQueue(initialViewModel: ReviewViewModel) {
+  const [viewModel, setViewModel] = useState(initialViewModel);
+  const [error, setError] = useState&lt;Error | null&gt;(null);
+
+  const refetch = useCallback(async () =&gt; {
+    try {
+      const dto = await fetchReviewQueue(createBrowserApiClient());
+      setViewModel(reviewQueueDTOToViewModel(dto, getBundledQuestions()));
+      setError(null);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause : new Error('Failed to refetch review queue'));
+    }
+  }, []);
+
+  return { viewModel, error, refetch };
+}</code></pre>
+
+    <div class="example-title">
+      <h3>避ける例: page に ViewModel 化を直接書く</h3>
+      <span class="tag">責務が混ざる例</span>
+    </div>
+    <pre><code class="language-tsx">// apps/web/src/app/review/page.tsx
+// 避ける: page が API DTO、content join、sort、ViewModel 形状を知っている。
+export default async function ReviewPage() {
+  const client = createServerApiClient();
+  const res = await client.review.queue.$get();
+  const dto = await res.json();
+  const questions = getBundledQuestions();
+
+  const viewModel = {
+    items: dto.items.map((item) =&gt; ({
+      ...questions[item.questionId],
+      dueAt: item.dueAt,
+      stability: item.stability,
+    })),
+  };
+
+  return &lt;ReviewRunner initialViewModel={viewModel} /&gt;;
+}</code></pre>
+    <div class="note">
+      この例では page が Hono RPC、レスポンス処理、content join、ViewModel 形状をすべて知っています。変更影響が page に漏れるため、<code>features/review/server</code> と <code>features/review/mapper.ts</code> へ分けます。
+    </div>
   </section>
 
   <section>

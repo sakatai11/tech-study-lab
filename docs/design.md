@@ -192,6 +192,7 @@ apps/web/src/
 │   ├── quiz/[lesson]/        # 演習
 │   └── review/               # 復習
 ├── features/                 # 機能集約（状態・ロジックを持つ単位）
+│   ├── lesson/               # components / server / mapper / view-model
 │   ├── quiz/                 # components / hooks / server / api / mapper / view-model
 │   └── review/               # components / hooks / server / api / mapper / view-model
 ├── components/ui/            # 汎用UI（Button / Card 等）。Tailwind 実装
@@ -200,6 +201,7 @@ apps/web/src/
 
 - **Quiz コンポーネント**は `apps/web/src/features/quiz` に置く。`question_id[]` を受け取り 1 問ずつ回す純粋部品とし、`/quiz`（レッスン全問）・`/review`（due 問題）・`wrongOnly`（間違えonly）で供給元だけ差し替えて再利用する（7.2 の方針を実体化）。
 - feature 内の通信責務は `api/`・`server/`・`hooks/` に分ける。`api/` は Hono RPC（`hc`）呼び出しの薄い wrapper、`server/` は page / Server Component から呼ぶ初回取得と ViewModel 化、`hooks/` は Client Component から呼ぶ mutation・再取得・UI state を担当する。`apps/web/src/features/*/server` 配下のファイルには `import 'server-only'` を置き、Client Component からの誤 import を防ぐ。
+- `features/*/server` は「page からしか呼ばれないから app 所有」ではなく、「feature の ViewModel を作るための Server 専用 loader」として feature 所有にする。`src/app` は URL・metadata・layout・route params の受け渡しだけを担い、content/API DTO の取得、join、sort、filter、ViewModel 化は `features` に閉じ込める。例外として、複数 feature を横断して 1 ページ専用に合成するだけの処理は `app` 直下ではなく、必要になった時点で `features/<page-feature>/server` のようなページ feature として切り出す。
 - `apps/web` 側では `_DAL` / `dal` という名前を使わない。DB へ直接アクセスしないため、Data Access Layer は `apps/api` 側の Drizzle / D1 アクセス層として定義する。
 - 共通 UI は**必要になった時点で** `components/ui` に薄く切り出す（先回りして作らない）。
 
@@ -245,7 +247,7 @@ apps/web/src/
 
 - スキーマは `packages/shared` に集約し二重定義しない（既存 `schema/content`・`db/schema`・`srs/sm2` を土台に拡張）。
 - 同一スキーマを **3 経路で共有**：①content のビルド時パース検証、②API 入力の `zValidator`、③フロントの型（`z.infer`）。
-- フロントは API レスポンス・content データとも `z.infer` で型を引き、独自の型定義を持たない。
+- フロントは API レスポンス・content データとも `z.infer` で型を引き、DTO / Content data の独自再定義を持たない。ViewModel は表示都合の web 固有型として `apps/web/src/features` に定義する（§9.3）。
 
 ### 8.7 スタイリング（Tailwind 移行）
 
@@ -303,11 +305,12 @@ export default function LessonPage({ params }: Props) {
 ```
 
 - loader はビルド時バンドル済み content を取得し、mapper を噛ませて ViewModel を page へ渡す。教材本文ページは API を呼ばない。
+- page は loader を呼ぶだけに留める。`params` の取り出し、`metadata`、`notFound()` など App Router 固有の関心事は page 側に残し、feature のデータ形成や ViewModel 化は `features/*/server` に置く。
 - エラーは throw → `error.tsx`・`Suspense` で処理。
 
 #### Client 系（演習・復習系）
 
-`/quiz/[lesson]`・`/review` などインタラクションを持つページ。**初回データは page 側で ViewModel 化して props で渡し、Client hook はその初期 VM を受け取り、以降の再取得・mutation のみ担当**する（＝初回レンダリング時にスピナーを出さない）。
+`/quiz/[lesson]`・`/review` などインタラクションを持つページ。**初回データは Server loader で ViewModel 化し、page はその VM を props で渡すだけに留める。Client hook は初期 VM を受け取り、以降の再取得・mutation のみ担当**する（＝初回レンダリング時にスピナーを出さない）。
 
 - `/quiz`：content から問題・解説を解決し、API GET はしない。Client hook は `POST /answers` のみ担当。
 - `/review`：Server loader で `GET /review/queue` を呼び、返却された `question_id` を content の問題本文・解説へ join して VM 化する。
@@ -343,7 +346,7 @@ export async function loadReviewQueue(): Promise<ReviewViewModel> {
   return reviewQueueDTOToViewModel(dto, getBundledQuestions());
 }
 
-// app/review/page.tsx（Server）— 初回データは page で整形して取得
+// app/review/page.tsx（Server）— 初回データは Server loader で整形して取得
 export default async function ReviewPage() {
   const initialVm = await loadReviewQueue();  // API queue + content join 済み VM
   return <ReviewRunner initialViewModel={initialVm} />;
@@ -377,7 +380,7 @@ export function ReviewRunner({ initialViewModel }: Props) {
 }
 ```
 
-- **初回＝page 側で VM 化**。`/quiz` は content のみ、`/review` は API queue + content join。loader も hook も同じ mapper を通すため、整形ロジックは一本のまま（§9.1 の原則）。
+- **初回＝Server loader で VM 化し、page は props 渡しのみ**。`/quiz` は content のみ、`/review` は API queue + content join。loader も hook も同じ mapper を通すため、整形ロジックは一本のまま（§9.1 の原則）。
 - **Client hook は初期 VM を props で受け取り**、`useState` の初期値に据える。以降の再取得・楽観更新のみ hook が受け持つ。
 - **RPC 呼び出しは `apps/web/src/features/*/api` の薄い wrapper 経由**。Server loader と Client hook は同じ wrapper を使い、実行環境ごとの client 生成だけを差し替える。HTTP レスポンス処理は `requestJson` に寄せ、feature 側では重複させない。
 - **初回スピナー不要**（本節冒頭で述べた原則の実装上の帰結）：ウォーターフォールを回避し初回表示が速い。ローディング表示が要るのは再取得中のみ。
@@ -493,7 +496,7 @@ export default function LessonPage({ params }: Props) {
 
 #### 演習（Client）
 
-`/quiz` は問題自体がビルド時バンドル（§8.2）なので初回 GET は不要。page（Server）で VM を組み立てて props で渡し、Client は解答（`POST /answers`）だけを担当する。
+`/quiz` は問題自体がビルド時バンドル（§8.2）なので初回 GET は不要。Server loader で VM を組み立て、page は props で渡し、Client は解答（`POST /answers`）だけを担当する。
 
 ```typescript
 // features/quiz/view-model.ts
@@ -525,11 +528,18 @@ export function quizContentToViewModel(content: LessonContent): QuizViewModel {
   };
 }
 
-// app/quiz/[lesson]/page.tsx（Server）— 初回 VM を page で組み立てて渡す
+// features/quiz/server/load-quiz.ts
+import 'server-only';
+
+export function loadQuiz(lessonId: string): QuizViewModel {
+  const content = getLessonContent(lessonId);   // ビルド時バンドル
+  return quizContentToViewModel(content);
+}
+
+// app/quiz/[lesson]/page.tsx（Server）— page は loader を呼んで props 渡し
 export default function QuizPage({ params }: Props) {
-  const content = getLessonContent(params.lesson);   // ビルド時バンドル
-  const vm = quizContentToViewModel(content);
-  return <QuizInteractive initialViewModel={vm} />;
+  const initialVm = loadQuiz(params.lesson);
+  return <QuizInteractive initialViewModel={initialVm} />;
 }
 
 // features/quiz/components/quiz-interactive.tsx（Client）
@@ -554,7 +564,7 @@ export function QuizInteractive({ initialViewModel }: Props) {
 }
 ```
 
-- `/quiz` の初回は **API GET なし**（問題はビルド時バンドル、page で VM 化）。Client hook は `POST /answers`（mutation）だけを持つ。
+- `/quiz` の初回は **API GET なし**（問題はビルド時バンドル、Server loader で VM 化）。Client hook は `POST /answers`（mutation）だけを持つ。
 - `/review` の初回は **Server loader で GET**（due queue）→ props 渡し（§9.2 参照）。
 
 ### 9.5 content / API 変更時の対応フロー
@@ -591,7 +601,7 @@ export default function Error({ error }: { error: Error }) {
 
 #### Client（演習・復習系）
 
-初回データは page 側で VM 化済みのため（9.2 参照）、**初回にローディング表示は出ない**。Client 側で扱うのは以下の 2 つ：
+初回データは Server loader で VM 化済みのため（9.2 参照）、**初回にローディング表示は出ない**。Client 側で扱うのは以下の 2 つ：
 
 - **初回データ形成の失敗**：content 未検出・検証失敗、または `/review` の初回 queue 取得失敗 → ルートの `error.tsx` で捕捉（Server 系と同じ経路）。
 - **再取得・mutation の失敗/待機**：hook が返す `error`・（再取得中の）状態を component で出し分ける。
