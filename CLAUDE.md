@@ -2,8 +2,6 @@
 
 このファイルは Claude Code が **tech-study-lab** で作業する際のガイドです。
 
-**必ず日本語で回答してください。**
-
 ## プロジェクト概要
 
 ソフトウェア学習アプリ。個人エンジニアが「セキュリティ / FE・BEフレームワーク / アーキテクチャ設計」を、読み物（教材）＋4択問題演習で学ぶ。解答ログを SRS（間隔反復）で分析し出題を最適化する。**開発自体をAI駆動で進めることが主目的。**
@@ -79,16 +77,9 @@ pnpm test
 pnpm typecheck
 ```
 
-## 現在の進捗
+## 進捗の確認方法
 
-- [x] 設計文書（docs/design.md）
-- [x] CLAUDE.md
-- [x] monorepo 基盤（pnpm workspaces / Biome / tsconfig.base）
-- [x] apps/web scaffold（Next.js App Router + OpenNext Cloudflare / src/ 構成）
-- [x] apps/api 最小エントリ（Hono `/health` + hc クライアントファクトリ）
-- [ ] packages/shared 実装（Drizzle スキーマ / Zod / SRS 純粋関数）
-- [ ] GitHub Actions CI
-- [ ] 最初のスライス：セキュリティ > XSS > 教材1本 + 4択3問
+進捗はこのファイルに書かず、実装コード・`git log`・`docs/design.md` から判断する。
 
 ## やらないこと（スコープ外）
 
