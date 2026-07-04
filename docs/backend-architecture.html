@@ -1,0 +1,1274 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tech-study-lab バックエンドアーキテクチャ</title>
+    <style>
+      :root {
+        --bg: #ffffff;
+        --fg: #1f2328;
+        --muted: #6b7280;
+        --border: #e5e7eb;
+        --accent: #2563eb;
+        --accent-bg: #eff6ff;
+        --code-bg: #f6f8fa;
+        --vscode-bg: #1e1e1e;
+        --vscode-panel: #252526;
+        --vscode-border: #3c3c3c;
+        --vscode-tab: #2d2d2d;
+        --vscode-text: #d4d4d4;
+        --vscode-muted: #9cdcfe;
+        --route: #eef6ff;
+        --service: #fff7ed;
+        --dal: #ecfdf5;
+        --shared: #f6f8fa;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Hiragino Sans",
+          "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", "Segoe UI",
+          sans-serif;
+        color: var(--fg);
+        background: var(--bg);
+        line-height: 1.8;
+        font-size: 16px;
+      }
+      main {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 48px 28px 96px;
+      }
+      header {
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 32px;
+        padding-bottom: 20px;
+      }
+      h1 {
+        font-size: 28px;
+        margin: 0 0 10px;
+      }
+      h2 {
+        font-size: 22px;
+        margin: 48px 0 16px;
+        padding-top: 8px;
+        border-top: 1px solid var(--border);
+      }
+      h3 {
+        font-size: 18px;
+        margin: 28px 0 12px;
+      }
+      p {
+        margin: 10px 0;
+      }
+      a {
+        color: var(--accent);
+      }
+      code {
+        font-family:
+          ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 0.15em 0.4em;
+        font-size: 0.88em;
+      }
+      pre {
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 16px;
+        overflow-x: auto;
+      }
+      pre:has(> code) {
+        position: relative;
+        margin: 12px 0 18px;
+        padding: 46px 16px 16px;
+        border: 1px solid var(--vscode-border);
+        border-radius: 8px;
+        background: var(--vscode-bg);
+        color: var(--vscode-text);
+        box-shadow: 0 10px 24px rgba(31, 35, 40, 0.16);
+      }
+      pre:has(> code)::before {
+        content: attr(data-code-title);
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        min-height: 34px;
+        padding: 6px 96px 6px 12px;
+        border-bottom: 1px solid var(--vscode-border);
+        border-radius: 7px 7px 0 0;
+        background: linear-gradient(
+          90deg,
+          var(--vscode-tab),
+          var(--vscode-panel)
+        );
+        color: var(--vscode-text);
+        font-family:
+          ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+        font-size: 12px;
+        line-height: 1.6;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      pre:has(> code.language-ts)::after {
+        position: absolute;
+        top: 7px;
+        right: 10px;
+        border: 1px solid #3c3c3c;
+        border-radius: 4px;
+        padding: 1px 8px;
+        background: #1e1e1e;
+        color: var(--vscode-muted);
+        font-size: 11px;
+        line-height: 1.6;
+        font-family:
+          ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+        content: "TS";
+      }
+      pre > code {
+        display: block;
+        border: 0;
+        background: transparent;
+        padding: 0;
+        color: var(--vscode-text);
+        font-size: 13px;
+        line-height: 1.7;
+      }
+      pre > code .token {
+        color: inherit;
+      }
+      .token.comment {
+        color: #6a9955;
+      }
+      .token.keyword {
+        color: #c586c0;
+      }
+      .token.type,
+      .token.builtin {
+        color: #4ec9b0;
+      }
+      .token.string {
+        color: #ce9178;
+      }
+      .token.number {
+        color: #b5cea8;
+      }
+      .token.function {
+        color: #dcdcaa;
+      }
+      .token.property {
+        color: #9cdcfe;
+      }
+      .token.operator,
+      .token.punctuation {
+        color: #d4d4d4;
+      }
+      pre.mermaid {
+        padding: 16px;
+        border: 1px solid var(--border);
+        background: #fff;
+        color: var(--fg);
+        box-shadow: none;
+      }
+      pre.mermaid::before,
+      pre.mermaid::after {
+        content: none;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 16px 0;
+        font-size: 14.5px;
+      }
+      th,
+      td {
+        border: 1px solid var(--border);
+        padding: 8px 12px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: var(--code-bg);
+      }
+      .lead {
+        color: var(--muted);
+        max-width: 840px;
+      }
+      .nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 16px;
+      }
+      .nav a {
+        display: inline-block;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 4px 10px;
+        text-decoration: none;
+        font-size: 14px;
+      }
+      .note {
+        background: var(--accent-bg);
+        border: 1px solid #bfdbfe;
+        border-radius: 8px;
+        padding: 12px 14px;
+        margin: 18px 0;
+      }
+      .grid {
+        display: grid;
+        gap: 14px;
+        margin: 16px 0 24px;
+      }
+      .grid.two {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .grid.three {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      .card {
+        border-radius: 8px;
+        padding: 14px 16px;
+        background: #f9fafb;
+      }
+      .card h3 {
+        margin: 0 0 8px;
+        font-size: 16px;
+      }
+      .card p,
+      .card ul {
+        margin: 8px 0 0;
+      }
+      .card ul {
+        padding-left: 1.2em;
+      }
+      .card li {
+        margin: 3px 0;
+      }
+      .callout-title {
+        display: block;
+        font-weight: 700;
+        margin-bottom: 4px;
+      }
+      .good {
+        background: #f0fdf4;
+        box-shadow: inset 4px 0 0 #22c55e;
+      }
+      .bad {
+        background: #fef2f2;
+        box-shadow: inset 4px 0 0 #ef4444;
+      }
+      .example-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin: 22px 0 8px;
+      }
+      .example-title h3 {
+        margin: 0;
+      }
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 2px 8px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+        white-space: nowrap;
+      }
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 10px 0 20px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .diagram {
+        margin: 16px 0 32px;
+      }
+      .diagram p {
+        color: var(--muted);
+        font-size: 14px;
+        margin: 8px 0 10px;
+      }
+      .diagram-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 10px 0;
+      }
+      .diagram-toolbar button {
+        appearance: none;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: #fff;
+        color: var(--fg);
+        cursor: pointer;
+        font: inherit;
+        font-size: 13px;
+        line-height: 1.4;
+        padding: 5px 10px;
+      }
+      .diagram-toolbar button:hover {
+        background: var(--accent-bg);
+        border-color: #bfdbfe;
+      }
+      .mermaid {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 16px;
+        overflow-x: auto;
+        line-height: 1.5;
+      }
+      .chip {
+        width: 14px;
+        height: 14px;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        display: inline-block;
+      }
+      @media (max-width: 760px) {
+        main {
+          padding: 32px 18px 72px;
+        }
+        .grid.two,
+        .grid.three {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>バックエンドアーキテクチャ</h1>
+        <p class="lead">
+          このページは
+          <a href="design.md">docs/design.md</a>
+          の第10章を、実装時に参照しやすいようにフロー図と層の責務へ再構成した補助資料です。一次ソースは
+          <a href="design.md">docs/design.md</a> です。フロントエンド側は
+          <a href="frontend-architecture.html">frontend-architecture.html</a>
+          を参照してください。
+        </p>
+        <nav class="nav" aria-label="関連ドキュメント">
+          <a href="design.html">設計文書 HTML</a>
+          <a href="design.md">設計文書 Markdown</a>
+          <a href="frontend-architecture.html">フロントエンドアーキテクチャ</a>
+        </nav>
+      </header>
+
+      <section>
+        <h2>基本方針</h2>
+        <p>
+          <code>apps/api</code>（Hono / Cloudflare Workers）は
+          <strong>route → service → dal の 3 層</strong>
+          に分けます。層を分ける目的はただ一つ、「HTTP の関心事」「業務の手順」「SQL
+          の関心事」を混ぜないことです。
+        </p>
+        <div class="grid three">
+          <article class="card">
+            <h3>route は HTTP の入口</h3>
+            <p>
+              <code>routes/</code> はパス・メソッド・<code>zValidator</code>
+              による入力検証・ステータスコード・レスポンス整形を扱います。ビジネスロジックは書きません。
+            </p>
+          </article>
+          <article class="card">
+            <h3>service はユースケース</h3>
+            <p>
+              <code>services/</code> は「採点 → 記録 → SRS
+              更新」のような業務手順の一連です。<strong
+                >Hono・D1・Drizzle に依存しない純 TypeScript</strong
+              >
+              なので、DB なしでテストできます。
+            </p>
+          </article>
+          <article class="card">
+            <h3>dal は永続化アクセス</h3>
+            <p>
+              <code>dal/</code> は Drizzle クエリの置き場です。upsert や
+              <code>db.batch</code> のような SQL
+              的関心事をここに閉じ込め、service には漏らしません。
+            </p>
+          </article>
+        </div>
+        <ul>
+          <li>
+            依存方向は
+            <strong><code>routes → services → dal →（D1）</code>の一方向のみ</strong>。逆方向の
+            import は禁止。<code>packages/shared</code> はどの層からも参照可。
+          </li>
+          <li>
+            service が「必要な関数の型（<code>AnswerDeps</code> など）」を宣言し、dal
+            がそれを実装する。route が両者を接続する。<strong
+              >DI コンテナは使わず、関数引数で依存を渡す</strong>。
+          </li>
+          <li>
+            <strong>採点の権威は API</strong>（design.md
+            §7.2）。クライアントは <code>selectedIndex</code>
+            を送るだけで、正解も <code>user_id</code> も信用しない。
+          </li>
+          <li>
+            <code>user_id</code> は middleware（<code>user-context.ts</code>）が注入する。固定値の知識はこの
+            1 ファイルに閉じ、将来の認証導入時はここだけ差し替える。
+          </li>
+          <li>
+            時刻（<code>now</code>）は service
+            内で取得せず、route から引数注入する。<code>sm2</code>
+            純粋関数と同じ設計で、テストで時刻を固定できる。
+          </li>
+          <li>
+            D1 は対話型トランザクションが使えないため、複数テーブルへの書き込みは
+            <code>db.batch()</code> で原子的にまとめる。
+          </li>
+          <li>
+            <code>hc</code> の型推論を保つため、ルート定義は<strong
+              >必ずメソッドチェーン</strong
+            >で書き、<code>index.ts</code> で <code>.route()</code>
+            のチェーンに合成して <code>AppType</code> をエクスポートする。
+          </li>
+        </ul>
+        <div class="note">
+          <span class="callout-title">なぜ feature 型（縦割り）にしないのか</span>
+          本アプリの API は 3 エンドポイントすべてが SRS
+          という同じデータ（<code>questions</code>・<code>answer_logs</code>・<code>srs_states</code>）の周りを回っており、feature
+          ごとにフォルダを切っても repository を相互 import
+          することになります。境界が曖昧な縦割りは置き場所の迷いを生むため、<strong
+            >層ごとの横割り＋依存方向ルール</strong
+          >を採用しています。独立したドメイン（教材管理・統計など）が増えた時点で
+          feature 型への移行を再検討します（移行はファイル移動のみで、3
+          層の責務はそのまま持ち越せます）。
+        </div>
+      </section>
+
+      <section>
+        <h2>API 契約（design.md §7.3）</h2>
+        <p>
+          エンドポイントは 3 本。本文（教材・問題・解説）はファイル一次ソースのため、API
+          は ID・SRS メタ・集計値のみ返します。
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>エンドポイント</th>
+              <th>リクエスト → レスポンス</th>
+              <th>役割</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>POST /answers</code></td>
+              <td>
+                <code>{ questionId, selectedIndex }</code> →
+                <code>{ isCorrect, correctIndex }</code>
+              </td>
+              <td>
+                採点（D1 の <code>questions</code> と照合）→
+                <code>answer_log</code> 記録 → SRS 更新
+              </td>
+            </tr>
+            <tr>
+              <td><code>GET /review/queue</code></td>
+              <td>→ <code>{ items: [{ questionId, dueAt }] }</code></td>
+              <td>
+                due 問題の収集（本文はフロントがバンドル済み content から
+                join）
+              </td>
+            </tr>
+            <tr>
+              <td><code>GET /dashboard/due-count</code></td>
+              <td>→ <code>{ dueCount }</code></td>
+              <td>ダッシュボードの due 件数</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          リクエスト／レスポンスの Zod スキーマは
+          <code>packages/shared/src/schema/api.ts</code>
+          に置き、「API 入力の <code>zValidator</code>」「route 返り値の
+          <code>satisfies</code>」「フロントの型（<code>z.infer</code>）」の 3
+          経路で共有します（§10.6）。
+        </p>
+      </section>
+
+      <section>
+        <h2>判断基準</h2>
+        <p>
+          迷った時は「どの層の関心事か」で置き場所を決めます。HTTP
+          の言葉（ステータスコード・ヘッダー）が出てきたら route、業務の言葉（採点・復習）が出てきたら
+          service、SQL の言葉（upsert・batch・where）が出てきたら dal です。
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>迷う処理</th>
+              <th>置き場所</th>
+              <th>理由</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>リクエストボディの形の検証</td>
+              <td><code>routes/</code>（<code>zValidator</code>）</td>
+              <td>HTTP 契約そのものだから。スキーマ定義は shared に置く。</td>
+            </tr>
+            <tr>
+              <td>「正解かどうか」の判定</td>
+              <td><code>services/answer-service.ts</code></td>
+              <td>採点はユースケースの中心。HTTP や SQL とは無関係。</td>
+            </tr>
+            <tr>
+              <td>次回出題日（SRS）の計算</td>
+              <td><code>packages/shared/src/srs/sm2.ts</code></td>
+              <td>
+                純粋関数として実装済み。service
+                は呼ぶだけで、計算式を持たない。
+              </td>
+            </tr>
+            <tr>
+              <td><code>srs_states</code> の upsert の書き方</td>
+              <td><code>dal/answer-repository.ts</code></td>
+              <td>
+                <code>onConflictDoUpdate</code>・<code>db.batch</code> は SQL
+                的関心事だから。
+              </td>
+            </tr>
+            <tr>
+              <td>エラーを 404 / 500 に写像する</td>
+              <td><code>index.ts</code> の <code>app.onError</code></td>
+              <td>
+                HTTP ステータスは route 層の横断処理。service
+                はドメインエラーを throw するだけ。
+              </td>
+            </tr>
+            <tr>
+              <td>固定 <code>user_id</code> の値</td>
+              <td><code>middleware/user-context.ts</code></td>
+              <td>
+                将来の認証差し替えポイントを 1 箇所に閉じるため（§10.4）。
+              </td>
+            </tr>
+            <tr>
+              <td>リクエスト／レスポンスの型定義</td>
+              <td><code>packages/shared/src/schema/api.ts</code></td>
+              <td>フロントと API の契約なので、単一ソースで共有するため。</td>
+            </tr>
+            <tr>
+              <td><code>Date.now()</code> の呼び出し</td>
+              <td><code>routes/</code>（service へ引数注入）</td>
+              <td>
+                service を純粋に保ち、テストで時刻を固定できるようにするため。
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="grid two">
+          <div class="card good">
+            <span class="callout-title">採用する考え方</span>
+            <p>
+              service は「deps という関数の束」を受け取る。DB
+              を知らないので、テストは素朴な fake
+              オブジェクトで書け、モックライブラリも Workers
+              ランタイムも要らない。
+            </p>
+          </div>
+          <div class="card bad">
+            <span class="callout-title">避ける考え方</span>
+            <p>
+              route ハンドラに採点・SRS 更新・Drizzle
+              クエリを直接書く。テストに workerd
+              が必須になり、書き込みの原子性（batch）も漏れやすい。
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>フロー図</h2>
+        <div class="legend">
+          <span
+            ><i class="chip" style="background: var(--route)"></i>route 層 /
+            middleware</span
+          >
+          <span
+            ><i class="chip" style="background: var(--service)"></i>service
+            層</span
+          >
+          <span
+            ><i class="chip" style="background: var(--dal)"></i>dal 層 /
+            D1</span
+          >
+          <span
+            ><i class="chip" style="background: var(--shared)"></i
+            >packages/shared</span
+          >
+        </div>
+
+        <h3>POST /answers のリクエスト処理（Walking Skeleton の中核）</h3>
+        <div class="diagram">
+          <p>
+            1 リクエストが 3 層をどう通るかを示します。route は検証と接続、service
+            は業務手順、dal は原子的書き込みだけを担当します。
+          </p>
+          <div class="diagram-toolbar" aria-label="POST /answers の図操作">
+            <button type="button" data-zoom-action="in">拡大</button>
+            <button type="button" data-zoom-action="out">縮小</button>
+            <button type="button" data-zoom-action="reset">リセット</button>
+          </div>
+          <pre class="mermaid">
+flowchart LR
+  classDef route fill:#eef6ff,stroke:#93c5fd,color:#1f2328;
+  classDef service fill:#fff7ed,stroke:#fdba74,color:#1f2328;
+  classDef dal fill:#ecfdf5,stroke:#86efac,color:#1f2328;
+  classDef shared fill:#f6f8fa,stroke:#d1d5db,color:#1f2328;
+
+  browser["クライアント\nPOST /answers\n{questionId, selectedIndex}"]:::shared
+
+  subgraph routeLayer["route 層"]
+    mw["middleware/user-context.ts\nuserId を権威的に注入"]:::route
+    val["zValidator\nanswerRequestSchema（shared）"]:::route
+    handler["routes/answers.ts\ndeps 生成・now 注入・service 呼び出し"]:::route
+  end
+
+  subgraph serviceLayer["service 層"]
+    svc["services/answer-service.ts\n1. answerIndex 照合\n2. 採点\n3. SRS 計算\n4. 記録指示"]:::service
+    sm2["reviewSrs（@tsl/shared sm2）\n純粋関数"]:::shared
+  end
+
+  subgraph dalLayer["dal 層 / D1"]
+    repo["dal/answer-repository.ts\ndb.batch で原子的書き込み"]:::dal
+    d1[("D1\nanswer_logs INSERT\n+ srs_states UPSERT")]:::dal
+  end
+
+  browser --> mw --> val --> handler -->|"submitAnswer(deps, input)"| svc
+  svc -->|"正誤 + now"| sm2
+  svc -->|"recordAnswer"| repo --> d1
+  handler -->|"{isCorrect, correctIndex}"| browser</pre>
+        </div>
+
+        <h3>依存方向と deps 注入</h3>
+        <div class="diagram">
+          <p>
+            import の矢印は常に一方向です。service は dal を import
+            しません。代わりに「必要な関数の型（AnswerDeps）」を自分で宣言し、dal
+            がそれを実装し、route が接続します。
+          </p>
+          <div class="diagram-toolbar" aria-label="依存方向の図操作">
+            <button type="button" data-zoom-action="in">拡大</button>
+            <button type="button" data-zoom-action="out">縮小</button>
+            <button type="button" data-zoom-action="reset">リセット</button>
+          </div>
+          <pre class="mermaid">
+flowchart LR
+  classDef route fill:#eef6ff,stroke:#93c5fd,color:#1f2328;
+  classDef service fill:#fff7ed,stroke:#fdba74,color:#1f2328;
+  classDef dal fill:#ecfdf5,stroke:#86efac,color:#1f2328;
+  classDef shared fill:#f6f8fa,stroke:#d1d5db,color:#1f2328;
+
+  routes["routes/answers.ts\nHTTP 契約"]:::route
+  services["services/answer-service.ts\nAnswerDeps 型を宣言\nユースケースを実装"]:::service
+  dal["dal/answer-repository.ts\ncreateAnswerDeps\nAnswerDeps を実装"]:::dal
+  shared["@tsl/shared\nsm2 / schema-api / db schema"]:::shared
+  d1[("D1")]:::dal
+
+  routes -->|"submitAnswer を呼ぶ"| services
+  routes -->|"createAnswerDeps(db) で生成し渡す"| dal
+  dal -.->|"型のみ import（実装対象の宣言）"| services
+  dal -->|"Drizzle クエリ"| d1
+  services -->|"純粋関数を利用"| shared
+  routes -->|"zValidator スキーマ"| shared</pre>
+        </div>
+
+        <h3>content → D1 同期（seed/upsert）</h3>
+        <div class="diagram">
+          <p>
+            教材・問題の一次ソースは <code>content/</code>
+            の Markdown です。D1 の <code>questions</code>
+            には採点に必要な最小フィールドだけを同期します（本文・選択肢・解説は入れません）。
+          </p>
+          <div class="diagram-toolbar" aria-label="content 同期の図操作">
+            <button type="button" data-zoom-action="in">拡大</button>
+            <button type="button" data-zoom-action="out">縮小</button>
+            <button type="button" data-zoom-action="reset">リセット</button>
+          </div>
+          <pre class="mermaid">
+flowchart LR
+  classDef shared fill:#f6f8fa,stroke:#d1d5db,color:#1f2328;
+  classDef dal fill:#ecfdf5,stroke:#86efac,color:#1f2328;
+
+  content["content/\nMarkdown + frontmatter\n（一次ソース）"]:::shared
+  parse["scripts/sync-content.ts\ngray-matter + shared の Zod 検証\n（§8.2 のフロント側と同一経路）"]:::shared
+  sql["冪等な upsert SQL 生成\nquestion_id + answer_index のみ"]:::shared
+  wrangler["wrangler d1 execute\n--local / --remote"]:::dal
+  d1[("D1 questions\n採点照合用キャッシュ")]:::dal
+
+  content --> parse --> sql --> wrangler --> d1</pre>
+        </div>
+      </section>
+
+      <section>
+        <h2>ディレクトリの役割</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>パス</th>
+              <th>役割</th>
+              <th>置かないもの</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>apps/api/src/index.ts</code></td>
+              <td>
+                middleware 適用・<code>onError</code>・ルート合成（メソッドチェーン）・<code>AppType</code>
+                エクスポート。
+              </td>
+              <td>個別エンドポイントのハンドラ実装、ビジネスロジック。</td>
+            </tr>
+            <tr>
+              <td><code>apps/api/src/env.ts</code></td>
+              <td>
+                <code>Bindings</code>（D1 / vars）・<code>Variables</code>（userId）の型定義。
+              </td>
+              <td>実行時ロジック。</td>
+            </tr>
+            <tr>
+              <td><code>apps/api/src/middleware/user-context.ts</code></td>
+              <td>
+                固定 <code>user_id</code>
+                の権威的注入。将来の認証実装への差し替えポイント。
+              </td>
+              <td>採点・SRS などの業務ロジック。</td>
+            </tr>
+            <tr>
+              <td><code>apps/api/src/routes/</code></td>
+              <td>
+                HTTP 契約。<code>zValidator</code>・deps 生成・<code>now</code>
+                注入・レスポンスの <code>satisfies</code>。
+              </td>
+              <td>採点判定、SRS 計算、Drizzle クエリ。</td>
+            </tr>
+            <tr>
+              <td><code>apps/api/src/services/</code></td>
+              <td>
+                ユースケース・deps 型の宣言・ドメインエラー（<code>errors.ts</code>）。純
+                TS のみ。
+              </td>
+              <td>
+                Hono の context、Drizzle の import、<code>Date.now()</code>、HTTP
+                ステータス。
+              </td>
+            </tr>
+            <tr>
+              <td><code>apps/api/src/dal/</code></td>
+              <td>
+                deps 実装。Drizzle クエリ・<code>db.batch</code>・upsert。ユースケース単位で
+                1 ファイル。
+              </td>
+              <td>業務判断（採点・SRS の計算式）、HTTP の関心事。</td>
+            </tr>
+            <tr>
+              <td><code>apps/api/scripts/sync-content.ts</code></td>
+              <td>
+                content/ → D1 の seed/upsert。shared の Zod
+                で検証し、冪等な upsert を流す。
+              </td>
+              <td>教材本文・選択肢・解説の D1 書き込み。</td>
+            </tr>
+            <tr>
+              <td><code>packages/shared/src/schema/api.ts</code></td>
+              <td>
+                API のリクエスト／レスポンス Zod。<code>zValidator</code>・<code>satisfies</code>・フロント型の
+                3 経路で共有。
+              </td>
+              <td>web 表示都合の型（ViewModel は web 側）。</td>
+            </tr>
+            <tr>
+              <td><code>packages/shared/src/srs/sm2.ts</code></td>
+              <td>SRS（SM-2）の純粋関数。実装・テスト済み。</td>
+              <td>DB アクセス、時刻取得などの副作用。</td>
+            </tr>
+            <tr>
+              <td><code>packages/shared/src/db/schema.ts</code></td>
+              <td>
+                Drizzle スキーマ（<code>users</code> /
+                <code>answer_logs</code> / <code>srs_states</code> /
+                <code>questions</code>）。
+              </td>
+              <td>クエリ実装（クエリは dal に置く）。</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>コード例</h2>
+        <p>
+          以下は実装イメージです。実コードでは import path
+          や型名を既存ファイルに合わせます。
+        </p>
+
+        <div class="example-title">
+          <h3>service: DB を知らないユースケース</h3>
+          <span class="tag">deps 宣言 + 純 TS</span>
+        </div>
+        <pre
+          data-code-title="apps/api/src/services/answer-service.ts"
+        ><code class="language-ts">// apps/api/src/services/answer-service.ts
+// Hono・D1・Drizzle に依存しない純 TS。deps は「必要な関数の束」として宣言する
+import { initialSrs, reviewSrs, type SrsInput, type SrsResult } from '@tsl/shared';
+import { QuestionNotFoundError } from './errors';
+
+export type AnswerDeps = {
+  findAnswerIndex(questionId: string): Promise&lt;number | null&gt;;
+  findSrsState(userId: string, questionId: string): Promise&lt;SrsInput | null&gt;;
+  recordAnswer(params: {
+    userId: string;
+    questionId: string;
+    isCorrect: boolean;
+    answeredAt: number;
+    nextSrs: SrsResult;
+  }): Promise&lt;void&gt;;
+};
+
+export type SubmitAnswerInput = {
+  userId: string;
+  questionId: string;
+  selectedIndex: number;
+  now: number; // 時刻は service 内で取得せず引数注入（テストで固定できる）
+};
+
+export async function submitAnswer(deps: AnswerDeps, input: SubmitAnswerInput) {
+  const answerIndex = await deps.findAnswerIndex(input.questionId);
+  if (answerIndex === null) throw new QuestionNotFoundError(input.questionId);
+
+  const isCorrect = answerIndex === input.selectedIndex; // 採点権威は API（§7.2）
+  const current =
+    (await deps.findSrsState(input.userId, input.questionId)) ?? initialSrs();
+  const nextSrs = reviewSrs(current, isCorrect, input.now); // 純粋関数（sm2）
+
+  await deps.recordAnswer({
+    userId: input.userId,
+    questionId: input.questionId,
+    isCorrect,
+    answeredAt: input.now,
+    nextSrs,
+  });
+
+  return { isCorrect, correctIndex: answerIndex };
+}</code></pre>
+
+        <div class="example-title">
+          <h3>route: 検証と接続だけを担当する</h3>
+          <span class="tag">zValidator + deps 生成 + now 注入</span>
+        </div>
+        <pre
+          data-code-title="apps/api/src/routes/answers.ts"
+        ><code class="language-ts">// apps/api/src/routes/answers.ts
+import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { drizzle } from 'drizzle-orm/d1';
+import { answerRequestSchema, type AnswerResponse } from '@tsl/shared';
+import type { AppEnv } from '../env';
+import { createAnswerDeps } from '../dal/answer-repository';
+import { submitAnswer } from '../services/answer-service';
+
+// hc の型推論のため、new Hono() からのメソッドチェーンで定義する
+export const answersRoute = new Hono&lt;AppEnv&gt;().post(
+  '/',
+  zValidator('json', answerRequestSchema),
+  async (c) =&gt; {
+    const { questionId, selectedIndex } = c.req.valid('json');
+    const result = await submitAnswer(createAnswerDeps(drizzle(c.env.DB)), {
+      userId: c.get('userId'), // middleware が注入済み（§10.4）
+      questionId,
+      selectedIndex,
+      now: Date.now(),
+    });
+    return c.json(result satisfies AnswerResponse); // 契約は shared の型で固定
+  },
+);</code></pre>
+
+        <div class="example-title">
+          <h3>dal: Drizzle と db.batch を閉じ込める</h3>
+          <span class="tag">AnswerDeps の実装</span>
+        </div>
+        <pre
+          data-code-title="apps/api/src/dal/answer-repository.ts"
+        ><code class="language-ts">// apps/api/src/dal/answer-repository.ts
+import { and, eq } from 'drizzle-orm';
+import type { DrizzleD1Database } from 'drizzle-orm/d1';
+import { db as schema } from '@tsl/shared';
+import type { AnswerDeps } from '../services/answer-service';
+
+export function createAnswerDeps(db: DrizzleD1Database): AnswerDeps {
+  return {
+    async findAnswerIndex(questionId) {
+      const rows = await db
+        .select({ answerIndex: schema.questions.answerIndex })
+        .from(schema.questions)
+        .where(eq(schema.questions.questionId, questionId));
+      return rows[0]?.answerIndex ?? null;
+    },
+
+    async findSrsState(userId, questionId) {
+      const rows = await db
+        .select()
+        .from(schema.srsStates)
+        .where(
+          and(
+            eq(schema.srsStates.userId, userId),
+            eq(schema.srsStates.questionId, questionId),
+          ),
+        );
+      return rows[0] ?? null;
+    },
+
+    async recordAnswer({ userId, questionId, isCorrect, answeredAt, nextSrs }) {
+      const srsRow = {
+        ease: nextSrs.ease,
+        intervalDays: nextSrs.intervalDays,
+        dueAt: new Date(nextSrs.dueAt),
+        reps: nextSrs.reps,
+        lapses: nextSrs.lapses,
+      };
+      // D1 は対話型トランザクション不可 → db.batch で原子的に書く（§10.7）
+      await db.batch([
+        db.insert(schema.answerLogs).values({
+          id: crypto.randomUUID(),
+          userId,
+          questionId,
+          isCorrect,
+          answeredAt: new Date(answeredAt),
+        }),
+        db
+          .insert(schema.srsStates)
+          .values({ userId, questionId, ...srsRow })
+          .onConflictDoUpdate({
+            target: [schema.srsStates.userId, schema.srsStates.questionId],
+            set: srsRow,
+          }),
+      ]);
+    },
+  };
+}</code></pre>
+
+        <div class="example-title">
+          <h3>middleware: user_id の権威的注入</h3>
+          <span class="tag">将来の認証差し替えポイント</span>
+        </div>
+        <pre
+          data-code-title="apps/api/src/middleware/user-context.ts"
+        ><code class="language-ts">// apps/api/src/middleware/user-context.ts
+import { createMiddleware } from 'hono/factory';
+import type { AppEnv } from '../env';
+
+const FIXED_USER_ID = 'user-local-001';
+
+// 将来公開時は「認証情報から userId を解決する実装」に差し替えるだけ。
+// route・service・API 契約は変わらない（design.md §7.2）
+export const userContext = createMiddleware&lt;AppEnv&gt;(async (c, next) =&gt; {
+  c.set('userId', FIXED_USER_ID);
+  await next();
+});</code></pre>
+
+        <div class="example-title">
+          <h3>index.ts: 合成・onError・AppType</h3>
+          <span class="tag">メソッドチェーン必須</span>
+        </div>
+        <pre
+          data-code-title="apps/api/src/index.ts"
+        ><code class="language-ts">// apps/api/src/index.ts
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
+import type { AppEnv } from './env';
+import { userContext } from './middleware/user-context';
+import { QuestionNotFoundError } from './services/errors';
+import { answersRoute } from './routes/answers';
+import { reviewRoute } from './routes/review';
+import { dashboardRoute } from './routes/dashboard';
+
+const app = new Hono&lt;AppEnv&gt;();
+
+// CORS はブラウザ経路（§3.1）用。Service Binding 経由には関与しない
+app.use('*', async (c, next) =&gt; cors({ origin: c.env.WEB_ORIGIN })(c, next));
+app.use('*', userContext);
+
+// service のドメインエラーを HTTP へ写像する（レスポンス形を統一）
+app.onError((err, c) =&gt; {
+  if (err instanceof QuestionNotFoundError) {
+    return c.json({ error: { code: 'QUESTION_NOT_FOUND', message: err.message } }, 404);
+  }
+  console.error(err); // Workers Logs で観測
+  return c.json({ error: { code: 'INTERNAL', message: 'Internal Server Error' } }, 500);
+});
+
+// hc の型推論を保つため、必ずメソッドチェーンで合成する
+const routes = app
+  .get('/health', (c) =&gt; c.json({ status: 'ok' as const }))
+  .route('/answers', answersRoute)
+  .route('/review', reviewRoute)
+  .route('/dashboard', dashboardRoute);
+
+export type AppType = typeof routes;
+export default app;</code></pre>
+
+        <div class="example-title">
+          <h3>テスト: fake deps で service を検証する</h3>
+          <span class="tag">Workers ランタイム不要</span>
+        </div>
+        <pre
+          data-code-title="apps/api/src/services/answer-service.test.ts"
+        ><code class="language-ts">// apps/api/src/services/answer-service.test.ts
+import { expect, it } from 'vitest';
+import { submitAnswer, type AnswerDeps } from './answer-service';
+
+it('正解なら isCorrect=true を返し、SRS を進めて記録する', async () =&gt; {
+  const recorded: Parameters&lt;AnswerDeps['recordAnswer']&gt;[0][] = [];
+  const deps: AnswerDeps = {
+    findAnswerIndex: async () =&gt; 2,
+    findSrsState: async () =&gt; null, // 初見の問題
+    recordAnswer: async (params) =&gt; {
+      recorded.push(params);
+    },
+  };
+
+  const result = await submitAnswer(deps, {
+    userId: 'u1',
+    questionId: 'q1',
+    selectedIndex: 2,
+    now: 0, // 時刻を固定できるのは引数注入にしているから
+  });
+
+  expect(result).toEqual({ isCorrect: true, correctIndex: 2 });
+  expect(recorded[0]?.nextSrs.reps).toBe(1); // initialSrs → 正解 1 回目
+});</code></pre>
+
+        <div class="example-title">
+          <h3>避ける例: route にすべてを書く</h3>
+          <span class="tag">責務が混ざる例</span>
+        </div>
+        <pre
+          data-code-title="避ける例: apps/api/src/routes/answers.ts"
+        ><code class="language-ts">// 避ける: route ハンドラが検証以外のすべて（採点・SRS・SQL）を知っている
+export const answersRoute = new Hono&lt;AppEnv&gt;().post(
+  '/',
+  zValidator('json', answerRequestSchema),
+  async (c) =&gt; {
+    const { questionId, selectedIndex } = c.req.valid('json');
+    const db = drizzle(c.env.DB);
+
+    const question = (
+      await db.select().from(schema.questions)
+        .where(eq(schema.questions.questionId, questionId))
+    )[0];
+    if (!question) return c.json({ error: 'not found' }, 404);
+
+    const isCorrect = question.answerIndex === selectedIndex;
+    const state = (await db.select().from(schema.srsStates) /* ... */)[0] ?? initialSrs();
+    const next = reviewSrs(state, isCorrect, Date.now());
+
+    await db.insert(schema.answerLogs).values({ /* ... */ });  // batch されていない！
+    await db.insert(schema.srsStates).values({ /* ... */ });   // 途中失敗で不整合が残る
+
+    return c.json({ isCorrect, correctIndex: question.answerIndex });
+  },
+);</code></pre>
+        <div class="note">
+          この例には 3 つの問題があります。①採点・SRS
+          のテストに実 DB（workerd）が必須になる、②2 つの書き込みが
+          <code>db.batch</code>
+          にまとまっておらず途中失敗で不整合が残る、③採点ロジックを他の場所（将来の記述式問題など）から再利用できない。<code>services</code>
+          と <code>dal</code> に分けるとこの 3 つが同時に解消されます。
+        </div>
+      </section>
+
+      <section>
+        <h2>テスト戦略（design.md §10.9）</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>対象</th>
+              <th>方法</th>
+              <th>ランタイム</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>SRS（<code>sm2</code>）</td>
+              <td>純粋関数の単体テスト（<strong>実装済み</strong>）</td>
+              <td>Node</td>
+            </tr>
+            <tr>
+              <td>service</td>
+              <td>
+                deps をインメモリ fake
+                に差し替えた単体テスト。採点の正誤・SRS
+                遷移の呼び出し・エラー系（問題未存在）を重点
+              </td>
+              <td>Node</td>
+            </tr>
+            <tr>
+              <td>route + dal</td>
+              <td>
+                <code>@cloudflare/vitest-pool-workers</code>（ローカル D1
+                に対する実クエリ）で happy path を最低 1 本（<code>POST
+                /answers</code> の貫通）
+              </td>
+              <td>workerd</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          service の deps
+          を「フラットな関数の束」にしているのはこのためです。fake
+          は素朴なオブジェクトリテラルで書け、モックライブラリを必要としません。テストのピラミッドは「純粋関数（多）→
+          service（中）→ 実 D1 貫通（少）」の順に薄くなります。
+        </p>
+      </section>
+
+      <section>
+        <h2>フロントエンドとの境界</h2>
+        <p>
+          API 契約は <code>AppType</code>（<code>hc</code> の型安全
+          RPC）と <code>packages/shared/src/schema/api.ts</code>
+          の 2 点で共有され、OpenAPI は使いません。web からの呼び出し経路は
+          <a href="frontend-architecture.html">frontend-architecture.html</a>
+          の「Worker 構成と接続」を参照してください（Server loader は Service
+          Binding、Client hook は公開 URL。どちらも同じ
+          <code>hc&lt;AppType&gt;</code> です）。
+        </p>
+        <div class="note">
+          <span class="callout-title">実装時の注意（design.md §10.10）</span>
+          本資料のコードが前提とする差分：<code>questions</code>
+          テーブルの追加、<code>srs_states</code> の複合主キー
+          <code>(user_id, question_id)</code>、<code>schema/api.ts</code>
+          の新設、wrangler の Worker 名を
+          <code>tech-study-lab-api</code> へ変更（web 側 Service Binding
+          が参照する名前）、<code>vars</code> への
+          <code>WEB_ORIGIN</code> 追加。
+        </div>
+      </section>
+    </main>
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+
+      function escapeHtml(value) {
+        return value
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;");
+      }
+
+      function highlightTypeScript(source) {
+        var patterns = [
+          ["comment", /\/\/[^\n]*/y],
+          ["string", /'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|`(?:\\.|[^`\\])*`/y],
+          ["number", /\b\d+(?:\.\d+)?\b/y],
+          [
+            "keyword",
+            /\b(?:import|from|export|type|function|return|const|let|var|async|await|try|catch|if|else|new|instanceof|throw|class|extends|constructor|super)\b/y,
+          ],
+          ["builtin", /\b(?:Promise|Record|Array|Error|Props|Response|Parameters)\b/y],
+          ["type", /\b[A-Z][A-Za-z0-9_]*\b/y],
+          ["function", /\b[a-zA-Z_$][\w$]*(?=\()/y],
+          ["property", /\b[a-zA-Z_$][\w$]*(?=\s*:)/y],
+          ["operator", /[=+\-*/%!?|&.]+/y],
+          ["punctuation", /[{}[\]();,:]/y],
+        ];
+        var html = "";
+        var index = 0;
+
+        while (index < source.length) {
+          var matched = false;
+          for (var i = 0; i < patterns.length; i += 1) {
+            var name = patterns[i][0];
+            var pattern = patterns[i][1];
+            pattern.lastIndex = index;
+            var match = pattern.exec(source);
+            if (match) {
+              html +=
+                '<span class="token ' +
+                name +
+                '">' +
+                escapeHtml(match[0]) +
+                "</span>";
+              index = pattern.lastIndex;
+              matched = true;
+              break;
+            }
+          }
+          if (!matched) {
+            html += escapeHtml(source[index]);
+            index += 1;
+          }
+        }
+
+        return html;
+      }
+
+      document
+        .querySelectorAll("code.language-ts")
+        .forEach(function (code) {
+          code.innerHTML = highlightTypeScript(code.textContent);
+        });
+
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: "base",
+        securityLevel: "strict",
+        themeVariables: {
+          fontFamily:
+            '-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif',
+          primaryColor: "#eef6ff",
+          primaryBorderColor: "#93c5fd",
+          lineColor: "#6b7280",
+          textColor: "#1f2328",
+        },
+      });
+
+      await mermaid.run({ querySelector: ".mermaid" });
+
+      document.querySelectorAll(".diagram").forEach(function (diagram) {
+        var scale = 1;
+        var svg = diagram.querySelector(".mermaid svg");
+        if (!svg) return;
+
+        function applyScale(nextScale) {
+          scale = Math.min(2, Math.max(0.6, nextScale));
+          svg.style.width = Math.round(scale * 100) + "%";
+          svg.style.maxWidth = "none";
+          svg.style.height = "auto";
+        }
+
+        diagram
+          .querySelectorAll("[data-zoom-action]")
+          .forEach(function (button) {
+            button.addEventListener("click", function () {
+              var action = button.getAttribute("data-zoom-action");
+              if (action === "in") applyScale(scale + 0.2);
+              if (action === "out") applyScale(scale - 0.2);
+              if (action === "reset") applyScale(1);
+            });
+          });
+      });
+    </script>
+  </body>
+</html>

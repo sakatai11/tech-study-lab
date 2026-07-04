@@ -130,6 +130,17 @@ D1 側（content 同期キャッシュ。4.2 の seed/upsert 対象）:
 
 - `questions`: `{ question_id, answer_index }`（`content/` の `answerIndex` を同期。本文・選択肢・解説は持たず、正誤判定に必要な最小フィールドのみ保持。7.2「正誤判定はAPIが権威」の照合元）
 
+### 4.5 出題ルール（SRS 運用仕様）
+
+SM-2 の計算式（`packages/shared/src/srs/sm2.ts`）の周辺で、実装時に判断を迫られるルールをここで確定する。
+
+**前提**：新規問題は学習フロー（教材 → `/quiz`）で必ず解答する。したがって `/review` は解答済み問題（`srs_states` を持つ問題）のみを扱い、SRS のサイクルは初回解答から始まる。
+
+- **SRS 更新の入口は 1 つ**：`POST /answers` は呼び出し元（`/quiz`・`/review`・`wrongOnly`）を区別せず、1 解答ごとに `answer_log` 記録と SRS 更新を必ず行う。演習と復習で採点・記録の仕様差を作らない（API はリクエストの文脈を持たない）。演習（`/quiz`）で正解した問題が SM-2 に従い翌日 due になるのは意図した挙動である。
+- **due queue の順序と上限**：`dueAt` 昇順（滞留が古いものから）。1 回のレスポンスは**最大 20 件**。完了後に残 due があれば `router.refresh()` で次のバッチを取得する（§9.2 の再取得動線と整合）。
+- **同一問題の複数回解答**：制御しない。解答のたびに SRS を更新する（最後の解答が次回出題日を決める）。`answer_logs` には全解答が残るため、事後分析は可能。
+- **正解データの修正**：content の `answerIndex` を修正しても、過去の `answer_logs` は再評価しない（記録時点の判定を保持する）。
+
 ## 5. AI駆動開発の基盤
 
 ### 方針
@@ -193,7 +204,7 @@ D1 側（content 同期キャッシュ。4.2 の seed/upsert 対象）:
 `apps/api`（Hono）に以下を想定。本文はファイル一次ソースのため、API は ID・SRS メタ・集計値のみ返す。
 
 - `POST /answers` — 1 問解答の記録 → SRS 更新。リクエスト `{ questionId, selectedIndex }`、レスポンス `{ isCorrect, correctIndex }`。正誤判定は API が D1 の `questions`（4.4）を照合して行う権威側（7.2）
-- `GET /review/queue` — due 問題の `question_id` ＋ SRS メタを返す（本文はフロントがバンドル済みデータから解決）
+- `GET /review/queue` — due 問題の `question_id` ＋ SRS メタを返す（本文はフロントがバンドル済みデータから解決）。`dueAt` 昇順・最大 20 件（§4.5）
 - `GET /dashboard/due-count` — ダッシュボードの due 件数
 
 ### 7.4 → 第8章へ
@@ -470,20 +481,7 @@ apps/web/src/
 
 #### API 側の DAL 配置
 
-`apps/api` は D1 / Drizzle に直接触るため、必要に応じて `dal/` を置く。Hono route は HTTP 契約、service はユースケース、dal は永続化アクセスに責務を分ける。
-
-```
-apps/api/src/
-├── routes/
-│   ├── answers.ts
-│   └── review.ts
-├── services/
-│   ├── answer-service.ts
-│   └── srs-service.ts
-└── dal/
-    ├── answer-log-repository.ts
-    └── srs-state-repository.ts
-```
+`apps/api` は D1 / Drizzle に直接触るため、`dal/` を置く。Hono route は HTTP 契約、service はユースケース、dal は永続化アクセスに責務を分ける。具体的なディレクトリ構成・各層の責務・コード例は **第10章（バックエンドアーキテクチャ）** で確定する。
 
 ### 9.4 共通パターンと例
 
@@ -683,6 +681,436 @@ apps/web/src/features/
 
 ViewModel・mapper は feature ごとに独立させ、同じ DTO の使い方が feature ごとに異なることを認める。`apps/web/src/features/shared` は共通 ViewModel を持つ場所ではなく、`contentQuestionToQuizQuestion` のような小さい純粋変換だけを置く場所とする。
 
-### 9.8 次回の実装テーマ
+### 9.8 → 第10章へ
 
-本章でデータフロー（Content data / API DTO → Mapper → ViewModel → page）を確定した。次回は実装フェーズ：Walking Skeleton（`セキュリティ > XSS > 教材1本 + 4択3問`、第6章）を、第8章の構成（8.1〜8.7）・本章のデータフロー（9.1〜9.7）に沿って縦に 1 本貫通させる。
+本章でフロントエンドのデータフロー（Content data / API DTO → Mapper → ViewModel → page）を確定した。API 側（`apps/api`）の内部構造（How）は **第10章** で確定する。その後の実装フェーズでは、Walking Skeleton（`セキュリティ > XSS > 教材1本 + 4択3問`、第6章）を第8〜10章の設計に沿って縦に 1 本貫通させる。
+
+## 10. バックエンドアーキテクチャ（How）
+
+第7.3章で API の契約（What）を定義した。本章は `apps/api`（Hono / Cloudflare Workers）の内部をどう構造化して実装するか（How）を確定する。設計哲学は本書全体と同じ：**`packages/shared` を単一ソース**・**純粋ロジックと副作用の分離**・**Workers 制約を前提**。
+
+バックエンドアーキテクチャのフロー図と各層の責務は、補助資料として [`docs/backend-architecture.html`](./backend-architecture.html) に整理する。本章を一次ソースとし、補助資料は実装時に参照しやすい形へ再構成したものとする。
+
+### 10.1 全体方針：軽量レイヤードアーキテクチャ
+
+**route → service → dal の 3 層**に分ける（§9.3 で予告した構成の確定）。依存方向は一方向のみ：`routes → services → dal →（D1）`。逆方向の import は禁止。`packages/shared` はどの層からも参照してよい。
+
+| 層 | 責務 | 依存してよいもの |
+| --- | --- | --- |
+| **route**（`routes/`） | HTTP 契約。パス・メソッド・`zValidator` による入力検証・ステータスコード・レスポンス整形。ビジネスロジックを書かない | Hono / service / dal（deps 生成のみ） |
+| **service**（`services/`） | ユースケース。「採点 → 記録 → SRS 更新」のような業務手順の一連。**Hono・D1・Drizzle の型に依存しない純 TS** | shared（`sm2` 等）/ 自身が定義する deps 型 |
+| **dal**（`dal/`） | 永続化アクセス。Drizzle クエリの置き場。SQL 的関心事（upsert・batch）をここに閉じ込める | Drizzle / shared の db schema |
+
+**採用しないもの（過剰設計の回避）**：
+
+- DI コンテナ・デコレータ注入 → **関数引数による明示的な依存渡し**で足りる
+- クリーンアーキテクチャ流の ports/adapters ディレクトリ分離 → 「service が deps 型（interface）を定義し、dal がそれを実装する」という import 方向ルールだけで同じ効果を得る
+- OpenAPI スキーマ生成 → `hc`（`AppType`）が型契約を担うため不要（§8.4）
+
+エンドポイント 3 本（§7.3）の規模で抽象を増やすと、AI 駆動開発のレビュー可能性がむしろ下がる。層の責務と依存方向が守られていれば十分とする。
+
+### 10.2 ディレクトリ構成
+
+```
+apps/api/
+├── src/
+│   ├── index.ts                 # エントリ。middleware 適用・ルート合成・AppType エクスポート
+│   ├── client.ts                # hc クライアントファクトリ（既存）
+│   ├── env.ts                   # Bindings（D1 / vars）・Variables（userId）の型定義
+│   ├── middleware/
+│   │   └── user-context.ts      # 固定 user_id の権威的注入（§7.2。将来は認証実装に差し替え）
+│   ├── routes/
+│   │   ├── answers.ts           # POST /answers
+│   │   ├── review.ts            # GET /review/queue
+│   │   └── dashboard.ts         # GET /dashboard/due-count
+│   ├── services/
+│   │   ├── answer-service.ts    # 採点 → 記録 → SRS 更新のユースケース
+│   │   ├── review-service.ts    # due 問題の収集・件数集計
+│   │   └── errors.ts            # ドメインエラー（QuestionNotFoundError 等）
+│   └── dal/
+│       ├── answer-repository.ts # AnswerDeps 実装（questions 照合・srs 取得・batch 書き込み）
+│       └── review-repository.ts # ReviewDeps 実装（due queue・due count）
+└── scripts/
+    └── sync-content.ts          # content/ → D1 seed/upsert（§10.8）
+```
+
+- **dal はテーブル単位ではなくユースケース単位**で置く。「service が要求する deps 型」を 1 ファイルで実装する形にすると、service ⇔ dal の対応が 1:1 で追いやすく、テーブル単位 repository の細切れ合成（と、それを束ねる工数）を避けられる。テーブル単位の共有が必要になった時点で分割する。
+
+### 10.3 リクエストの流れ（`POST /answers` を例に）
+
+Walking Skeleton の中核となる 1 リクエストの処理フロー：
+
+```
+zValidator（shared の answerRequestSchema で入力検証）
+  → userId を context から取得（§10.4 の middleware が注入済み）
+  → services/answer-service の submitAnswer(deps, input)
+      1. questions（content 同期キャッシュ §4.4）から answerIndex を取得
+         → 無ければ QuestionNotFoundError
+      2. isCorrect = answerIndex === selectedIndex（採点権威は API §7.2）
+      3. 現在の srs_state を取得（無ければ initialSrs()）
+      4. reviewSrs(state, isCorrect, now) で次状態を算出（純粋関数 @tsl/shared）
+      5. answer_log 挿入 ＋ srs_state upsert を db.batch で原子的に書き込み
+  → { isCorrect, correctIndex } を JSON で返す
+```
+
+```typescript
+// services/answer-service.ts — Hono・D1・Drizzle に依存しない純 TS
+import { initialSrs, reviewSrs, type SrsInput, type SrsResult } from '@tsl/shared'
+import { QuestionNotFoundError } from './errors'
+
+// service が要求する依存（deps）。フラットな関数の束にし、テストでは素朴な fake で差し替える
+export type AnswerDeps = {
+  findAnswerIndex(questionId: string): Promise<number | null>
+  findSrsState(userId: string, questionId: string): Promise<SrsInput | null>
+  recordAnswer(params: {
+    userId: string
+    questionId: string
+    isCorrect: boolean
+    answeredAt: number
+    nextSrs: SrsResult
+  }): Promise<void>
+}
+
+export type SubmitAnswerInput = {
+  userId: string
+  questionId: string
+  selectedIndex: number
+  now: number  // 時刻は service 内で取得せず引数注入（sm2 と同じ設計。テストで固定できる）
+}
+
+export async function submitAnswer(deps: AnswerDeps, input: SubmitAnswerInput) {
+  const answerIndex = await deps.findAnswerIndex(input.questionId)
+  if (answerIndex === null) throw new QuestionNotFoundError(input.questionId)
+
+  const isCorrect = answerIndex === input.selectedIndex
+  const current =
+    (await deps.findSrsState(input.userId, input.questionId)) ?? initialSrs()
+  const nextSrs = reviewSrs(current, isCorrect, input.now)
+
+  await deps.recordAnswer({
+    userId: input.userId,
+    questionId: input.questionId,
+    isCorrect,
+    answeredAt: input.now,
+    nextSrs,
+  })
+
+  return { isCorrect, correctIndex: answerIndex }
+}
+```
+
+```typescript
+// routes/answers.ts — HTTP 契約のみ。ロジックは service へ委譲
+import { Hono } from 'hono'
+import { zValidator } from '@hono/zod-validator'
+import { drizzle } from 'drizzle-orm/d1'
+import { answerRequestSchema, type AnswerResponse } from '@tsl/shared'
+import type { AppEnv } from '../env'
+import { createAnswerDeps } from '../dal/answer-repository'
+import { submitAnswer } from '../services/answer-service'
+
+export const answersRoute = new Hono<AppEnv>().post(
+  '/',
+  zValidator('json', answerRequestSchema),
+  async (c) => {
+    const { questionId, selectedIndex } = c.req.valid('json')
+    const result = await submitAnswer(createAnswerDeps(drizzle(c.env.DB)), {
+      userId: c.get('userId'),
+      questionId,
+      selectedIndex,
+      now: Date.now(),
+    })
+    return c.json(result satisfies AnswerResponse)
+  },
+)
+```
+
+```typescript
+// dal/answer-repository.ts — Drizzle・db.batch をここに閉じ込める
+import { and, eq } from 'drizzle-orm'
+import type { DrizzleD1Database } from 'drizzle-orm/d1'
+import { db as schema } from '@tsl/shared'
+import type { AnswerDeps } from '../services/answer-service'
+
+export function createAnswerDeps(db: DrizzleD1Database): AnswerDeps {
+  return {
+    async findAnswerIndex(questionId) { /* questions を select */ },
+    async findSrsState(userId, questionId) { /* srs_states を select */ },
+    async recordAnswer(p) {
+      await db.batch([
+        db.insert(schema.answerLogs).values({ id: crypto.randomUUID(), /* ... */ }),
+        db.insert(schema.srsStates).values({ /* ... */ }).onConflictDoUpdate({
+          target: [schema.srsStates.userId, schema.srsStates.questionId],
+          set: { /* nextSrs の各値 */ },
+        }),
+      ])
+    },
+  }
+}
+```
+
+`GET /review/queue`・`GET /dashboard/due-count` も同型（route → `review-service` → `review-repository`）。due 判定は `dueAt <= now` を SQL の where 句で行い、`isDue`（sm2）と意味を一致させる。
+
+### 10.4 user_id の権威的注入（middleware）
+
+§7.2 の「API が固定 `user_id` を権威的に注入する」を Hono middleware として実体化する。
+
+```typescript
+// middleware/user-context.ts
+import { createMiddleware } from 'hono/factory'
+import type { AppEnv } from '../env'
+
+const FIXED_USER_ID = 'user-local-001'
+
+// 将来公開時は、この middleware を「認証情報から userId を解決する実装」に
+// 差し替えるだけ。route・service・API 契約は不変（§7.2）
+export const userContext = createMiddleware<AppEnv>(async (c, next) => {
+  c.set('userId', FIXED_USER_ID)
+  await next()
+})
+```
+
+- route・service は `userId` を「middleware が保証済みの値」として受け取るだけにし、固定値の知識を `user-context.ts` の 1 箇所に閉じ込める。
+- クライアントから送られた `user_id` は**一切信用しない**（リクエストボディにも含めない。§7.3 の契約に `userId` が無いのはこのため）。
+
+### 10.5 Hono アプリの合成と `AppType`
+
+```typescript
+// env.ts
+export type Bindings = {
+  DB: D1Database
+  WEB_ORIGIN: string  // CORS 許可オリジン（wrangler.toml の vars で環境ごとに設定）
+}
+export type Variables = {
+  userId: string
+}
+export type AppEnv = { Bindings: Bindings; Variables: Variables }
+```
+
+```typescript
+// index.ts — middleware 適用・ルート合成・AppType エクスポート
+const app = new Hono<AppEnv>()
+
+// CORS はブラウザ経路（§3.1）用。Service Binding 経由の呼び出しには関与しない。
+// 許可オリジンは env から解決するため、ハンドラ内で cors() を生成して適用する
+app.use('*', async (c, next) => cors({ origin: c.env.WEB_ORIGIN })(c, next))
+app.use('*', userContext)
+app.onError(errorHandler)  // §10.6
+
+const routes = app
+  .get('/health', (c) => c.json({ status: 'ok' as const }))
+  .route('/answers', answersRoute)
+  .route('/review', reviewRoute)
+  .route('/dashboard', dashboardRoute)
+
+export type AppType = typeof routes
+export default app
+```
+
+- **`hc` の型推論を保つため、ルート定義はメソッドチェーンで書く**。各サブルーターは `new Hono<AppEnv>().post(...)` のチェーンで定義・export し、`index.ts` では `.route()` のチェーンで合成する。チェーンを分断（`app.post(...)` を文として並べる等）すると `AppType` からエンドポイント型が消える。
+- パス設計は §7.3 の契約（`POST /answers`・`GET /review/queue`・`GET /dashboard/due-count`）をそのまま `.route()` のプレフィックス＋サブルーター内パスで構成する。
+
+### 10.6 バリデーション・DTO・エラー処理
+
+**入出力スキーマは `packages/shared/src/schema/api.ts` に新設**する（§9.3 で予告済み）。同一スキーマを「API 入力の `zValidator`」「route 返り値の契約固定（`satisfies`）」「フロントの型（`z.infer`）」の 3 経路で共有する（§8.6 と同じパターン）。
+
+```typescript
+// packages/shared/src/schema/api.ts（抜粋）
+export const answerRequestSchema = z.object({
+  questionId: z.string().min(1),
+  selectedIndex: z.number().int().min(0).max(5),  // choices は最大6（schema/content と整合）
+})
+export type AnswerRequest = z.infer<typeof answerRequestSchema>
+
+export const answerResponseSchema = z.object({
+  isCorrect: z.boolean(),
+  correctIndex: z.number().int().nonnegative(),
+})
+export type AnswerResponse = z.infer<typeof answerResponseSchema>
+
+export const reviewQueueResponseSchema = z.object({
+  items: z.array(z.object({ questionId: z.string().min(1), dueAt: z.number().int() })),
+})
+export const dueCountResponseSchema = z.object({
+  dueCount: z.number().int().nonnegative(),
+})
+```
+
+**エラー処理の方針**：
+
+- service は **HTTP を知らないドメインエラー**（`services/errors.ts` の `QuestionNotFoundError` 等）を throw する。
+- route 層の `app.onError` がドメインエラーを HTTP ステータスへ写像し、レスポンス形を `{ error: { code, message } }` に統一する。未知のエラーは 500（`INTERNAL`）とし、詳細メッセージを外に漏らさない。
+
+```typescript
+// index.ts（抜粋）
+app.onError((err, c) => {
+  if (err instanceof QuestionNotFoundError) {
+    return c.json({ error: { code: 'QUESTION_NOT_FOUND', message: err.message } }, 404)
+  }
+  console.error(err)  // Workers Logs で観測
+  return c.json({ error: { code: 'INTERNAL', message: 'Internal Server Error' } }, 500)
+})
+```
+
+- `zValidator` の検証失敗（400）はデフォルト挙動のまま使う（MVP）。フロントは `requestJson`（§8.4）が `res.ok` で弾くため、エラーボディの形に依存しない。
+
+### 10.7 D1 の整合性と書き込み
+
+- **D1 は対話型トランザクション（`BEGIN`〜`COMMIT` を複数往復で跨ぐ形）をサポートしない**。複数文の原子的書き込みは `db.batch([...])` を使う。`POST /answers` の「`answer_log` 挿入＋`srs_state` upsert」は必ず 1 batch にまとめる（片方だけ書けた状態を作らない）。
+- 「読み（現 SRS 状態）→ 計算 → 書き」の間に別リクエストが割り込む競合は、単一ユーザー MVP では許容する（同一問題への同時解答は実運用上起きない）。将来マルチユーザー化しても user 単位で直列なら問題にならない。
+- `srs_states` は `(user_id, question_id)` の**複合主キー**とし、upsert は `onConflictDoUpdate` で書く。
+- Drizzle インスタンスは route ハンドラ内で `drizzle(c.env.DB)` を生成して dal へ渡す（リクエストスコープ。グローバルに保持しない）。
+
+### 10.8 content → D1 同期スクリプト
+
+§4.2 の seed/upsert を `apps/api/scripts/sync-content.ts`（`pnpm --filter @tsl/api content:sync`）として実装する。
+
+- **パース経路は §8.2 と共有**：`gray-matter` でパースし `packages/shared` の content Zod（`validatedMcqSchema` 含む）で検証する。フロントのビルド時バンドルと同じ検証を通った内容だけが D1 に入る。
+- 同期対象は `questions` テーブルの**最小フィールドのみ**（`question_id`, `answer_index`。§4.4）。本文・選択肢・解説は D1 に入れない。
+- 検証済みデータから upsert SQL（`INSERT ... ON CONFLICT(question_id) DO UPDATE`）を生成し、`wrangler d1 execute`（ローカルは `--local`、本番は `--remote`）で流す。**冪等**（何度実行しても同じ結果）にする。
+- 固定ユーザー行（`users`）の seed も同スクリプトで行う（`user-context.ts` の `FIXED_USER_ID` と同じ値）。
+- content から削除された問題は**物理削除しない**（`answer_logs`・`srs_states` が参照するため）。出題対象からは自然に外れる（フロントのバンドルに含まれず、due queue の join でも解決されない）。整理が必要になったら論理削除フラグを検討する。
+- 実行タイミング：ローカル開発では手動、本番はデプロイフロー（CI）に組み込む。
+
+### 10.9 テスト戦略
+
+§5 のガードレール方針を API の各層に割り当てる。
+
+| 対象 | 方法 | ランタイム |
+| --- | --- | --- |
+| SRS（`sm2`） | 純粋関数の単体テスト（**実装済み**） | Node |
+| service | deps をインメモリ fake に差し替えた単体テスト。採点の正誤・SRS 遷移の呼び出し・エラー系（問題未存在）を重点 | Node |
+| route + dal | `@cloudflare/vitest-pool-workers`（ローカル D1 に対する実クエリ）で happy path を最低 1 本（`POST /answers` の貫通） | workerd |
+
+- service の deps を「フラットな関数の束」（§10.3）にしているのはこのため。fake は素朴なオブジェクトリテラルで書け、モックライブラリを要しない。
+
+```typescript
+// services/answer-service.test.ts（fake deps の例）
+const recorded: unknown[] = []
+const deps: AnswerDeps = {
+  findAnswerIndex: async () => 2,
+  findSrsState: async () => null,
+  recordAnswer: async (p) => { recorded.push(p) },
+}
+const result = await submitAnswer(deps, {
+  userId: 'u1', questionId: 'q1', selectedIndex: 2, now: 0,
+})
+// → result.isCorrect === true、recorded[0].nextSrs.reps === 1 などを検証
+```
+
+### 10.10 既存コードとの差分（本章から発生する実装タスク）
+
+- `packages/shared/src/db/schema.ts`：`questions` テーブル（§4.4 の content 同期キャッシュ）を追加。`srs_states` に複合主キー `(user_id, question_id)` を追加
+- `packages/shared/src/schema/api.ts`：新設（§10.6）
+- `apps/api/wrangler.toml`：`name` を `tech-study-lab-api` へ変更（web Worker と区別する。§3.1 の Service Binding が参照する `service` 名になる）。`vars` に `WEB_ORIGIN` を追加
+- `apps/api/src/`：`env.ts` / `middleware/` / `routes/` / `services/` / `dal/` を §10.2 の構成で新設し、`index.ts` をルート合成形へ書き換え
+- `apps/api/scripts/sync-content.ts`：新設（§10.8。package.json の `content:sync` は定義済み）
+
+### 10.11 将来拡張ポイント
+
+- **認証**：`user-context.ts` の差し替えのみ（§10.4）。API 契約・層構造は不変
+- **バッチ処理**（due 通知・統計集計等）：`apps/api` の wrangler 設定に Cron Triggers を追加する。web と Worker を分離した §3.1 の利点がここで効く
+- **記述式・コード問題**（§4.3）：shared の `questionSchema`（discriminated union）に type を追加 → `answer-service` の採点分岐を追加。route の契約は `question.type` に応じたリクエストスキーマ拡張で対応
+
+## 11. コンテンツ規約
+
+`content/` 配下の物理的な決め事。第4章のデータモデル（論理）を、ファイルシステム上の規約（物理）に落とす。**教材を 1 本書く前に確定しておくべき事項**をここに集約する。
+
+### 11.1 ファイル配置
+
+```
+content/
+├── security/                   # domain（domainKeySchema のキーと一致）
+│   └── xss/                    # topic（トピックキー）
+│       ├── index.md            # トピックのメタ情報＋概要文
+│       └── security-xss-01.md  # レッスン（ファイル名 = lessonId）
+```
+
+- ディレクトリ階層は §4.1 のコンテンツ階層（domain > topic > lesson）をそのまま写す。
+- **ファイル名 = lessonId**。frontmatter の `domain` / `topic` はディレクトリパスと一致していなければならない。
+- パス⇔frontmatter⇔ID の整合は、ビルド時パース（§8.2）と `content:sync`（§10.8）の**両方で検証し、不一致はビルド失敗**にする。AI が教材を追加・改訂する際のガードレール（§5）として機能させる。
+
+### 11.2 ID 命名規則
+
+| ID | 形式 | 例 |
+| --- | --- | --- |
+| lessonId | `<domain>-<topic>-<連番2桁>` | `security-xss-01` |
+| questionId | `<lessonId>-q<連番>` | `security-xss-01-q1` |
+
+- 使用文字は小文字英数とハイフンのみ（`^[a-z0-9-]+$`）。
+- **一度 `answer_logs` / `srs_states` に記録された ID は変更しない（不変）**。ID を変えると学習履歴・SRS 状態が切れる。
+- 誤字修正・解説の改善など**意味が変わらない改訂は同一 ID のまま**行う。問題の意味が変わる改訂は**新しい questionId で追加**し、旧問題は content から削除する（D1 側は物理削除しない。§10.8）。
+- トピック内のレッスン並び順は lessonId の連番で決める（別途 `order` フィールドは持たない。並び替えが必要になった時点で追加を検討）。
+
+### 11.3 表示名（ラベル）の持ち場所
+
+キー（`security` / `xss`）は識別子であり、画面表示用の日本語ラベルとは分離する。
+
+| 対象 | 持ち場所 | 理由 |
+| --- | --- | --- |
+| domain のラベル・並び順 | `packages/shared` の定数マップ（`DOMAIN_LABELS: Record<DomainKey, { label, order }>`） | 4 領域で固定（Zod enum と同じ場所で単一ソース化） |
+| topic のラベル・並び順・概要文 | `content/<domain>/<topic>/index.md`（frontmatter: `{ topic, title, order }`、本文: 概要文） | コンテンツと一緒に増えるため content 側で管理。概要文はレッスン一覧ページの説明に使う |
+| lesson のタイトル | レッスン frontmatter の `title`（既存どおり） | — |
+
+### 11.4 実装タスク
+
+- `packages/shared/src/schema/content.ts`：topic index 用の Zod（`topicFrontmatterSchema`）と、lessonId / questionId の形式検証（regex・`questionId` が `lessonId` を接頭辞に持つこと）を追加
+- `packages/shared`：`DOMAIN_LABELS` を追加
+- ビルド時パース（§8.2）と `content:sync`（§10.8）：パス⇔frontmatter⇔ID の整合検証を実装
+
+## 12. 環境・デプロイ
+
+### 12.1 環境定義
+
+**local / production の 2 環境のみ**。preview 環境（PR ごとのデプロイ等）は将来検討とする。
+
+### 12.2 環境変数・バインディング一覧
+
+§3.1 / §8.4 / §10.5 に散在していた設定値の単一の一覧。**設定値をコードにハードコードしない**（§8.4）。
+
+| 名前 | 種別 | 参照箇所 | local | production |
+| --- | --- | --- | --- | --- |
+| `DB` | D1 バインディング（api） | dal（Drizzle） | `wrangler dev` のローカル D1 | `apps/api/wrangler.toml` の `d1_databases`（要実 ID。§12.4） |
+| `WEB_ORIGIN` | var（api） | CORS 許可オリジン（§10.5） | `http://localhost:3000` | web Worker の公開 URL |
+| `API` | Service Binding（web） | Server loader（§3.1・§8.4） | なし（URL フォールバック） | `services: [{ binding: "API", service: "tech-study-lab-api" }]` |
+| `API_BASE_URL` | env（web / Server 専用） | Server loader のフォールバック（§8.4） | `http://localhost:8787` | 設定しない（Service Binding を優先） |
+| `NEXT_PUBLIC_API_BASE_URL` | ビルド時 env（web / Client） | Client hook（§8.4） | `http://localhost:8787` | api Worker の公開 URL |
+
+### 12.3 ローカル開発手順
+
+1. `pnpm install`
+2. `pnpm --filter @tsl/api db:migrate:local`（初回・スキーマ変更時）
+3. content sync のローカル実行（初回・content 変更時。§10.8）
+4. `pnpm --filter @tsl/api dev`（`:8787`）と `pnpm --filter @tsl/web dev`（`:3000`）を並走
+
+### 12.4 本番デプロイ手順（順序が仕様）
+
+初回のみ：`wrangler d1 create tech-study-lab` を実行し、発行された `database_id` を `apps/api/wrangler.toml` に設定する。
+
+1. **マイグレーション適用**：`wrangler d1 migrations apply tech-study-lab --remote`
+2. **content sync**：`content/` → D1 upsert（`--remote`。§10.8）
+3. **api デプロイ**：`pnpm --filter @tsl/api deploy`
+4. **web デプロイ**：OpenNext ビルド＋デプロイ
+
+順序の根拠：**スキーマ → データ → API → 画面** の順なら、各ステップの完了時点で稼働中の旧バージョンが壊れない（マイグレーションが追加中心の後方互換であることが前提。§12.6）。
+
+- MVP は**手動実行**とする。Walking Skeleton 貫通後に GitHub Actions による main ブランチ自動デプロイへ移行する（PR ゲート CI ＝型・lint・test・build は §5 のとおり先行整備）。
+
+### 12.5 content 更新の運用ルール
+
+content は「web のビルド時バンドル（§8.2）」と「D1 の `questions` 同期（§10.8）」の**二重反映**である。
+
+- content を変更したら、§12.4 の **② content sync と ④ web 再ビルド・デプロイを必ずセットで実行**する。
+- 片方だけ実行すると「画面に問題が表示されるのに採点 API が `QUESTION_NOT_FOUND` を返す」不整合が起きる。
+- CI 化の際は `content/` の差分を検知して両ジョブを必須にする。
+
+### 12.6 マイグレーション運用
+
+- 生成：`pnpm --filter @tsl/api db:generate`（drizzle-kit）→ ローカル適用（`db:migrate:local`）→ テスト → PR。
+- 本番適用はデプロイ手順の先頭（§12.4 の①）。
+- **破壊的変更（列削除・型変更・NOT NULL 追加）は原則避け、追加中心**とする。やむを得ない場合は「新列追加 → データ移行 → 旧列削除」の多段リリースで行う。
+
+### 12.7 バックアップ・観測（当面の割り切り）
+
+- **バックアップ**：教材・問題は Git にあるため、守る対象は D1 の `answer_logs` / `srs_states` のみ。当面は必要時に `wrangler d1 export` を手動実行し、マルチユーザー公開時に定期化（Cron 等）を検討する。
+- **観測**：Workers Logs（`console.error`。§10.6 の `onError` から出力）で足りるとする。構造化ログ・外部監視は公開時に再検討。
