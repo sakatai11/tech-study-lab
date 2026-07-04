@@ -321,6 +321,44 @@
 <li>フロント ⇔ API は Hono の <code>hc</code>（型安全RPC）で接続。</li>
 <li>Drizzle スキーマと Zod スキーマを <code>packages/shared</code> に集約し、フロント・API・DBで単一ソース化する。</li>
 </ul>
+<h3>3.1 Worker 構成と接続（決定）</h3>
+<p><code>apps/web</code>（OpenNext）と <code>apps/api</code>（Hono）は<strong>別 Worker としてデプロイする</strong>。Next.js の Route Handler 上に Hono を載せる同居構成（<code>app/api/[[...route]]/route.ts</code> + <code>handle()</code>）は採用しない。</p>
+<p><strong>別 Worker を採る理由</strong>：</p>
+<ul>
+<li><code>apps/api</code> が自身の wrangler 設定を完全所有できる。D1 マイグレーションや将来の Cron Triggers / Queues 等の Workers プラットフォーム機能を、OpenNext が生成する web 側の wrangler 設定・Next.js ビルドに巻き込まずに使える。デプロイも独立する（API の変更に Next.js ビルドが不要）。</li>
+<li>同居構成ではリクエストが「Next.js ルーター → Route Handler → Hono ルーター」の二段になり、Next middleware と Hono middleware の責務境界が濁る。なお Hono の RPC・<code>zValidator</code>・middleware 自体は Route Handler 内でも動くため、失うのは Hono の機能ではなく Workers との直結と独立性である。</li>
+<li>既存の設計判断と整合する：§8.3 のキャッシュ方針は「mutation（<code>POST /answers</code>）が Next.js のサーバーコンテキストを経由しない」ことを前提とし、§7.2 の採点権威・<code>user_id</code> 注入点も API 側にある。API 契約（<code>AppType</code>）を <code>apps/api</code> に一本化する §5 のガードレールとも噛み合う。</li>
+<li>Hono + Cloudflare を学ぶドッグフーディング目的（§2）を素通りしない。</li>
+</ul>
+<p><strong>接続経路</strong>（<code>hc</code> クライアント側の取り回しは §8.4）：</p>
+<table>
+<thead>
+<tr>
+<th>呼び出し元</th>
+<th>経路</th>
+<th>備考</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Server loader（web Worker 内）</td>
+<td><strong>Service Binding</strong>（<code>env.API</code>）</td>
+<td>Worker 間の内部呼び出し。公衆インターネットを経由せず、CORS 不要</td>
+</tr>
+<tr>
+<td>Client hook（ブラウザ）</td>
+<td>API Worker の公開 URL</td>
+<td>当面は Hono の <code>cors()</code> で web オリジンのみ許可。将来カスタムドメイン導入時は同一ゾーンのルート割当（<code>example.com/api/*</code> → API Worker）で同一オリジン化し、CORS 設定を撤去する</td>
+</tr>
+<tr>
+<td>ローカル開発</td>
+<td>URL（<code>http://localhost:8787</code>）</td>
+<td><code>next dev</code> と <code>wrangler dev</code> を並走させ、env の URL にフォールバック</td>
+</tr>
+</tbody></table>
+<ul>
+<li>web 側の wrangler 設定に <code>services: [{ "binding": "API", "service": "&lt;API Worker 名&gt;" }]</code> を宣言し、Server 側の <code>hc</code> には <code>getCloudflareContext().env.API.fetch</code> をカスタム <code>fetch</code> として渡す。</li>
+<li>Service Binding 経由でも <code>hc&lt;AppType&gt;</code> の型安全 RPC はそのまま維持される（差し替わるのは fetch 実装のみで、パス・メソッド・型は不変。baseURL のホスト名はダミーでよい）。</li>
+</ul>
 <h2>4. データモデル</h2>
 <h3>4.1 コンテンツ階層</h3>
 <pre><code>領域（domain）
@@ -515,8 +553,12 @@
 </ul>
 <h3>8.4 <code>hc</code> クライアントの取り回し</h3>
 <ul>
-<li><code>apps/api</code> が <code>AppType</code> をエクスポート → <code>apps/web</code> は <code>hc&lt;AppType&gt;</code> で型安全クライアントを生成（既存 <code>apps/api/src/client.ts</code> のファクトリを利用）。</li>
-<li><code>apps/web/src/lib/api.ts</code> に<strong>クライアント生成を集約</strong>。baseURL は env（Workers バインディング / 環境変数）から解決し、ハードコードしない。</li>
+<li><code>apps/api</code> が <code>AppType</code> をエクスポート → <code>apps/web</code> は <code>hc&lt;AppType&gt;</code> で型安全クライアントを生成（既存 <code>apps/api/src/client.ts</code> のファクトリを利用。Service Binding の fetch を渡せるよう、ファクトリは <code>hc</code> の第2引数（<code>fetch</code> オプション等）を受け取れる形に拡張する）。</li>
+<li><code>apps/web/src/lib/api.ts</code> に<strong>クライアント生成を集約</strong>し、§3.1 の接続経路に対応する 2 系統を分ける。baseURL は env（Workers バインディング / 環境変数）から解決し、ハードコードしない。<ul>
+<li><code>createServerApiClient</code>：Server loader 用。本番は Service Binding（<code>getCloudflareContext().env.API.fetch</code> を <code>hc</code> のカスタム <code>fetch</code> に渡す）、ローカル開発は env の URL にフォールバック。</li>
+<li><code>createBrowserApiClient</code>：Client hook 用。env から解決した API Worker の公開 baseURL を使う。</li>
+</ul>
+</li>
 <li>feature の <code>api/</code> は <code>hc</code> の path・method 呼び出しを薄く包む。server / client 両方から使うため、<code>server-only</code>・cookies・headers・秘密情報など環境専用処理を入れない。</li>
 <li><code>res.ok</code> チェックと <code>res.json()</code> 変換は <code>apps/web/src/lib/api-response.ts</code> の <code>requestJson</code> に共通化する。feature の <code>api/</code> は path・method・引数・エラーメッセージだけを持つ。</li>
 <li><code>hc</code> の path 呼び出し自体は文字列パスの汎用 fetch に置き換えない。<code>client.review.queue.$get()</code> のような endpoint ごとの wrapper を残すことで、Hono RPC の型推論を維持する。</li>

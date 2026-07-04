@@ -63,6 +63,28 @@ tech-study-lab/
 - フロント ⇔ API は Hono の `hc`（型安全RPC）で接続。
 - Drizzle スキーマと Zod スキーマを `packages/shared` に集約し、フロント・API・DBで単一ソース化する。
 
+### 3.1 Worker 構成と接続（決定）
+
+`apps/web`（OpenNext）と `apps/api`（Hono）は**別 Worker としてデプロイする**。Next.js の Route Handler 上に Hono を載せる同居構成（`app/api/[[...route]]/route.ts` + `handle()`）は採用しない。
+
+**別 Worker を採る理由**：
+
+- `apps/api` が自身の wrangler 設定を完全所有できる。D1 マイグレーションや将来の Cron Triggers / Queues 等の Workers プラットフォーム機能を、OpenNext が生成する web 側の wrangler 設定・Next.js ビルドに巻き込まずに使える。デプロイも独立する（API の変更に Next.js ビルドが不要）。
+- 同居構成ではリクエストが「Next.js ルーター → Route Handler → Hono ルーター」の二段になり、Next middleware と Hono middleware の責務境界が濁る。なお Hono の RPC・`zValidator`・middleware 自体は Route Handler 内でも動くため、失うのは Hono の機能ではなく Workers との直結と独立性である。
+- 既存の設計判断と整合する：§8.3 のキャッシュ方針は「mutation（`POST /answers`）が Next.js のサーバーコンテキストを経由しない」ことを前提とし、§7.2 の採点権威・`user_id` 注入点も API 側にある。API 契約（`AppType`）を `apps/api` に一本化する §5 のガードレールとも噛み合う。
+- Hono + Cloudflare を学ぶドッグフーディング目的（§2）を素通りしない。
+
+**接続経路**（`hc` クライアント側の取り回しは §8.4）：
+
+| 呼び出し元 | 経路 | 備考 |
+| --- | --- | --- |
+| Server loader（web Worker 内） | **Service Binding**（`env.API`） | Worker 間の内部呼び出し。公衆インターネットを経由せず、CORS 不要 |
+| Client hook（ブラウザ） | API Worker の公開 URL | 当面は Hono の `cors()` で web オリジンのみ許可。将来カスタムドメイン導入時は同一ゾーンのルート割当（`example.com/api/*` → API Worker）で同一オリジン化し、CORS 設定を撤去する |
+| ローカル開発 | URL（`http://localhost:8787`） | `next dev` と `wrangler dev` を並走させ、env の URL にフォールバック |
+
+- web 側の wrangler 設定に `services: [{ "binding": "API", "service": "<API Worker 名>" }]` を宣言し、Server 側の `hc` には `getCloudflareContext().env.API.fetch` をカスタム `fetch` として渡す。
+- Service Binding 経由でも `hc<AppType>` の型安全 RPC はそのまま維持される（差し替わるのは fetch 実装のみで、パス・メソッド・型は不変。baseURL のホスト名はダミーでよい）。
+
 ## 4. データモデル
 
 ### 4.1 コンテンツ階層
@@ -234,8 +256,10 @@ apps/web/src/
 
 ### 8.4 `hc` クライアントの取り回し
 
-- `apps/api` が `AppType` をエクスポート → `apps/web` は `hc<AppType>` で型安全クライアントを生成（既存 `apps/api/src/client.ts` のファクトリを利用）。
-- `apps/web/src/lib/api.ts` に**クライアント生成を集約**。baseURL は env（Workers バインディング / 環境変数）から解決し、ハードコードしない。
+- `apps/api` が `AppType` をエクスポート → `apps/web` は `hc<AppType>` で型安全クライアントを生成（既存 `apps/api/src/client.ts` のファクトリを利用。Service Binding の fetch を渡せるよう、ファクトリは `hc` の第2引数（`fetch` オプション等）を受け取れる形に拡張する）。
+- `apps/web/src/lib/api.ts` に**クライアント生成を集約**し、§3.1 の接続経路に対応する 2 系統を分ける。baseURL は env（Workers バインディング / 環境変数）から解決し、ハードコードしない。
+  - `createServerApiClient`：Server loader 用。本番は Service Binding（`getCloudflareContext().env.API.fetch` を `hc` のカスタム `fetch` に渡す）、ローカル開発は env の URL にフォールバック。
+  - `createBrowserApiClient`：Client hook 用。env から解決した API Worker の公開 baseURL を使う。
 - feature の `api/` は `hc` の path・method 呼び出しを薄く包む。server / client 両方から使うため、`server-only`・cookies・headers・秘密情報など環境専用処理を入れない。
 - `res.ok` チェックと `res.json()` 変換は `apps/web/src/lib/api-response.ts` の `requestJson` に共通化する。feature の `api/` は path・method・引数・エラーメッセージだけを持つ。
 - `hc` の path 呼び出し自体は文字列パスの汎用 fetch に置き換えない。`client.review.queue.$get()` のような endpoint ごとの wrapper を残すことで、Hono RPC の型推論を維持する。

@@ -503,6 +503,13 @@
             に集約し、フロントからは <code>hc</code> の型安全RPCで呼ぶ。
           </li>
           <li>
+            web と API は<strong>別 Worker</strong>（design.md
+            §3.1）。Server loader からは Service Binding
+            （<code>env.API</code>）で内部呼び出し、Client hook からは API
+            Worker の公開 URL で呼ぶ。どちらの経路でも
+            <code>hc&lt;AppType&gt;</code> の型は同一。
+          </li>
+          <li>
             初回表示は Server loader で ViewModel 化して props 渡し、Client
             Component はその VM をそのまま描画に使う（state に複製しない）。Client
             hook が持つのは「解答結果」「送信エラー」だけ。
@@ -685,7 +692,7 @@ flowchart LR
 
   runner["ReviewRunner\nviewModel props（state に複製しない）"]:::client
 
-  page -->|calls| serverLoader -->|uses wrapper| rpcWrapper -->|hc $get| endpoint
+  page -->|calls| serverLoader -->|uses wrapper| rpcWrapper -->|"hc $get（Service Binding）"| endpoint
   endpoint -->|query| service -->|returns| dto
   dto -->|join by question_id| contentIndex -->|map| mapper -->|props| runner</pre>
         </div>
@@ -721,7 +728,7 @@ flowchart LR
     srs["SRS更新\npure function + repository"]:::api
   end
 
-  ui -->|submit| hook -->|calls wrapper| apiWrapper -->|hc $post| endpoint -->|update| srs</pre>
+  ui -->|submit| hook -->|calls wrapper| apiWrapper -->|"hc $post（公開URL）"| endpoint -->|update| srs</pre>
         </div>
       </section>
 
@@ -810,8 +817,10 @@ flowchart LR
             <tr>
               <td><code>apps/web/src/lib/api.ts</code></td>
               <td>
-                <code>createServerApiClient</code> /
-                <code>createBrowserApiClient</code> などの Hono client 生成。
+                <code>createServerApiClient</code>（本番は Service Binding の
+                fetch、dev は URL フォールバック）/
+                <code>createBrowserApiClient</code>（公開 URL）の Hono client
+                生成。
               </td>
               <td>endpoint ごとの business wrapper。</td>
             </tr>
@@ -1053,6 +1062,82 @@ export default async function ReviewPage() {
           <code>apps/api</code> 側に閉じ、フロントは Hono RPC wrapper 経由で DTO
           を受け取ります。
         </p>
+
+        <h3>Worker 構成と接続（design.md §3.1・§8.4）</h3>
+        <p>
+          <code>apps/web</code>（OpenNext）と <code>apps/api</code>（Hono）は
+          <strong>別 Worker</strong> としてデプロイします。Next.js の Route
+          Handler 上に Hono を載せる同居構成は採用しません（wrangler
+          設定の所有権・デプロイ独立性・§8.3
+          キャッシュ方針の前提を維持するため）。呼び出し元によって経路が変わりますが、
+          <code>hc&lt;AppType&gt;</code> の型安全RPCは両経路で同一です。
+        </p>
+        <div class="diagram">
+          <p>
+            Server loader は Service Binding
+            による内部呼び出し（公衆インターネット非経由・CORS 不要）、Client
+            hook は公開 URL（当面は <code>cors()</code>
+            で許可、将来はルート割当で同一オリジン化）です。
+          </p>
+          <div class="diagram-toolbar" aria-label="Worker構成と接続の図操作">
+            <button type="button" data-zoom-action="in">拡大</button>
+            <button type="button" data-zoom-action="out">縮小</button>
+            <button type="button" data-zoom-action="reset">リセット</button>
+          </div>
+          <pre class="mermaid">
+flowchart LR
+  classDef server fill:#eef6ff,stroke:#93c5fd,color:#1f2328;
+  classDef client fill:#fff7ed,stroke:#fdba74,color:#1f2328;
+  classDef api fill:#ecfdf5,stroke:#86efac,color:#1f2328;
+
+  subgraph webWorker["web Worker（OpenNext / Next.js）"]
+    loader["Server loader\ncreateServerApiClient"]:::server
+  end
+
+  browser["Client hook（ブラウザ）\ncreateBrowserApiClient"]:::client
+
+  subgraph apiWorker["api Worker（Hono）"]
+    routes["routes + zValidator"]:::api
+  end
+
+  d1[("D1")]:::api
+
+  loader -->|"Service Binding env.API.fetch\n内部呼び出し・CORS不要"| routes
+  browser -->|"公開URL\n（将来: /api/* ルート割当で同一オリジン化）"| routes
+  routes --> d1</pre>
+        </div>
+        <pre
+          data-code-title="apps/web/src/lib/api.ts"
+        ><code class="language-ts">// apps/web/src/lib/api.ts
+import { getCloudflareContext } from '@opennextjs/cloudflare';
+import { createClient } from '@tsl/api/client';
+
+// Server loader 用: 本番は Service Binding、dev は URL にフォールバック
+export function createServerApiClient() {
+  const { env } = getCloudflareContext();
+  if (env.API) {
+    // ホスト名はダミー（Service Binding はパスのみ使用）
+    return createClient('https://api.internal', {
+      fetch: env.API.fetch.bind(env.API),
+    });
+  }
+  return createClient(env.API_BASE_URL); // next dev + wrangler dev 並走時
+}
+
+// Client hook 用: env から解決した公開 baseURL
+export function createBrowserApiClient() {
+  return createClient(process.env.NEXT_PUBLIC_API_BASE_URL);
+}</code></pre>
+        <div class="note">
+          web 側の wrangler 設定に
+          <code
+            >"services": [{ "binding": "API", "service": "&lt;API Worker
+            名&gt;" }]</code
+          >
+          を宣言します。<code>apps/api/src/client.ts</code> のファクトリは
+          <code>hc</code> の第2引数（<code>fetch</code>
+          オプション等）を受け渡せる形に拡張します。
+        </div>
       </section>
     </main>
     <script type="module">
