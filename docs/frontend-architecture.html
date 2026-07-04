@@ -503,8 +503,26 @@
             に集約し、フロントからは <code>hc</code> の型安全RPCで呼ぶ。
           </li>
           <li>
-            初回表示は Server loader で ViewModel 化して props 渡し、Client hook
-            は mutation・再取得・loading/error state を担当する。
+            初回表示は Server loader で ViewModel 化して props 渡し、Client
+            Component はその VM をそのまま描画に使う（state に複製しない）。Client
+            hook が持つのは「解答結果」「送信エラー」だけ。
+          </li>
+          <li>
+            due queue の再取得は Client 側で content join
+            をやり直すのではなく、<code>router.refresh()</code> で Server
+            Component を再実行し、Server loader が新しい VM を作り直す。
+          </li>
+          <li>
+            正誤判定は API（サーバー）が権威。VM は選択肢と解説のみを持ち、正解
+            （<code>answerIndex</code>）を含めない。
+          </li>
+          <li>
+            <code>/</code>・<code>/review</code> は無キャッシュ fetch により
+            route segment config の既定（<code>dynamic = 'auto'</code>）のまま
+            自動的に動的レンダリングになる。<code
+              >'use cache'</code
+            >・<code>cacheTag</code>・<code>revalidateTag</code> は現時点では
+            採用しない。
           </li>
         </ul>
         <div class="note">
@@ -665,7 +683,7 @@ flowchart LR
     dto["ReviewQueueDTO\nserializable response"]:::api
   end
 
-  runner["ReviewRunner\ninitialViewModel props"]:::client
+  runner["ReviewRunner\nviewModel props（state に複製しない）"]:::client
 
   page -->|calls| serverLoader -->|uses wrapper| rpcWrapper -->|hc $get| endpoint
   endpoint -->|query| service -->|returns| dto
@@ -676,7 +694,8 @@ flowchart LR
         <div class="diagram">
           <p>
             ユーザー操作後は Client hook から Hono API
-            を呼び、D1への記録とSRS更新をAPI側に閉じます。
+            を呼び、正誤判定・D1への記録・SRS更新をすべてAPI側に閉じます（クライアントは
+            <code>selectedIndex</code> を送るだけで、正解を保持しません）。
           </p>
           <div
             class="diagram-toolbar"
@@ -698,7 +717,7 @@ flowchart LR
   end
 
   subgraph api["Hono API / D1"]
-    endpoint["POST /answers\nanswer_log記録"]:::api
+    endpoint["POST /answers\n{selectedIndex} → {isCorrect, correctIndex}\nD1のquestionsと照合し記録"]:::api
     srs["SRS更新\npure function + repository"]:::api
   end
 
@@ -911,36 +930,82 @@ import type { ReviewViewModel } from '../view-model';
 
 export async function loadReviewQueue(): Promise&lt;ReviewViewModel&gt; {
   const dto = await fetchReviewQueue(createServerApiClient());
-  return reviewQueueDTOToViewModel(dto, getBundledQuestions());
+  return reviewQueueDTOToViewModel(dto, getBundledQuestions()); // join はサーバー側のみ
 }</code></pre>
 
         <pre
-          data-code-title="apps/web/src/features/review/hooks/use-review-queue.ts"
-        ><code class="language-ts">// apps/web/src/features/review/hooks/use-review-queue.ts
+          data-code-title="apps/web/src/app/review/page.tsx"
+        ><code class="language-tsx">// apps/web/src/app/review/page.tsx
+// 無キャッシュ fetch により dynamic = 'auto' のまま動的レンダリングになる
+import { ReviewRunner } from '@/features/review/components/review-runner';
+import { loadReviewQueue } from '@/features/review/server/load-review-queue';
+
+export default async function ReviewPage() {
+  const viewModel = await loadReviewQueue(); // API queue + content join 済み VM
+
+  return &lt;ReviewRunner viewModel={viewModel} /&gt;;
+}</code></pre>
+
+        <pre
+          data-code-title="apps/web/src/features/review/hooks/use-answer-submit.ts"
+        ><code class="language-ts">// apps/web/src/features/review/hooks/use-answer-submit.ts
 'use client';
 
 import { useCallback, useState } from 'react';
 import { createBrowserApiClient } from '@/lib/api';
-import { getBundledQuestions } from '@/lib/content';
-import { fetchReviewQueue } from '../api/review-api';
-import { reviewQueueDTOToViewModel } from '../mapper';
-import type { ReviewViewModel } from '../view-model';
+import { postAnswer } from '../api/review-api';
+import type { AnswerResult } from '@tsl/shared/schema/api';
 
-export function useReviewQueue(initialViewModel: ReviewViewModel) {
-  const [viewModel, setViewModel] = useState(initialViewModel);
+// VM は保持しない。解答結果とエラーだけを扱う mutation 専用 hook
+export function useAnswerSubmit() {
+  const [results, setResults] = useState&lt;Record&lt;string, AnswerResult&gt;&gt;({});
   const [error, setError] = useState&lt;Error | null&gt;(null);
 
-  const refetch = useCallback(async () =&gt; {
+  const submitAnswer = useCallback(async (questionId: string, selectedIndex: number) =&gt; {
     try {
-      const dto = await fetchReviewQueue(createBrowserApiClient());
-      setViewModel(reviewQueueDTOToViewModel(dto, getBundledQuestions()));
-      setError(null);
+      const result = await postAnswer(createBrowserApiClient(), { questionId, selectedIndex });
+      setResults((prev) =&gt; ({ ...prev, [questionId]: result }));
     } catch (cause) {
-      setError(cause instanceof Error ? cause : new Error('Failed to refetch review queue'));
+      setError(cause instanceof Error ? cause : new Error('Failed to submit answer'));
     }
   }, []);
 
-  return { viewModel, error, refetch };
+  return { results, error, submitAnswer };
+}</code></pre>
+
+        <pre
+          data-code-title="apps/web/src/features/review/components/review-runner.tsx"
+        ><code class="language-tsx">// apps/web/src/features/review/components/review-runner.tsx
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { useAnswerSubmit } from '../hooks/use-answer-submit';
+import type { ReviewViewModel } from '../view-model';
+
+type Props = {
+  viewModel: ReviewViewModel;
+};
+
+export function ReviewRunner({ viewModel }: Props) {
+  const router = useRouter();
+  const { results, error, submitAnswer } = useAnswerSubmit();
+
+  const handleAllAnswered = () =&gt; {
+    router.refresh(); // Server loader を再実行し、次の due queue を props で受け直す
+  };
+
+  if (error) {
+    return &lt;ErrorDisplay error={error} retry={() =&gt; router.refresh()} /&gt;;
+  }
+
+  return (
+    &lt;QuizRenderer
+      viewModel={viewModel}
+      results={results}
+      onAnswer={submitAnswer}
+      onComplete={handleAllAnswered}
+    /&gt;
+  );
 }</code></pre>
 
         <div class="example-title">
@@ -965,7 +1030,7 @@ export default async function ReviewPage() {
     })),
   };
 
-  return &lt;ReviewRunner initialViewModel={viewModel} /&gt;;
+  return &lt;ReviewRunner viewModel={viewModel} /&gt;;
 }</code></pre>
         <div class="note">
           この例では page が Hono RPC、レスポンス処理、content join、ViewModel
