@@ -98,11 +98,15 @@ content（frontmatter）側:
 - `lesson`: レッスンID・タイトル・本文（Markdown本体）
 - `questions[]`: `{ id, type: 'mcq', prompt, choices[], answerIndex, explanation }`
 
-D1 側（動的）:
+D1 側（動的データ）:
 
 - `users`: 将来公開用。初期は単一ユーザーでも user_id を持つ
 - `answer_logs`: `{ id, user_id, question_id, is_correct, answered_at }`
 - `srs_states`: `{ user_id, question_id, ease, interval, due_at, reps, lapses }`（SRSパラメータ。アルゴリズムは実装時に SM-2 ベースを想定）
+
+D1 側（content 同期キャッシュ。4.2 の seed/upsert 対象）:
+
+- `questions`: `{ question_id, answer_index }`（`content/` の `answerIndex` を同期。本文・選択肢・解説は持たず、正誤判定に必要な最小フィールドのみ保持。7.2「正誤判定はAPIが権威」の照合元）
 
 ## 5. AI駆動開発の基盤
 
@@ -154,6 +158,7 @@ D1 側（動的）:
 
 - **データ取得（ハイブリッド）**：教材・問題はビルド時バンドル済み content を RSC / Server loader から読む。解答記録・SRS・due など動的データのみ Hono API を `hc` で呼ぶ。D1 への seed は配信・集計用キャッシュとして維持し、表示の主経路は content。
 - **演習フロー**：1 問ずつ表示 → 即時に正誤＋解説 → 確定で選択肢をロック → 末尾に結果サマリ。**1 問解答＝1 `answer_log` POST**（SRS は問題粒度で更新）。
+- **正誤判定の権威はAPI（サーバー）**：Quiz/Review の `QuizViewModel` は選択肢と解説のみを持ち、正解（`answerIndex`）を含めない。クライアントは選んだ `selectedIndex` を `POST /answers` に送り、API が D1 の `questions`（4.4）と照合して `is_correct` を判定・記録し、結果（`isCorrect` / `correctIndex`）を返す。将来公開後もクライアントバンドルに正解を露出しない。
 - **Quiz コンポーネント**：`question_id` の配列を受け取り 1 問ずつ回す純粋部品として設計。`/quiz`（レッスン全問）・`/review`（due 問題）・「間違えた問題だけ」（`wrongOnly`）で再利用する。問題セットの供給元だけが異なる。
 - **結果サマリの動線（出し分け）**：`/quiz` は学習の前進が目的 → 「次のレッスンへ」。`/review` は due 消化が目的 → 「ホームへ」（残があれば継続）。両者で「間違えた問題だけ復習」を提供。
 - **ID 設計**：`lessonId` / `questionId` は**グローバル一意**。学習導線は階層 URL（`/learn/...`）、演習・復習はフラット URL（`/quiz/[lesson]`・`/review`）。
@@ -165,7 +170,7 @@ D1 側（動的）:
 
 `apps/api`（Hono）に以下を想定。本文はファイル一次ソースのため、API は ID・SRS メタ・集計値のみ返す。
 
-- `POST /answers` — 1 問解答の記録 → SRS 更新
+- `POST /answers` — 1 問解答の記録 → SRS 更新。リクエスト `{ questionId, selectedIndex }`、レスポンス `{ isCorrect, correctIndex }`。正誤判定は API が D1 の `questions`（4.4）を照合して行う権威側（7.2）
 - `GET /review/queue` — due 問題の `question_id` ＋ SRS メタを返す（本文はフロントがバンドル済みデータから解決）
 - `GET /dashboard/due-count` — ダッシュボードの due 件数
 
@@ -225,6 +230,7 @@ apps/web/src/
 - 実行場所はディレクトリ名ではなく import 境界で決まる。`apps/web/src/features/*/server` は `apps/web/src/app/**/page.tsx` など Server Component から import する限りサーバー側で実行される。誤用防止のため `import 'server-only'` を必須にする。
 - Server Actions は使わず、動的データは Hono API に一本化する。初回取得は page / Server loader から `hc` で実行し、mutation・再取得は Client hook から `hc` を叩く（API 契約を `apps/api` に一本化し、RPC 型を素直に効かせる）。
   - **不採用の根拠**：変更系を Hono に一本化することで ①契約（`AppType`）と `user_id` 注入点（§7.2）を単一ソースに保てる、②Hono+Cloudflare の学習目的（§2）を素通りしない。Server Actions の利点（フォームのプログレッシブエンハンスメント等）は、即時採点の Client 主導 Quiz・変更系が `POST /answers` ほぼ一択の本アプリでは恩恵が小さい。重いフォームが必要になった時点で再検討する。
+- **キャッシュ方針**：`/`（due-count）・`/review`（queue）は動的データ。Next.js 15+ は `fetch` をデフォルトで無キャッシュにするため、`hc` 経由の `fetch` にキャッシュオプションを付けない限り、route segment config のデフォルト（`dynamic = 'auto'`）のまま自動的に動的レンダリングになる。**`export const dynamic = 'force-dynamic'` は明記しない**（`'auto'` の挙動に暗黙で依存する）。この前提が壊れるのは「`hc` の fetch 呼び出しに `cache: 'force-cache'` や `next: { revalidate }` を付けてしまった時」のみなので、feature の `api/` wrapper（§8.4）にキャッシュオプションを持ち込まないことを徹底する。`'use cache'` / `cacheTag` / `revalidateTag` も現時点では採用しない — mutation（`POST /answers`）が Hono Worker 直行で Next.js のサーバーコンテキストを経由しないため `revalidateTag` の発火点がなく、due-count はユーザー単位のためタグ設計もマルチユーザー化まで先送りする。解答後・画面復帰時の鮮度回復は Client 側の `router.refresh()` で RSC を再実行して担う（§9.2）。
 
 ### 8.4 `hc` クライアントの取り回し
 
@@ -310,10 +316,10 @@ export default function LessonPage({ params }: Props) {
 
 #### Client 系（演習・復習系）
 
-`/quiz/[lesson]`・`/review` などインタラクションを持つページ。**初回データは Server loader で ViewModel 化し、page はその VM を props で渡すだけに留める。Client hook は初期 VM を受け取り、以降の再取得・mutation のみ担当**する（＝初回レンダリング時にスピナーを出さない）。
+`/quiz/[lesson]`・`/review` などインタラクションを持つページ。**初回データは Server loader で ViewModel 化し、page はその VM を props で渡すだけに留める。Client Component は props の VM をそのまま描画に使い、ローカル state は「解答結果」「送信エラー」だけに限定する**（＝初回レンダリング時にスピナーを出さない。VM 自体を state に複製しない）。
 
-- `/quiz`：content から問題・解説を解決し、API GET はしない。Client hook は `POST /answers` のみ担当。
-- `/review`：Server loader で `GET /review/queue` を呼び、返却された `question_id` を content の問題本文・解説へ join して VM 化する。
+- `/quiz`：content から問題・解説を解決し、API GET はしない。Client hook は `POST /answers` のみ担当。VM は content のみで再取得不要なため、`useState(initialViewModel)` に据えてよい。
+- `/review`：Server loader で `GET /review/queue` を呼び、返却された `question_id` を content の問題本文・解説へ join して VM 化する。**join は Server loader 内でのみ行い、content データ（教材本文・解説）をクライアントバンドルに含めない**。解答完了後に次の due を引き直す場面では、Client から API を再度叩いて join し直すのではなく `router.refresh()` で Server Component を再実行し、Server loader が新しい VM を props として渡し直す（§8.3 のキャッシュ方針）。
 
 ```typescript
 // lib/api-response.ts
@@ -343,48 +349,60 @@ import 'server-only';
 
 export async function loadReviewQueue(): Promise<ReviewViewModel> {
   const dto = await fetchReviewQueue(createServerApiClient());
-  return reviewQueueDTOToViewModel(dto, getBundledQuestions());
+  return reviewQueueDTOToViewModel(dto, getBundledQuestions());  // join はサーバー側のみ
 }
 
-// app/review/page.tsx（Server）— 初回データは Server loader で整形して取得
+// app/review/page.tsx（Server）— 無キャッシュ fetch により auto のまま動的レンダリング。再取得は router.refresh() に委譲
 export default async function ReviewPage() {
-  const initialVm = await loadReviewQueue();  // API queue + content join 済み VM
-  return <ReviewRunner initialViewModel={initialVm} />;
+  const viewModel = await loadReviewQueue();  // API queue + content join 済み VM
+  return <ReviewRunner viewModel={viewModel} />;
 }
 
-// features/review/hooks/use-review-queue.ts（Client）
+// features/review/hooks/use-answer-submit.ts（Client）— VM は保持しない。mutation のみ担当
 'use client';
-export function useReviewQueue(initialVm: ReviewViewModel) {
-  const [vm, setVm] = useState<ReviewViewModel>(initialVm);  // ← 初回は props、スピナー不要
+export function useAnswerSubmit() {
+  const [results, setResults] = useState<Record<string, AnswerResult>>({});
   const [error, setError] = useState<Error | null>(null);
 
-  // 再取得（例：完了後に次の due を引き直す）だけを Client が担当
-  const refetch = useCallback(async () => {
+  const submitAnswer = useCallback(async (questionId: string, selectedIndex: number) => {
     try {
-      const dto = await fetchReviewQueue(createBrowserApiClient());
-      setVm(reviewQueueDTOToViewModel(dto, getBundledQuestions()));
+      const result = await postAnswer(createBrowserApiClient(), { questionId, selectedIndex });
+      setResults(prev => ({ ...prev, [questionId]: result }));
     } catch (e) {
       setError(e as Error);
     }
   }, []);
 
-  return { vm, error, refetch };
+  return { results, error, submitAnswer };
 }
 
 // features/review/components/review-runner.tsx（Client）
 'use client';
-export function ReviewRunner({ initialViewModel }: Props) {
-  const { vm, error, refetch } = useReviewQueue(initialViewModel);
-  if (error) return <ErrorDisplay error={error} retry={refetch} />;
-  return <QuizRenderer viewModel={vm} />;  // 初回から即描画（スピナーなし）
+export function ReviewRunner({ viewModel }: Props) {
+  const router = useRouter();
+  const { results, error, submitAnswer } = useAnswerSubmit();
+
+  const handleAllAnswered = () => {
+    router.refresh();  // Server loader を再実行し、次の due queue を VM ごと props で受け直す
+  };
+
+  if (error) return <ErrorDisplay error={error} retry={() => router.refresh()} />;
+  return (
+    <QuizRenderer
+      viewModel={viewModel}       // props をそのまま描画に使う。state に複製しない
+      results={results}
+      onAnswer={submitAnswer}
+      onComplete={handleAllAnswered}
+    />
+  );
 }
 ```
 
-- **初回＝Server loader で VM 化し、page は props 渡しのみ**。`/quiz` は content のみ、`/review` は API queue + content join。loader も hook も同じ mapper を通すため、整形ロジックは一本のまま（§9.1 の原則）。
-- **Client hook は初期 VM を props で受け取り**、`useState` の初期値に据える。以降の再取得・楽観更新のみ hook が受け持つ。
+- **初回＝Server loader で VM 化し、page は props 渡しのみ**。`/quiz` は content のみ、`/review` は API queue + content join。loader は毎回同じ mapper を通すため、整形ロジックは一本のまま（§9.1 の原則）。
+- **VM はクライアント state に複製しない**。`ReviewRunner` は props の `viewModel` をそのまま描画に使い、Client 側で保持するのは「解答結果（`results`）」「送信エラー」のみ。due queue の再取得は `router.refresh()` による Server Component 再実行に一本化し、content との join を常にサーバー側に閉じ込める（クライアントバンドルへの content 混入を防ぐ）。
 - **RPC 呼び出しは `apps/web/src/features/*/api` の薄い wrapper 経由**。Server loader と Client hook は同じ wrapper を使い、実行環境ごとの client 生成だけを差し替える。HTTP レスポンス処理は `requestJson` に寄せ、feature 側では重複させない。
-- **初回スピナー不要**（本節冒頭で述べた原則の実装上の帰結）：ウォーターフォールを回避し初回表示が速い。ローディング表示が要るのは再取得中のみ。
-- **将来：**TanStack Query 等へ置き換える際、mapper・ViewModel 型・page は変わらず、hook 内部だけ差し替わる（契約保証）。TanStack Query の `initialData` に props の VM を渡す形へ自然に移行できる。
+- **初回スピナー不要**（本節冒頭で述べた原則の実装上の帰結）：ウォーターフォールを回避し初回表示が速い。`router.refresh()` 中の待機表示が必要なら `loading.tsx` かローカルな `isRefreshing` フラグで扱う。
+- **将来：**TanStack Query 等へ置き換える際、mapper・ViewModel 型・page は変わらず、hook（`useAnswerSubmit` 相当）内部だけ差し替わる（契約保証）。
 
 ### 9.3 DTO / ViewModel の分離と配置
 
@@ -546,25 +564,28 @@ export default function QuizPage({ params }: Props) {
 'use client';
 export function QuizInteractive({ initialViewModel }: Props) {
   const [vm] = useState(initialViewModel);              // 初回から即描画（スピナーなし）
+  const [currentIndex, setCurrentIndex] = useState(0);  // §8.5：1問ずつ表示する線形フロー
   const { submitAnswer, results } = useAnswerSubmit();  // POST /answers を担当
 
+  const question = vm.questions[currentIndex];
+  if (!question) return <QuizSummary results={results} />;  // 全問終了 → 結果サマリ（§7.2）
+
+  const isLast = currentIndex === vm.questions.length - 1;
+
   return (
-    <div className="space-y-6">
-      {vm.questions.map(q => (
-        <QuestionCard
-          key={q.id}
-          question={q}
-          explanation={vm.explanations[q.id]}
-          onAnswer={submitAnswer}
-          result={results[q.id]}
-        />
-      ))}
-    </div>
+    <QuestionCard
+      question={question}
+      explanation={vm.explanations[question.id]}
+      onAnswer={selectedIndex => submitAnswer(question.id, selectedIndex)}
+      result={results[question.id]}                 // 判定結果を受けて選択肢ロック・解説表示（§8.5）
+      onNext={isLast ? undefined : () => setCurrentIndex(i => i + 1)}
+    />
   );
 }
 ```
 
 - `/quiz` の初回は **API GET なし**（問題はビルド時バンドル、Server loader で VM 化）。Client hook は `POST /answers`（mutation）だけを持つ。
+- `QuizInteractive` は全問を一括レンダリングせず、`currentIndex` で 1 問ずつ描画する（§8.5 のフローと整合）。`/review` の `ReviewRunner`（§9.2）も同じ `QuestionCard` を 1 問ずつ回す構成にする。
 - `/review` の初回は **Server loader で GET**（due queue）→ props 渡し（§9.2 参照）。
 
 ### 9.5 content / API 変更時の対応フロー
@@ -609,13 +630,14 @@ export default function Error({ error }: { error: Error }) {
 ```typescript
 // features/review/components/review-runner.tsx
 'use client';
-export function ReviewRunner({ initialViewModel }: Props) {
-  const { vm, error, refetch } = useReviewQueue(initialViewModel);
+export function ReviewRunner({ viewModel }: Props) {
+  const router = useRouter();
+  const { results, error, submitAnswer } = useAnswerSubmit();
 
-  // 初回は props で描画済み。ここで扱うのは再取得エラーのみ
-  if (error) return <ErrorDisplay error={error} retry={refetch} />;
+  // 初回は props で描画済み。ここで扱うのは解答送信エラーのみ
+  if (error) return <ErrorDisplay error={error} retry={() => router.refresh()} />;
 
-  return <QuizRenderer viewModel={vm} />;  // 初回からスピナーなしで描画
+  return <QuizRenderer viewModel={viewModel} results={results} onAnswer={submitAnswer} />;  // 初回からスピナーなしで描画
 }
 ```
 
