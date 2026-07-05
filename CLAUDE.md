@@ -60,6 +60,14 @@ docs/design.md   # 設計文書（一次ソース）
 - 新機能は「Walking Skeleton と同じ縦切りパターン」で追加する（教材→出題→解答記録→SRS）。
 - 機能実装は issue 駆動で進める（仕様を GitHub issue に登録してから実装に着手する）。
 
+### ブランチ戦略（Git Flow 型）
+
+- `main` は保護。**直接コミットしない**。リリース用ブランチ。
+- `develop` が統合ブランチ。作業ブランチは常に `develop` から切る。
+- 作業ブランチは Conventional Branch 命名: `<種別>/issue-<番号>-<英語スラッグ>`（種別: `feature` / `fix` / `refactor` / `docs` / `test` / `chore`）。
+- feature → develop は PR を作成する（**マージは人間**）。`develop` → `main` の PR・マージは人間が任意タイミングで行う。
+- `gh pr merge` は使わない（マージは常に人間の判断）。
+
 ## コマンド
 
 > pnpm は corepack で有効化（`corepack enable`）。

@@ -12,17 +12,33 @@ argument-hint: <issue番号> [sonnet|codex]
 
 ## フェーズ0: 準備
 
+> **ブランチ戦略（Git Flow 型）**: `main` は保護。**パイプラインは main で作業しない・main に直接コミットしない**。統合ブランチ `develop` をベースに作業ブランチを切る。`develop` → `main` の PR・マージは人間が任意タイミングで行う（パイプラインの対象外）。
+
 1. issue を取得する:
    ```bash
    gh issue view <N> --json number,title,body,labels,comments
    ```
 2. issue に `impl:codex` ラベルがあれば、引数指定がない限り codex モードにする。
-3. 作業ツリーの確認とブランチ作成:
+3. **ブランチ種別を判定する（Conventional Branch）**。issue のラベル・タイトル・本文から下表で種別を選ぶ（判断に迷えば `feature`）:
+
+   | 種別 | 使う場面 | issue の目安 |
+   |---|---|---|
+   | `feature` | 新機能・機能拡張 | `spec` / `enhancement` ラベル、新規実装 |
+   | `fix` | バグ修正 | `bug` ラベル、既存挙動の不具合 |
+   | `refactor` | 挙動を変えない内部改善 | リファクタ・整理 |
+   | `docs` | ドキュメントのみ | `docs`、design.md 更新など |
+   | `test` | テスト追加・修正のみ | テスト整備 |
+   | `chore` | ビルド・設定・依存など | 上記に当てはまらない雑務 |
+
+4. 作業ツリーの確認と、`develop` からの作業ブランチ作成:
    ```bash
    git status --porcelain   # クリーンでなければユーザーに確認して停止
-   git checkout main && git pull
-   git checkout -b feature/issue-<N>-<英語スラッグ>
+   git fetch origin
+   git switch develop 2>/dev/null || git switch -c develop origin/develop 2>/dev/null || git switch -c develop
+   git pull --ff-only 2>/dev/null || true   # develop がリモートに無い初回はスキップ
+   git switch -c <種別>/issue-<N>-<英語スラッグ>   # 例: feature/issue-12-lesson-filter
    ```
+   - `develop` がローカル・リモートともに存在しない初回は、上記でローカルに新規作成される。その旨をユーザーに報告する（`develop` の初期化）。
 
 ## フェーズ1: 調査
 
@@ -58,7 +74,7 @@ argument-hint: <issue番号> [sonnet|codex]
 
 ## フェーズ4: レビュー
 
-`reviewer` エージェント（subagent_type: reviewer）に issue 番号・方針サマリを渡して起動する（差分は `git diff main...HEAD` で取得させる）。must-fix / should-fix / nit の重要度付き指摘を受け取る。
+`reviewer` エージェント（subagent_type: reviewer）に issue 番号・方針サマリを渡して起動する（差分は `git diff develop...HEAD` で取得させる）。must-fix / should-fix / nit の重要度付き指摘を受け取る。
 
 ## フェーズ5: テスト
 
@@ -74,10 +90,17 @@ argument-hint: <issue番号> [sonnet|codex]
 
 ## フェーズ7: 完了
 
-1. 最終確認: `git diff main...HEAD --stat` と品質ゲート結果をまとめる。
+1. 最終確認: `git diff develop...HEAD --stat` と品質ゲート結果をまとめる。
 2. コミットする（メッセージに `refs #<N>` を含める）。
-3. ユーザーに完了報告する: 実装サマリ／レビュー・テスト結果／コミットハッシュ。
-4. **PR 作成はユーザーに確認してから**行う（承認されたら pr-creator skill を使用。PR 本文に `closes #<N>` を含める）。
+3. 作業ブランチをプッシュする:
+   ```bash
+   git push -u origin <種別>/issue-<N>-<英語スラッグ>
+   ```
+4. **feature → develop の PR をユーザー確認後に作成する**（承認されたら pr-creator skill を使用）:
+   - **ベースブランチは `develop`**（`main` ではない）。`gh pr create --base develop ...`
+   - PR 本文には `refs #<N>` を書く（参照のみ）。**`closes #<N>` は使わない**: GitHub の自動クローズはデフォルトブランチ（`main`）へのマージでのみ発火するため、develop マージでは効かず誤解を招く。issue のクローズは `develop` → `main` のリリース時に人間が判断する。
+   - **マージはしない**。feature → develop のマージ、および develop → main の PR・マージはすべて人間が任意タイミングで行う（`gh pr merge` は settings.json で禁止）。
+5. ユーザーに完了報告する: 実装サマリ／レビュー・テスト結果／作業ブランチ名／PR URL（作成した場合）。
 
 ## 中断・失敗時の原則
 
