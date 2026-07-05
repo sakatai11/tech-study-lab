@@ -1,8 +1,6 @@
-# AGENTS.md
+# CLAUDE.md
 
-このファイルは Codex が **tech-study-lab** で作業する際のガイドです。
-
-**必ず日本語で回答してください。**
+このファイルは **tech-study-lab** で作業する際のガイドです。
 
 ## プロジェクト概要
 
@@ -30,7 +28,7 @@ apps/api/        # Hono — 主要API（Cloudflare Workers）
   src/index.ts   # エントリ・AppType エクスポート
   src/client.ts  # hc 型安全クライアントファクトリ
 packages/shared/ # Drizzleスキーマ・Zodスキーマ・共有型（単一ソース）
-content/         # 教材・問題（MDX/Markdown + frontmatter）= 一次ソース
+content/         # 教材・問題（Markdown + frontmatter）= 一次ソース
 docs/design.md   # 設計文書（一次ソース）
 ```
 
@@ -60,6 +58,15 @@ docs/design.md   # 設計文書（一次ソース）
 - 大きな変更の前に `docs/design.md` を確認し、必要なら先に更新する。
 - 既存のパターン（命名・ディレクトリ・コードスタイル）に合わせる。Biome の設定に従う。
 - 新機能は「Walking Skeleton と同じ縦切りパターン」で追加する（教材→出題→解答記録→SRS）。
+- 機能実装は issue 駆動で進める（仕様を GitHub issue に登録してから実装に着手する）。
+
+### ブランチ戦略（Git Flow 型）
+
+- `main` は保護。**直接コミットしない**。リリース用ブランチ。
+- `develop` が統合ブランチ。作業ブランチは常に `develop` から切る。
+- 作業ブランチは Conventional Branch 命名: `<種別>/issue-<番号>-<英語スラッグ>`（種別: `feature` / `fix` / `refactor` / `docs` / `test` / `chore`）。
+- feature → develop は PR を作成する（**マージは人間**）。`develop` → `main` の PR・マージは人間が任意タイミングで行う。
+- `gh pr merge` は使わない（マージは常に人間の判断）。
 
 ## コマンド
 
@@ -79,16 +86,9 @@ pnpm test
 pnpm typecheck
 ```
 
-## 現在の進捗
+## 進捗の確認方法
 
-- [x] 設計文書（docs/design.md）
-- [x] AGENTS.md
-- [x] monorepo 基盤（pnpm workspaces / Biome / tsconfig.base）
-- [x] apps/web scaffold（Next.js App Router + OpenNext Cloudflare / src/ 構成）
-- [x] apps/api 最小エントリ（Hono `/health` + hc クライアントファクトリ）
-- [ ] packages/shared 実装（Drizzle スキーマ / Zod / SRS 純粋関数）
-- [ ] GitHub Actions CI
-- [ ] 最初のスライス：セキュリティ > XSS > 教材1本 + 4択3問
+進捗はこのファイルに書かず、実装コード・`git log`・`docs/design.md` から判断する。
 
 ## やらないこと（スコープ外）
 
