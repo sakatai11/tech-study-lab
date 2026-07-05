@@ -64,9 +64,9 @@ argument-hint: <issue番号> [sonnet|codex]
 ### codex モード
 
 1. 方針書をプロンプトファイルとして scratchpad に書き出す。内容は「issue 番号・受け入れ条件・決定方針・変更対象ファイル・ガードレール（AGENTS.md 準拠、コミット禁止、typecheck/biome/test を自己検証すること）」。
-2. codex CLI を**バックグラウンド**で起動する（Bash tool, `run_in_background: true`）:
+2. codex CLI を**バックグラウンド**で起動する（Bash tool, `run_in_background: true`）。**モデルは `-m gpt-5.4` を必ず明示する**（グローバル config のデフォルトに依存せず、パイプラインの実装は gpt-5.4 に固定する）:
    ```bash
-   codex exec --sandbox workspace-write --cd /Users/sakaitaichi/workspace/develop/tech-study-lab \
+   codex exec -m gpt-5.4 --sandbox workspace-write --cd /Users/sakaitaichi/workspace/develop/tech-study-lab \
      --output-last-message <scratchpad>/codex-result-<N>.md \
      - < <scratchpad>/codex-prompt-<N>.md
    ```
