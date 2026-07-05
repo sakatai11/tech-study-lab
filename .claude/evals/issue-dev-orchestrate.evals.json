@@ -152,5 +152,62 @@
       "git branch -D develop  （develop を残す場合はスキップ）",
       "gh issue close 12 --comment 'パイプライン動作検証用の仮issue。検証完了のためクローズ。'  （settings.json で gh issue close は deny のため人間が実行）"
     ]
+  },
+  "codexModeRun": {
+    "evalId": "issue-dev-orchestrate-codex-002",
+    "date": "2026-07-06",
+    "issue": 14,
+    "issueUrl": "https://github.com/sakatai11/tech-study-lab/issues/14",
+    "branch": "feature/issue-14-srs-due-in-days",
+    "mode": "codex",
+    "purpose": "codex モード（フェーズ3 でバックグラウンド codex CLI が実装できるか）の動作検証",
+    "environment": {
+      "codexVersion": "codex-cli 0.142.5",
+      "auth": "Logged in using ChatGPT",
+      "command": "codex exec --sandbox workspace-write --cd <repo> --output-last-message <scratchpad>/codex-result-14.md - < <scratchpad>/codex-prompt-14.md",
+      "exitCode": 0
+    },
+    "testIssue": {
+      "func": "dueInDays(dueAt: number, now: number): number",
+      "logic": "Math.floor(dueAt / DAY_MS) - Math.floor(now / DAY_MS)（延滞=負 / 当日=0 / 未来=正）",
+      "labels": ["spec", "impl:codex"],
+      "reason": "sonnet 検証(dueStatus)と別題材の SRS 純粋関数。impl:codex ラベルでモード自動判定も併せて検証。"
+    },
+    "checks": [
+      { "item": "impl:codex ラベル → codex モード判定", "result": "pass" },
+      {
+        "item": "codex exec バックグラウンド起動・完了",
+        "result": "pass",
+        "note": "exit 0。--output-last-message で成果サマリを回収"
+      },
+      {
+        "item": "ガードレール順守（isDue 直後に追加・DAY_MS 再利用・JSDoc・any不使用・コミットしない）",
+        "result": "pass"
+      },
+      {
+        "item": "自己申告と独立検証の一致（typecheck / biome 対象2ファイル / shared test）",
+        "result": "pass",
+        "note": "全ゲート独立実行でも pass"
+      },
+      {
+        "item": "境界値テストの実体（同日=0 / 前日=-1 / 翌日=+1 / 5日差 / 暦日境界の直前直後）",
+        "result": "pass",
+        "note": "shared test 12件（既存7＋新規5）パス"
+      }
+    ],
+    "observations": [
+      "sm2.ts 全体が single quote へ再整形され diff が膨張（codex が対象ファイルに biome --write を適用）。codex 固有ではなく finding#4 と同根（既存コードが biome 未整形）。issue #13 で解消予定。",
+      "codex は --output-last-message に構造化された自己検証サマリを返し、オーケストレーター側の取り込み（result 確認→独立検証）が想定通り機能した。"
+    ],
+    "verdict": {
+      "result": "pass",
+      "summary": "codex モードのフェーズ3（バックグラウンド codex CLI 実装）は想定通り動作。impl:codex ラベル判定・バックグラウンド起動・成果回収・ガードレール順守・独立検証一致をすべて確認。sonnet モードと同等の成果物品質。"
+    },
+    "cleanup": {
+      "steps": [
+        "codex 実装は検証用のため git restore で破棄し feature/issue-14-srs-due-in-days を削除済み",
+        "gh issue close 14 --comment 'codex モード動作検証用の仮issue。検証完了のためクローズ。'  （gh issue close は deny のため人間が実行）"
+      ]
+    }
   }
 }
