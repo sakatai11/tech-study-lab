@@ -1,4 +1,4 @@
-# CLAUDE.md
+# AGENTS.md
 
 このファイルは **tech-study-lab** で作業する際のガイドです。
 
