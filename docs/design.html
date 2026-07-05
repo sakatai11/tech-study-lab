@@ -319,8 +319,9 @@
 <p>D1 側（動的データ）:</p>
 <ul>
 <li><code>users</code>: 将来公開用。初期は単一ユーザーでも user_id を持つ</li>
-<li><code>answer_logs</code>: <code>{ id, user_id, question_id, is_correct, answered_at }</code></li>
+<li><code>answer_logs</code>: <code>{ id, user_id, question_id, is_correct, answered_at, response_time_ms? }</code>（<code>response_time_ms</code> は §7 アナリティクス画面の「平均反応時間」向け。Quiz クライアントが選択肢表示から解答確定までを計測して送信する任意項目）</li>
 <li><code>srs_states</code>: <code>{ user_id, question_id, ease, interval, due_at, reps, lapses }</code>（SRSパラメータ。アルゴリズムは実装時に SM-2 ベースを想定）</li>
+<li><code>lesson_views</code>: <code>{ id, user_id, lesson_id, viewed_at }</code>（アナリティクス画面の「学習時間」「最近のアクティビティ」向け。教材本文ページ表示時に fire-and-forget で記録する最小ログ。学習時間は「閲覧したレッスンの frontmatter 所要時間（例：約18分）の合計」＋「<code>answer_logs.response_time_ms</code> の合計」で近似する簡易集計とし、精緻な計測は行わない）</li>
 </ul>
 <p>D1 側（content 同期キャッシュ。4.2 の seed/upsert 対象）:</p>
 <ul>
@@ -367,17 +368,19 @@
 </ul>
 <p>このスライスが1本通れば、以降はトピック・機能を<strong>同じパターンの繰り返し</strong>で増やせる。これがAI駆動の反復に最適な土台となる。</p>
 <h2>7. フロントエンド画面構成</h2>
-<p><code>apps/web</code>（Next.js App Router）の画面・ルーティング設計。Walking Skeleton（セキュリティ &gt; XSS &gt; 教材1本 + 4択3問）を貫通させる最小構成として 5 ルートを置く。</p>
+<p><code>apps/web</code>（Next.js App Router）の画面・ルーティング設計。ビジュアルモックアップ（<a href="./mockups/DevPath%20Neumorphism.dc.html"><code>docs/mockups/DevPath Neumorphism.dc.html</code></a>・<a href="./mockups/DevPath%20SP%20Neumorphism.dc.html">SP版</a>）で確定した画面セットを正式スコープとする。Walking Skeleton（§6：セキュリティ &gt; XSS &gt; 教材1本 + 4択3問）は本章のうち <code>/</code>・<code>/learn/...</code>・<code>/quiz/...</code> を貫通させる最小構成であり、本章の画面数と Walking Skeleton の対象範囲は別物である。</p>
 <h3>7.1 ルート構成</h3>
 <table>
 <thead>
 <tr><th>ルート</th><th>役割</th><th>データ経路</th><th>主導線</th></tr>
 </thead>
-<tbody><tr><td><code>/</code> ダッシュボード</td><td><strong>今日の復習（due）が主役</strong>。学習継続・領域ナビは従。due 0 件時は新規レッスンへフォールバック</td><td>due 件数のみ API（Server loader → <code>hc</code>）</td><td>「復習を始める」→ <code>/review</code></td></tr>
+<tbody><tr><td><code>/</code> ダッシュボード</td><td><strong>今日の復習（due）が主役</strong>。学習統計（正答率・学習時間・連続学習日数）・領域別習得状況・最近のアクティビティ・次のレッスン導線を併せ持つ</td><td>due 件数・統計値は API（Server loader → <code>hc</code>）</td><td>「復習を始める」→ <code>/review</code>、「続きから」→ <code>/learn/...</code></td></tr>
+<tr><td><code>/domains</code> 学習領域一覧</td><td>4 領域（Security / Frontend / Backend / Architecture）を俯瞰し、領域ごとの習得率・トピック数を表示。コンテンツ未整備の領域は「準備中」表示で非活性</td><td>領域別集計は API（<code>GET /domains</code>）</td><td>領域カード → <code>/learn/[domain]/[topic]</code></td></tr>
 <tr><td><code>/learn/[domain]/[topic]</code> レッスン一覧</td><td>トピック内のレッスン一覧（初期は XSS 1本）</td><td>ビルド時バンドル済み content（RSC）</td><td>各レッスンへ</td></tr>
 <tr><td><code>/learn/[domain]/[topic]/[lesson]</code> 教材本文</td><td>Markdown 本文表示</td><td>ビルド時バンドル済み content（RSC）・<strong>API 不要</strong></td><td>「問題を解く →」<code>/quiz/[lesson]</code></td></tr>
-<tr><td><code>/quiz/[lesson]</code> 演習</td><td>レッスン全問を 1 問ずつ即時採点</td><td>問題＝content / 解答記録＝API</td><td>完了 → 「次のレッスンへ」</td></tr>
-<tr><td><code>/review</code> 復習</td><td>due 問題をレッスン横断で収集</td><td>queue＝API / 問題本文＝content / 記録＝API</td><td>完了 → 「ホームへ」</td></tr></tbody>
+<tr><td><code>/quiz/[lesson]</code> 演習</td><td>イントロ（レッスン概要の確認）→ 全問を 1 問ずつ即時採点 → 結果サマリ、を 1 画面内のクライアント状態遷移（<code>intro → exercise → result</code>）で完結。演習ナビ・教材本文の両方から入れる</td><td>問題＝content（RSC で初期化）/ 解答記録＝API</td><td>完了 → 「次のレッスンへ」／「再挑戦」</td></tr>
+<tr><td><code>/review</code> 復習</td><td>イントロ（本日の due キューを dueAt 昇順・滞留日数付きでプレビュー）→ due 問題をレッスン横断で 1 問ずつ即時採点 → 結果サマリ、を 1 画面内のクライアント状態遷移で完結</td><td>queue＝API（<code>GET /review/queue</code>）/ 問題本文＝content / 記録＝API</td><td>完了 → 「ホームへ」／「間違えた問題だけ再挑戦」</td></tr>
+<tr><td><code>/analytics</code> アナリティクス</td><td>解答ログ・SRS状態を集計した学習分析ビュー（総解答数・正答率・平均反応時間・習得済み問題数・週次アクティビティ・SRS定着度分布・間違えやすい問題ランキング）</td><td>集計値は API（§7.3）</td><td>—</td></tr></tbody>
 </table>
 <h3>7.2 横断する設計判断</h3>
 <ul>
@@ -386,17 +389,23 @@
 <li><strong>正誤判定の権威はAPI（サーバー）</strong>：Quiz/Review の <code>QuizViewModel</code> は選択肢と解説のみを持ち、正解（<code>answerIndex</code>）を含めない。クライアントは選んだ <code>selectedIndex</code> を <code>POST /answers</code> に送り、API が D1 の <code>questions</code>（4.4）と照合して <code>is_correct</code> を判定・記録し、結果（<code>isCorrect</code> / <code>correctIndex</code>）を返す。将来公開後もクライアントバンドルに正解を露出しない。</li>
 <li><strong>Quiz コンポーネント</strong>：<code>question_id</code> の配列を受け取り 1 問ずつ回す純粋部品として設計。<code>/quiz</code>（レッスン全問）・<code>/review</code>（due 問題）・「間違えた問題だけ」（<code>wrongOnly</code>）で再利用する。問題セットの供給元だけが異なる。</li>
 <li><strong>結果サマリの動線（出し分け）</strong>：<code>/quiz</code> は学習の前進が目的 → 「次のレッスンへ」。<code>/review</code> は due 消化が目的 → 「ホームへ」（残があれば継続）。両者で「間違えた問題だけ復習」を提供。</li>
+<li><strong>イントロ・演習・結果の状態遷移（URL は変えない）</strong>：演習・復習とも 1 ルート内で <code>intro → exercise → result</code> のクライアント状態遷移を持つ（別 URL に切らない。モックの実装モデルに一致）。<code>intro</code> は開始前の確認（対象レッスンの概要／due 件数・滞留日数のプレビュー）に専念し、<code>exercise</code> は 1 問ずつ即時採点、<code>result</code> はスコア・問題ごとの正誤一覧・出し分けアクションを表示する。初回データ（問題・解説、<code>/review</code> は due queue）は Server loader で ViewModel 化して props で渡し、状態遷移そのものは Client Component が持つ（§8.5・§9.4 の <code>QuizInteractive</code> と同じ設計）。結果表示は <code>/quiz</code> と <code>/review</code> で共通コンポーネントとして再利用する。</li>
 <li><strong>ID 設計</strong>：<code>lessonId</code> / <code>questionId</code> は<strong>グローバル一意</strong>。学習導線は階層 URL（<code>/learn/...</code>）、演習・復習はフラット URL（<code>/quiz/[lesson]</code>・<code>/review</code>）。</li>
-<li><strong>レイアウト</strong>：上部ヘッダーのみ（<strong>ロゴ / 復習 / 学習</strong> の 3 リンク）。本文は中央 1 カラム。サイドバーは持たない（トピック増加後に後付け可）。</li>
+<li><strong>レイアウト（サイドバー / ボトムタブ）</strong>：PC は左サイドバー（ロゴ＋ダッシュボード／教材／演習／復習（due件数バッジ）／アナリティクス／学習領域／設定）、本文は右側 1 カラム。SP は上部アプリバー（ロゴ＋アバター）＋下部固定タブバー（ホーム／教材／演習／復習（dueバッジ）／分析の5項目）。「演習」「復習」ナビ項目は直前に扱っていたレッスン（未着手なら先頭レッスン）を対象とする簡易ヒューリスティックで遷移先を決定する（MVP は XSS 1本のため実質固定）。<strong>「設定」は将来の公開機能（認証等、§1 スコープ外）向けのプレースホルダで、MVP ではルートを持たない非活性項目</strong>とする。SP のタブバーはスペース都合で 5 項目に絞り、「学習領域（<code>/domains</code>）」へは「教材」タブまたはダッシュボードの領域カードから遷移する。</li>
 <li><strong>ユーザー</strong>：ログイン UI なし。API（Hono）側が固定 <code>user_id</code> を権威的に注入する。将来公開時は「固定値を返す関数」を「認証から <code>user_id</code> を引く関数」に差し替えるだけで、画面・API 契約は不変。</li>
-<li><strong>スタイリング</strong>：Tailwind CSS。共通コンポーネント（ボタン・カード等）は必要になった時点で薄く切り出す。</li>
+<li><strong>スタイリング</strong>：Tailwind CSS ＋ Neumorphism ベースのビジュアルデザイン。詳細トークン・実装方針は §8.7。</li>
 </ul>
 <h3>7.3 画面構成から要請される API（参考）</h3>
 <p><code>apps/api</code>（Hono）に以下を想定。本文はファイル一次ソースのため、API は ID・SRS メタ・集計値のみ返す。</p>
 <ul>
-<li><code>POST /answers</code> — 1 問解答の記録 → SRS 更新。リクエスト <code>{ questionId, selectedIndex }</code>、レスポンス <code>{ isCorrect, correctIndex }</code>。正誤判定は API が D1 の <code>questions</code>（4.4）を照合して行う権威側（7.2）</li>
+<li><code>POST /answers</code> — 1 問解答の記録 → SRS 更新。リクエスト <code>{ questionId, selectedIndex, responseTimeMs? }</code>、レスポンス <code>{ isCorrect, correctIndex }</code>。正誤判定は API が D1 の <code>questions</code>（4.4）を照合して行う権威側（7.2）</li>
 <li><code>GET /review/queue</code> — due 問題の <code>question_id</code> ＋ SRS メタを返す（本文はフロントがバンドル済みデータから解決）。<code>dueAt</code> 昇順・最大 20 件（§4.5）</li>
 <li><code>GET /dashboard/due-count</code> — ダッシュボードの due 件数</li>
+<li><code>GET /domains</code> — 4 領域それぞれの習得率（習得済み問題数 / 全問題数）・トピック数・レッスン数を返す（<code>/domains</code>・ダッシュボードの領域別カードで共用）</li>
+<li><code>GET /analytics/summary</code> — 総解答数・正答率・平均反応時間・習得済み問題数（SRS interval ≥ 21日）・連続学習日数・今週の学習時間（§4.4 の <code>lesson_views</code>・<code>answer_logs.response_time_ms</code> から集計）</li>
+<li><code>GET /analytics/weekly</code> — 直近7日の解答数推移（曜日ごとの件数）</li>
+<li><code>GET /analytics/mistakes</code> — 誤答率が高い問題の上位ランキング（<code>question_id</code> ＋ 誤答率）</li>
+<li><code>GET /activity/recent</code> — ダッシュボードの「最近のアクティビティ」向け直近イベント一覧（レッスン閲覧・演習完了・復習キュー更新を統合。集計ロジックの詳細は10章相当で実装時に確定する簡易版でよい）</li>
 </ul>
 <h3>7.4 → 第8章へ</h3>
 <p>本章は画面・ルーティング（What/Where）を定義した。フロントエンドのアーキテクチャ（How）は <strong>第8章</strong> で確定する。</p>
@@ -407,16 +416,21 @@
 <p><code>features + components/ui</code> 型を採用。<code>src/app</code> は薄く保ち、ロジックは <code>features</code> に寄せる。</p>
 <pre><code>apps/web/src/
 ├── app/                      # ルートのみ（page.tsx / layout.tsx）。薄く保つ
-│   ├── layout.tsx            # ヘッダー（ロゴ/復習/学習）＋中央1カラム
+│   ├── layout.tsx            # サイドバー（PC）/ ボトムタブ（SP）＋本文1カラム（§7.2）
 │   ├── page.tsx              # / ダッシュボード
+│   ├── domains/              # 学習領域一覧
 │   ├── learn/[domain]/[topic]/...   # レッスン一覧・教材本文（RSC）
-│   ├── quiz/[lesson]/        # 演習
-│   └── review/               # 復習
+│   ├── quiz/[lesson]/        # 演習（page が Server loader で初期化 → Client が intro/exercise/result 状態を持つ）
+│   ├── review/               # 復習（同上。初回 due queue は Server loader）
+│   └── analytics/            # アナリティクス
 ├── features/                 # 機能集約（状態・ロジックを持つ単位）
-│   ├── lesson/               # components / server / mapper / view-model
-│   ├── quiz/                 # components / hooks / server / api / mapper / view-model
-│   └── review/               # components / hooks / server / api / mapper / view-model
-├── components/ui/            # 汎用UI（Button / Card 等）。Tailwind 実装
+│   ├── dashboard/            # 統計・領域別進捗・最近のアクティビティの集約（components / server / mapper / view-model）
+│   ├── domains/              # 領域一覧の取得・ViewModel化
+│   ├── lesson/                # components / server / mapper / view-model
+│   ├── quiz/                  # components / hooks / server / api / mapper / view-model
+│   ├── review/                # components / hooks / server / api / mapper / view-model
+│   └── analytics/             # 集計値の取得・ViewModel化（components / server / api / mapper / view-model）
+├── components/ui/            # 汎用UI（Button / Card / Badge / ProgressBar 等）。Neumorphism トークンを土台に Tailwind で実装（§8.7）
 └── lib/                      # hc クライアントファクトリ / API response helper / content ローダー / env</code></pre>
 <ul>
 <li><strong>Quiz コンポーネント</strong>は <code>apps/web/src/features/quiz</code> に置く。<code>question_id[]</code> を受け取り 1 問ずつ回す純粋部品とし、<code>/quiz</code>（レッスン全問）・<code>/review</code>（due 問題）・<code>wrongOnly</code>（間違えonly）で供給元だけ差し替えて再利用する（7.2 の方針を実体化）。</li>
@@ -438,14 +452,14 @@
 </ul>
 <h3>8.3 Server / Client コンポーネント境界</h3>
 <ul>
-<li><strong>教材系（<code>/</code>・<code>/learn/...</code>）= RSC</strong>。ビルド時バンドル済みデータを読む。ダッシュボードの due 件数のような初回表示に必要な軽い集計値は page / Server loader から <code>hc</code> で読む。教材本文ページは <strong>API 不要</strong>。</li>
-<li><strong>演習系（Quiz / Review）= Client Component</strong>。状態（現在の問題・採点結果・ロック）を持つため。</li>
+<li><strong>教材・集計系（<code>/</code>・<code>/learn/...</code>・<code>/domains</code>・<code>/analytics</code>）= RSC</strong>。ビルド時バンドル済みデータを読む。ダッシュボードの due 件数・統計値、<code>/domains</code> の習得率、<code>/analytics</code> の各集計のような初回表示に必要な集計値は page / Server loader から <code>hc</code> で読む。教材本文ページは <strong>API 不要</strong>。</li>
+<li><strong>演習系（Quiz / Review）= Client Component</strong>。イントロ・演習・結果の状態（現在の問題・採点結果・ロック）を持つため。初回データは Server loader（<code>/quiz</code> は content、<code>/review</code> は due queue）で ViewModel 化し props で渡す（§9.2）。</li>
 <li><strong>レイアウト / ヘッダー = Server</strong>。</li>
 <li>実行場所はディレクトリ名ではなく import 境界で決まる。<code>apps/web/src/features/*/server</code> は <code>apps/web/src/app/**/page.tsx</code> など Server Component から import する限りサーバー側で実行される。誤用防止のため <code>import 'server-only'</code> を必須にする。</li>
 <li>Server Actions は使わず、動的データは Hono API に一本化する。初回取得は page / Server loader から <code>hc</code> で実行し、mutation・再取得は Client hook から <code>hc</code> を叩く（API 契約を <code>apps/api</code> に一本化し、RPC 型を素直に効かせる）。<ul>
 <li><strong>不採用の根拠</strong>：変更系を Hono に一本化することで ①契約（<code>AppType</code>）と <code>user_id</code> 注入点（§7.2）を単一ソースに保てる、②Hono+Cloudflare の学習目的（§2）を素通りしない。Server Actions の利点（フォームのプログレッシブエンハンスメント等）は、即時採点の Client 主導 Quiz・変更系が <code>POST /answers</code> ほぼ一択の本アプリでは恩恵が小さい。重いフォームが必要になった時点で再検討する。</li>
 </ul></li>
-<li><strong>キャッシュ方針</strong>：<code>/</code>（due-count）・<code>/review</code>（queue）は動的データ。Next.js 15+ は <code>fetch</code> をデフォルトで無キャッシュにするため、<code>hc</code> 経由の <code>fetch</code> にキャッシュオプションを付けない限り、route segment config のデフォルト（<code>dynamic = 'auto'</code>）のまま自動的に動的レンダリングになる。<strong><code>export const dynamic = 'force-dynamic'</code> は明記しない</strong>（<code>'auto'</code> の挙動に暗黙で依存する）。この前提が壊れるのは「<code>hc</code> の fetch 呼び出しに <code>cache: 'force-cache'</code> や <code>next: { revalidate }</code> を付けてしまった時」のみなので、feature の <code>api/</code> wrapper（§8.4）にキャッシュオプションを持ち込まないことを徹底する。<code>'use cache'</code> / <code>cacheTag</code> / <code>revalidateTag</code> も現時点では採用しない — mutation（<code>POST /answers</code>）が Hono Worker 直行で Next.js のサーバーコンテキストを経由しないため <code>revalidateTag</code> の発火点がなく、due-count はユーザー単位のためタグ設計もマルチユーザー化まで先送りする。解答後・画面復帰時の鮮度回復は Client 側の <code>router.refresh()</code> で RSC を再実行して担う（§9.2）。</li>
+<li><strong>キャッシュ方針</strong>：<code>/</code>（due-count・統計）・<code>/domains</code>（習得率）・<code>/analytics</code>（各集計）・<code>/review</code>（queue）は動的データ。Next.js 15+ は <code>fetch</code> をデフォルトで無キャッシュにするため、<code>hc</code> 経由の <code>fetch</code> にキャッシュオプションを付けない限り、route segment config のデフォルト（<code>dynamic = 'auto'</code>）のまま自動的に動的レンダリングになる。<strong><code>export const dynamic = 'force-dynamic'</code> は明記しない</strong>（<code>'auto'</code> の挙動に暗黙で依存する）。この前提が壊れるのは「<code>hc</code> の fetch 呼び出しに <code>cache: 'force-cache'</code> や <code>next: { revalidate }</code> を付けてしまった時」のみなので、feature の <code>api/</code> wrapper（§8.4）にキャッシュオプションを持ち込まないことを徹底する。<code>'use cache'</code> / <code>cacheTag</code> / <code>revalidateTag</code> も現時点では採用しない — mutation（<code>POST /answers</code>）が Hono Worker 直行で Next.js のサーバーコンテキストを経由しないため <code>revalidateTag</code> の発火点がなく、due-count はユーザー単位のためタグ設計もマルチユーザー化まで先送りする。解答後・画面復帰時の鮮度回復は Client 側の <code>router.refresh()</code> で RSC を再実行して担う（§9.2）。</li>
 </ul>
 <h3>8.4 <code>hc</code> クライアントの取り回し</h3>
 <ul>
@@ -462,11 +476,11 @@
 </ul>
 <h3>8.5 演習（Quiz）の状態管理</h3>
 <ul>
-<li><strong>クライアント state のみ</strong>（<code>useState</code> で Quiz コンポーネント内に閉じる）。MVP として最小化。<ul>
-<li>MVP フローは「1 問表示 → 選択 → 即時採点 → ロック → 解説表示 → 次問」で線形・シンプルなため、<code>useState</code> で充分。複雑な状態遷移が出現（例：問題セット内での再検索・フィルタ等）したら、その時点で <code>useReducer</code> へ段階的にリファクタリング。</li>
+<li><strong>クライアント state のみ</strong>（<code>useState</code> で Quiz コンポーネント内に閉じる）。MVP として最小化。画面フェーズ（<code>intro → exercise → result</code>）・現在の問題インデックス・解答結果を Client Component が保持する（§7.2）。<ul>
+<li>MVP フローは「イントロ確認 → 1 問表示 → 選択 → 即時採点 → ロック → 解説表示 → 次問 → 結果」で線形・シンプルなため、<code>useState</code> で充分。複雑な状態遷移が出現（例：問題セット内での再検索・フィルタ等）したら、その時点で <code>useReducer</code> へ段階的にリファクタリング。</li>
 </ul></li>
-<li><strong>リロードで進捗はリセット（許容）</strong>。ただし「1 問解答＝1 <code>answer_log</code> POST」（7.2 で定義済みの原則）なので、解答そのものは即サーバーに残る。途中復帰（sessionStorage）やサーバー復元は将来拡張ポイントとして留保。</li>
-<li>フロー：1 問表示 → 即時採点（正誤＋解説）→ 選択肢ロック → 末尾に結果サマリ → 出し分け動線（<code>/quiz</code>=次のレッスンへ／<code>/review</code>=ホームへ、両者「間違えonly」提供）。</li>
+<li><strong>リロードで進捗はリセット（許容）</strong>。リロードすると <code>intro</code> フェーズに戻る。ただし「1 問解答＝1 <code>answer_log</code> POST」（7.2 で定義済みの原則）なので、解答そのものは即サーバーに残る。途中復帰（sessionStorage）やサーバー復元は将来拡張ポイントとして留保。</li>
+<li>フロー：イントロ（概要／due プレビュー）→ 1 問表示 → 即時採点（正誤＋解説）→ 選択肢ロック → 末尾に結果サマリ → 出し分け動線（<code>/quiz</code>=次のレッスンへ／<code>/review</code>=ホームへ、両者「間違えonly」提供）。</li>
 </ul>
 <h3>8.6 <code>packages/shared</code> の Zod 利用パターン</h3>
 <ul>
@@ -474,10 +488,31 @@
 <li>同一スキーマを <strong>3 経路で共有</strong>：①content のビルド時パース検証、②API 入力の <code>zValidator</code>、③フロントの型（<code>z.infer</code>）。</li>
 <li>フロントは API レスポンス・content データとも <code>z.infer</code> で型を引き、DTO / Content data の独自再定義を持たない。ViewModel は表示都合の web 固有型として <code>apps/web/src/features</code> に定義する（§9.3）。</li>
 </ul>
-<h3>8.7 スタイリング（Tailwind 移行）</h3>
+<h3>8.7 スタイリング（Tailwind + Neumorphism デザインシステム）</h3>
+<p>ビジュアルモックアップ（<a href="./mockups/DevPath%20Neumorphism.dc.html"><code>docs/mockups/DevPath Neumorphism.dc.html</code></a>・<a href="./mockups/DevPath%20SP%20Neumorphism.dc.html">SP版</a>）で確定したトンマナを正式なスタイル方針とする。</p>
 <ul>
-<li><strong>Tailwind CSS を導入</strong>し、スタイルを Tailwind に寄せる。</li>
-<li>現状の scaffold 残骸（<code>*.module.css</code>、<code>*.disabled</code> ファイル群）は<strong>撤去対象</strong>として整理する。</li>
+<li><strong>Tailwind CSS を導入</strong>し、スタイルを Tailwind に寄せる。現状の scaffold 残骸（<code>*.module.css</code>、<code>*.disabled</code> ファイル群）は<strong>撤去対象</strong>として整理する。</li>
+<li><strong>ビジュアルスタイル＝ Neumorphism（ソフトUI）</strong>。背景と同色のカードに、明暗2方向のシャドウ（暗い影＋明るいハイライト）で立体感を出す。用途別に3段階：<ul>
+<li><code>nm</code>（凸/浮き出し）：カード・ボタン・パネルの基本表面</li>
+<li><code>nm-in</code>（凹/くぼみ）：アイコンバッジ、選択済み・ロック状態の入力欄</li>
+<li><code>nm-in-sm</code>（小さな凹・pill 形状）：タグ、プログレスバーの溝、カウンターバッジ</li>
+</ul></li>
+<li><strong>カラートークン</strong>（CSS変数として定義し、Tailwind の <code>theme.extend.colors</code> / 任意のテーマ切り替えの土台にする）：
+<table>
+<thead>
+<tr><th>トークン</th><th>値</th><th>用途</th></tr>
+</thead>
+<tbody><tr><td><code>--nm-base</code></td><td><code>#e4e9f0</code></td><td>背景・カード地色</td></tr>
+<tr><td><code>--nm-dark</code></td><td><code>#d1d7e0</code></td><td>影（暗）側</td></tr>
+<tr><td><code>--nm-light</code></td><td><code>#ffffff</code></td><td>影（明）側</td></tr>
+<tr><td><code>--accent</code> / <code>--accent-lt</code></td><td><code>#1a73e8</code> / <code>#3f8bf5</code></td><td>アクセント（ブランドブルー）。CTA・進捗バー・選択状態</td></tr>
+<tr><td>文字色</td><td><code>#3b4457</code>（見出し）/ <code>#465063</code>（本文）/ <code>#7a8699</code>・<code>#93a0b5</code>（補助）</td><td>テキスト階調</td></tr>
+<tr><td>セマンティック</td><td>成功 <code>#1f9d5c</code> / 警告 <code>#c77d13</code> / 危険 <code>#dc2626</code></td><td>正誤判定・due滞留度・誤答率の色分け</td></tr></tbody>
+</table>
+</li>
+<li><strong>タイポグラフィ</strong>：UI・本文は <strong>Inter</strong>（400/500/600/700/800）、ID・パンくず・コードブロックは <strong>JetBrains Mono</strong>（等幅、識別子と地の文を視覚的に区別する）。</li>
+<li><strong>Tailwind への落とし込み</strong>：Tailwind のユーティリティだけでは2方向シャドウを素直に表現しづらいため、<code>globals.css</code> の <code>@layer components</code> に <code>.nm</code> / <code>.nm-in</code> / <code>.nm-in-sm</code> を定義し、<code>components/ui</code>（Card・Button・Badge・ProgressBar 等）がそれを土台に組む。色・影の強さは CSS 変数（<code>--nm-base</code> 等）で一元管理し、Tailwind の任意値記法（<code>shadow-[...]</code>）やコンポーネントクラスから参照する。</li>
+<li><strong>配色・起伏の可変性</strong>：モックアップにはトーン（クール/ニュートラル/ウォーム）・起伏の深さ・アクセントカラーを切り替えるプレビュー用の仕組みがあるが、これはデザイン検討用のプレビュー機能であり、<strong>アプリ本体にテーマ切り替えUIは設けない</strong>。初期値（クール・標準・ブルー）を唯一の配色として固定する。CSS変数で値を持つのは実装の柔軟性のためであり、将来の要望が具体化した時点でテーマ切り替えを検討する。</li>
 <li>共通スタイルは <code>components/ui</code> のコンポーネントに集約し、ページ側はユーティリティクラスで組む。</li>
 </ul>
 <h3>8.8 → 第9章へ</h3>
@@ -521,7 +556,7 @@ export default function LessonPage({ params }: Props) {
 <li>エラーは throw → <code>error.tsx</code>・<code>Suspense</code> で処理。</li>
 </ul>
 <h4>Client 系（演習・復習系）</h4>
-<p><code>/quiz/[lesson]</code>・<code>/review</code> などインタラクションを持つページ。<strong>初回データは Server loader で ViewModel 化し、page はその VM を props で渡すだけに留める。Client Component は props の VM をそのまま描画に使い、ローカル state は「解答結果」「送信エラー」だけに限定する</strong>（＝初回レンダリング時にスピナーを出さない。VM 自体を state に複製しない）。</p>
+<p><code>/quiz/[lesson]</code>・<code>/review</code> などインタラクションを持つページ。<strong>初回データは Server loader で ViewModel 化し、page はその VM を props で渡すだけに留める。Client Component は props の VM をそのまま描画に使い、ローカル state は「画面フェーズ（intro/exercise/result）」「解答結果」「送信エラー」だけに限定する</strong>（＝初回レンダリング時にスピナーを出さない。VM 自体を state に複製しない）。</p>
 <ul>
 <li><code>/quiz</code>：content から問題・解説を解決し、API GET はしない。Client hook は <code>POST /answers</code> のみ担当。VM は content のみで再取得不要なため、<code>useState(initialViewModel)</code> に据えてよい。</li>
 <li><code>/review</code>：Server loader で <code>GET /review/queue</code> を呼び、返却された <code>question_id</code> を content の問題本文・解説へ join して VM 化する。<strong>join は Server loader 内でのみ行い、content データ（教材本文・解説）をクライアントバンドルに含めない</strong>。解答完了後に次の due を引き直す場面では、Client から API を再度叩いて join し直すのではなく <code>router.refresh()</code> で Server Component を再実行し、Server loader が新しい VM を props として渡し直す（§8.3 のキャッシュ方針）。</li>
@@ -838,7 +873,7 @@ export function ReviewRunner({ viewModel }: Props) {
 <li>クリーンアーキテクチャ流の ports/adapters ディレクトリ分離 → 「service が deps 型（interface）を定義し、dal がそれを実装する」という import 方向ルールだけで同じ効果を得る</li>
 <li>OpenAPI スキーマ生成 → <code>hc</code>（<code>AppType</code>）が型契約を担うため不要（§8.4）</li>
 </ul>
-<p>エンドポイント 3 本（§7.3）の規模で抽象を増やすと、AI 駆動開発のレビュー可能性がむしろ下がる。層の責務と依存方向が守られていれば十分とする。</p>
+<p><strong>スコープの段階性</strong>：本章のコード例・ディレクトリ構成は Walking Skeleton 中核の 3 エンドポイント（§7.3 の <code>POST /answers</code>・<code>GET /review/queue</code>・<code>GET /dashboard/due-count</code>）を基準に確定する。§7.3 が挙げる残りのエンドポイント（<code>GET /domains</code>・<code>GET /analytics/*</code>・<code>GET /activity/recent</code>）は Walking Skeleton 貫通後に<strong>同じ route → service → dal パターンで追加</strong>する（§6 の「同じパターンの繰り返しで増やす」方針）。数エンドポイントの規模で抽象を増やすと、AI 駆動開発のレビュー可能性がむしろ下がる。層の責務と依存方向が守られていれば十分とする。</p>
 <h3>10.2 ディレクトリ構成</h3>
 <pre><code>apps/api/
 ├── src/
@@ -861,6 +896,7 @@ export function ReviewRunner({ viewModel }: Props) {
 └── scripts/
     └── sync-content.ts          # content/ → D1 seed/upsert（§10.8）</code></pre>
 <ul>
+<li>上記は Walking Skeleton 中核 3 エンドポイントの構成（§10.1）。§7.3 の後続エンドポイントは同じ 3 層パターンで追加する：<code>routes/domains.ts</code>・<code>routes/analytics.ts</code>・<code>routes/activity.ts</code>、対応する <code>services/*-service.ts</code> と <code>dal/*-repository.ts</code>、<code>index.ts</code> への <code>.route()</code> 追記。アナリティクスは集計クエリ主体（読み取りのみ）のため service 層は薄くなる見込み。</li>
 <li><strong>dal はテーブル単位ではなくユースケース単位</strong>で置く。「service が要求する deps 型」を 1 ファイルで実装する形にすると、service ⇔ dal の対応が 1:1 で追いやすく、テーブル単位 repository の細切れ合成（と、それを束ねる工数）を避けられる。テーブル単位の共有が必要になった時点で分割する。</li>
 </ul>
 <h3>10.3 リクエストの流れ（<code>POST /answers</code> を例に）</h3>
@@ -1010,7 +1046,7 @@ export type AppType = typeof routes
 export default app</code></pre>
 <ul>
 <li><strong><code>hc</code> の型推論を保つため、ルート定義はメソッドチェーンで書く</strong>。各サブルーターは <code>new Hono&lt;AppEnv&gt;().post(...)</code> のチェーンで定義・export し、<code>index.ts</code> では <code>.route()</code> のチェーンで合成する。チェーンを分断（<code>app.post(...)</code> を文として並べる等）すると <code>AppType</code> からエンドポイント型が消える。</li>
-<li>パス設計は §7.3 の契約（<code>POST /answers</code>・<code>GET /review/queue</code>・<code>GET /dashboard/due-count</code>）をそのまま <code>.route()</code> のプレフィックス＋サブルーター内パスで構成する。</li>
+<li>パス設計は §7.3 の契約（<code>POST /answers</code>・<code>GET /review/queue</code>・<code>GET /dashboard/due-count</code>）をそのまま <code>.route()</code> のプレフィックス＋サブルーター内パスで構成する。後続の <code>GET /domains</code>・<code>GET /analytics/*</code>・<code>GET /activity/recent</code>（§10.1）も同じ要領で <code>.route('/domains', ...)</code> 等をチェーンに追記する。</li>
 </ul>
 <h3>10.6 バリデーション・DTO・エラー処理</h3>
 <p><strong>入出力スキーマは <code>packages/shared/src/schema/api.ts</code> に新設</strong>する（§9.3 で予告済み）。同一スキーマを「API 入力の <code>zValidator</code>」「route 返り値の契約固定（<code>satisfies</code>）」「フロントの型（<code>z.infer</code>）」の 3 経路で共有する（§8.6 と同じパターン）。</p>
@@ -1033,6 +1069,10 @@ export const reviewQueueResponseSchema = z.object({
 export const dueCountResponseSchema = z.object({
   dueCount: z.number().int().nonnegative(),
 })</code></pre>
+<ul>
+<li><code>POST /answers</code> の入力は任意の反応時間を含める：<code>answerRequestSchema</code> に <code>responseTimeMs: z.number().int().nonnegative().optional()</code> を追加する（§7.3・§4.4。アナリティクスの平均反応時間用。未送信でも採点は成立する）。</li>
+<li>後続エンドポイント（§10.1）のレスポンススキーマ（<code>domainsResponseSchema</code>・<code>analyticsSummaryResponseSchema</code>・<code>analyticsWeeklyResponseSchema</code>・<code>mistakesResponseSchema</code>・<code>recentActivityResponseSchema</code>）も同じ <code>api.ts</code> に同じパターンで追加する。</li>
+</ul>
 <p><strong>エラー処理の方針</strong>：</p>
 <ul>
 <li>service は <strong>HTTP を知らないドメインエラー</strong>（<code>services/errors.ts</code> の <code>QuestionNotFoundError</code> 等）を throw する。</li>
@@ -1092,10 +1132,10 @@ const result = await submitAnswer(deps, {
 // → result.isCorrect === true、recorded[0].nextSrs.reps === 1 などを検証</code></pre>
 <h3>10.10 既存コードとの差分（本章から発生する実装タスク）</h3>
 <ul>
-<li><code>packages/shared/src/db/schema.ts</code>：<code>questions</code> テーブル（§4.4 の content 同期キャッシュ）を追加。<code>srs_states</code> に複合主キー <code>(user_id, question_id)</code> を追加</li>
-<li><code>packages/shared/src/schema/api.ts</code>：新設（§10.6）</li>
+<li><code>packages/shared/src/db/schema.ts</code>：<code>questions</code> テーブル（§4.4 の content 同期キャッシュ）を追加。<code>srs_states</code> に複合主キー <code>(user_id, question_id)</code> を追加。<code>answer_logs</code> に <code>response_time_ms</code>（任意列）を追加。<code>lesson_views</code> テーブル（§4.4。アナリティクス用）を追加</li>
+<li><code>packages/shared/src/schema/api.ts</code>：新設（§10.6）。Walking Skeleton 分（answer / reviewQueue / dueCount）を先行し、<code>responseTimeMs</code> 任意入力と後続エンドポイントのレスポンススキーマは各画面の実装時に追加</li>
 <li><code>apps/api/wrangler.toml</code>：<code>name</code> を <code>tech-study-lab-api</code> へ変更（web Worker と区別する。§3.1 の Service Binding が参照する <code>service</code> 名になる）。<code>vars</code> に <code>WEB_ORIGIN</code> を追加</li>
-<li><code>apps/api/src/</code>：<code>env.ts</code> / <code>middleware/</code> / <code>routes/</code> / <code>services/</code> / <code>dal/</code> を §10.2 の構成で新設し、<code>index.ts</code> をルート合成形へ書き換え</li>
+<li><code>apps/api/src/</code>：<code>env.ts</code> / <code>middleware/</code> / <code>routes/</code> / <code>services/</code> / <code>dal/</code> を §10.2 の構成で新設し、<code>index.ts</code> をルート合成形へ書き換え。<code>/domains</code>・<code>/analytics/*</code>・<code>/activity/recent</code> 用の route/service/dal は Walking Skeleton 貫通後に同パターンで追加（§10.1）</li>
 <li><code>apps/api/scripts/sync-content.ts</code>：新設（§10.8。package.json の <code>content:sync</code> は定義済み）</li>
 </ul>
 <h3>10.11 将来拡張ポイント</h3>
@@ -1202,7 +1242,7 @@ const result = await submitAnswer(deps, {
 </ul>
 <h3>12.7 バックアップ・観測（当面の割り切り）</h3>
 <ul>
-<li><strong>バックアップ</strong>：教材・問題は Git にあるため、守る対象は D1 の <code>answer_logs</code> / <code>srs_states</code> のみ。当面は必要時に <code>wrangler d1 export</code> を手動実行し、マルチユーザー公開時に定期化（Cron 等）を検討する。</li>
+<li><strong>バックアップ</strong>：教材・問題は Git にあるため、守る対象は D1 の動的データ（<code>answer_logs</code> / <code>srs_states</code> / <code>lesson_views</code>）のみ。当面は必要時に <code>wrangler d1 export</code> を手動実行し、マルチユーザー公開時に定期化（Cron 等）を検討する。</li>
 <li><strong>観測</strong>：Workers Logs（<code>console.error</code>。§10.6 の <code>onError</code> から出力）で足りるとする。構造化ログ・外部監視は公開時に再検討。</li>
 </ul>
     </article>

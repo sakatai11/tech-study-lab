@@ -499,8 +499,18 @@
             loader からビルド時バンドル済みデータを読む。
           </li>
           <li>
-            解答ログ・SRS・due queue などの動的データだけを Hono API
-            に集約し、フロントからは <code>hc</code> の型安全RPCで呼ぶ。
+            解答ログ・SRS・due queue・各種集計（ダッシュボード統計・<code>/domains</code>
+            の習得率・<code>/analytics</code> の集計）などの動的データだけを Hono
+            API に集約し、フロントからは <code>hc</code> の型安全RPCで呼ぶ。集計系ページも
+            RSC で、初回表示に必要な集計値を Server loader から読む（教材本文ページのみ
+            API 不要）。
+          </li>
+          <li>
+            演習・復習は 1 ルート内でクライアント状態遷移（<code>intro →
+            exercise → result</code>）を持つ（別 URL に切らない）。初回データ
+            （問題・解説、<code>/review</code> は due queue）は Server loader で
+            ViewModel 化して props 渡しし、Client Component が画面フェーズ・解答結果・送信エラーだけを
+            state に持つ。
           </li>
           <li>
             web と API は<strong>別 Worker</strong>（design.md
@@ -524,8 +534,8 @@
             （<code>answerIndex</code>）を含めない。
           </li>
           <li>
-            <code>/</code>・<code>/review</code> は無キャッシュ fetch により
-            route segment config の既定（<code>dynamic = 'auto'</code>）のまま
+            動的データを読むページ（<code>/</code>（due-count・統計）・<code>/domains</code>（習得率）・<code>/analytics</code>（各集計）・<code>/review</code>（queue））は無キャッシュ
+            fetch により route segment config の既定（<code>dynamic = 'auto'</code>）のまま
             自動的に動的レンダリングになる。<code
               >'use cache'</code
             >・<code>cacheTag</code>・<code>revalidateTag</code> は現時点では
@@ -811,7 +821,11 @@ flowchart LR
             </tr>
             <tr>
               <td><code>apps/web/src/components/ui</code></td>
-              <td>Button / Card などの汎用UI。Tailwind 実装を集約する。</td>
+              <td>
+                Button / Card / Badge / ProgressBar などの汎用UI。Tailwind ＋
+                Neumorphism トークン（<code>.nm</code> / <code>.nm-in</code> /
+                <code>.nm-in-sm</code>、design.md §8.7）を土台に集約する。
+              </td>
               <td>feature 固有ロジック、データ取得。</td>
             </tr>
             <tr>

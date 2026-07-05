@@ -447,12 +447,12 @@
         </ul>
         <div class="note">
           <span class="callout-title">なぜ feature 型（縦割り）にしないのか</span>
-          本アプリの API は 3 エンドポイントすべてが SRS
+          本アプリの中核 API（3 エンドポイント）はいずれも SRS
           という同じデータ（<code>questions</code>・<code>answer_logs</code>・<code>srs_states</code>）の周りを回っており、feature
           ごとにフォルダを切っても repository を相互 import
           することになります。境界が曖昧な縦割りは置き場所の迷いを生むため、<strong
             >層ごとの横割り＋依存方向ルール</strong
-          >を採用しています。独立したドメイン（教材管理・統計など）が増えた時点で
+          >を採用しています。後続の集計系（アナリティクス・領域一覧）を含め独立したドメインが増えた時点で
           feature 型への移行を再検討します（移行はファイル移動のみで、3
           層の責務はそのまま持ち越せます）。
         </div>
@@ -461,7 +461,9 @@
       <section>
         <h2>API 契約（design.md §7.3）</h2>
         <p>
-          エンドポイントは 3 本。本文（教材・問題・解説）はファイル一次ソースのため、API
+          本資料が詳細化するのは Walking Skeleton 中核の
+          <strong>3 エンドポイント</strong>（<code>POST /answers</code>・<code>GET
+          /review/queue</code>・<code>GET /dashboard/due-count</code>）です。本文（教材・問題・解説）はファイル一次ソースのため、API
           は ID・SRS メタ・集計値のみ返します。
         </p>
         <table>
@@ -476,12 +478,12 @@
             <tr>
               <td><code>POST /answers</code></td>
               <td>
-                <code>{ questionId, selectedIndex }</code> →
+                <code>{ questionId, selectedIndex, responseTimeMs? }</code> →
                 <code>{ isCorrect, correctIndex }</code>
               </td>
               <td>
                 採点（D1 の <code>questions</code> と照合）→
-                <code>answer_log</code> 記録 → SRS 更新
+                <code>answer_log</code> 記録（任意で反応時間も）→ SRS 更新
               </td>
             </tr>
             <tr>
@@ -506,6 +508,17 @@
           <code>satisfies</code>」「フロントの型（<code>z.infer</code>）」の 3
           経路で共有します（§10.6）。
         </p>
+        <div class="note">
+          <span class="callout-title">後続エンドポイント（Walking Skeleton 貫通後）</span>
+          §7.3 は上記 3 本に加えて画面駆動の集計 API を挙げます：<code>GET
+          /domains</code>（領域別の習得率・トピック/レッスン数）、<code>GET
+          /analytics/summary</code>・<code>GET /analytics/weekly</code>・<code>GET
+          /analytics/mistakes</code>（アナリティクス画面の各集計）、<code>GET
+          /activity/recent</code>（最近のアクティビティ）。これらは
+          Walking Skeleton 貫通後に<strong>同じ route → service → dal
+          パターン</strong>で追加します（§10.1）。集計クエリ主体（読み取りのみ）のため
+          service 層は薄くなります。
+        </div>
       </section>
 
       <section>
@@ -809,8 +822,9 @@ flowchart LR
               <td><code>packages/shared/src/db/schema.ts</code></td>
               <td>
                 Drizzle スキーマ（<code>users</code> /
-                <code>answer_logs</code> / <code>srs_states</code> /
-                <code>questions</code>）。
+                <code>answer_logs</code>（任意列 <code>response_time_ms</code>）/
+                <code>srs_states</code> / <code>questions</code> /
+                <code>lesson_views</code>）。
               </td>
               <td>クエリ実装（クエリは dal に置く）。</td>
             </tr>
@@ -1159,11 +1173,15 @@ export const answersRoute = new Hono&lt;AppEnv&gt;().post(
           <span class="callout-title">実装時の注意（design.md §10.10）</span>
           本資料のコードが前提とする差分：<code>questions</code>
           テーブルの追加、<code>srs_states</code> の複合主キー
-          <code>(user_id, question_id)</code>、<code>schema/api.ts</code>
+          <code>(user_id, question_id)</code>、<code>answer_logs</code> への任意列
+          <code>response_time_ms</code> 追加、<code>lesson_views</code>
+          テーブルの追加（アナリティクス用）、<code>schema/api.ts</code>
           の新設、wrangler の Worker 名を
           <code>tech-study-lab-api</code> へ変更（web 側 Service Binding
           が参照する名前）、<code>vars</code> への
-          <code>WEB_ORIGIN</code> 追加。
+          <code>WEB_ORIGIN</code>
+          追加。集計系エンドポイント（<code>/domains</code>・<code>/analytics/*</code>・<code>/activity/recent</code>）の
+          route/service/dal は Walking Skeleton 貫通後に同パターンで追加。
         </div>
       </section>
     </main>
