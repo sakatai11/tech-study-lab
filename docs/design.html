@@ -211,36 +211,15 @@
 <h2>1. プロダクト方針</h2>
 <table>
 <thead>
-<tr>
-<th>項目</th>
-<th>決定</th>
-</tr>
+<tr><th>項目</th><th>決定</th></tr>
 </thead>
-<tbody><tr>
-<td>ユーザー</td>
-<td>個人（自分）から開始 → <strong>将来公開</strong>。データ分離は最初から意識する</td>
-</tr>
-<tr>
-<td>学習領域</td>
-<td>セキュリティ / FE・BEフレームワーク / アーキテクチャ設計</td>
-</tr>
-<tr>
-<td>学習形態</td>
-<td>読み物（教材）＋ <strong>4択</strong>問題演習</td>
-</tr>
-<tr>
-<td>適応学習</td>
-<td><strong>出題制御型</strong>（SRS／弱点優先）。コンテンツ自体の自動生成はしない</td>
-</tr>
-<tr>
-<td>SRS単位</td>
-<td><strong>問題ごと</strong>（弱点を問題粒度で追跡）</td>
-</tr>
-<tr>
-<td>コンテンツ供給</td>
-<td>既存教材の構造化取込 ＋ 手書き骨子＋AI補助執筆</td>
-</tr>
-</tbody></table>
+<tbody><tr><td>ユーザー</td><td>個人（自分）から開始 → <strong>将来公開</strong>。データ分離は最初から意識する</td></tr>
+<tr><td>学習領域</td><td>セキュリティ / FE・BEフレームワーク / アーキテクチャ設計</td></tr>
+<tr><td>学習形態</td><td>読み物（教材）＋ <strong>4択</strong>問題演習</td></tr>
+<tr><td>適応学習</td><td><strong>出題制御型</strong>（SRS／弱点優先）。コンテンツ自体の自動生成はしない</td></tr>
+<tr><td>SRS単位</td><td><strong>問題ごと</strong>（弱点を問題粒度で追跡）</td></tr>
+<tr><td>コンテンツ供給</td><td>既存教材の構造化取込 ＋ 手書き骨子＋AI補助執筆</td></tr></tbody>
+</table>
 <h3>スコープ外（現時点）</h3>
 <ul>
 <li>コンテンツ生成型の適応学習（解答傾向からLLMが問題・解説を自動生成・改訂する仕組み）</li>
@@ -251,53 +230,17 @@
 <p>フルCloudflare構成。Hono と Cloudflare を学習目的で採用する（このアプリ開発自体をドッグフーディングの場とする）。</p>
 <table>
 <thead>
-<tr>
-<th>レイヤー</th>
-<th>技術</th>
-<th>補足</th>
-</tr>
+<tr><th>レイヤー</th><th>技術</th><th>補足</th></tr>
 </thead>
-<tbody><tr>
-<td>フロント</td>
-<td>Next.js（App Router）</td>
-<td>Cloudflare Workers（OpenNext）へデプロイ</td>
-</tr>
-<tr>
-<td>API</td>
-<td>Hono</td>
-<td>Cloudflare Workers。<strong>主要APIを一通り担当</strong></td>
-</tr>
-<tr>
-<td>DB</td>
-<td>Cloudflare D1（SQLite）</td>
-<td>ORM は Drizzle</td>
-</tr>
-<tr>
-<td>型・バリデーション</td>
-<td>TypeScript strict / Zod</td>
-<td>Honoの <code>zValidator</code> とフロントで共有</td>
-</tr>
-<tr>
-<td>Lint/Format</td>
-<td>Biome</td>
-<td>設定一元化・高速</td>
-</tr>
-<tr>
-<td>テスト</td>
-<td>Vitest</td>
-<td>SRSロジックは純粋関数で重点的にテスト</td>
-</tr>
-<tr>
-<td>CI</td>
-<td>GitHub Actions</td>
-<td>型・lint・test・build を PR ゲート化</td>
-</tr>
-<tr>
-<td>パッケージ管理</td>
-<td>pnpm workspaces</td>
-<td>monorepo</td>
-</tr>
-</tbody></table>
+<tbody><tr><td>フロント</td><td>Next.js（App Router）</td><td>Cloudflare Workers（OpenNext）へデプロイ</td></tr>
+<tr><td>API</td><td>Hono</td><td>Cloudflare Workers。<strong>主要APIを一通り担当</strong></td></tr>
+<tr><td>DB</td><td>Cloudflare D1（SQLite）</td><td>ORM は Drizzle</td></tr>
+<tr><td>型・バリデーション</td><td>TypeScript strict / Zod</td><td>Honoの <code>zValidator</code> とフロントで共有</td></tr>
+<tr><td>Lint/Format</td><td>Biome</td><td>設定一元化・高速</td></tr>
+<tr><td>テスト</td><td>Vitest</td><td>SRSロジックは純粋関数で重点的にテスト</td></tr>
+<tr><td>CI</td><td>GitHub Actions</td><td>型・lint・test・build を PR ゲート化</td></tr>
+<tr><td>パッケージ管理</td><td>pnpm workspaces</td><td>monorepo</td></tr></tbody>
+</table>
 <h3>既知のリスク</h3>
 <ul>
 <li>Next.js の Cloudflare デプロイ（<code>@opennextjs/cloudflare</code>）は Vercel 比でハマりどころが残る。これは「Cloudflareを学ぶ」目的の一部として許容する。</li>
@@ -314,8 +257,7 @@
 ├── content/          # 教材・問題（Markdown + frontmatter）= 一次ソース
 ├── docs/
 │   └── design.md     # 本書
-└── CLAUDE.md         # AI駆動開発のコンテキスト・規約
-</code></pre>
+└── CLAUDE.md         # AI駆動開発のコンテキスト・規約</code></pre>
 <p><code>apps/web/src</code> 配下のより詳細な構成（<code>features</code> / <code>components/ui</code> / <code>lib</code> 等）は第8.1章で確定する。</p>
 <ul>
 <li>フロント ⇔ API は Hono の <code>hc</code>（型安全RPC）で接続。</li>
@@ -333,28 +275,12 @@
 <p><strong>接続経路</strong>（<code>hc</code> クライアント側の取り回しは §8.4）：</p>
 <table>
 <thead>
-<tr>
-<th>呼び出し元</th>
-<th>経路</th>
-<th>備考</th>
-</tr>
+<tr><th>呼び出し元</th><th>経路</th><th>備考</th></tr>
 </thead>
-<tbody><tr>
-<td>Server loader（web Worker 内）</td>
-<td><strong>Service Binding</strong>（<code>env.API</code>）</td>
-<td>Worker 間の内部呼び出し。公衆インターネットを経由せず、CORS 不要</td>
-</tr>
-<tr>
-<td>Client hook（ブラウザ）</td>
-<td>API Worker の公開 URL</td>
-<td>当面は Hono の <code>cors()</code> で web オリジンのみ許可。将来カスタムドメイン導入時は同一ゾーンのルート割当（<code>example.com/api/*</code> → API Worker）で同一オリジン化し、CORS 設定を撤去する</td>
-</tr>
-<tr>
-<td>ローカル開発</td>
-<td>URL（<code>http://localhost:8787</code>）</td>
-<td><code>next dev</code> と <code>wrangler dev</code> を並走させ、env の URL にフォールバック</td>
-</tr>
-</tbody></table>
+<tbody><tr><td>Server loader（web Worker 内）</td><td><strong>Service Binding</strong>（<code>env.API</code>）</td><td>Worker 間の内部呼び出し。公衆インターネットを経由せず、CORS 不要</td></tr>
+<tr><td>Client hook（ブラウザ）</td><td>API Worker の公開 URL</td><td>当面は Hono の <code>cors()</code> で web オリジンのみ許可。将来カスタムドメイン導入時は同一ゾーンのルート割当（<code>example.com/api/*</code> → API Worker）で同一オリジン化し、CORS 設定を撤去する</td></tr>
+<tr><td>ローカル開発</td><td>URL（<code>http://localhost:8787</code>）</td><td><code>next dev</code> と <code>wrangler dev</code> を並走させ、env の URL にフォールバック</td></tr></tbody>
+</table>
 <ul>
 <li>web 側の wrangler 設定に <code>services: [{ "binding": "API", "service": "&lt;API Worker 名&gt;" }]</code> を宣言し、Server 側の <code>hc</code> には <code>getCloudflareContext().env.API.fetch</code> をカスタム <code>fetch</code> として渡す。</li>
 <li>Service Binding 経由でも <code>hc&lt;AppType&gt;</code> の型安全 RPC はそのまま維持される（差し替わるのは fetch 実装のみで、パス・メソッド・型は不変。baseURL のホスト名はダミーでよい）。</li>
@@ -364,28 +290,15 @@
 <pre><code>領域（domain）
 └── トピック（topic）       例：XSS, 認証認可, 状態管理
     └── レッスン（lesson）   教材1本 = Markdown
-        └── 問題（question） 複数。4択
-</code></pre>
+        └── 問題（question） 複数。4択</code></pre>
 <h3>4.2 持ち方（ハイブリッド）</h3>
 <table>
 <thead>
-<tr>
-<th>データ</th>
-<th>保存先</th>
-<th>役割</th>
-</tr>
+<tr><th>データ</th><th>保存先</th><th>役割</th></tr>
 </thead>
-<tbody><tr>
-<td>教材・問題</td>
-<td><strong>Git管理の Markdown + frontmatter</strong>（<code>content/</code>）</td>
-<td>一次ソース。AIが執筆・改訂、PRでレビュー</td>
-</tr>
-<tr>
-<td>解答ログ・SRS状態</td>
-<td><strong>D1</strong></td>
-<td>動的データ。ユーザーごとに分離</td>
-</tr>
-</tbody></table>
+<tbody><tr><td>教材・問題</td><td><strong>Git管理の Markdown + frontmatter</strong>（<code>content/</code>）</td><td>一次ソース。AIが執筆・改訂、PRでレビュー</td></tr>
+<tr><td>解答ログ・SRS状態</td><td><strong>D1</strong></td><td>動的データ。ユーザーごとに分離</td></tr></tbody>
+</table>
 <ul>
 <li>デプロイ/ビルド時に <code>content/</code> をパースして D1 へ <strong>seed/upsert</strong> する同期スクリプトを設ける（このスクリプト自体も学習材料）。</li>
 <li>「ファイルが一次ソース、D1は配信・集計用キャッシュ」と責務を明確にする。</li>
@@ -403,11 +316,24 @@
 <li><code>lesson</code>: レッスンID・タイトル・本文（Markdown本体）</li>
 <li><code>questions[]</code>: <code>{ id, type: 'mcq', prompt, choices[], answerIndex, explanation }</code></li>
 </ul>
-<p>D1 側（動的）:</p>
+<p>D1 側（動的データ）:</p>
 <ul>
 <li><code>users</code>: 将来公開用。初期は単一ユーザーでも user_id を持つ</li>
 <li><code>answer_logs</code>: <code>{ id, user_id, question_id, is_correct, answered_at }</code></li>
 <li><code>srs_states</code>: <code>{ user_id, question_id, ease, interval, due_at, reps, lapses }</code>（SRSパラメータ。アルゴリズムは実装時に SM-2 ベースを想定）</li>
+</ul>
+<p>D1 側（content 同期キャッシュ。4.2 の seed/upsert 対象）:</p>
+<ul>
+<li><code>questions</code>: <code>{ question_id, answer_index }</code>（<code>content/</code> の <code>answerIndex</code> を同期。本文・選択肢・解説は持たず、正誤判定に必要な最小フィールドのみ保持。7.2「正誤判定はAPIが権威」の照合元）</li>
+</ul>
+<h3>4.5 出題ルール（SRS 運用仕様）</h3>
+<p>SM-2 の計算式（<code>packages/shared/src/srs/sm2.ts</code>）の周辺で、実装時に判断を迫られるルールをここで確定する。</p>
+<p><strong>前提</strong>：新規問題は学習フロー（教材 → <code>/quiz</code>）で必ず解答する。したがって <code>/review</code> は解答済み問題（<code>srs_states</code> を持つ問題）のみを扱い、SRS のサイクルは初回解答から始まる。</p>
+<ul>
+<li><strong>SRS 更新の入口は 1 つ</strong>：<code>POST /answers</code> は呼び出し元（<code>/quiz</code>・<code>/review</code>・<code>wrongOnly</code>）を区別せず、1 解答ごとに <code>answer_log</code> 記録と SRS 更新を必ず行う。演習と復習で採点・記録の仕様差を作らない（API はリクエストの文脈を持たない）。演習（<code>/quiz</code>）で正解した問題が SM-2 に従い翌日 due になるのは意図した挙動である。</li>
+<li><strong>due queue の順序と上限</strong>：<code>dueAt</code> 昇順（滞留が古いものから）。1 回のレスポンスは<strong>最大 20 件</strong>。完了後に残 due があれば <code>router.refresh()</code> で次のバッチを取得する（§9.2 の再取得動線と整合）。</li>
+<li><strong>同一問題の複数回解答</strong>：制御しない。解答のたびに SRS を更新する（最後の解答が次回出題日を決める）。<code>answer_logs</code> には全解答が残るため、事後分析は可能。</li>
+<li><strong>正解データの修正</strong>：content の <code>answerIndex</code> を修正しても、過去の <code>answer_logs</code> は再評価しない（記録時点の判定を保持する）。</li>
 </ul>
 <h2>5. AI駆動開発の基盤</h2>
 <h3>方針</h3>
@@ -417,8 +343,7 @@
 <li><strong>ガードレール（C）</strong> — 型安全・テスト・CI。「動くが間違ったコード」を最初に防ぐ土台</li>
 <li><strong>仕様駆動（A）</strong> — 本書を一次ソースに、機能の意図を文書化。AIのコンテキストと人間のレビュー基準を揃える</li>
 <li><strong>スキル化（B）</strong> — 反復作業（教材取込・問題追加・マイグレーション等）が見えた段階でスキル/サブエージェント化</li>
-</ol>
-</li>
+</ol></li>
 </ul>
 <h3>ガードレールの中身</h3>
 <ul>
@@ -437,8 +362,7 @@
 <li>4択に回答</li>
 <li>正誤を D1 に記録（<code>hc</code> → Hono → Drizzle → D1）</li>
 <li>SRS が次回出題日を算出し、再訪時に出題</li>
-</ol>
-</li>
+</ol></li>
 <li><strong>同時に効かせるもの</strong>：CI（型・lint・test・build）、<code>hc</code> 型安全RPC、content→D1 同期</li>
 </ul>
 <p>このスライスが1本通れば、以降はトピック・機能を<strong>同じパターンの繰り返し</strong>で増やせる。これがAI駆動の反復に最適な土台となる。</p>
@@ -447,48 +371,19 @@
 <h3>7.1 ルート構成</h3>
 <table>
 <thead>
-<tr>
-<th>ルート</th>
-<th>役割</th>
-<th>データ経路</th>
-<th>主導線</th>
-</tr>
+<tr><th>ルート</th><th>役割</th><th>データ経路</th><th>主導線</th></tr>
 </thead>
-<tbody><tr>
-<td><code>/</code> ダッシュボード</td>
-<td><strong>今日の復習（due）が主役</strong>。学習継続・領域ナビは従。due 0 件時は新規レッスンへフォールバック</td>
-<td>due 件数のみ API（Server loader → <code>hc</code>）</td>
-<td>「復習を始める」→ <code>/review</code></td>
-</tr>
-<tr>
-<td><code>/learn/[domain]/[topic]</code> レッスン一覧</td>
-<td>トピック内のレッスン一覧（初期は XSS 1本）</td>
-<td>ビルド時バンドル済み content（RSC）</td>
-<td>各レッスンへ</td>
-</tr>
-<tr>
-<td><code>/learn/[domain]/[topic]/[lesson]</code> 教材本文</td>
-<td>Markdown 本文表示</td>
-<td>ビルド時バンドル済み content（RSC）・<strong>API 不要</strong></td>
-<td>「問題を解く →」<code>/quiz/[lesson]</code></td>
-</tr>
-<tr>
-<td><code>/quiz/[lesson]</code> 演習</td>
-<td>レッスン全問を 1 問ずつ即時採点</td>
-<td>問題＝content / 解答記録＝API</td>
-<td>完了 → 「次のレッスンへ」</td>
-</tr>
-<tr>
-<td><code>/review</code> 復習</td>
-<td>due 問題をレッスン横断で収集</td>
-<td>queue＝API / 問題本文＝content / 記録＝API</td>
-<td>完了 → 「ホームへ」</td>
-</tr>
-</tbody></table>
+<tbody><tr><td><code>/</code> ダッシュボード</td><td><strong>今日の復習（due）が主役</strong>。学習継続・領域ナビは従。due 0 件時は新規レッスンへフォールバック</td><td>due 件数のみ API（Server loader → <code>hc</code>）</td><td>「復習を始める」→ <code>/review</code></td></tr>
+<tr><td><code>/learn/[domain]/[topic]</code> レッスン一覧</td><td>トピック内のレッスン一覧（初期は XSS 1本）</td><td>ビルド時バンドル済み content（RSC）</td><td>各レッスンへ</td></tr>
+<tr><td><code>/learn/[domain]/[topic]/[lesson]</code> 教材本文</td><td>Markdown 本文表示</td><td>ビルド時バンドル済み content（RSC）・<strong>API 不要</strong></td><td>「問題を解く →」<code>/quiz/[lesson]</code></td></tr>
+<tr><td><code>/quiz/[lesson]</code> 演習</td><td>レッスン全問を 1 問ずつ即時採点</td><td>問題＝content / 解答記録＝API</td><td>完了 → 「次のレッスンへ」</td></tr>
+<tr><td><code>/review</code> 復習</td><td>due 問題をレッスン横断で収集</td><td>queue＝API / 問題本文＝content / 記録＝API</td><td>完了 → 「ホームへ」</td></tr></tbody>
+</table>
 <h3>7.2 横断する設計判断</h3>
 <ul>
 <li><strong>データ取得（ハイブリッド）</strong>：教材・問題はビルド時バンドル済み content を RSC / Server loader から読む。解答記録・SRS・due など動的データのみ Hono API を <code>hc</code> で呼ぶ。D1 への seed は配信・集計用キャッシュとして維持し、表示の主経路は content。</li>
 <li><strong>演習フロー</strong>：1 問ずつ表示 → 即時に正誤＋解説 → 確定で選択肢をロック → 末尾に結果サマリ。<strong>1 問解答＝1 <code>answer_log</code> POST</strong>（SRS は問題粒度で更新）。</li>
+<li><strong>正誤判定の権威はAPI（サーバー）</strong>：Quiz/Review の <code>QuizViewModel</code> は選択肢と解説のみを持ち、正解（<code>answerIndex</code>）を含めない。クライアントは選んだ <code>selectedIndex</code> を <code>POST /answers</code> に送り、API が D1 の <code>questions</code>（4.4）と照合して <code>is_correct</code> を判定・記録し、結果（<code>isCorrect</code> / <code>correctIndex</code>）を返す。将来公開後もクライアントバンドルに正解を露出しない。</li>
 <li><strong>Quiz コンポーネント</strong>：<code>question_id</code> の配列を受け取り 1 問ずつ回す純粋部品として設計。<code>/quiz</code>（レッスン全問）・<code>/review</code>（due 問題）・「間違えた問題だけ」（<code>wrongOnly</code>）で再利用する。問題セットの供給元だけが異なる。</li>
 <li><strong>結果サマリの動線（出し分け）</strong>：<code>/quiz</code> は学習の前進が目的 → 「次のレッスンへ」。<code>/review</code> は due 消化が目的 → 「ホームへ」（残があれば継続）。両者で「間違えた問題だけ復習」を提供。</li>
 <li><strong>ID 設計</strong>：<code>lessonId</code> / <code>questionId</code> は<strong>グローバル一意</strong>。学習導線は階層 URL（<code>/learn/...</code>）、演習・復習はフラット URL（<code>/quiz/[lesson]</code>・<code>/review</code>）。</li>
@@ -499,15 +394,15 @@
 <h3>7.3 画面構成から要請される API（参考）</h3>
 <p><code>apps/api</code>（Hono）に以下を想定。本文はファイル一次ソースのため、API は ID・SRS メタ・集計値のみ返す。</p>
 <ul>
-<li><code>POST /answers</code> — 1 問解答の記録 → SRS 更新</li>
-<li><code>GET /review/queue</code> — due 問題の <code>question_id</code> ＋ SRS メタを返す（本文はフロントがバンドル済みデータから解決）</li>
+<li><code>POST /answers</code> — 1 問解答の記録 → SRS 更新。リクエスト <code>{ questionId, selectedIndex }</code>、レスポンス <code>{ isCorrect, correctIndex }</code>。正誤判定は API が D1 の <code>questions</code>（4.4）を照合して行う権威側（7.2）</li>
+<li><code>GET /review/queue</code> — due 問題の <code>question_id</code> ＋ SRS メタを返す（本文はフロントがバンドル済みデータから解決）。<code>dueAt</code> 昇順・最大 20 件（§4.5）</li>
 <li><code>GET /dashboard/due-count</code> — ダッシュボードの due 件数</li>
 </ul>
 <h3>7.4 → 第8章へ</h3>
 <p>本章は画面・ルーティング（What/Where）を定義した。フロントエンドのアーキテクチャ（How）は <strong>第8章</strong> で確定する。</p>
 <h2>8. フロントエンドアーキテクチャ（How）</h2>
 <p>第7章の画面・ルーティング（What/Where）を、<code>apps/web</code> 上でどう構造化して実装するか（How）を確定する。設計哲学は本書全体と同じ：<strong>ハイブリッド（教材＝ファイル一次ソース／動的データ＝D1）</strong>・<strong><code>packages/shared</code> を単一ソース</strong>・<strong>Workers 制約を前提</strong>。</p>
-<p>フロントエンドアーキテクチャのフロー図と各ディレクトリの役割は、補助資料として <a href="frontend-architecture.html">docs/frontend-architecture.html</a> に整理する。本章と第9章を一次ソースとし、補助資料は実装時に参照しやすい形へ再構成したものとする。</p>
+<p>フロントエンドアーキテクチャのフロー図と各ディレクトリの役割は、補助資料として <a href="./frontend-architecture.html"><code>docs/frontend-architecture.html</code></a> に整理する。本章と第9章を一次ソースとし、補助資料は実装時に参照しやすい形へ再構成したものとする。</p>
 <h3>8.1 ディレクトリ構成</h3>
 <p><code>features + components/ui</code> 型を採用。<code>src/app</code> は薄く保ち、ロジックは <code>features</code> に寄せる。</p>
 <pre><code>apps/web/src/
@@ -518,14 +413,15 @@
 │   ├── quiz/[lesson]/        # 演習
 │   └── review/               # 復習
 ├── features/                 # 機能集約（状態・ロジックを持つ単位）
+│   ├── lesson/               # components / server / mapper / view-model
 │   ├── quiz/                 # components / hooks / server / api / mapper / view-model
 │   └── review/               # components / hooks / server / api / mapper / view-model
 ├── components/ui/            # 汎用UI（Button / Card 等）。Tailwind 実装
-└── lib/                      # hc クライアントファクトリ / API response helper / content ローダー / env
-</code></pre>
+└── lib/                      # hc クライアントファクトリ / API response helper / content ローダー / env</code></pre>
 <ul>
 <li><strong>Quiz コンポーネント</strong>は <code>apps/web/src/features/quiz</code> に置く。<code>question_id[]</code> を受け取り 1 問ずつ回す純粋部品とし、<code>/quiz</code>（レッスン全問）・<code>/review</code>（due 問題）・<code>wrongOnly</code>（間違えonly）で供給元だけ差し替えて再利用する（7.2 の方針を実体化）。</li>
 <li>feature 内の通信責務は <code>api/</code>・<code>server/</code>・<code>hooks/</code> に分ける。<code>api/</code> は Hono RPC（<code>hc</code>）呼び出しの薄い wrapper、<code>server/</code> は page / Server Component から呼ぶ初回取得と ViewModel 化、<code>hooks/</code> は Client Component から呼ぶ mutation・再取得・UI state を担当する。<code>apps/web/src/features/*/server</code> 配下のファイルには <code>import 'server-only'</code> を置き、Client Component からの誤 import を防ぐ。</li>
+<li><code>features/*/server</code> は「page からしか呼ばれないから app 所有」ではなく、「feature の ViewModel を作るための Server 専用 loader」として feature 所有にする。<code>src/app</code> は URL・metadata・layout・route params の受け渡しだけを担い、content/API DTO の取得、join、sort、filter、ViewModel 化は <code>features</code> に閉じ込める。例外として、複数 feature を横断して 1 ページ専用に合成するだけの処理は <code>app</code> 直下ではなく、必要になった時点で <code>features/&lt;page-feature&gt;/server</code> のようなページ feature として切り出す。</li>
 <li><code>apps/web</code> 側では <code>_DAL</code> / <code>dal</code> という名前を使わない。DB へ直接アクセスしないため、Data Access Layer は <code>apps/api</code> 側の Drizzle / D1 アクセス層として定義する。</li>
 <li>共通 UI は<strong>必要になった時点で</strong> <code>components/ui</code> に薄く切り出す（先回りして作らない）。</li>
 </ul>
@@ -548,8 +444,8 @@
 <li>実行場所はディレクトリ名ではなく import 境界で決まる。<code>apps/web/src/features/*/server</code> は <code>apps/web/src/app/**/page.tsx</code> など Server Component から import する限りサーバー側で実行される。誤用防止のため <code>import 'server-only'</code> を必須にする。</li>
 <li>Server Actions は使わず、動的データは Hono API に一本化する。初回取得は page / Server loader から <code>hc</code> で実行し、mutation・再取得は Client hook から <code>hc</code> を叩く（API 契約を <code>apps/api</code> に一本化し、RPC 型を素直に効かせる）。<ul>
 <li><strong>不採用の根拠</strong>：変更系を Hono に一本化することで ①契約（<code>AppType</code>）と <code>user_id</code> 注入点（§7.2）を単一ソースに保てる、②Hono+Cloudflare の学習目的（§2）を素通りしない。Server Actions の利点（フォームのプログレッシブエンハンスメント等）は、即時採点の Client 主導 Quiz・変更系が <code>POST /answers</code> ほぼ一択の本アプリでは恩恵が小さい。重いフォームが必要になった時点で再検討する。</li>
-</ul>
-</li>
+</ul></li>
+<li><strong>キャッシュ方針</strong>：<code>/</code>（due-count）・<code>/review</code>（queue）は動的データ。Next.js 15+ は <code>fetch</code> をデフォルトで無キャッシュにするため、<code>hc</code> 経由の <code>fetch</code> にキャッシュオプションを付けない限り、route segment config のデフォルト（<code>dynamic = 'auto'</code>）のまま自動的に動的レンダリングになる。<strong><code>export const dynamic = 'force-dynamic'</code> は明記しない</strong>（<code>'auto'</code> の挙動に暗黙で依存する）。この前提が壊れるのは「<code>hc</code> の fetch 呼び出しに <code>cache: 'force-cache'</code> や <code>next: { revalidate }</code> を付けてしまった時」のみなので、feature の <code>api/</code> wrapper（§8.4）にキャッシュオプションを持ち込まないことを徹底する。<code>'use cache'</code> / <code>cacheTag</code> / <code>revalidateTag</code> も現時点では採用しない — mutation（<code>POST /answers</code>）が Hono Worker 直行で Next.js のサーバーコンテキストを経由しないため <code>revalidateTag</code> の発火点がなく、due-count はユーザー単位のためタグ設計もマルチユーザー化まで先送りする。解答後・画面復帰時の鮮度回復は Client 側の <code>router.refresh()</code> で RSC を再実行して担う（§9.2）。</li>
 </ul>
 <h3>8.4 <code>hc</code> クライアントの取り回し</h3>
 <ul>
@@ -557,8 +453,7 @@
 <li><code>apps/web/src/lib/api.ts</code> に<strong>クライアント生成を集約</strong>し、§3.1 の接続経路に対応する 2 系統を分ける。baseURL は env（Workers バインディング / 環境変数）から解決し、ハードコードしない。<ul>
 <li><code>createServerApiClient</code>：Server loader 用。本番は Service Binding（<code>getCloudflareContext().env.API.fetch</code> を <code>hc</code> のカスタム <code>fetch</code> に渡す）、ローカル開発は env の URL にフォールバック。</li>
 <li><code>createBrowserApiClient</code>：Client hook 用。env から解決した API Worker の公開 baseURL を使う。</li>
-</ul>
-</li>
+</ul></li>
 <li>feature の <code>api/</code> は <code>hc</code> の path・method 呼び出しを薄く包む。server / client 両方から使うため、<code>server-only</code>・cookies・headers・秘密情報など環境専用処理を入れない。</li>
 <li><code>res.ok</code> チェックと <code>res.json()</code> 変換は <code>apps/web/src/lib/api-response.ts</code> の <code>requestJson</code> に共通化する。feature の <code>api/</code> は path・method・引数・エラーメッセージだけを持つ。</li>
 <li><code>hc</code> の path 呼び出し自体は文字列パスの汎用 fetch に置き換えない。<code>client.review.queue.$get()</code> のような endpoint ごとの wrapper を残すことで、Hono RPC の型推論を維持する。</li>
@@ -569,8 +464,7 @@
 <ul>
 <li><strong>クライアント state のみ</strong>（<code>useState</code> で Quiz コンポーネント内に閉じる）。MVP として最小化。<ul>
 <li>MVP フローは「1 問表示 → 選択 → 即時採点 → ロック → 解説表示 → 次問」で線形・シンプルなため、<code>useState</code> で充分。複雑な状態遷移が出現（例：問題セット内での再検索・フィルタ等）したら、その時点で <code>useReducer</code> へ段階的にリファクタリング。</li>
-</ul>
-</li>
+</ul></li>
 <li><strong>リロードで進捗はリセット（許容）</strong>。ただし「1 問解答＝1 <code>answer_log</code> POST」（7.2 で定義済みの原則）なので、解答そのものは即サーバーに残る。途中復帰（sessionStorage）やサーバー復元は将来拡張ポイントとして留保。</li>
 <li>フロー：1 問表示 → 即時採点（正誤＋解説）→ 選択肢ロック → 末尾に結果サマリ → 出し分け動線（<code>/quiz</code>=次のレッスンへ／<code>/review</code>=ホームへ、両者「間違えonly」提供）。</li>
 </ul>
@@ -578,7 +472,7 @@
 <ul>
 <li>スキーマは <code>packages/shared</code> に集約し二重定義しない（既存 <code>schema/content</code>・<code>db/schema</code>・<code>srs/sm2</code> を土台に拡張）。</li>
 <li>同一スキーマを <strong>3 経路で共有</strong>：①content のビルド時パース検証、②API 入力の <code>zValidator</code>、③フロントの型（<code>z.infer</code>）。</li>
-<li>フロントは API レスポンス・content データとも <code>z.infer</code> で型を引き、独自の型定義を持たない。</li>
+<li>フロントは API レスポンス・content データとも <code>z.infer</code> で型を引き、DTO / Content data の独自再定義を持たない。ViewModel は表示都合の web 固有型として <code>apps/web/src/features</code> に定義する（§9.3）。</li>
 </ul>
 <h3>8.7 スタイリング（Tailwind 移行）</h3>
 <ul>
@@ -597,8 +491,7 @@
     ↓ ViewModel（web 固有型）
   Server loader / Client hook
     ↓
-  page / component（表示）
-</code></pre>
+  page / component（表示）</code></pre>
 <p>この図は責務の分離順を表しており、実行時の呼び出し順とは異なる。実装上は Server loader / Client hook が fetch（content 取得または DTO 取得）と Mapper 呼び出しの両方を内包する呼び出し元であり、9.2 のコード例の通り「loader/hook が fetch→mapper を呼び、ViewModel を得て page/component へ渡す」という順序で実行される。</p>
 <ul>
 <li><strong>Content data</strong>：<code>content/</code> の Markdown + frontmatter をビルド時にパース・検証した型付きデータ。教材本文・問題本文・解説の主経路。</li>
@@ -621,17 +514,17 @@ export function loadLesson(lessonId: string): LessonViewModel {
 export default function LessonPage({ params }: Props) {
   const vm = loadLesson(params.lesson);
   return &lt;LessonDisplay viewModel={vm} /&gt;;
-}
-</code></pre>
+}</code></pre>
 <ul>
 <li>loader はビルド時バンドル済み content を取得し、mapper を噛ませて ViewModel を page へ渡す。教材本文ページは API を呼ばない。</li>
+<li>page は loader を呼ぶだけに留める。<code>params</code> の取り出し、<code>metadata</code>、<code>notFound()</code> など App Router 固有の関心事は page 側に残し、feature のデータ形成や ViewModel 化は <code>features/*/server</code> に置く。</li>
 <li>エラーは throw → <code>error.tsx</code>・<code>Suspense</code> で処理。</li>
 </ul>
 <h4>Client 系（演習・復習系）</h4>
-<p><code>/quiz/[lesson]</code>・<code>/review</code> などインタラクションを持つページ。<strong>初回データは page 側で ViewModel 化して props で渡し、Client hook はその初期 VM を受け取り、以降の再取得・mutation のみ担当</strong>する（＝初回レンダリング時にスピナーを出さない）。</p>
+<p><code>/quiz/[lesson]</code>・<code>/review</code> などインタラクションを持つページ。<strong>初回データは Server loader で ViewModel 化し、page はその VM を props で渡すだけに留める。Client Component は props の VM をそのまま描画に使い、ローカル state は「解答結果」「送信エラー」だけに限定する</strong>（＝初回レンダリング時にスピナーを出さない。VM 自体を state に複製しない）。</p>
 <ul>
-<li><code>/quiz</code>：content から問題・解説を解決し、API GET はしない。Client hook は <code>POST /answers</code> のみ担当。</li>
-<li><code>/review</code>：Server loader で <code>GET /review/queue</code> を呼び、返却された <code>question_id</code> を content の問題本文・解説へ join して VM 化する。</li>
+<li><code>/quiz</code>：content から問題・解説を解決し、API GET はしない。Client hook は <code>POST /answers</code> のみ担当。VM は content のみで再取得不要なため、<code>useState(initialViewModel)</code> に据えてよい。</li>
+<li><code>/review</code>：Server loader で <code>GET /review/queue</code> を呼び、返却された <code>question_id</code> を content の問題本文・解説へ join して VM 化する。<strong>join は Server loader 内でのみ行い、content データ（教材本文・解説）をクライアントバンドルに含めない</strong>。解答完了後に次の due を引き直す場面では、Client から API を再度叩いて join し直すのではなく <code>router.refresh()</code> で Server Component を再実行し、Server loader が新しい VM を props として渡し直す（§8.3 のキャッシュ方針）。</li>
 </ul>
 <pre><code class="language-typescript">// lib/api-response.ts
 type JsonResponse&lt;T&gt; = Response &amp; {
@@ -660,48 +553,59 @@ import 'server-only';
 
 export async function loadReviewQueue(): Promise&lt;ReviewViewModel&gt; {
   const dto = await fetchReviewQueue(createServerApiClient());
-  return reviewQueueDTOToViewModel(dto, getBundledQuestions());
+  return reviewQueueDTOToViewModel(dto, getBundledQuestions());  // join はサーバー側のみ
 }
 
-// app/review/page.tsx（Server）— 初回データは page で整形して取得
+// app/review/page.tsx（Server）— 無キャッシュ fetch により auto のまま動的レンダリング。再取得は router.refresh() に委譲
 export default async function ReviewPage() {
-  const initialVm = await loadReviewQueue();  // API queue + content join 済み VM
-  return &lt;ReviewRunner initialViewModel={initialVm} /&gt;;
+  const viewModel = await loadReviewQueue();  // API queue + content join 済み VM
+  return &lt;ReviewRunner viewModel={viewModel} /&gt;;
 }
 
-// features/review/hooks/use-review-queue.ts（Client）
+// features/review/hooks/use-answer-submit.ts（Client）— VM は保持しない。mutation のみ担当
 'use client';
-export function useReviewQueue(initialVm: ReviewViewModel) {
-  const [vm, setVm] = useState&lt;ReviewViewModel&gt;(initialVm);  // ← 初回は props、スピナー不要
+export function useAnswerSubmit() {
+  const [results, setResults] = useState&lt;Record&lt;string, AnswerResult&gt;&gt;({});
   const [error, setError] = useState&lt;Error | null&gt;(null);
 
-  // 再取得（例：完了後に次の due を引き直す）だけを Client が担当
-  const refetch = useCallback(async () =&gt; {
+  const submitAnswer = useCallback(async (questionId: string, selectedIndex: number) =&gt; {
     try {
-      const dto = await fetchReviewQueue(createBrowserApiClient());
-      setVm(reviewQueueDTOToViewModel(dto, getBundledQuestions()));
+      const result = await postAnswer(createBrowserApiClient(), { questionId, selectedIndex });
+      setResults(prev =&gt; ({ ...prev, [questionId]: result }));
     } catch (e) {
       setError(e as Error);
     }
   }, []);
 
-  return { vm, error, refetch };
+  return { results, error, submitAnswer };
 }
 
 // features/review/components/review-runner.tsx（Client）
 'use client';
-export function ReviewRunner({ initialViewModel }: Props) {
-  const { vm, error, refetch } = useReviewQueue(initialViewModel);
-  if (error) return &lt;ErrorDisplay error={error} retry={refetch} /&gt;;
-  return &lt;QuizRenderer viewModel={vm} /&gt;;  // 初回から即描画（スピナーなし）
-}
-</code></pre>
+export function ReviewRunner({ viewModel }: Props) {
+  const router = useRouter();
+  const { results, error, submitAnswer } = useAnswerSubmit();
+
+  const handleAllAnswered = () =&gt; {
+    router.refresh();  // Server loader を再実行し、次の due queue を VM ごと props で受け直す
+  };
+
+  if (error) return &lt;ErrorDisplay error={error} retry={() =&gt; router.refresh()} /&gt;;
+  return (
+    &lt;QuizRenderer
+      viewModel={viewModel}       // props をそのまま描画に使う。state に複製しない
+      results={results}
+      onAnswer={submitAnswer}
+      onComplete={handleAllAnswered}
+    /&gt;
+  );
+}</code></pre>
 <ul>
-<li><strong>初回＝page 側で VM 化</strong>。<code>/quiz</code> は content のみ、<code>/review</code> は API queue + content join。loader も hook も同じ mapper を通すため、整形ロジックは一本のまま（§9.1 の原則）。</li>
-<li><strong>Client hook は初期 VM を props で受け取り</strong>、<code>useState</code> の初期値に据える。以降の再取得・楽観更新のみ hook が受け持つ。</li>
+<li><strong>初回＝Server loader で VM 化し、page は props 渡しのみ</strong>。<code>/quiz</code> は content のみ、<code>/review</code> は API queue + content join。loader は毎回同じ mapper を通すため、整形ロジックは一本のまま（§9.1 の原則）。</li>
+<li><strong>VM はクライアント state に複製しない</strong>。<code>ReviewRunner</code> は props の <code>viewModel</code> をそのまま描画に使い、Client 側で保持するのは「解答結果（<code>results</code>）」「送信エラー」のみ。due queue の再取得は <code>router.refresh()</code> による Server Component 再実行に一本化し、content との join を常にサーバー側に閉じ込める（クライアントバンドルへの content 混入を防ぐ）。</li>
 <li><strong>RPC 呼び出しは <code>apps/web/src/features/*/api</code> の薄い wrapper 経由</strong>。Server loader と Client hook は同じ wrapper を使い、実行環境ごとの client 生成だけを差し替える。HTTP レスポンス処理は <code>requestJson</code> に寄せ、feature 側では重複させない。</li>
-<li><strong>初回スピナー不要</strong>（本節冒頭で述べた原則の実装上の帰結）：ウォーターフォールを回避し初回表示が速い。ローディング表示が要るのは再取得中のみ。</li>
-<li><strong>将来：</strong>TanStack Query 等へ置き換える際、mapper・ViewModel 型・page は変わらず、hook 内部だけ差し替わる（契約保証）。TanStack Query の <code>initialData</code> に props の VM を渡す形へ自然に移行できる。</li>
+<li><strong>初回スピナー不要</strong>（本節冒頭で述べた原則の実装上の帰結）：ウォーターフォールを回避し初回表示が速い。<code>router.refresh()</code> 中の待機表示が必要なら <code>loading.tsx</code> かローカルな <code>isRefreshing</code> フラグで扱う。</li>
+<li><strong>将来：</strong>TanStack Query 等へ置き換える際、mapper・ViewModel 型・page は変わらず、hook（<code>useAnswerSubmit</code> 相当）内部だけ差し替わる（契約保証）。</li>
 </ul>
 <h3>9.3 DTO / ViewModel の分離と配置</h3>
 <h4>型の配置</h4>
@@ -728,8 +632,7 @@ apps/web/src/
 └── lib/
     ├── api.ts                      # createServerApiClient / createBrowserApiClient
     ├── api-response.ts             # requestJson
-    └── content.ts                  # content loader / question index
-</code></pre>
+    └── content.ts                  # content loader / question index</code></pre>
 <ul>
 <li><strong>Content data / DTO は shared</strong>（複数パッケージで共有、単一ソース）。</li>
 <li><strong>ViewModel は <code>apps/web/src/features</code> 配下</strong>（表示都合なので web 固有）。</li>
@@ -741,18 +644,7 @@ apps/web/src/
 <li><strong><code>apps/web/src/lib</code> は横断インフラだけ</strong>。API client 生成、HTTP response 処理、content index など feature 非依存の関数を置く。画面都合の整形は feature mapper に残す。</li>
 </ul>
 <h4>API 側の DAL 配置</h4>
-<p><code>apps/api</code> は D1 / Drizzle に直接触るため、必要に応じて <code>dal/</code> を置く。Hono route は HTTP 契約、service はユースケース、dal は永続化アクセスに責務を分ける。</p>
-<pre><code>apps/api/src/
-├── routes/
-│   ├── answers.ts
-│   └── review.ts
-├── services/
-│   ├── answer-service.ts
-│   └── srs-service.ts
-└── dal/
-    ├── answer-log-repository.ts
-    └── srs-state-repository.ts
-</code></pre>
+<p><code>apps/api</code> は D1 / Drizzle に直接触るため、<code>dal/</code> を置く。Hono route は HTTP 契約、service はユースケース、dal は永続化アクセスに責務を分ける。具体的なディレクトリ構成・各層の責務・コード例は <strong>第10章（バックエンドアーキテクチャ）</strong> で確定する。</p>
 <h3>9.4 共通パターンと例</h3>
 <h4>教材（Server）</h4>
 <pre><code class="language-typescript">// features/lesson/view-model.ts
@@ -798,10 +690,9 @@ export default function LessonPage({ params }: Props) {
       &lt;ReactMarkdown&gt;{vm.markdownBody}&lt;/ReactMarkdown&gt;
     &lt;/article&gt;
   );
-}
-</code></pre>
+}</code></pre>
 <h4>演習（Client）</h4>
-<p><code>/quiz</code> は問題自体がビルド時バンドル（§8.2）なので初回 GET は不要。page（Server）で VM を組み立てて props で渡し、Client は解答（<code>POST /answers</code>）だけを担当する。</p>
+<p><code>/quiz</code> は問題自体がビルド時バンドル（§8.2）なので初回 GET は不要。Server loader で VM を組み立て、page は props で渡し、Client は解答（<code>POST /answers</code>）だけを担当する。</p>
 <pre><code class="language-typescript">// features/quiz/view-model.ts
 export type QuizViewModel = {
   questions: Array&lt;{
@@ -831,36 +722,45 @@ export function quizContentToViewModel(content: LessonContent): QuizViewModel {
   };
 }
 
-// app/quiz/[lesson]/page.tsx（Server）— 初回 VM を page で組み立てて渡す
+// features/quiz/server/load-quiz.ts
+import 'server-only';
+
+export function loadQuiz(lessonId: string): QuizViewModel {
+  const content = getLessonContent(lessonId);   // ビルド時バンドル
+  return quizContentToViewModel(content);
+}
+
+// app/quiz/[lesson]/page.tsx（Server）— page は loader を呼んで props 渡し
 export default function QuizPage({ params }: Props) {
-  const content = getLessonContent(params.lesson);   // ビルド時バンドル
-  const vm = quizContentToViewModel(content);
-  return &lt;QuizInteractive initialViewModel={vm} /&gt;;
+  const initialVm = loadQuiz(params.lesson);
+  return &lt;QuizInteractive initialViewModel={initialVm} /&gt;;
 }
 
 // features/quiz/components/quiz-interactive.tsx（Client）
 'use client';
 export function QuizInteractive({ initialViewModel }: Props) {
   const [vm] = useState(initialViewModel);              // 初回から即描画（スピナーなし）
+  const [currentIndex, setCurrentIndex] = useState(0);  // §8.5：1問ずつ表示する線形フロー
   const { submitAnswer, results } = useAnswerSubmit();  // POST /answers を担当
 
+  const question = vm.questions[currentIndex];
+  if (!question) return &lt;QuizSummary results={results} /&gt;;  // 全問終了 → 結果サマリ（§7.2）
+
+  const isLast = currentIndex === vm.questions.length - 1;
+
   return (
-    &lt;div className="space-y-6"&gt;
-      {vm.questions.map(q =&gt; (
-        &lt;QuestionCard
-          key={q.id}
-          question={q}
-          explanation={vm.explanations[q.id]}
-          onAnswer={submitAnswer}
-          result={results[q.id]}
-        /&gt;
-      ))}
-    &lt;/div&gt;
+    &lt;QuestionCard
+      question={question}
+      explanation={vm.explanations[question.id]}
+      onAnswer={selectedIndex =&gt; submitAnswer(question.id, selectedIndex)}
+      result={results[question.id]}                 // 判定結果を受けて選択肢ロック・解説表示（§8.5）
+      onNext={isLast ? undefined : () =&gt; setCurrentIndex(i =&gt; i + 1)}
+    /&gt;
   );
-}
-</code></pre>
+}</code></pre>
 <ul>
-<li><code>/quiz</code> の初回は <strong>API GET なし</strong>（問題はビルド時バンドル、page で VM 化）。Client hook は <code>POST /answers</code>（mutation）だけを持つ。</li>
+<li><code>/quiz</code> の初回は <strong>API GET なし</strong>（問題はビルド時バンドル、Server loader で VM 化）。Client hook は <code>POST /answers</code>（mutation）だけを持つ。</li>
+<li><code>QuizInteractive</code> は全問を一括レンダリングせず、<code>currentIndex</code> で 1 問ずつ描画する（§8.5 のフローと整合）。<code>/review</code> の <code>ReviewRunner</code>（§9.2）も同じ <code>QuestionCard</code> を 1 問ずつ回す構成にする。</li>
 <li><code>/review</code> の初回は <strong>Server loader で GET</strong>（due queue）→ props 渡し（§9.2 参照）。</li>
 </ul>
 <h3>9.5 content / API 変更時の対応フロー</h3>
@@ -887,25 +787,24 @@ export default function Error({ error }: { error: Error }) {
   return &lt;ErrorPage message={error.message} /&gt;;
 }
 
-// features/lesson/server/load-lesson.ts の content 未検出・検証失敗 throw が自動で error.tsx へ
-</code></pre>
+// features/lesson/server/load-lesson.ts の content 未検出・検証失敗 throw が自動で error.tsx へ</code></pre>
 <h4>Client（演習・復習系）</h4>
-<p>初回データは page 側で VM 化済みのため（9.2 参照）、<strong>初回にローディング表示は出ない</strong>。Client 側で扱うのは以下の 2 つ：</p>
+<p>初回データは Server loader で VM 化済みのため（9.2 参照）、<strong>初回にローディング表示は出ない</strong>。Client 側で扱うのは以下の 2 つ：</p>
 <ul>
 <li><strong>初回データ形成の失敗</strong>：content 未検出・検証失敗、または <code>/review</code> の初回 queue 取得失敗 → ルートの <code>error.tsx</code> で捕捉（Server 系と同じ経路）。</li>
 <li><strong>再取得・mutation の失敗/待機</strong>：hook が返す <code>error</code>・（再取得中の）状態を component で出し分ける。</li>
 </ul>
 <pre><code class="language-typescript">// features/review/components/review-runner.tsx
 'use client';
-export function ReviewRunner({ initialViewModel }: Props) {
-  const { vm, error, refetch } = useReviewQueue(initialViewModel);
+export function ReviewRunner({ viewModel }: Props) {
+  const router = useRouter();
+  const { results, error, submitAnswer } = useAnswerSubmit();
 
-  // 初回は props で描画済み。ここで扱うのは再取得エラーのみ
-  if (error) return &lt;ErrorDisplay error={error} retry={refetch} /&gt;;
+  // 初回は props で描画済み。ここで扱うのは解答送信エラーのみ
+  if (error) return &lt;ErrorDisplay error={error} retry={() =&gt; router.refresh()} /&gt;;
 
-  return &lt;QuizRenderer viewModel={vm} /&gt;;  // 初回からスピナーなしで描画
-}
-</code></pre>
+  return &lt;QuizRenderer viewModel={viewModel} results={results} onAnswer={submitAnswer} /&gt;;  // 初回からスピナーなしで描画
+}</code></pre>
 <h3>9.7 mapper・ViewModel の共有戦略</h3>
 <p>同じ content data / DTO を複数ページが使う場合（例：復習（<code>/review</code>）と演習（<code>/quiz</code>）が同じ bundled questions を使用）：</p>
 <pre><code>apps/web/src/features/
@@ -916,11 +815,396 @@ export function ReviewRunner({ initialViewModel }: Props) {
 │   ├── view-model.ts           # ReviewViewModel（復習特有、異なるページ 組成）
 │   └── mapper.ts
 └── shared/
-    └── quiz-question.ts        # 小さい純粋変換のみ
-</code></pre>
+    └── quiz-question.ts        # 小さい純粋変換のみ</code></pre>
 <p>ViewModel・mapper は feature ごとに独立させ、同じ DTO の使い方が feature ごとに異なることを認める。<code>apps/web/src/features/shared</code> は共通 ViewModel を持つ場所ではなく、<code>contentQuestionToQuizQuestion</code> のような小さい純粋変換だけを置く場所とする。</p>
-<h3>9.8 次回の実装テーマ</h3>
-<p>本章でデータフロー（Content data / API DTO → Mapper → ViewModel → page）を確定した。次回は実装フェーズ：Walking Skeleton（<code>セキュリティ &gt; XSS &gt; 教材1本 + 4択3問</code>、第6章）を、第8章の構成（8.1〜8.7）・本章のデータフロー（9.1〜9.7）に沿って縦に 1 本貫通させる。</p>
+<h3>9.8 → 第10章へ</h3>
+<p>本章でフロントエンドのデータフロー（Content data / API DTO → Mapper → ViewModel → page）を確定した。API 側（<code>apps/api</code>）の内部構造（How）は <strong>第10章</strong> で確定する。その後の実装フェーズでは、Walking Skeleton（<code>セキュリティ &gt; XSS &gt; 教材1本 + 4択3問</code>、第6章）を第8〜10章の設計に沿って縦に 1 本貫通させる。</p>
+<h2>10. バックエンドアーキテクチャ（How）</h2>
+<p>第7.3章で API の契約（What）を定義した。本章は <code>apps/api</code>（Hono / Cloudflare Workers）の内部をどう構造化して実装するか（How）を確定する。設計哲学は本書全体と同じ：<strong><code>packages/shared</code> を単一ソース</strong>・<strong>純粋ロジックと副作用の分離</strong>・<strong>Workers 制約を前提</strong>。</p>
+<p>バックエンドアーキテクチャのフロー図と各層の責務は、補助資料として <a href="./backend-architecture.html"><code>docs/backend-architecture.html</code></a> に整理する。本章を一次ソースとし、補助資料は実装時に参照しやすい形へ再構成したものとする。</p>
+<h3>10.1 全体方針：軽量レイヤードアーキテクチャ</h3>
+<p><strong>route → service → dal の 3 層</strong>に分ける（§9.3 で予告した構成の確定）。依存方向は一方向のみ：<code>routes → services → dal →（D1）</code>。逆方向の import は禁止。<code>packages/shared</code> はどの層からも参照してよい。</p>
+<table>
+<thead>
+<tr><th>層</th><th>責務</th><th>依存してよいもの</th></tr>
+</thead>
+<tbody><tr><td><strong>route</strong>（<code>routes/</code>）</td><td>HTTP 契約。パス・メソッド・<code>zValidator</code> による入力検証・ステータスコード・レスポンス整形。ビジネスロジックを書かない</td><td>Hono / service / dal（deps 生成のみ）</td></tr>
+<tr><td><strong>service</strong>（<code>services/</code>）</td><td>ユースケース。「採点 → 記録 → SRS 更新」のような業務手順の一連。<strong>Hono・D1・Drizzle の型に依存しない純 TS</strong></td><td>shared（<code>sm2</code> 等）/ 自身が定義する deps 型</td></tr>
+<tr><td><strong>dal</strong>（<code>dal/</code>）</td><td>永続化アクセス。Drizzle クエリの置き場。SQL 的関心事（upsert・batch）をここに閉じ込める</td><td>Drizzle / shared の db schema</td></tr></tbody>
+</table>
+<p><strong>採用しないもの（過剰設計の回避）</strong>：</p>
+<ul>
+<li>DI コンテナ・デコレータ注入 → <strong>関数引数による明示的な依存渡し</strong>で足りる</li>
+<li>クリーンアーキテクチャ流の ports/adapters ディレクトリ分離 → 「service が deps 型（interface）を定義し、dal がそれを実装する」という import 方向ルールだけで同じ効果を得る</li>
+<li>OpenAPI スキーマ生成 → <code>hc</code>（<code>AppType</code>）が型契約を担うため不要（§8.4）</li>
+</ul>
+<p>エンドポイント 3 本（§7.3）の規模で抽象を増やすと、AI 駆動開発のレビュー可能性がむしろ下がる。層の責務と依存方向が守られていれば十分とする。</p>
+<h3>10.2 ディレクトリ構成</h3>
+<pre><code>apps/api/
+├── src/
+│   ├── index.ts                 # エントリ。middleware 適用・ルート合成・AppType エクスポート
+│   ├── client.ts                # hc クライアントファクトリ（既存）
+│   ├── env.ts                   # Bindings（D1 / vars）・Variables（userId）の型定義
+│   ├── middleware/
+│   │   └── user-context.ts      # 固定 user_id の権威的注入（§7.2。将来は認証実装に差し替え）
+│   ├── routes/
+│   │   ├── answers.ts           # POST /answers
+│   │   ├── review.ts            # GET /review/queue
+│   │   └── dashboard.ts         # GET /dashboard/due-count
+│   ├── services/
+│   │   ├── answer-service.ts    # 採点 → 記録 → SRS 更新のユースケース
+│   │   ├── review-service.ts    # due 問題の収集・件数集計
+│   │   └── errors.ts            # ドメインエラー（QuestionNotFoundError 等）
+│   └── dal/
+│       ├── answer-repository.ts # AnswerDeps 実装（questions 照合・srs 取得・batch 書き込み）
+│       └── review-repository.ts # ReviewDeps 実装（due queue・due count）
+└── scripts/
+    └── sync-content.ts          # content/ → D1 seed/upsert（§10.8）</code></pre>
+<ul>
+<li><strong>dal はテーブル単位ではなくユースケース単位</strong>で置く。「service が要求する deps 型」を 1 ファイルで実装する形にすると、service ⇔ dal の対応が 1:1 で追いやすく、テーブル単位 repository の細切れ合成（と、それを束ねる工数）を避けられる。テーブル単位の共有が必要になった時点で分割する。</li>
+</ul>
+<h3>10.3 リクエストの流れ（<code>POST /answers</code> を例に）</h3>
+<p>Walking Skeleton の中核となる 1 リクエストの処理フロー：</p>
+<pre><code>zValidator（shared の answerRequestSchema で入力検証）
+  → userId を context から取得（§10.4 の middleware が注入済み）
+  → services/answer-service の submitAnswer(deps, input)
+      1. questions（content 同期キャッシュ §4.4）から answerIndex を取得
+         → 無ければ QuestionNotFoundError
+      2. isCorrect = answerIndex === selectedIndex（採点権威は API §7.2）
+      3. 現在の srs_state を取得（無ければ initialSrs()）
+      4. reviewSrs(state, isCorrect, now) で次状態を算出（純粋関数 @tsl/shared）
+      5. answer_log 挿入 ＋ srs_state upsert を db.batch で原子的に書き込み
+  → { isCorrect, correctIndex } を JSON で返す</code></pre>
+<pre><code class="language-typescript">// services/answer-service.ts — Hono・D1・Drizzle に依存しない純 TS
+import { initialSrs, reviewSrs, type SrsInput, type SrsResult } from '@tsl/shared'
+import { QuestionNotFoundError } from './errors'
+
+// service が要求する依存（deps）。フラットな関数の束にし、テストでは素朴な fake で差し替える
+export type AnswerDeps = {
+  findAnswerIndex(questionId: string): Promise&lt;number | null&gt;
+  findSrsState(userId: string, questionId: string): Promise&lt;SrsInput | null&gt;
+  recordAnswer(params: {
+    userId: string
+    questionId: string
+    isCorrect: boolean
+    answeredAt: number
+    nextSrs: SrsResult
+  }): Promise&lt;void&gt;
+}
+
+export type SubmitAnswerInput = {
+  userId: string
+  questionId: string
+  selectedIndex: number
+  now: number  // 時刻は service 内で取得せず引数注入（sm2 と同じ設計。テストで固定できる）
+}
+
+export async function submitAnswer(deps: AnswerDeps, input: SubmitAnswerInput) {
+  const answerIndex = await deps.findAnswerIndex(input.questionId)
+  if (answerIndex === null) throw new QuestionNotFoundError(input.questionId)
+
+  const isCorrect = answerIndex === input.selectedIndex
+  const current =
+    (await deps.findSrsState(input.userId, input.questionId)) ?? initialSrs()
+  const nextSrs = reviewSrs(current, isCorrect, input.now)
+
+  await deps.recordAnswer({
+    userId: input.userId,
+    questionId: input.questionId,
+    isCorrect,
+    answeredAt: input.now,
+    nextSrs,
+  })
+
+  return { isCorrect, correctIndex: answerIndex }
+}</code></pre>
+<pre><code class="language-typescript">// routes/answers.ts — HTTP 契約のみ。ロジックは service へ委譲
+import { Hono } from 'hono'
+import { zValidator } from '@hono/zod-validator'
+import { drizzle } from 'drizzle-orm/d1'
+import { answerRequestSchema, type AnswerResponse } from '@tsl/shared'
+import type { AppEnv } from '../env'
+import { createAnswerDeps } from '../dal/answer-repository'
+import { submitAnswer } from '../services/answer-service'
+
+export const answersRoute = new Hono&lt;AppEnv&gt;().post(
+  '/',
+  zValidator('json', answerRequestSchema),
+  async (c) =&gt; {
+    const { questionId, selectedIndex } = c.req.valid('json')
+    const result = await submitAnswer(createAnswerDeps(drizzle(c.env.DB)), {
+      userId: c.get('userId'),
+      questionId,
+      selectedIndex,
+      now: Date.now(),
+    })
+    return c.json(result satisfies AnswerResponse)
+  },
+)</code></pre>
+<pre><code class="language-typescript">// dal/answer-repository.ts — Drizzle・db.batch をここに閉じ込める
+import { and, eq } from 'drizzle-orm'
+import type { DrizzleD1Database } from 'drizzle-orm/d1'
+import { db as schema } from '@tsl/shared'
+import type { AnswerDeps } from '../services/answer-service'
+
+export function createAnswerDeps(db: DrizzleD1Database): AnswerDeps {
+  return {
+    async findAnswerIndex(questionId) { /* questions を select */ },
+    async findSrsState(userId, questionId) { /* srs_states を select */ },
+    async recordAnswer(p) {
+      await db.batch([
+        db.insert(schema.answerLogs).values({ id: crypto.randomUUID(), /* ... */ }),
+        db.insert(schema.srsStates).values({ /* ... */ }).onConflictDoUpdate({
+          target: [schema.srsStates.userId, schema.srsStates.questionId],
+          set: { /* nextSrs の各値 */ },
+        }),
+      ])
+    },
+  }
+}</code></pre>
+<p><code>GET /review/queue</code>・<code>GET /dashboard/due-count</code> も同型（route → <code>review-service</code> → <code>review-repository</code>）。due 判定は <code>dueAt &lt;= now</code> を SQL の where 句で行い、<code>isDue</code>（sm2）と意味を一致させる。</p>
+<h3>10.4 user_id の権威的注入（middleware）</h3>
+<p>§7.2 の「API が固定 <code>user_id</code> を権威的に注入する」を Hono middleware として実体化する。</p>
+<pre><code class="language-typescript">// middleware/user-context.ts
+import { createMiddleware } from 'hono/factory'
+import type { AppEnv } from '../env'
+
+const FIXED_USER_ID = 'user-local-001'
+
+// 将来公開時は、この middleware を「認証情報から userId を解決する実装」に
+// 差し替えるだけ。route・service・API 契約は不変（§7.2）
+export const userContext = createMiddleware&lt;AppEnv&gt;(async (c, next) =&gt; {
+  c.set('userId', FIXED_USER_ID)
+  await next()
+})</code></pre>
+<ul>
+<li>route・service は <code>userId</code> を「middleware が保証済みの値」として受け取るだけにし、固定値の知識を <code>user-context.ts</code> の 1 箇所に閉じ込める。</li>
+<li>クライアントから送られた <code>user_id</code> は<strong>一切信用しない</strong>（リクエストボディにも含めない。§7.3 の契約に <code>userId</code> が無いのはこのため）。</li>
+</ul>
+<h3>10.5 Hono アプリの合成と <code>AppType</code></h3>
+<pre><code class="language-typescript">// env.ts
+export type Bindings = {
+  DB: D1Database
+  WEB_ORIGIN: string  // CORS 許可オリジン（wrangler.toml の vars で環境ごとに設定）
+}
+export type Variables = {
+  userId: string
+}
+export type AppEnv = { Bindings: Bindings; Variables: Variables }</code></pre>
+<pre><code class="language-typescript">// index.ts — middleware 適用・ルート合成・AppType エクスポート
+const app = new Hono&lt;AppEnv&gt;()
+
+// CORS はブラウザ経路（§3.1）用。Service Binding 経由の呼び出しには関与しない。
+// 許可オリジンは env から解決するため、ハンドラ内で cors() を生成して適用する
+app.use('*', async (c, next) =&gt; cors({ origin: c.env.WEB_ORIGIN })(c, next))
+app.use('*', userContext)
+app.onError(errorHandler)  // §10.6
+
+const routes = app
+  .get('/health', (c) =&gt; c.json({ status: 'ok' as const }))
+  .route('/answers', answersRoute)
+  .route('/review', reviewRoute)
+  .route('/dashboard', dashboardRoute)
+
+export type AppType = typeof routes
+export default app</code></pre>
+<ul>
+<li><strong><code>hc</code> の型推論を保つため、ルート定義はメソッドチェーンで書く</strong>。各サブルーターは <code>new Hono&lt;AppEnv&gt;().post(...)</code> のチェーンで定義・export し、<code>index.ts</code> では <code>.route()</code> のチェーンで合成する。チェーンを分断（<code>app.post(...)</code> を文として並べる等）すると <code>AppType</code> からエンドポイント型が消える。</li>
+<li>パス設計は §7.3 の契約（<code>POST /answers</code>・<code>GET /review/queue</code>・<code>GET /dashboard/due-count</code>）をそのまま <code>.route()</code> のプレフィックス＋サブルーター内パスで構成する。</li>
+</ul>
+<h3>10.6 バリデーション・DTO・エラー処理</h3>
+<p><strong>入出力スキーマは <code>packages/shared/src/schema/api.ts</code> に新設</strong>する（§9.3 で予告済み）。同一スキーマを「API 入力の <code>zValidator</code>」「route 返り値の契約固定（<code>satisfies</code>）」「フロントの型（<code>z.infer</code>）」の 3 経路で共有する（§8.6 と同じパターン）。</p>
+<pre><code class="language-typescript">// packages/shared/src/schema/api.ts（抜粋）
+export const answerRequestSchema = z.object({
+  questionId: z.string().min(1),
+  selectedIndex: z.number().int().min(0).max(5),  // choices は最大6（schema/content と整合）
+})
+export type AnswerRequest = z.infer&lt;typeof answerRequestSchema&gt;
+
+export const answerResponseSchema = z.object({
+  isCorrect: z.boolean(),
+  correctIndex: z.number().int().nonnegative(),
+})
+export type AnswerResponse = z.infer&lt;typeof answerResponseSchema&gt;
+
+export const reviewQueueResponseSchema = z.object({
+  items: z.array(z.object({ questionId: z.string().min(1), dueAt: z.number().int() })),
+})
+export const dueCountResponseSchema = z.object({
+  dueCount: z.number().int().nonnegative(),
+})</code></pre>
+<p><strong>エラー処理の方針</strong>：</p>
+<ul>
+<li>service は <strong>HTTP を知らないドメインエラー</strong>（<code>services/errors.ts</code> の <code>QuestionNotFoundError</code> 等）を throw する。</li>
+<li>route 層の <code>app.onError</code> がドメインエラーを HTTP ステータスへ写像し、レスポンス形を <code>{ error: { code, message } }</code> に統一する。未知のエラーは 500（<code>INTERNAL</code>）とし、詳細メッセージを外に漏らさない。</li>
+</ul>
+<pre><code class="language-typescript">// index.ts（抜粋）
+app.onError((err, c) =&gt; {
+  if (err instanceof QuestionNotFoundError) {
+    return c.json({ error: { code: 'QUESTION_NOT_FOUND', message: err.message } }, 404)
+  }
+  console.error(err)  // Workers Logs で観測
+  return c.json({ error: { code: 'INTERNAL', message: 'Internal Server Error' } }, 500)
+})</code></pre>
+<ul>
+<li><code>zValidator</code> の検証失敗（400）はデフォルト挙動のまま使う（MVP）。フロントは <code>requestJson</code>（§8.4）が <code>res.ok</code> で弾くため、エラーボディの形に依存しない。</li>
+</ul>
+<h3>10.7 D1 の整合性と書き込み</h3>
+<ul>
+<li><strong>D1 は対話型トランザクション（<code>BEGIN</code>〜<code>COMMIT</code> を複数往復で跨ぐ形）をサポートしない</strong>。複数文の原子的書き込みは <code>db.batch([...])</code> を使う。<code>POST /answers</code> の「<code>answer_log</code> 挿入＋<code>srs_state</code> upsert」は必ず 1 batch にまとめる（片方だけ書けた状態を作らない）。</li>
+<li>「読み（現 SRS 状態）→ 計算 → 書き」の間に別リクエストが割り込む競合は、単一ユーザー MVP では許容する（同一問題への同時解答は実運用上起きない）。将来マルチユーザー化しても user 単位で直列なら問題にならない。</li>
+<li><code>srs_states</code> は <code>(user_id, question_id)</code> の<strong>複合主キー</strong>とし、upsert は <code>onConflictDoUpdate</code> で書く。</li>
+<li>Drizzle インスタンスは route ハンドラ内で <code>drizzle(c.env.DB)</code> を生成して dal へ渡す（リクエストスコープ。グローバルに保持しない）。</li>
+</ul>
+<h3>10.8 content → D1 同期スクリプト</h3>
+<p>§4.2 の seed/upsert を <code>apps/api/scripts/sync-content.ts</code>（<code>pnpm --filter @tsl/api content:sync</code>）として実装する。</p>
+<ul>
+<li><strong>パース経路は §8.2 と共有</strong>：<code>gray-matter</code> でパースし <code>packages/shared</code> の content Zod（<code>validatedMcqSchema</code> 含む）で検証する。フロントのビルド時バンドルと同じ検証を通った内容だけが D1 に入る。</li>
+<li>同期対象は <code>questions</code> テーブルの<strong>最小フィールドのみ</strong>（<code>question_id</code>, <code>answer_index</code>。§4.4）。本文・選択肢・解説は D1 に入れない。</li>
+<li>検証済みデータから upsert SQL（<code>INSERT ... ON CONFLICT(question_id) DO UPDATE</code>）を生成し、<code>wrangler d1 execute</code>（ローカルは <code>--local</code>、本番は <code>--remote</code>）で流す。<strong>冪等</strong>（何度実行しても同じ結果）にする。</li>
+<li>固定ユーザー行（<code>users</code>）の seed も同スクリプトで行う（<code>user-context.ts</code> の <code>FIXED_USER_ID</code> と同じ値）。</li>
+<li>content から削除された問題は<strong>物理削除しない</strong>（<code>answer_logs</code>・<code>srs_states</code> が参照するため）。出題対象からは自然に外れる（フロントのバンドルに含まれず、due queue の join でも解決されない）。整理が必要になったら論理削除フラグを検討する。</li>
+<li>実行タイミング：ローカル開発では手動、本番はデプロイフロー（CI）に組み込む。</li>
+</ul>
+<h3>10.9 テスト戦略</h3>
+<p>§5 のガードレール方針を API の各層に割り当てる。</p>
+<table>
+<thead>
+<tr><th>対象</th><th>方法</th><th>ランタイム</th></tr>
+</thead>
+<tbody><tr><td>SRS（<code>sm2</code>）</td><td>純粋関数の単体テスト（<strong>実装済み</strong>）</td><td>Node</td></tr>
+<tr><td>service</td><td>deps をインメモリ fake に差し替えた単体テスト。採点の正誤・SRS 遷移の呼び出し・エラー系（問題未存在）を重点</td><td>Node</td></tr>
+<tr><td>route + dal</td><td><code>@cloudflare/vitest-pool-workers</code>（ローカル D1 に対する実クエリ）で happy path を最低 1 本（<code>POST /answers</code> の貫通）</td><td>workerd</td></tr></tbody>
+</table>
+<ul>
+<li>service の deps を「フラットな関数の束」（§10.3）にしているのはこのため。fake は素朴なオブジェクトリテラルで書け、モックライブラリを要しない。</li>
+</ul>
+<pre><code class="language-typescript">// services/answer-service.test.ts（fake deps の例）
+const recorded: unknown[] = []
+const deps: AnswerDeps = {
+  findAnswerIndex: async () =&gt; 2,
+  findSrsState: async () =&gt; null,
+  recordAnswer: async (p) =&gt; { recorded.push(p) },
+}
+const result = await submitAnswer(deps, {
+  userId: 'u1', questionId: 'q1', selectedIndex: 2, now: 0,
+})
+// → result.isCorrect === true、recorded[0].nextSrs.reps === 1 などを検証</code></pre>
+<h3>10.10 既存コードとの差分（本章から発生する実装タスク）</h3>
+<ul>
+<li><code>packages/shared/src/db/schema.ts</code>：<code>questions</code> テーブル（§4.4 の content 同期キャッシュ）を追加。<code>srs_states</code> に複合主キー <code>(user_id, question_id)</code> を追加</li>
+<li><code>packages/shared/src/schema/api.ts</code>：新設（§10.6）</li>
+<li><code>apps/api/wrangler.toml</code>：<code>name</code> を <code>tech-study-lab-api</code> へ変更（web Worker と区別する。§3.1 の Service Binding が参照する <code>service</code> 名になる）。<code>vars</code> に <code>WEB_ORIGIN</code> を追加</li>
+<li><code>apps/api/src/</code>：<code>env.ts</code> / <code>middleware/</code> / <code>routes/</code> / <code>services/</code> / <code>dal/</code> を §10.2 の構成で新設し、<code>index.ts</code> をルート合成形へ書き換え</li>
+<li><code>apps/api/scripts/sync-content.ts</code>：新設（§10.8。package.json の <code>content:sync</code> は定義済み）</li>
+</ul>
+<h3>10.11 将来拡張ポイント</h3>
+<ul>
+<li><strong>認証</strong>：<code>user-context.ts</code> の差し替えのみ（§10.4）。API 契約・層構造は不変</li>
+<li><strong>バッチ処理</strong>（due 通知・統計集計等）：<code>apps/api</code> の wrangler 設定に Cron Triggers を追加する。web と Worker を分離した §3.1 の利点がここで効く</li>
+<li><strong>記述式・コード問題</strong>（§4.3）：shared の <code>questionSchema</code>（discriminated union）に type を追加 → <code>answer-service</code> の採点分岐を追加。route の契約は <code>question.type</code> に応じたリクエストスキーマ拡張で対応</li>
+</ul>
+<h2>11. コンテンツ規約</h2>
+<p><code>content/</code> 配下の物理的な決め事。第4章のデータモデル（論理）を、ファイルシステム上の規約（物理）に落とす。<strong>教材を 1 本書く前に確定しておくべき事項</strong>をここに集約する。</p>
+<h3>11.1 ファイル配置</h3>
+<pre><code>content/
+├── security/                   # domain（domainKeySchema のキーと一致）
+│   └── xss/                    # topic（トピックキー）
+│       ├── index.md            # トピックのメタ情報＋概要文
+│       └── security-xss-01.md  # レッスン（ファイル名 = lessonId）</code></pre>
+<ul>
+<li>ディレクトリ階層は §4.1 のコンテンツ階層（domain &gt; topic &gt; lesson）をそのまま写す。</li>
+<li><strong>ファイル名 = lessonId</strong>。frontmatter の <code>domain</code> / <code>topic</code> はディレクトリパスと一致していなければならない。</li>
+<li>パス⇔frontmatter⇔ID の整合は、ビルド時パース（§8.2）と <code>content:sync</code>（§10.8）の<strong>両方で検証し、不一致はビルド失敗</strong>にする。AI が教材を追加・改訂する際のガードレール（§5）として機能させる。</li>
+</ul>
+<h3>11.2 ID 命名規則</h3>
+<table>
+<thead>
+<tr><th>ID</th><th>形式</th><th>例</th></tr>
+</thead>
+<tbody><tr><td>lessonId</td><td><code>&lt;domain&gt;-&lt;topic&gt;-&lt;連番2桁&gt;</code></td><td><code>security-xss-01</code></td></tr>
+<tr><td>questionId</td><td><code>&lt;lessonId&gt;-q&lt;連番&gt;</code></td><td><code>security-xss-01-q1</code></td></tr></tbody>
+</table>
+<ul>
+<li>使用文字は小文字英数とハイフンのみ（<code>^[a-z0-9-]+$</code>）。</li>
+<li><strong>一度 <code>answer_logs</code> / <code>srs_states</code> に記録された ID は変更しない（不変）</strong>。ID を変えると学習履歴・SRS 状態が切れる。</li>
+<li>誤字修正・解説の改善など<strong>意味が変わらない改訂は同一 ID のまま</strong>行う。問題の意味が変わる改訂は<strong>新しい questionId で追加</strong>し、旧問題は content から削除する（D1 側は物理削除しない。§10.8）。</li>
+<li>トピック内のレッスン並び順は lessonId の連番で決める（別途 <code>order</code> フィールドは持たない。並び替えが必要になった時点で追加を検討）。</li>
+</ul>
+<h3>11.3 表示名（ラベル）の持ち場所</h3>
+<p>キー（<code>security</code> / <code>xss</code>）は識別子であり、画面表示用の日本語ラベルとは分離する。</p>
+<table>
+<thead>
+<tr><th>対象</th><th>持ち場所</th><th>理由</th></tr>
+</thead>
+<tbody><tr><td>domain のラベル・並び順</td><td><code>packages/shared</code> の定数マップ（<code>DOMAIN_LABELS: Record&lt;DomainKey, { label, order }&gt;</code>）</td><td>4 領域で固定（Zod enum と同じ場所で単一ソース化）</td></tr>
+<tr><td>topic のラベル・並び順・概要文</td><td><code>content/&lt;domain&gt;/&lt;topic&gt;/index.md</code>（frontmatter: <code>{ topic, title, order }</code>、本文: 概要文）</td><td>コンテンツと一緒に増えるため content 側で管理。概要文はレッスン一覧ページの説明に使う</td></tr>
+<tr><td>lesson のタイトル</td><td>レッスン frontmatter の <code>title</code>（既存どおり）</td><td>—</td></tr></tbody>
+</table>
+<h3>11.4 実装タスク</h3>
+<ul>
+<li><code>packages/shared/src/schema/content.ts</code>：topic index 用の Zod（<code>topicFrontmatterSchema</code>）と、lessonId / questionId の形式検証（regex・<code>questionId</code> が <code>lessonId</code> を接頭辞に持つこと）を追加</li>
+<li><code>packages/shared</code>：<code>DOMAIN_LABELS</code> を追加</li>
+<li>ビルド時パース（§8.2）と <code>content:sync</code>（§10.8）：パス⇔frontmatter⇔ID の整合検証を実装</li>
+</ul>
+<h3>11.5 レッスンあたりの問題数</h3>
+<ul>
+<li>本番の教材は <strong>1 レッスンあたり 5〜7 問を目安</strong>とする。定義・原因・具体例・対策・落とし穴など、トピックの主要な観点を一通りカバーしつつ、AI が 1 レッスンを書く際の執筆・レビュー負荷が過大にならない範囲として設定する。</li>
+<li><strong>第6章 Walking Skeleton の「4択3問」は例外</strong>：スタック全体（教材表示 → 採点 → SRS）の疎通確認が目的の最小構成であり、本番教材の目安ではない。Walking Skeleton 貫通後に追加する実際のレッスンは本節の 5〜7 問を基準にする。</li>
+<li>5〜7 問は初期の目安であり固定値ではない。トピックの複雑さに応じて増減してよい。</li>
+</ul>
+<h2>12. 環境・デプロイ</h2>
+<h3>12.1 環境定義</h3>
+<p><strong>local / production の 2 環境のみ</strong>。preview 環境（PR ごとのデプロイ等）は将来検討とする。</p>
+<h3>12.2 環境変数・バインディング一覧</h3>
+<p>§3.1 / §8.4 / §10.5 に散在していた設定値の単一の一覧。<strong>設定値をコードにハードコードしない</strong>（§8.4）。</p>
+<table>
+<thead>
+<tr><th>名前</th><th>種別</th><th>参照箇所</th><th>local</th><th>production</th></tr>
+</thead>
+<tbody><tr><td><code>DB</code></td><td>D1 バインディング（api）</td><td>dal（Drizzle）</td><td><code>wrangler dev</code> のローカル D1</td><td><code>apps/api/wrangler.toml</code> の <code>d1_databases</code>（要実 ID。§12.4）</td></tr>
+<tr><td><code>WEB_ORIGIN</code></td><td>var（api）</td><td>CORS 許可オリジン（§10.5）</td><td><code>http://localhost:3000</code></td><td>web Worker の公開 URL</td></tr>
+<tr><td><code>API</code></td><td>Service Binding（web）</td><td>Server loader（§3.1・§8.4）</td><td>なし（URL フォールバック）</td><td><code>services: [{ binding: "API", service: "tech-study-lab-api" }]</code></td></tr>
+<tr><td><code>API_BASE_URL</code></td><td>env（web / Server 専用）</td><td>Server loader のフォールバック（§8.4）</td><td><code>http://localhost:8787</code></td><td>設定しない（Service Binding を優先）</td></tr>
+<tr><td><code>NEXT_PUBLIC_API_BASE_URL</code></td><td>ビルド時 env（web / Client）</td><td>Client hook（§8.4）</td><td><code>http://localhost:8787</code></td><td>api Worker の公開 URL</td></tr></tbody>
+</table>
+<h3>12.3 ローカル開発手順</h3>
+<ol>
+<li><code>pnpm install</code></li>
+<li><code>pnpm --filter @tsl/api db:migrate:local</code>（初回・スキーマ変更時）</li>
+<li>content sync のローカル実行（初回・content 変更時。§10.8）</li>
+<li><code>pnpm --filter @tsl/api dev</code>（<code>:8787</code>）と <code>pnpm --filter @tsl/web dev</code>（<code>:3000</code>）を並走</li>
+</ol>
+<h3>12.4 本番デプロイ手順（順序が仕様）</h3>
+<p>初回のみ：<code>wrangler d1 create tech-study-lab</code> を実行し、発行された <code>database_id</code> を <code>apps/api/wrangler.toml</code> に設定する。</p>
+<ol>
+<li><strong>マイグレーション適用</strong>：<code>wrangler d1 migrations apply tech-study-lab --remote</code></li>
+<li><strong>content sync</strong>：<code>content/</code> → D1 upsert（<code>--remote</code>。§10.8）</li>
+<li><strong>api デプロイ</strong>：<code>pnpm --filter @tsl/api deploy</code></li>
+<li><strong>web デプロイ</strong>：OpenNext ビルド＋デプロイ</li>
+</ol>
+<p>順序の根拠：<strong>スキーマ → データ → API → 画面</strong> の順なら、各ステップの完了時点で稼働中の旧バージョンが壊れない（マイグレーションが追加中心の後方互換であることが前提。§12.6）。</p>
+<ul>
+<li>MVP は<strong>手動実行</strong>とする。Walking Skeleton 貫通後に GitHub Actions による main ブランチ自動デプロイへ移行する（PR ゲート CI ＝型・lint・test・build は §5 のとおり先行整備）。</li>
+</ul>
+<h3>12.5 content 更新の運用ルール</h3>
+<p>content は「web のビルド時バンドル（§8.2）」と「D1 の <code>questions</code> 同期（§10.8）」の<strong>二重反映</strong>である。</p>
+<ul>
+<li>content を変更したら、§12.4 の <strong>② content sync と ④ web 再ビルド・デプロイを必ずセットで実行</strong>する。</li>
+<li>片方だけ実行すると「画面に問題が表示されるのに採点 API が <code>QUESTION_NOT_FOUND</code> を返す」不整合が起きる。</li>
+<li>CI 化の際は <code>content/</code> の差分を検知して両ジョブを必須にする。</li>
+</ul>
+<h3>12.6 マイグレーション運用</h3>
+<ul>
+<li>生成：<code>pnpm --filter @tsl/api db:generate</code>（drizzle-kit）→ ローカル適用（<code>db:migrate:local</code>）→ テスト → PR。</li>
+<li>本番適用はデプロイ手順の先頭（§12.4 の①）。</li>
+<li><strong>破壊的変更（列削除・型変更・NOT NULL 追加）は原則避け、追加中心</strong>とする。やむを得ない場合は「新列追加 → データ移行 → 旧列削除」の多段リリースで行う。</li>
+</ul>
+<h3>12.7 バックアップ・観測（当面の割り切り）</h3>
+<ul>
+<li><strong>バックアップ</strong>：教材・問題は Git にあるため、守る対象は D1 の <code>answer_logs</code> / <code>srs_states</code> のみ。当面は必要時に <code>wrangler d1 export</code> を手動実行し、マルチユーザー公開時に定期化（Cron 等）を検討する。</li>
+<li><strong>観測</strong>：Workers Logs（<code>console.error</code>。§10.6 の <code>onError</code> から出力）で足りるとする。構造化ログ・外部監視は公開時に再検討。</li>
+</ul>
     </article>
   </main>
 </div>
