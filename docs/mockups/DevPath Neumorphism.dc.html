@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  :root{--nm-base:#e4e9f0;--nm-dark:#d1d7e0;--nm-light:#ffffff;--accent:#1a73e8;--accent-lt:#3f8bf5;--accent-glow:rgba(26,115,232,.4);--nm-d:6px}
+  body{background:var(--nm-base);font-family:'Inter',system-ui,sans-serif}
+  .nm{background:var(--nm-base);border-radius:20px;box-shadow:var(--nm-d) var(--nm-d) calc(var(--nm-d)*2.4) var(--nm-dark), calc(var(--nm-d)*-1) calc(var(--nm-d)*-1) calc(var(--nm-d)*2.4) var(--nm-light)}
+  .nm-sm{background:var(--nm-base);border-radius:14px;box-shadow:calc(var(--nm-d)*0.8) calc(var(--nm-d)*0.8) calc(var(--nm-d)*1.7) var(--nm-dark), calc(var(--nm-d)*-0.8) calc(var(--nm-d)*-0.8) calc(var(--nm-d)*1.7) var(--nm-light)}
+  .nm-in{background:var(--nm-base);border-radius:14px;box-shadow:inset calc(var(--nm-d)*0.8) calc(var(--nm-d)*0.8) calc(var(--nm-d)*1.6) var(--nm-dark), inset calc(var(--nm-d)*-0.8) calc(var(--nm-d)*-0.8) calc(var(--nm-d)*1.6) var(--nm-light)}
+  .nm-in-sm{background:var(--nm-base);border-radius:9999px;box-shadow:inset calc(var(--nm-d)*0.5) calc(var(--nm-d)*0.5) calc(var(--nm-d)*1) var(--nm-dark), inset calc(var(--nm-d)*-0.5) calc(var(--nm-d)*-0.5) calc(var(--nm-d)*1) var(--nm-light)}
+  .navitem{transition:box-shadow .18s, color .18s}
+  .navitem:hover{box-shadow:calc(var(--nm-d)*0.5) calc(var(--nm-d)*0.5) calc(var(--nm-d)*1.2) var(--nm-dark), calc(var(--nm-d)*-0.5) calc(var(--nm-d)*-0.5) calc(var(--nm-d)*1.2) var(--nm-light)}
+  .press{transition:box-shadow .12s}
+  .press:hover{box-shadow:calc(var(--nm-d)*0.7) calc(var(--nm-d)*0.7) calc(var(--nm-d)*1.5) var(--nm-dark), calc(var(--nm-d)*-0.7) calc(var(--nm-d)*-0.7) calc(var(--nm-d)*1.5) var(--nm-light)}
+  .press:active{box-shadow:inset calc(var(--nm-d)*0.7) calc(var(--nm-d)*0.7) calc(var(--nm-d)*1.5) var(--nm-dark), inset calc(var(--nm-d)*-0.7) calc(var(--nm-d)*-0.7) calc(var(--nm-d)*1.5) var(--nm-light)}
+  .btn-primary{transition:filter .14s}
+  .btn-primary:active{filter:brightness(.94)}
+  .optbtn{transition:box-shadow .12s}
+</style>
+</helmet>
+<div style="display:flex;min-height:772px;width:1240px;background:var(--nm-base);color:#465063;font-family:'Inter',system-ui,sans-serif;padding:20px;gap:20px;{{ themeVars }}">
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="nm" style="width:236px;flex:none;display:flex;flex-direction:column;padding:20px 16px;align-self:stretch">
+    <div onClick="{{ goDashboard }}" style="display:flex;align-items:center;gap:12px;padding:4px 6px 20px;cursor:pointer">
+      <span class="nm-sm" style="display:grid;place-items:center;width:42px;height:42px;border-radius:13px;color:var(--accent)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></span>
+      <div style="line-height:1.25"><div style="font-size:15px;font-weight:700;color:#3b4457;letter-spacing:-.01em">DevPath</div><div style="font-size:11.5px;color:#93a0b5">Tech Study Lab</div></div>
+    </div>
+    <div style="padding:4px 8px 8px;font-size:10.5px;font-weight:700;letter-spacing:.14em;color:#a7b2c4;text-transform:uppercase">メニュー</div>
+    <nav style="display:flex;flex-direction:column;gap:6px">
+      <a class="{{ navDash.cls }}" onClick="{{ goDashboard }}" style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:12px;text-decoration:none;cursor:pointer;font-size:14px;font-weight:{{ navDash.weight }};color:{{ navDash.color }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>ダッシュボード</a>
+      <a class="{{ navLearn.cls }}" onClick="{{ goLearn }}" style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:12px;text-decoration:none;cursor:pointer;font-size:14px;font-weight:{{ navLearn.weight }};color:{{ navLearn.color }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>教材（学習）</a>
+      <a class="{{ navQuiz.cls }}" onClick="{{ goQuizIntro }}" style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:12px;text-decoration:none;cursor:pointer;font-size:14px;font-weight:{{ navQuiz.weight }};color:{{ navQuiz.color }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>演習</a>
+      <a class="{{ navReview.cls }}" onClick="{{ goReviewIntro }}" style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:12px;text-decoration:none;cursor:pointer;font-size:14px;font-weight:{{ navReview.weight }};color:{{ navReview.color }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>復習<span class="nm-in-sm" style="margin-left:auto;font-size:11px;font-weight:700;color:var(--accent);padding:2px 9px;border-radius:9999px">3</span></a>
+      <a class="{{ navAnalytics.cls }}" onClick="{{ goAnalytics }}" style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:12px;text-decoration:none;cursor:pointer;font-size:14px;font-weight:{{ navAnalytics.weight }};color:{{ navAnalytics.color }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>アナリティクス</a>
+      <a class="{{ navDomains.cls }}" onClick="{{ goDomains }}" style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:12px;text-decoration:none;cursor:pointer;font-size:14px;font-weight:{{ navDomains.weight }};color:{{ navDomains.color }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>学習領域</a>
+      <a class="navitem" href="#" style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:12px;text-decoration:none;color:#5b6577;font-size:14px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>設定</a>
+    </nav>
+    <div class="nm-in" style="margin-top:auto;padding:14px;border-radius:15px;display:flex;align-items:center;gap:11px">
+      <span class="nm-sm" style="display:grid;place-items:center;width:36px;height:36px;border-radius:9999px;color:var(--accent);font-weight:700;font-size:13px">田</span>
+      <div style="line-height:1.3"><div style="font-size:13px;font-weight:600;color:#3b4457">田中</div><div style="font-size:11.5px;color:#93a0b5">個人プラン</div></div>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <main style="flex:1;display:flex;flex-direction:column;gap:20px;min-width:0">
+
+    <!-- ===== DASHBOARD ===== -->
+    <sc-if value="{{ showDashboard }}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:4px 4px 0">
+      <div><h1 style="margin:0;font-size:25px;font-weight:800;letter-spacing:-.02em;color:#3b4457">ダッシュボード</h1><p style="margin:6px 0 0;font-size:14px;color:#7a8699">今日の学習状況と復習キューの概要</p></div>
+      <button class="press btn-primary" onClick="{{ goReviewIntro }}" style="border:0;border-radius:14px;background:linear-gradient(150deg,var(--accent-lt),var(--accent));color:#fff;font-size:14px;font-weight:600;padding:12px 20px;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:8px;box-shadow:0 9px 20px var(--accent-glow)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>復習を始める</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px">
+      <div class="nm" style="padding:20px"><div style="display:flex;align-items:center;justify-content:space-between"><span class="nm-in" style="display:grid;place-items:center;width:42px;height:42px;border-radius:13px;color:var(--accent)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg></span><span style="font-size:12px;font-weight:600;color:#1f9d5c">+1</span></div><div style="margin-top:15px;font-size:13px;color:#7a8699">今日の復習</div><div style="margin-top:2px;font-size:27px;font-weight:800;color:#3b4457">3<span style="font-size:14px;font-weight:600;color:#7a8699">問</span></div></div>
+      <div class="nm" style="padding:20px"><div style="display:flex;align-items:center;justify-content:space-between"><span class="nm-in" style="display:grid;place-items:center;width:42px;height:42px;border-radius:13px;color:var(--accent)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></span><span style="font-size:12px;font-weight:600;color:#1f9d5c">+5.2pt</span></div><div style="margin-top:15px;font-size:13px;color:#7a8699">正答率 · 直近7日</div><div style="margin-top:2px;font-size:27px;font-weight:800;color:var(--accent)">78%</div></div>
+      <div class="nm" style="padding:20px"><div style="display:flex;align-items:center;justify-content:space-between"><span class="nm-in" style="display:grid;place-items:center;width:42px;height:42px;border-radius:13px;color:var(--accent)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></span><span style="font-size:12px;font-weight:600;color:#1f9d5c">+18%</span></div><div style="margin-top:15px;font-size:13px;color:#7a8699">学習時間 · 今週</div><div style="margin-top:2px;font-size:27px;font-weight:800;color:#3b4457">2h 15m</div></div>
+      <div class="nm" style="padding:20px"><div style="display:flex;align-items:center;justify-content:space-between"><span class="nm-in" style="display:grid;place-items:center;width:42px;height:42px;border-radius:13px;color:var(--accent)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path></svg></span><span style="font-size:12px;font-weight:600;color:#7a8699">継続</span></div><div style="margin-top:15px;font-size:13px;color:#7a8699">連続学習</div><div style="margin-top:2px;font-size:27px;font-weight:800;color:#3b4457">12<span style="font-size:14px;font-weight:600;color:#7a8699">日</span></div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <section class="nm" style="padding:24px">
+        <h2 style="margin:0;font-size:16px;font-weight:700;color:#3b4457">領域別の習得状況</h2>
+        <div style="margin-top:18px;display:flex;flex-direction:column;gap:18px">
+          <sc-for list="{{ domains }}" as="d" hint-placeholder-count="4">
+            <button onClick="{{ goLearn }}" style="border:0;background:transparent;padding:0;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:14px;text-align:left">
+              <span class="nm-in" style="display:grid;place-items:center;width:42px;height:42px;flex:none;border-radius:13px;color:var(--accent)">{{ d.icon }}</span>
+              <div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;font-size:13.5px;margin-bottom:8px"><span style="font-weight:600;color:#465063">{{ d.name }}</span><span style="font-weight:700;color:#3b4457">{{ d.pct }}</span></div><div class="nm-in-sm" style="height:10px;border-radius:9999px"><div style="height:10px;border-radius:9999px;background:linear-gradient(90deg,var(--accent-lt),var(--accent));width:{{ d.pct }}"></div></div></div>
+            </button>
+          </sc-for>
+        </div>
+      </section>
+      <section class="nm" style="padding:24px">
+        <div style="display:flex;align-items:center;justify-content:space-between"><h2 style="margin:0;font-size:16px;font-weight:700;color:#3b4457">最近のアクティビティ</h2><a onClick="{{ goAnalytics }}" style="font-size:12.5px;color:var(--accent);text-decoration:none;font-weight:600;cursor:pointer">すべて表示</a></div>
+        <div style="margin-top:14px;display:flex;flex-direction:column;gap:12px">
+          <div class="press" onClick="{{ goQuizIntro }}" style="display:flex;align-items:center;gap:13px;padding:12px;border-radius:13px;cursor:pointer"><span class="nm-in" style="display:grid;place-items:center;width:36px;height:36px;flex:none;border-radius:11px;color:#1f9d5c"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span><div style="flex:1"><div style="font-size:14px;font-weight:600;color:#465063">演習を完了（5問正解）</div><div style="font-size:12px;color:#93a0b5;margin-top:1px">XSSの基礎とエスケープ設計</div></div><div style="text-align:right;flex:none"><div style="font-size:13px;font-weight:700;color:#1f9d5c">5 / 5</div><div style="font-size:11.5px;color:#93a0b5">2分前</div></div></div>
+          <div class="press" onClick="{{ goArticle }}" style="display:flex;align-items:center;gap:13px;padding:12px;border-radius:13px;cursor:pointer"><span class="nm-in" style="display:grid;place-items:center;width:36px;height:36px;flex:none;border-radius:11px;color:var(--accent)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg></span><div style="flex:1"><div style="font-size:14px;font-weight:600;color:#465063">レッスンを読了</div><div style="font-size:12px;color:#93a0b5;margin-top:1px">Security / XSS · 約18分</div></div><div style="text-align:right;flex:none;font-size:11.5px;color:#93a0b5">15分前</div></div>
+          <div class="press" onClick="{{ goReviewIntro }}" style="display:flex;align-items:center;gap:13px;padding:12px;border-radius:13px;cursor:pointer"><span class="nm-in" style="display:grid;place-items:center;width:36px;height:36px;flex:none;border-radius:11px;color:var(--accent)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg></span><div style="flex:1"><div style="font-size:14px;font-weight:600;color:#465063">復習キューを更新</div><div style="font-size:12px;color:#93a0b5;margin-top:1px">SRSが3問を今日のdueに設定</div></div><div style="text-align:right;flex:none;font-size:11.5px;color:#93a0b5">1時間前</div></div>
+          <div class="press" onClick="{{ goLearn }}" style="display:flex;align-items:center;gap:13px;padding:12px;border-radius:13px;cursor:pointer"><span class="nm-in" style="display:grid;place-items:center;width:36px;height:36px;flex:none;border-radius:11px;color:var(--accent)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></span><div style="flex:1"><div style="font-size:14px;font-weight:600;color:#465063">新しいレッスンを追加</div><div style="font-size:12px;color:#93a0b5;margin-top:1px">Frontend / 状態管理の基礎</div></div><div style="text-align:right;flex:none;font-size:11.5px;color:#93a0b5">2時間前</div></div>
+        </div>
+      </section>
+    </div>
+    <section class="nm" style="padding:22px 24px;display:flex;align-items:center;gap:18px">
+      <span class="nm-in" style="display:grid;place-items:center;width:52px;height:52px;flex:none;border-radius:15px;color:var(--accent)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg></span>
+      <div style="flex:1"><div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:.06em">NEXT LESSON</div><h3 style="margin:5px 0 0;font-size:18px;font-weight:700;color:#3b4457">XSSの基礎とエスケープ設計</h3><p style="margin:3px 0 0;font-size:13px;color:#7a8699">教材本文 → 4択3問</p></div>
+      <button class="press btn-primary" onClick="{{ goArticle }}" style="border:0;border-radius:14px;background:linear-gradient(150deg,var(--accent-lt),var(--accent));color:#fff;font-size:14px;font-weight:600;padding:12px 22px;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:8px;box-shadow:0 9px 20px var(--accent-glow);flex:none">続きから <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></button>
+    </section>
+    </sc-if>
+
+    <!-- ===== LEARN LIST ===== -->
+    <sc-if value="{{ showLearn }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:4px 4px 0"><div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#93a0b5">教材 / security / xss</div><h1 style="margin:8px 0 0;font-size:25px;font-weight:800;letter-spacing:-.02em;color:#3b4457">Security / XSS</h1><p style="margin:6px 0 0;font-size:14px;color:#7a8699">トピック内のレッスン一覧</p></div>
+    <button class="press" onClick="{{ goArticle }}" style="border:0;background:var(--nm-base);border-radius:20px;box-shadow:7px 7px 16px var(--nm-dark), -7px -7px 16px var(--nm-light);padding:22px;display:flex;align-items:center;gap:18px;cursor:pointer;font-family:inherit;text-align:left">
+      <span class="nm-in" style="display:grid;place-items:center;width:52px;height:52px;flex:none;border-radius:15px;color:var(--accent)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg></span>
+      <div style="flex:1"><div style="display:flex;align-items:center;gap:9px"><span class="nm-in-sm" style="font-size:10.5px;font-weight:700;color:var(--accent);padding:3px 10px;border-radius:9999px">Lesson 01</span><span style="font-size:12px;color:#93a0b5">約18分 · 4択3問</span></div><h3 style="margin:10px 0 0;font-size:19px;font-weight:700;color:#3b4457">XSSの基礎とエスケープ設計</h3><p style="margin:4px 0 0;font-size:13px;color:#7a8699">Markdown本文・コード例・4択3問</p></div>
+      <span class="nm-sm" style="display:grid;place-items:center;width:40px;height:40px;flex:none;border-radius:12px;color:var(--accent)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span>
+    </button>
+    </sc-if>
+
+    <!-- ===== ARTICLE ===== -->
+    <sc-if value="{{ showArticle }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:4px 4px 0">
+      <div><div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#93a0b5">教材 / security / xss / xss-basics</div><h1 style="margin:8px 0 0;font-size:25px;font-weight:800;letter-spacing:-.02em;color:#3b4457">XSSの基礎とエスケープ設計</h1></div>
+      <button class="press" onClick="{{ goLearn }}" style="border:0;background:var(--nm-base);border-radius:12px;box-shadow:5px 5px 11px var(--nm-dark), -5px -5px 11px var(--nm-light);color:#5b6577;font-size:13.5px;font-weight:600;padding:11px 16px;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:7px;flex:none"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>目次へ戻る</button>
+    </div>
+    <article class="nm" style="padding:34px 38px">
+      <div style="display:flex;flex-wrap:wrap;gap:9px"><span class="nm-in-sm" style="color:var(--accent);padding:5px 14px;font-size:12.5px;font-weight:600">Security / XSS</span><span class="nm-in-sm" style="color:#7a8699;padding:5px 14px;font-size:12.5px">約18分</span><span class="nm-in-sm" style="color:#7a8699;padding:5px 14px;font-size:12.5px">4択3問</span></div>
+      <p style="margin:22px 0 0;font-size:16px;line-height:1.85;color:#465063">XSSは「入力値が危険」なのではなく、値がHTMLやJavaScriptとして解釈される文脈に混入することで成立します。実装では保存前の一律除去より、出力時の文脈別エスケープを軸に考えます。</p>
+      <h2 style="margin:30px 0 0;font-size:19px;font-weight:700;color:#3b4457">危険な描画例</h2>
+      <p style="margin:12px 0 0;font-size:15px;line-height:1.8;color:#465063">HTMLとして差し込むAPIは、信頼できるサニタイズ済みHTMLだけに限定します。</p>
+      <pre style="margin:16px 0 0;overflow-x:auto;border-radius:14px;background:#0f1729;padding:18px 20px;font-family:'JetBrains Mono',monospace;font-size:13.5px;line-height:1.75;color:#cbd5e1;white-space:pre;box-shadow:inset 2px 2px 6px rgba(0,0,0,.35)"><code>{{ codeSample }}</code></pre>
+      <h2 style="margin:30px 0 0;font-size:19px;font-weight:700;color:#3b4457">設計チェック</h2>
+      <ul style="margin:14px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:11px">
+        <li style="display:flex;gap:10px;font-size:15px;line-height:1.7;color:#465063"><span style="color:var(--accent);font-weight:700">▪</span>HTML本文、属性、URL、JS文字列でエスケープ方式を分ける</li>
+        <li style="display:flex;gap:10px;font-size:15px;line-height:1.7;color:#465063"><span style="color:var(--accent);font-weight:700">▪</span>CSPは防御層として追加し、主対策の代替にしない</li>
+        <li style="display:flex;gap:10px;font-size:15px;line-height:1.7;color:#465063"><span style="color:var(--accent);font-weight:700">▪</span>レビュー対象にHTML直挿入の逃げ道を明記する</li>
+      </ul>
+      <div style="margin-top:28px;display:flex;justify-content:flex-end"><button class="press btn-primary" onClick="{{ goQuiz }}" style="border:0;border-radius:14px;background:linear-gradient(150deg,var(--accent-lt),var(--accent));color:#fff;font-size:14px;font-weight:600;padding:13px 22px;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:8px;box-shadow:0 9px 20px var(--accent-glow)">問題を解く <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></button></div>
+    </article>
+    </sc-if>
+
+    <!-- ===== QUIZ INTRO ===== -->
+    <sc-if value="{{ showQuizIntro }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:4px 4px 0"><div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#93a0b5">演習 / レッスンを選ぶ</div><h1 style="margin:8px 0 0;font-size:25px;font-weight:800;letter-spacing:-.02em;color:#3b4457">演習</h1><p style="margin:6px 0 0;font-size:14px;color:#7a8699">レッスンを選んで4択演習を始めます。1問ずつ即時採点し、解答はSRSに記録されます。</p></div>
+    <section class="nm" style="padding:24px">
+      <div style="display:flex;align-items:center;gap:16px">
+        <span class="nm-in" style="display:grid;place-items:center;width:52px;height:52px;flex:none;border-radius:15px;color:var(--accent)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg></span>
+        <div style="flex:1"><span class="nm-in-sm" style="font-size:10.5px;font-weight:700;color:var(--accent);padding:3px 10px;border-radius:9999px">Security / XSS</span><h3 style="margin:9px 0 0;font-size:19px;font-weight:700;color:#3b4457">XSSの基礎とエスケープ設計</h3><p style="margin:3px 0 0;font-size:13px;color:#7a8699">4択3問 · 約5分 · 即時採点＋解説 / SRSに自動記録</p></div>
+      </div>
+      <div style="margin-top:20px;padding-top:20px;border-top:1px solid #d6dde7;display:flex;gap:12px">
+        <button class="press" onClick="{{ goArticle }}" style="flex:none;border:0;background:var(--nm-base);border-radius:14px;box-shadow:4px 4px 10px var(--nm-dark), -4px -4px 10px var(--nm-light);color:#5b6577;font-size:14px;font-weight:600;padding:14px 22px;cursor:pointer;font-family:inherit">先に教材を読む</button>
+        <button class="press btn-primary" onClick="{{ goQuiz }}" style="flex:1;border:0;border-radius:14px;background:linear-gradient(150deg,var(--accent-lt),var(--accent));color:#fff;font-size:15px;font-weight:600;padding:14px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 9px 20px var(--accent-glow)">このレッスンの演習を始める <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></button>
+      </div>
+    </section>
+    </sc-if>
+
+    <!-- ===== REVIEW INTRO ===== -->
+    <sc-if value="{{ showReviewIntro }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:4px 4px 0"><div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#93a0b5">復習 / due queue</div><h1 style="margin:8px 0 0;font-size:25px;font-weight:800;letter-spacing:-.02em;color:#3b4457">今日の復習</h1><p style="margin:6px 0 0;font-size:14px;color:#7a8699">SRSが選んだ復習対象をレッスン横断で出題します。dueAt昇順・最大20件。</p></div>
+    <section class="nm" style="padding:24px">
+      <div style="display:flex;align-items:center;justify-content:space-between"><h2 style="margin:0;font-size:16px;font-weight:700;color:#3b4457">本日のキュー</h2><span class="nm-in-sm" style="font-size:11px;font-weight:600;color:var(--accent);padding:3px 11px;border-radius:9999px">3問</span></div>
+      <div style="margin-top:16px;display:flex;flex-direction:column;gap:11px">
+        <div class="nm-in" style="display:flex;align-items:center;gap:12px;border-radius:13px;padding:14px 16px"><span class="nm-sm" style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--accent);padding:4px 10px;border-radius:8px">XSS-003</span><span style="font-size:13.5px;color:#465063;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">保存型XSSの説明として最も適切なものは？</span><span style="font-size:11.5px;color:#dc2626;font-weight:600">2日 滞留</span></div>
+        <div class="nm-in" style="display:flex;align-items:center;gap:12px;border-radius:13px;padding:14px 16px"><span class="nm-sm" style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--accent);padding:4px 10px;border-radius:8px">XSS-001</span><span style="font-size:13.5px;color:#465063;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">HTML本文へ表示する際、最初に検討すべき対策は？</span><span style="font-size:11.5px;color:#c77d13;font-weight:600">1日 滞留</span></div>
+        <div class="nm-in" style="display:flex;align-items:center;gap:12px;border-radius:13px;padding:14px 16px"><span class="nm-sm" style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--accent);padding:4px 10px;border-radius:8px">XSS-002</span><span style="font-size:13.5px;color:#465063;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Reactのテキスト埋め込みが比較的安全な理由は？</span><span style="font-size:11.5px;color:#1f9d5c;font-weight:600">本日 due</span></div>
+      </div>
+      <div style="margin-top:20px;padding-top:20px;border-top:1px solid #d6dde7;display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <button class="press" onClick="{{ goDashboard }}" style="border:0;background:var(--nm-base);border-radius:12px;box-shadow:4px 4px 10px var(--nm-dark), -4px -4px 10px var(--nm-light);color:#5b6577;font-size:13.5px;font-weight:600;padding:11px 16px;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:7px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>ホームへ戻る</button>
+        <button class="press btn-primary" onClick="{{ goReview }}" style="border:0;border-radius:14px;background:linear-gradient(150deg,var(--accent-lt),var(--accent));color:#fff;font-size:14px;font-weight:600;padding:12px 22px;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:8px;box-shadow:0 9px 20px var(--accent-glow)">復習を始める <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></button>
+      </div>
+    </section>
+    </sc-if>
+
+    <!-- ===== EXERCISE ===== -->
+    <sc-if value="{{ showExercise }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:4px 4px 0"><div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#93a0b5">{{ exerciseCrumb }}</div><h1 style="margin:8px 0 0;font-size:25px;font-weight:800;letter-spacing:-.02em;color:#3b4457">{{ exerciseTitle }}</h1></div>
+    <section class="nm" style="padding:26px 28px">
+      <div style="display:flex;align-items:center;justify-content:space-between;font-size:12.5px;color:#7a8699"><span style="font-weight:600">問題 {{ questionNo }} / {{ questionTotal }}</span><span style="font-family:'JetBrains Mono',monospace">{{ exercisePct }}</span></div>
+      <div class="nm-in-sm" style="margin-top:10px;height:10px;border-radius:9999px"><div style="height:10px;border-radius:9999px;background:linear-gradient(90deg,var(--accent-lt),var(--accent));width:{{ exercisePct }}"></div></div>
+      <div style="margin-top:22px"><span class="nm-in-sm" style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--accent);padding:4px 11px;border-radius:8px">{{ currentQuestionId }}</span></div>
+      <h2 style="margin:14px 0 0;font-size:19px;font-weight:700;line-height:1.55;color:#3b4457">{{ currentQuestionText }}</h2>
+      <div style="margin-top:20px;display:flex;flex-direction:column;gap:13px">
+        <sc-for list="{{ options }}" as="opt" hint-placeholder-count="4">
+          <button onClick="{{ opt.onSelect }}" class="optbtn {{ opt.cls }}" style="display:flex;width:100%;align-items:center;gap:14px;border:0;border-radius:14px;background:var(--nm-base);padding:15px 18px;text-align:left;cursor:{{ opt.cursor }};font-family:inherit;color:#3b4457;font-size:14.5px;box-shadow:{{ opt.shadow }}">
+            <span style="display:grid;width:26px;height:26px;flex-shrink:0;place-items:center;border-radius:9999px;color:{{ opt.markerColor }};font-size:12px;font-weight:700;box-shadow:{{ opt.markerShadow }}">
+              <sc-if value="{{ opt.isNum }}" hint-placeholder-val="{{ true }}"><span>{{ opt.num }}</span></sc-if>
+              <sc-if value="{{ opt.isCheck }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></sc-if>
+              <sc-if value="{{ opt.isX }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></sc-if>
+            </span>
+            <span>{{ opt.text }}</span>
+          </button>
+        </sc-for>
+      </div>
+      <sc-if value="{{ showExplanation }}" hint-placeholder-val="{{ false }}">
+        <div class="nm-in" style="margin-top:18px;border-radius:14px;padding:15px 17px;color:{{ explanationColor }};line-height:1.7;font-size:14px;display:flex;gap:10px"><span style="font-weight:700;flex:none">{{ explanationTag }}</span><span>{{ explanationText }}</span></div>
+      </sc-if>
+      <div style="margin-top:22px;display:flex;justify-content:flex-end"><button class="press btn-primary" onClick="{{ nextQuestion }}" style="border:0;border-radius:14px;background:linear-gradient(150deg,var(--accent-lt),var(--accent));color:#fff;font-size:14px;font-weight:600;padding:13px 22px;cursor:{{ nextCursor }};opacity:{{ nextOpacity }};font-family:inherit;display:inline-flex;align-items:center;gap:8px;box-shadow:0 9px 20px var(--accent-glow)">{{ nextLabel }} <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></button></div>
+    </section>
+    </sc-if>
+
+    <!-- ===== RESULT ===== -->
+    <sc-if value="{{ showResult }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:4px 4px 0"><div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#93a0b5">{{ resultCrumb }}</div><h1 style="margin:8px 0 0;font-size:25px;font-weight:800;letter-spacing:-.02em;color:#3b4457">結果</h1></div>
+    <section class="nm" style="padding:36px 32px;text-align:center">
+      <div class="nm-in" style="display:inline-grid;place-items:center;width:104px;height:104px;border-radius:9999px;color:{{ resultRingColor }}"><span style="font-size:34px;font-weight:800">{{ resultScore }}<span style="font-size:18px;color:#93a0b5">/{{ resultTotal }}</span></span></div>
+      <h2 style="margin:18px 0 0;font-size:20px;font-weight:700;color:#3b4457">{{ resultHeadline }}</h2>
+      <p style="margin:8px 0 0;font-size:14px;color:#7a8699">解答記録はAPIへ送信され、SRSが次回の出題日を更新します。</p>
+      <div style="max-width:460px;margin:24px auto 0;text-align:left;display:flex;flex-direction:column;gap:10px">
+        <sc-for list="{{ resultRows }}" as="r" hint-placeholder-count="3">
+          <div class="nm-in" style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-radius:13px"><span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#465063">{{ r.id }}</span><span style="font-size:13px;font-weight:600;color:{{ r.color }}">{{ r.icon }} {{ r.label }}</span></div>
+        </sc-for>
+      </div>
+      <div style="margin-top:26px;display:flex;flex-wrap:wrap;justify-content:center;gap:12px">
+        <sc-for list="{{ resultActions }}" as="a" hint-placeholder-count="2">
+          <button class="press {{ a.cls }}" onClick="{{ a.onClick }}" style="border:0;border-radius:14px;padding:13px 22px;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;background:{{ a.bg }};color:{{ a.color }};box-shadow:{{ a.shadow }}">{{ a.label }}</button>
+        </sc-for>
+      </div>
+    </section>
+    </sc-if>
+
+    <!-- ===== ANALYTICS ===== -->
+    <sc-if value="{{ showAnalytics }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:4px 4px 0"><h1 style="margin:0;font-size:25px;font-weight:800;letter-spacing:-.02em;color:#3b4457">アナリティクス</h1><p style="margin:6px 0 0;font-size:14px;color:#7a8699">解答ログ・SRS状態を集計した学習の分析ビュー</p></div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px">
+      <div class="nm" style="padding:20px"><div style="font-size:13px;color:#7a8699">総解答数</div><div style="margin-top:6px;font-size:26px;font-weight:800;color:#3b4457">142</div><div style="margin-top:6px;font-size:12px;color:#1f9d5c">直近7日 +38</div></div>
+      <div class="nm" style="padding:20px"><div style="font-size:13px;color:#7a8699">正答率</div><div style="margin-top:6px;font-size:26px;font-weight:800;color:var(--accent)">78%</div><div style="margin-top:6px;font-size:12px;color:#1f9d5c">+5.2pt</div></div>
+      <div class="nm" style="padding:20px"><div style="font-size:13px;color:#7a8699">平均反応時間</div><div style="margin-top:6px;font-size:26px;font-weight:800;color:#3b4457">14<span style="font-size:14px;font-weight:600;color:#7a8699">秒</span></div><div style="margin-top:6px;font-size:12px;color:#1f9d5c">-2秒</div></div>
+      <div class="nm" style="padding:20px"><div style="font-size:13px;color:#7a8699">習得済み問題</div><div style="margin-top:6px;font-size:26px;font-weight:800;color:#3b4457">8<span style="font-size:14px;font-weight:600;color:#7a8699">/16</span></div><div style="margin-top:6px;font-size:12px;color:#7a8699">interval ≥ 21日</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:20px">
+      <section class="nm" style="padding:24px">
+        <h2 style="margin:0;font-size:16px;font-weight:700;color:#3b4457">学習アクティビティ</h2>
+        <div class="nm-in" style="margin-top:16px;display:flex;height:196px;align-items:stretch;gap:14px;border-radius:16px;padding:16px">
+          <sc-for list="{{ weekly }}" as="w" hint-placeholder-count="7">
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px"><div style="flex:1;width:100%;display:flex;align-items:flex-end"><div style="width:100%;border-radius:7px;background:linear-gradient(180deg,var(--accent-lt),var(--accent));height:{{ w.height }};box-shadow:2px 2px 5px var(--nm-dark)"></div></div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#93a0b5">{{ w.day }}</span></div>
+          </sc-for>
+        </div>
+      </section>
+      <section class="nm" style="padding:24px">
+        <h2 style="margin:0;font-size:16px;font-weight:700;color:#3b4457">SRS 定着度の分布</h2>
+        <div class="nm-in-sm" style="margin-top:16px;display:flex;height:14px;border-radius:9999px;overflow:hidden"><div style="width:50%;background:#1f9d5c"></div><div style="width:31%;background:var(--accent)"></div><div style="width:19%;background:#dc2626"></div></div>
+        <div style="margin-top:16px;display:flex;flex-direction:column;gap:12px;font-size:13.5px">
+          <div style="display:flex;align-items:center;gap:10px"><span style="width:10px;height:10px;border-radius:3px;background:#1f9d5c"></span>習得済み<span style="margin-left:auto;font-weight:700;color:#3b4457">8</span></div>
+          <div style="display:flex;align-items:center;gap:10px"><span style="width:10px;height:10px;border-radius:3px;background:var(--accent)"></span>学習中<span style="margin-left:auto;font-weight:700;color:#3b4457">5</span></div>
+          <div style="display:flex;align-items:center;gap:10px"><span style="width:10px;height:10px;border-radius:3px;background:#dc2626"></span>復習待ち（due）<span style="margin-left:auto;font-weight:700;color:#3b4457">3</span></div>
+        </div>
+      </section>
+    </div>
+    <section class="nm" style="padding:24px">
+      <h2 style="margin:0;font-size:16px;font-weight:700;color:#3b4457">間違えやすい問題</h2>
+      <div style="margin-top:14px;display:flex;flex-direction:column;gap:11px">
+        <div style="display:flex;align-items:center;gap:12px"><span class="nm-in-sm" style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--accent);padding:4px 11px;border-radius:8px">XSS-003</span><span style="font-size:13.5px;color:#465063;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">保存型XSSの説明として最も適切…</span><span style="font-size:13px;font-weight:700;color:#dc2626">誤答 46%</span></div>
+        <div style="display:flex;align-items:center;gap:12px"><span class="nm-in-sm" style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--accent);padding:4px 11px;border-radius:8px">XSS-002</span><span style="font-size:13.5px;color:#465063;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Reactのテキスト埋め込みが安全…</span><span style="font-size:13px;font-weight:700;color:#c77d13">誤答 28%</span></div>
+        <div style="display:flex;align-items:center;gap:12px"><span class="nm-in-sm" style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--accent);padding:4px 11px;border-radius:8px">XSS-001</span><span style="font-size:13.5px;color:#465063;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">HTML本文へ表示する際の対策…</span><span style="font-size:13px;font-weight:700;color:#1f9d5c">誤答 12%</span></div>
+      </div>
+    </section>
+    </sc-if>
+
+    <!-- ===== DOMAINS ===== -->
+    <sc-if value="{{ showDomains }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:4px 4px 0"><h1 style="margin:0;font-size:25px;font-weight:800;letter-spacing:-.02em;color:#3b4457">学習領域</h1><p style="margin:6px 0 0;font-size:14px;color:#7a8699">4領域を俯瞰し、トピック → レッスンへドリルダウンします</p></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <button class="press" onClick="{{ goLearn }}" style="border:0;background:var(--nm-base);border-radius:20px;box-shadow:7px 7px 16px var(--nm-dark), -7px -7px 16px var(--nm-light);padding:24px;text-align:left;cursor:pointer;font-family:inherit">
+        <div style="display:flex;align-items:center;gap:14px"><span class="nm-in" style="display:grid;place-items:center;width:46px;height:46px;flex:none;border-radius:13px;color:var(--accent)"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></span><div style="flex:1"><div style="font-size:16px;font-weight:700;color:#3b4457">Security</div><div style="font-size:12.5px;color:#93a0b5">XSS・認証認可・脆弱性</div></div><span class="nm-in-sm" style="font-size:11px;font-weight:600;color:#1f9d5c;padding:3px 11px;border-radius:9999px">学習中</span></div>
+        <div style="margin-top:18px;display:flex;justify-content:space-between;font-size:12.5px;color:#7a8699"><span>1 トピック · 1 レッスン</span><span style="font-weight:700;color:#3b4457">習得率 42%</span></div>
+        <div class="nm-in-sm" style="margin-top:8px;height:8px;border-radius:9999px"><div style="height:8px;width:42%;border-radius:9999px;background:linear-gradient(90deg,var(--accent-lt),var(--accent))"></div></div>
+      </button>
+      <div class="nm-in" style="padding:24px;border-radius:20px;opacity:.6"><div style="display:flex;align-items:center;gap:14px"><span class="nm-sm" style="display:grid;place-items:center;width:46px;height:46px;flex:none;border-radius:13px;color:var(--accent)"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></span><div style="flex:1"><div style="font-size:16px;font-weight:700;color:#3b4457">Frontend</div><div style="font-size:12.5px;color:#93a0b5">React・UI設計・状態管理</div></div><span style="font-size:11px;font-weight:600;color:#93a0b5">準備中</span></div><div style="margin-top:16px;font-size:12.5px;color:#93a0b5">コンテンツを追加予定（状態管理の基礎ほか）</div></div>
+      <div class="nm-in" style="padding:24px;border-radius:20px;opacity:.6"><div style="display:flex;align-items:center;gap:14px"><span class="nm-sm" style="display:grid;place-items:center;width:46px;height:46px;flex:none;border-radius:13px;color:var(--accent)"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg></span><div style="flex:1"><div style="font-size:16px;font-weight:700;color:#3b4457">Backend</div><div style="font-size:12.5px;color:#93a0b5">API・DB・Hono</div></div><span style="font-size:11px;font-weight:600;color:#93a0b5">準備中</span></div><div style="margin-top:16px;font-size:12.5px;color:#93a0b5">コンテンツを追加予定（Hono ルーティングほか）</div></div>
+      <div class="nm-in" style="padding:24px;border-radius:20px;opacity:.6"><div style="display:flex;align-items:center;gap:14px"><span class="nm-sm" style="display:grid;place-items:center;width:46px;height:46px;flex:none;border-radius:13px;color:var(--accent)"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg></span><div style="flex:1"><div style="font-size:16px;font-weight:700;color:#3b4457">Architecture</div><div style="font-size:12.5px;color:#93a0b5">設計・運用</div></div><span style="font-size:11px;font-weight:600;color:#93a0b5">準備中</span></div><div style="margin-top:16px;font-size:12.5px;color:#93a0b5">コンテンツを追加予定（レイヤードアーキほか）</div></div>
+    </div>
+    </sc-if>
+
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1240,&quot;height&quot;:812},&quot;surfaceTone&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;クール&quot;,&quot;ニュートラル&quot;,&quot;ウォーム&quot;],&quot;default&quot;:&quot;クール&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;質感&quot;,&quot;label&quot;:&quot;表面トーン&quot;},&quot;relief&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;フラット&quot;,&quot;標準&quot;,&quot;立体&quot;],&quot;default&quot;:&quot;フラット&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;質感&quot;,&quot;label&quot;:&quot;起伏の深さ&quot;},&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;options&quot;:[&quot;#1a73e8&quot;,&quot;#0d9488&quot;,&quot;#7c3aed&quot;,&quot;#475569&quot;],&quot;default&quot;:&quot;#1a73e8&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;質感&quot;,&quot;label&quot;:&quot;アクセント&quot;}}">
+class Component extends DCLogic {
+  state = { route: 'dashboard', mode: 'quiz', lastMode: 'review', qIndex: 0, answers: [null, null, null] };
+
+  questions = [
+    { id: 'XSS-001', text: 'ユーザー入力をHTML本文へ表示する際、最初に検討すべき対策はどれですか？', options: ['出力時に文脈に応じてエスケープする', '入力値をすべて削除する', 'CookieをHttpOnlyにするだけでよい', 'CSPだけを設定する'], correct: 0, note: 'XSS対策の基本は、HTML本文・属性・URL・JavaScriptなど出力文脈に応じたエスケープです。' },
+    { id: 'XSS-002', text: 'Reactで通常のテキスト埋め込みが比較的安全な理由はどれですか？', options: ['JSXの文字列展開は標準でHTMLエスケープされる', 'ブラウザがscriptタグを必ず無視する', 'Reactは通信を暗号化する', 'DOM APIがすべて無効化される'], correct: 0, note: 'Reactはテキストとして埋め込む値をエスケープします。ただし dangerouslySetInnerHTML などは別途注意が必要です。' },
+    { id: 'XSS-003', text: '保存型XSSの説明として最も適切なものはどれですか？', options: ['悪意ある入力がDBなどに保存され、後から閲覧者へ配信される', 'URLのクエリだけで一時的に発火する', 'HTTPSを使わない通信だけで発生する', 'サーバーのCPU使用率が上がる攻撃である'], correct: 0, note: '保存型XSSは投稿・プロフィール等に保存されたスクリプトが、他ユーザー閲覧時に実行されるタイプです。' },
+  ];
+
+  icons = {
+    shield: React.createElement('svg', { width: 19, height: 19, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }, React.createElement('path', { d: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z' })),
+    code: React.createElement('svg', { width: 19, height: 19, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }, React.createElement('polyline', { points: '16 18 22 12 16 6' }), React.createElement('polyline', { points: '8 6 2 12 8 18' })),
+    db: React.createElement('svg', { width: 19, height: 19, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }, React.createElement('ellipse', { cx: 12, cy: 5, rx: 9, ry: 3 }), React.createElement('path', { d: 'M21 12c0 1.66-4 3-9 3s-9-1.34-9-3' }), React.createElement('path', { d: 'M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5' })),
+    arch: React.createElement('svg', { width: 19, height: 19, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }, React.createElement('polygon', { points: '12 2 2 7 12 12 22 7 12 2' }), React.createElement('polyline', { points: '2 17 12 22 22 17' }), React.createElement('polyline', { points: '2 12 12 17 22 12' })),
+  };
+
+  go(route) { this.setState({ route }); if (typeof window !== 'undefined') window.scrollTo(0, 0); }
+  startExercise(mode) { this.setState({ route: 'exercise', mode, qIndex: 0, answers: [null, null, null] }); if (typeof window !== 'undefined') window.scrollTo(0, 0); }
+  select(i) { if (this.state.answers[this.state.qIndex] !== null) return; this.setState({ answers: this.state.answers.map((v, idx) => (idx === this.state.qIndex ? i : v)) }); }
+  next() {
+    const { qIndex, answers } = this.state;
+    if (answers[qIndex] === null) return;
+    if (qIndex < this.questions.length - 1) { this.setState({ qIndex: qIndex + 1 }); }
+    else { this.setState({ route: 'result', lastMode: this.state.mode }); }
+    if (typeof window !== 'undefined') window.scrollTo(0, 0);
+  }
+
+  navStyle(active) {
+    return active
+      ? { cls: 'nm-in', color: 'var(--accent)', weight: '600' }
+      : { cls: 'navitem', color: '#5b6577', weight: '400' };
+  }
+
+  renderVals() {
+    const tone=this.props.surfaceTone??'クール';const relief=this.props.relief??'標準';const accent=this.props.accent??'#1a73e8';
+    const _tones={'クール':['#e4e9f0','#cbd3de','#ffffff'],'ニュートラル':['#e9e9ec','#d2d2d6','#ffffff'],'ウォーム':['#ece7e0','#d7cfc3','#fffdf9']};const _t=_tones[tone]||_tones['クール'];
+    const _rel={'フラット':'3px','標準':'6px','立体':'10px'}[relief]||'6px';
+    const _lt={'#1a73e8':'#3f8bf5','#0d9488':'#2fc4b2','#7c3aed':'#a06bf5','#475569':'#6b7a90'}[accent]||accent;
+    const _rgba=(h,a)=>{const n=h.replace('#','');return 'rgba('+parseInt(n.slice(0,2),16)+','+parseInt(n.slice(2,4),16)+','+parseInt(n.slice(4,6),16)+','+a+')';};
+    const themeVars='--nm-base:'+_t[0]+';--nm-dark:'+_t[1]+';--nm-light:'+_t[2]+';--accent:'+accent+';--accent-lt:'+_lt+';--accent-glow:'+_rgba(accent,'.4')+';--nm-d:'+_rel;
+    const { route, qIndex, answers } = this.state;
+    const mode = this.state.mode;
+    const rMode = this.state.lastMode;
+    const raised = '5px 5px 11px var(--nm-dark), -5px -5px 11px var(--nm-light)';
+    const inset = 'inset 5px 5px 10px var(--nm-dark), inset -5px -5px 10px var(--nm-light)';
+    const markerRaised = '3px 3px 6px var(--nm-dark), -3px -3px 6px var(--nm-light)';
+
+    const learnActive = route === 'learn' || route === 'article';
+    const quizActive = route === 'quizIntro' || (route === 'exercise' && mode === 'quiz') || (route === 'result' && rMode === 'quiz');
+    const reviewActive = route === 'reviewIntro' || (route === 'exercise' && mode === 'review') || (route === 'result' && rMode === 'review');
+
+    const domains = [
+      { name: 'Security', pct: '42%', icon: this.icons.shield },
+      { name: 'Frontend', pct: '68%', icon: this.icons.code },
+      { name: 'Backend', pct: '31%', icon: this.icons.db },
+      { name: 'Architecture', pct: '18%', icon: this.icons.arch },
+    ];
+
+    const q = this.questions[qIndex];
+    const selected = answers[qIndex];
+    const locked = selected !== null;
+    const allAnswered = answers.every((a) => a !== null);
+    const isLast = qIndex === this.questions.length - 1;
+
+    const options = q ? q.options.map((text, i) => {
+      const good = locked && i === q.correct;
+      const bad = locked && selected === i && i !== q.correct;
+      let markerState = 'num';
+      if (locked) markerState = good ? 'check' : bad ? 'x' : 'num';
+      return {
+        text, num: i + 1, onSelect: () => this.select(i),
+        cls: locked ? '' : 'press',
+        shadow: locked ? inset : raised,
+        cursor: locked ? 'default' : 'pointer',
+        markerShadow: markerState === 'num' ? markerRaised : 'none',
+        markerColor: good ? '#1f9d5c' : bad ? '#dc2626' : '#7a8699',
+        isNum: markerState === 'num', isCheck: markerState === 'check', isX: markerState === 'x',
+      };
+    }) : [];
+
+    const pct = Math.round(((qIndex + 1) / this.questions.length) * 100) + '%';
+    const isCorrect = q && selected === q.correct;
+
+    const resultRows = this.questions.map((qq, i) => {
+      const ok = answers[i] === qq.correct;
+      return { id: qq.id, label: ok ? '正解' : '不正解', color: ok ? '#1f9d5c' : '#dc2626', icon: ok ? '✓' : '✕' };
+    });
+    const score = resultRows.filter((r) => r.label === '正解').length;
+    const perfect = score === this.questions.length;
+
+    const primaryBtn = { bg: 'linear-gradient(150deg,var(--accent-lt),var(--accent))', color: '#fff', shadow: '0 9px 20px var(--accent-glow)', cls: 'btn-primary' };
+    const ghostBtn = { bg: 'var(--nm-base)', color: '#5b6577', shadow: '5px 5px 11px var(--nm-dark), -5px -5px 11px var(--nm-light)', cls: '' };
+    const resultActions = rMode === 'review'
+      ? [
+          { label: 'ホームへ戻る', onClick: () => this.go('dashboard'), ...ghostBtn },
+          { label: '間違えた問題だけ再挑戦', onClick: () => this.startExercise('review'), ...primaryBtn },
+        ]
+      : [
+          { label: '次のレッスンへ', onClick: () => this.go('learn'), ...primaryBtn },
+          { label: '再挑戦', onClick: () => this.startExercise('quiz'), ...ghostBtn },
+        ];
+
+    return {
+      themeVars,
+      goDashboard: () => this.go('dashboard'),
+      goLearn: () => this.go('learn'),
+      goArticle: () => this.go('article'),
+      goQuiz: () => this.startExercise('quiz'),
+      goQuizIntro: () => this.go('quizIntro'),
+      goReview: () => this.startExercise('review'),
+      goReviewIntro: () => this.go('reviewIntro'),
+      goAnalytics: () => this.go('analytics'),
+      goDomains: () => this.go('domains'),
+
+      navDash: this.navStyle(route === 'dashboard'),
+      navLearn: this.navStyle(learnActive),
+      navQuiz: this.navStyle(quizActive),
+      navReview: this.navStyle(reviewActive),
+      navAnalytics: this.navStyle(route === 'analytics'),
+      navDomains: this.navStyle(route === 'domains'),
+
+      showDashboard: route === 'dashboard',
+      showLearn: route === 'learn',
+      showArticle: route === 'article',
+      showQuizIntro: route === 'quizIntro',
+      showReviewIntro: route === 'reviewIntro',
+      showExercise: route === 'exercise',
+      showResult: route === 'result',
+      showAnalytics: route === 'analytics',
+      showDomains: route === 'domains',
+
+      domains,
+      weekly: [42, 58, 36, 72, 64, 88, 76].map((v, i) => ({ height: v + '%', day: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i] })),
+      codeSample: '// Avoid: userInput contains HTML\n<div dangerouslySetInnerHTML={{ __html: userInput }} />\n\n// Prefer: render as text\n<p>{userInput}</p>',
+
+      exerciseCrumb: mode === 'review' ? '復習 / due queue' : '演習 / security / xss / xss-basics',
+      exerciseTitle: mode === 'review' ? '今日の復習' : 'XSSの基礎 · 演習',
+      questionNo: qIndex + 1,
+      questionTotal: this.questions.length,
+      exercisePct: pct,
+      currentQuestionId: q ? q.id : '',
+      currentQuestionText: q ? q.text : '',
+      options,
+      showExplanation: locked,
+      explanationTag: isCorrect ? '正解' : '不正解',
+      explanationColor: isCorrect ? '#15803d' : '#b91c1c',
+      explanationText: q ? q.note : '',
+      nextLabel: allAnswered && isLast ? '結果を見る' : '次の問題へ',
+      nextCursor: locked ? 'pointer' : 'not-allowed',
+      nextOpacity: locked ? '1' : '0.5',
+      nextQuestion: () => this.next(),
+
+      resultCrumb: rMode === 'review' ? '復習 / 完了' : '演習 / 完了',
+      resultScore: score,
+      resultTotal: this.questions.length,
+      resultHeadline: perfect ? '全問正解です！' : score >= 2 ? 'よくできました' : '復習で定着させましょう',
+      resultRingColor: perfect ? '#1f9d5c' : 'var(--accent)',
+      resultRows,
+      resultActions,
+    };
+  }
+}
+</script>
+</body>
+</html>
