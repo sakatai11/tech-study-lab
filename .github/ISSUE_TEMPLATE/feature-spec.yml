@@ -1,0 +1,59 @@
+name: 機能仕様（AI駆動開発用）
+description: /issue-dev パイプラインで実装する機能仕様を登録する
+title: "[Feature] "
+labels: ["spec"]
+body:
+  - type: textarea
+    id: purpose
+    attributes:
+      label: 目的・背景
+      description: なぜこの機能が必要か。ユーザー視点での価値。
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 受け入れ条件
+      description: 完了と判断できる検証可能な条件を箇条書きで。AIエージェントはこれを実装・テストのゴールにする。
+      placeholder: |
+        - [ ] 教材一覧画面で category ごとの絞り込みができる
+        - [ ] API `/api/materials?category=x` が Zod でバリデーションされる
+    validations:
+      required: true
+  - type: dropdown
+    id: scope
+    attributes:
+      label: 影響範囲（想定）
+      multiple: true
+      options:
+        - apps/web（Next.js 画面）
+        - apps/api（Hono API）
+        - packages/shared（スキーマ・型）
+        - content/（教材・問題）
+        - docs/design.md（設計更新が必要）
+    validations:
+      required: true
+  - type: input
+    id: design-ref
+    attributes:
+      label: docs/design.md の該当節
+      description: 関連する設計文書の節（例「4.2 出題ロジック」）。設計にない新規仕様の場合は「新規」と記載。
+    validations:
+      required: true
+  - type: dropdown
+    id: implementer
+    attributes:
+      label: 実装エージェント
+      description: impl:codex ラベルを付けると codex モードになります（このフィールドは参考情報）
+      options:
+        - sonnet（デフォルト）
+        - codex CLI（バックグラウンド）
+    validations:
+      required: false
+  - type: textarea
+    id: notes
+    attributes:
+      label: 補足・制約
+      description: 技術的制約、参考リンク、やらないこと（スコープ外）など。
+    validations:
+      required: false
