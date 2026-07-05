@@ -1,0 +1,156 @@
+{
+  "$schema": "内部用途: issue-dev-orchestrate パイプラインの回帰eval記録。skill/agent 改修時にこのシナリオを再実行し、各フェーズの expected と actual の一致を確認する。",
+  "evalId": "issue-dev-orchestrate-smoke-001",
+  "target": {
+    "skill": "issue-dev-orchestrate",
+    "agents": ["issue-investigator", "developer", "reviewer", "test-fixer"],
+    "mode": "sonnet"
+  },
+  "run": {
+    "date": "2026-07-06",
+    "issue": 12,
+    "issueUrl": "https://github.com/sakatai11/tech-study-lab/issues/12",
+    "branch": "feature/issue-12-srs-due-status",
+    "baseBranch": "develop",
+    "commit": "ffff0a9",
+    "purpose": "issue-dev-orchestrate が全7フェーズを想定通り実行するかの動作検証（スモークテスト）"
+  },
+  "testIssue": {
+    "title": "[Feature] SRS: 復習期日の状態を判定する dueStatus 関数を追加",
+    "labels": ["spec"],
+    "reason": "SRS純粋関数＋Vitest というパイプラインのガードレールを最も忠実に踏む、自己完結の最小縦切り（SRS層）。既存 packages/shared/src/srs/sm2.ts に関数1つ追加。",
+    "spec": {
+      "func": "dueStatus(dueAt: number, now: number): 'overdue' | 'today' | 'upcoming'",
+      "logic": "Math.floor(t / DAY_MS) で UTC 暦日インデックス化。dueAt暦日 < now暦日 → overdue、同一 → today、大きい → upcoming",
+      "constraints": [
+        "純粋関数（now は引数）",
+        "既存 DAY_MS 再利用・二重定義しない",
+        "index.ts の既存 export * で自動公開",
+        "境界値テストを Vitest で追加"
+      ]
+    },
+    "reproduce": "この spec を gh issue create --label spec で登録し直せば同一シナリオを再現可能。"
+  },
+  "phases": [
+    {
+      "phase": 0,
+      "name": "準備",
+      "expected": "作業ツリーがクリーンなら、develop を初期化（無ければ作成）し Conventional Branch 命名で feature ブランチを develop から切る。main には触れない。",
+      "actual": "status クリーン確認 → develop をローカル新規作成（local/remote 共に無かったため main から派生・初期化を報告）→ feature/issue-12-srs-due-status 作成。種別は spec ラベル＋新規実装から feature と正しく判定。",
+      "status": "pass"
+    },
+    {
+      "phase": 1,
+      "name": "調査 (issue-investigator)",
+      "expected": "仕様サマリ／design.md 整合性／影響範囲／推奨案・代替案／テスト観点／要確認事項を含む調査レポートを返す。",
+      "actual": "全項目を網羅。design.md §4.5 との軽微な乖離（dueStatus の3値・暦日粒度が未記載、isDue とは粒度が異なる点）を検出。代替案A/Bを不採用理由付きで提示。要確認3点を提起。",
+      "status": "pass"
+    },
+    {
+      "phase": 2,
+      "name": "方針決定",
+      "expected": "推奨案採用。方針が拮抗 or 要確認が実装を左右する場合のみ AskUserQuestion。design.md 乖離があれば実装前に更新。決定を issue にコメント記録。",
+      "actual": "推奨案採用。要確認3点はいずれも実装を大きく左右しないためデフォルト判断（AskUserQuestion なし）。design.md は本 issue が検証用仮 issue のため更新スキップと明記。issue #12 にコメント記録。",
+      "status": "pass",
+      "note": "本番機能なら design.md §4.5 に暦日ベース判定を追記する運用。仮 issue のためスキップは妥当。"
+    },
+    {
+      "phase": 3,
+      "name": "実装 (developer, sonnet)",
+      "expected": "方針書に忠実に実装。ガードレール順守。typecheck/biome/test で自己検証。コミットしない。",
+      "actual": "dueStatus を isDue 直後に追加、JSDoc で isDue との粒度差を明示、テスト5件追加（shared 7→12件パス）。既存の biome/test 失敗を stash で切り分け、変更前からの既存問題（docs/mockups, apps/api テスト未検出）と正しく判定。",
+      "status": "pass"
+    },
+    {
+      "phase": 4,
+      "name": "レビュー (reviewer)",
+      "expected": "差分を取得しレビュー。must-fix/should-fix/nit で指摘。指摘ゼロなら堂々とゼロ。",
+      "actual": "approve・指摘ゼロ。biome の整形乖離（既存状態）を確認事項として分離報告。新規差分と既存問題を正しく切り分け。",
+      "status": "pass_with_workaround",
+      "note": "reviewer.md/SKILL.md が指定する diff base `git diff develop...HEAD`（3ドット）では、実装が未コミットのためレビュー対象が空になる。オーケストレーターが `git diff develop`（working tree 含む）を明示指示して回避。findings#1 参照。"
+    },
+    {
+      "phase": 5,
+      "name": "テスト (test-fixer)",
+      "expected": "3品質ゲート（typecheck/biome/test）を全パスさせる。テストを弱めない。",
+      "actual": "対象2ファイルを biome --write で整形（double→single quote 等）、typecheck・biome・shared test（12件）pass。既存テストのアサーションは無変更。既存の無関係失敗はスコープ外として据え置き。",
+      "status": "pass_with_workaround",
+      "note": "`pnpm biome check .` / `pnpm test` はリポジトリ全体対象で既存エラー（biome 約28件・apps/api テスト未検出）により必ず失敗する。オーケストレーターが変更2ファイルにスコープを絞る明示指示を出して回避。findings#2 参照。"
+    },
+    {
+      "phase": 6,
+      "name": "fix ループ",
+      "expected": "must-fix/should-fix と test-fixer 残課題を集約。空ならフェーズ7へ。最大2周。",
+      "actual": "レビュー指摘ゼロ・test-fixer 残課題なし → fix 対象空 → フェーズ7へ直行。",
+      "status": "pass"
+    },
+    {
+      "phase": 7,
+      "name": "完了",
+      "expected": "最終確認→コミット（refs #N）→push→PR は develop ベースでユーザー確認後に作成、closes は使わずマージしない。",
+      "actual": "git diff develop --stat で最終確認、コミット ffff0a9（refs #12）作成。push/PR は検証用仮ブランチのため実行せず、承認ゲートで停止（設計通り）。",
+      "status": "pass",
+      "note": "承認ゲートが機能して停止することを確認。実運用では push→PR(--base develop, refs #12) をユーザー承認後に実施。"
+    }
+  ],
+  "findings": [
+    {
+      "id": 1,
+      "severity": "high",
+      "title": "レビュー/テスト時の diff base が未コミット変更を拾えない",
+      "detail": "reviewer.md 手順1 と SKILL.md フェーズ4 が `git diff develop...HEAD`（3ドット＝コミット済みのみ）を指定。だが実装はフェーズ7までコミットされないため、フェーズ4/5 時点では差分が空になり、レビュー対象が取得できない。",
+      "evidence": "本 run で `git diff develop...HEAD --stat` は空、`git diff develop --stat` は2ファイル49行を返した。",
+      "fix": "reviewer.md / SKILL.md フェーズ4 の diff 取得を `git diff develop`（working tree 含む）へ修正する。または『フェーズ3実装後に一旦コミットしてからレビュー』へ順序変更する。",
+      "workaroundApplied": "オーケストレーターが reviewer に `git diff develop` を明示指示して回避。"
+    },
+    {
+      "id": 2,
+      "severity": "medium",
+      "title": "品質ゲートがリポジトリ全体対象で既存エラーにより必ず失敗する",
+      "detail": "フェーズ5の `pnpm biome check .` / `pnpm test` はリポジトリ全体を対象とし、今回の変更と無関係な既存エラー（biome 約28件: docs/mockups/*.js 等、apps/api の No test files found）で常に非ゼロ終了する。test-fixer が『全パス』を素直に目指すと収束不能、またはスコープ外ファイルを改変するリスク。",
+      "evidence": "変更前クリーンなツリーでも同数の失敗を再現（developer・test-fixer 双方が stash で確認）。",
+      "fix": "SKILL.md フェーズ5 / test-fixer.md に『品質ゲートは変更ファイルにスコープする（biome は対象ファイル列挙、test は影響 filter）。既存のスコープ外失敗はベースラインとして許容し直さない』方針を明記する。将来的には別 chore issue で既存 biome エラーを一掃してゲートを全体対象に戻す。",
+      "workaroundApplied": "オーケストレーターが test-fixer に変更2ファイルへのスコープ限定と既存失敗の据え置きを明示指示して回避。"
+    },
+    {
+      "id": 3,
+      "severity": "low",
+      "title": "PostToolUse フック(biome --write)がサブエージェント編集に効いていない疑い",
+      "detail": "settings.json の PostToolUse フックが ts 編集後に `biome check --write` を走らせる想定だが、developer 実装直後のファイルは double quote + セミコロンが残存していた（biome.json は single/asNeeded）。フックがサブエージェントのツール実行に適用されていない可能性。",
+      "evidence": "フェーズ4時点で `biome check` が対象2ファイルに整形エラー2件。フェーズ5の test-fixer が明示 --write して解消。",
+      "fix": "フックのサブエージェント適用範囲を確認する。現状はフェーズ5で吸収できているため実害は小さいが、フック依存を前提にしない運用（フェーズ5で必ず整形）を明記しておくと安全。"
+    },
+    {
+      "id": 4,
+      "severity": "low",
+      "title": "biome --write が既存未整形行も巻き込み diff が膨張",
+      "detail": "test-fixer の biome --write が既存コード（未整形の double quote 行）も single quote に整形するため、実ロジックは +約8行なのにコミット差分が +122/-88 に膨張した。レビュー・履歴の見通しを悪くする。",
+      "evidence": "commit ffff0a9 は 2 files +122/-88。うち dueStatus 実装ロジックは 8行程度。",
+      "fix": "根因は既存コードが biome 設定未適用なこと。別 chore で全体整形（`biome check --write .`）を一度実施し、以降は差分を実変更のみに保つ。"
+    }
+  ],
+  "positives": [
+    "全サブエージェント（investigator/developer/reviewer/test-fixer）が既存の無関係失敗と新規差分を一貫して切り分けた。ガードレールが機能。",
+    "Git Flow ブランチ戦略が設計通り: develop 初期化、feature を develop から派生、main に未接触。",
+    "design.md 乖離検出→仮 issue のためスキップという方針判断が機能。",
+    "フェーズ7の PR 承認ゲートが機能し、マージ・push を自動実行せず停止。",
+    "最終成果: dueStatus 実装＋境界値テスト12件パス、レビュー指摘ゼロ。"
+  ],
+  "verdict": {
+    "result": "pass_with_actionable_findings",
+    "summary": "パイプラインは全7フェーズを想定通り実行し、正しい成果物を生成した。ただしフェーズ4のdiff base（findings#1, high）とフェーズ5のゲートスコープ（findings#2, medium）はオーケストレーターの手動補正で回避しており、skill/agent 定義の修正が望ましい。"
+  },
+  "artifacts": {
+    "issueComment": "https://github.com/sakatai11/tech-study-lab/issues/12#issuecomment-4886064072",
+    "commit": "ffff0a9",
+    "changedFiles": ["packages/shared/src/srs/sm2.ts", "packages/shared/src/srs/sm2.test.ts"]
+  },
+  "cleanup": {
+    "note": "検証用の資産。本採用しない場合は以下で撤去可能。",
+    "steps": [
+      "git switch develop && git branch -D feature/issue-12-srs-due-status",
+      "git branch -D develop  （develop を残す場合はスキップ）",
+      "gh issue close 12 --comment 'パイプライン動作検証用の仮issue。検証完了のためクローズ。'  （settings.json で gh issue close は deny のため人間が実行）"
+    ]
+  }
+}

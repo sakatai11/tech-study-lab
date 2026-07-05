@@ -74,11 +74,13 @@ argument-hint: <issue番号> [sonnet|codex]
 
 ## フェーズ4: レビュー
 
-`reviewer` エージェント（subagent_type: reviewer）に issue 番号・方針サマリを渡して起動する（差分は `git diff develop...HEAD` で取得させる）。must-fix / should-fix / nit の重要度付き指摘を受け取る。
+`reviewer` エージェント（subagent_type: reviewer）に issue 番号・方針サマリを渡して起動する。**この時点で実装は未コミット**（コミットはフェーズ7）なので、差分は **`git diff develop`（作業ツリーを含む）** で取得させる。`git diff develop...HEAD`（3ドット）はコミット済みのみで未コミット段階では空になるため使わない。must-fix / should-fix / nit の重要度付き指摘を受け取る。
 
 ## フェーズ5: テスト
 
-`test-fixer` エージェント（subagent_type: test-fixer）を起動し、3つの品質ゲート（typecheck / biome / test）を全パスさせる。
+`test-fixer` エージェント（subagent_type: test-fixer）を起動し、3つの品質ゲート（typecheck / biome / test）を通す。
+
+> **スコープの明示（重要）**: `pnpm biome check .` / `pnpm test` はリポジトリ全体を対象にするため、今回の変更と**無関係な既存エラー**（例: `docs/mockups/*.js` の biome 指摘、テスト未整備パッケージの「No test files found」）で失敗することがある。test-fixer には**変更ファイル（フェーズ4で得た差分）にスコープを絞って直させ、スコープ外の既存失敗はベースラインとして据え置く**よう明示指示する。既存失敗を新規混入と区別するため、必要なら `git stash` でクリーンツリーの失敗数と突き合わせる。
 
 ## フェーズ6: fix ループ
 
@@ -90,7 +92,7 @@ argument-hint: <issue番号> [sonnet|codex]
 
 ## フェーズ7: 完了
 
-1. 最終確認: `git diff develop...HEAD --stat` と品質ゲート結果をまとめる。
+1. 最終確認: **コミット前**なので `git diff develop --stat`（作業ツリーを含む）で変更を確認し、品質ゲート結果とあわせてまとめる。
 2. コミットする（メッセージに `refs #<N>` を含める）。
 3. 作業ブランチをプッシュする:
    ```bash
