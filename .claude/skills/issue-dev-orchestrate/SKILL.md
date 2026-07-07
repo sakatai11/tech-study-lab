@@ -25,9 +25,9 @@ argument-hint: <issue番号> [sonnet|codex]
    |---|---|---|
    | `feature` | 新機能・機能拡張 | `spec` / `enhancement` ラベル、新規実装 |
    | `fix` | バグ修正 | `bug` ラベル、既存挙動の不具合 |
-   | `refactor` | 挙動を変えない内部改善 | リファクタ・整理 |
-   | `docs` | ドキュメントのみ | `docs`、design.md 更新など |
-   | `test` | テスト追加・修正のみ | テスト整備 |
+   | `refactor` | 挙動を変えない内部改善 | `refactor` ラベル、リファクタ・整理 |
+   | `docs` | ドキュメントのみ | `documentation` ラベル、design.md 更新など |
+   | `test` | テスト追加・修正のみ | `test` ラベル、テスト整備 |
    | `chore` | ビルド・設定・依存など | 上記に当てはまらない雑務 |
 
 4. 作業ツリーの確認と、`develop` からの作業ブランチ作成:

@@ -1,0 +1,65 @@
+name: 開発タスク（バグ・改善・雑務）
+description: 開発中に発生したバグ修正・リファクタ・ドキュメント・テスト・雑務を登録する
+title: "[Task] "
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: 種別
+      description: 対応するラベル（bug / refactor / documentation / test / chore）も issue に付与する
+      options:
+        - bug（既存挙動の不具合）
+        - refactor（挙動を変えない内部改善）
+        - docs（ドキュメントのみ）
+        - test（テスト追加・修正のみ）
+        - chore（ビルド・設定・依存などの雑務）
+    validations:
+      required: true
+  - type: textarea
+    id: background
+    attributes:
+      label: 背景・現状
+      description: なぜこのタスクが必要か。バグの場合は「再現手順 / 期待する動作 / 実際の動作」を書く。
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: 完了条件
+      description: 完了と判断できる検証可能な条件を箇条書きで。AIエージェントはこれを実装・テストのゴールにする。
+      placeholder: |
+        - [ ] /lessons で 404 にならず一覧が表示される
+        - [ ] 回帰テストを追加し再発を検知できる
+    validations:
+      required: true
+  - type: dropdown
+    id: scope
+    attributes:
+      label: 影響範囲（想定）
+      multiple: true
+      options:
+        - apps/web（Next.js 画面）
+        - apps/api（Hono API）
+        - packages/shared（スキーマ・型）
+        - content/（教材・問題）
+        - docs/design.md（設計更新が必要）
+        - .github/・CI・設定ファイル
+    validations:
+      required: true
+  - type: dropdown
+    id: implementer
+    attributes:
+      label: 実装エージェント
+      description: impl:codex ラベルを付けると codex モードになります（このフィールドは参考情報）
+      options:
+        - sonnet（デフォルト）
+        - codex CLI（バックグラウンド）
+    validations:
+      required: false
+  - type: textarea
+    id: notes
+    attributes:
+      label: 補足・制約
+      description: 技術的制約、関連 issue・PR、参考リンク、やらないこと（スコープ外）など。
+    validations:
+      required: false
