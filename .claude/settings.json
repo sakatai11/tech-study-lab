@@ -56,7 +56,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "input=$(cat); name=$(printf '%s' \"$input\" | jq -r '.tool_input.skill // \"unknown\"'); safe=$(printf '%s' \"$name\" | tr -c 'A-Za-z0-9._-' '-'); dir=\"${CLAUDE_PROJECT_DIR:-.}/.claude/logs\"; mkdir -p \"$dir\"; printf '%s' \"$input\" | jq -c '{ts: (now | todate), skill: (.tool_input.skill // \"unknown\"), args: (.tool_input.args // null), error_hint: ((.tool_response // \"\" | tostring) | test(\"(?i)error|not found|failed\"))}' >> \"$dir/skill-$safe.jsonl\"; exit 0"
+            "command": "input=$(cat); name=$(printf '%s' \"$input\" | jq -r '.tool_input.skill // \"unknown\"'); safe=$(printf '%s' \"$name\" | tr -c 'A-Za-z0-9._-' '-'); dir=\"${CLAUDE_PROJECT_DIR:-.}/.claude/logs\"; mkdir -p \"$dir\"; printf '%s' \"$input\" | jq -c '{ts: (now | todate), skill: (.tool_input.skill // \"unknown\"), args: (.tool_input.args // null)}' >> \"$dir/skill-$safe.jsonl\"; exit 0"
           }
         ]
       }
