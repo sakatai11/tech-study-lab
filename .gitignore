@@ -21,6 +21,9 @@ out/
 # test / coverage
 coverage/
 
+# claude code skill execution logs
+.claude/logs/
+
 # misc
 .DS_Store
 *.log
