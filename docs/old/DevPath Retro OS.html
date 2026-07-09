@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DevPath — Retro OS Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ==========================================================
+     Design tokens — DevPath OS（レトロOS × ターミナル）
+     Win9x/XP のクロム（ベベル・ティール壁紙・タスクバー）
+     × GitHub の計器盤（草・ストリーク・数値）
+     × ターミナルのシンタックスカラー
+     ライト/ダーク切替は廃止。レトロテーマ一本。
+     ========================================================== */
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  :root{
+    --desktop:#0e7373;
+    --win-face:#d4d0c8; --ctrl-face:#c0c0c0;
+    --bevel-lt:#ffffff; --bevel-mid:#808080; --bevel-dk:#404040;
+    --title-active:linear-gradient(90deg,#000080,#1084d0);
+    --title-inactive:linear-gradient(90deg,#808080,#b5b5b5);
+    --ink:#1a1a1a; --mute:#5a5a5a; --faint:#8a8a8a;
+    --term-bg:#0c0c0c; --term-ink:#cccccc;
+    --green:#39d353; --red:#f85149; --yellow:#e3b341; --purple:#bc8cff; --blue:#58a6ff;
+    --navy:#000080;
+    --sel-bg:#000080; --sel-ink:#ffffff;
+    --heat0:#ebedf0; --heat1:#9be9a8; --heat2:#40c463; --heat3:#30a14e; --heat4:#216e39;
+    --ok-ink:#0a7a2f; --ok-bg:#d8efd8;
+    --ng-ink:#c22525; --ng-bg:#f3d9d9;
+    --dom-security:#0a7a2f; --dom-frontend:#1084d0; --dom-backend:#6a3fa0; --dom-arch:#9a6700;
+    --ease-spring:cubic-bezier(.34,1.56,.64,1);
+  }
+  body{background:var(--desktop);font-family:'Inter',system-ui,sans-serif;color:var(--ink);font-size:13px}
+  button{font-family:inherit}
+  .mono{font-family:'JetBrains Mono',monospace}
+  :focus-visible{outline:1px dotted var(--ink);outline-offset:-3px}
+
+  /* ============ desktop / scanlines / boot ============ */
+  .desktop{min-height:100vh;background:
+    radial-gradient(circle at 18% 12%,rgba(255,255,255,.05),transparent 55%),
+    repeating-conic-gradient(from 0deg,rgba(255,255,255,.02) 0deg 90deg,transparent 90deg 180deg) 0 0/6px 6px,
+    var(--desktop);
+  }
+  .scanlines{position:fixed;inset:0;pointer-events:none;z-index:9997;background:repeating-linear-gradient(0deg,rgba(0,0,0,.06) 0 1px,transparent 1px 3px)}
+  .scanlines.off{opacity:0}
+  #boot{position:fixed;inset:0;background:#000;color:var(--green);font-family:'JetBrains Mono',monospace;font-size:14px;padding:12vh 8vw;z-index:9999;cursor:pointer;display:flex;flex-direction:column;gap:9px}
+  #boot.hide{opacity:0;transition:opacity .4s ease}
+  .bline{opacity:0;animation:blineIn .18s ease forwards;animation-delay:calc(var(--i)*250ms)}
+  @keyframes blineIn{to{opacity:1}}
+
+  /* ============ window chrome ============ */
+  .view-area{display:flex;flex-direction:column;gap:18px;max-width:1180px;margin:0 auto;padding:22px 22px 116px}
+  .win{background:var(--win-face);border:2px solid;border-color:var(--bevel-lt) var(--bevel-dk) var(--bevel-dk) var(--bevel-lt);box-shadow:1px 1px 0 var(--bevel-mid),4px 4px 0 rgba(0,0,0,.25)}
+  .win-title{height:26px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 4px 0 9px;background:var(--title-active)}
+  .win.inactive .win-title{background:var(--title-inactive)}
+  .win-title-text{font-size:12px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .win-ctrls{display:flex;gap:3px;flex:none}
+  .win-btn{width:16px;height:14px;display:grid;place-items:center;background:var(--ctrl-face);border:1px solid;border-color:var(--bevel-lt) var(--bevel-dk) var(--bevel-dk) var(--bevel-lt);font-size:9px;line-height:1;color:#000;cursor:default}
+  .win-btn.close{cursor:pointer}
+  .win-btn.close:active{border-color:var(--bevel-dk) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk)}
+  .win-body{padding:16px}
+
+  /* ============ stagger / motion — 「開く」感 ============ */
+  .reveal{opacity:0;animation:winopen .35s ease-out forwards;animation-delay:calc(var(--i,0)*70ms)}
+  @keyframes winopen{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+  .view-exit{animation:sink .14s ease-in forwards}
+  @keyframes sink{to{opacity:0;transform:scale(.97)}}
+  .wiggle{animation:wiggle 2.6s ease-in-out infinite}
+  @keyframes wiggle{0%,100%{transform:rotate(0)}8%{transform:rotate(-8deg)}16%{transform:rotate(8deg)}24%{transform:rotate(0)}}
+  .bounce{animation:bounce .5s var(--ease-spring)}
+  @keyframes bounce{0%{transform:translateY(0)}35%{transform:translateY(-6px)}70%{transform:translateY(2px)}100%{transform:translateY(0)}}
+
+  /* ============ bevel button (.btn95) ============ */
+  .btn95{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;background:var(--ctrl-face);border:2px solid;border-color:var(--bevel-lt) var(--bevel-dk) var(--bevel-dk) var(--bevel-lt);box-shadow:1px 1px 0 var(--bevel-mid);font-weight:700;font-size:13px;color:var(--ink);cursor:pointer}
+  .btn95:active{border-color:var(--bevel-dk) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk);translate:1px 1px}
+  .btn95[disabled]{opacity:.5;cursor:not-allowed;translate:0 0}
+  .btn95.primary{box-shadow:1px 1px 0 var(--bevel-mid),inset 0 0 0 1.5px var(--ink)}
+  .btn95.ghost95{font-weight:600}
+
+  /* ============ keycap ============ */
+  .key{display:inline-grid;place-items:center;min-width:24px;height:22px;padding:0 6px;background:var(--ctrl-face);border:2px solid;border-color:var(--bevel-lt) var(--bevel-dk) var(--bevel-dk) var(--bevel-lt);font-size:11.5px;font-weight:700;color:var(--ink)}
+
+  /* ============ terminal breadcrumb ============ */
+  .term-crumb{font-size:12px;color:rgba(255,255,255,.68);display:flex;align-items:center;gap:2px;flex-wrap:wrap;text-shadow:1px 1px 0 rgba(0,0,0,.3)}
+  .term-crumb .p{color:#39d353;margin-right:6px;font-weight:700}
+  .cursor{display:inline-block;width:7px;height:14px;background:#39d353;margin-left:6px;animation:blink 1.1s steps(1) infinite;vertical-align:-2px}
+  @keyframes blink{50%{opacity:0}}
+  .blink-tag{animation:blink 1s steps(1) infinite;color:var(--navy);font-weight:700}
+
+  /* ============ terminal panel (win chrome, black body) ============ */
+  .win.term .win-body{background:var(--term-bg);color:var(--term-ink);font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.8;padding:16px 18px;overflow-x:auto;white-space:pre-wrap}
+
+  /* ============ layout helpers ============ */
+  .win-grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .stat-grid95{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .stat-tile{background:#fff;border:2px solid;border-color:var(--bevel-dk) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk);padding:12px 14px}
+  .stat-tile .stv{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;color:var(--ink)}
+  .stat-tile .stl{margin-top:4px;font-size:11.5px;color:var(--mute)}
+  .well95{background:#fff;border:2px solid;border-color:var(--bevel-dk) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk);padding:14px}
+
+  /* ============ Win9x progress bar ============ */
+  .pbar-track{height:16px;background:#fff;border:2px solid;border-color:var(--bevel-dk) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk);padding:2px}
+  .pbar-fill{height:100%;width:0;background:repeating-linear-gradient(90deg,var(--navy) 0 9px,transparent 9px 12px);animation:pbarfill 1s steps(12) forwards;animation-delay:calc(.2s + var(--i,0)*90ms)}
+  @keyframes pbarfill{to{width:var(--w)}}
+
+  /* ============ heatmap（草） ============ */
+  .heat-grid{display:grid;grid-template-rows:repeat(7,1fr);grid-auto-flow:column;gap:3px}
+  .heat-cell{width:100%;aspect-ratio:1;border-radius:1.5px;background:var(--heat0);opacity:0;animation:heat-in .3s forwards;animation-delay:calc(var(--i)*4ms)}
+  @keyframes heat-in{to{opacity:1}}
+
+  /* ============ row (clickable list row) ============ */
+  .row95{display:flex;align-items:center;gap:10px;padding:9px 6px;cursor:pointer}
+  .row95:hover{background:var(--sel-bg);color:var(--sel-ink)}
+  .row95:hover .mono{color:inherit}
+
+  /* ============ achievement chip ============ */
+  .achip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;background:var(--ctrl-face);border:2px solid;border-color:var(--bevel-lt) var(--bevel-dk) var(--bevel-dk) var(--bevel-lt);font-size:11.5px;font-weight:700;color:var(--ink)}
+  .achip.locked{opacity:.42;filter:grayscale(1)}
+
+  /* ============ quiz options ============ */
+  .optbtn{display:flex;width:100%;align-items:center;gap:12px;background:var(--ctrl-face);border:2px solid;border-color:var(--bevel-lt) var(--bevel-dk) var(--bevel-dk) var(--bevel-lt);box-shadow:1px 1px 0 var(--bevel-mid);padding:13px 16px;text-align:left;cursor:pointer;color:var(--ink);font-size:14px;font-weight:600}
+  .optbtn:not(.locked):hover{background:var(--sel-bg);color:var(--sel-ink)}
+  .optbtn:not(.locked):hover .key{background:var(--sel-bg);color:var(--sel-ink);border-color:#fff #000 #000 #fff}
+  .optbtn:not(.locked):active{translate:1px 1px}
+  .optbtn.locked{opacity:1;cursor:default}
+  .optbtn.locked:not(.opt-correct):not(.opt-wrong){opacity:.45}
+  .optbtn.opt-correct{background:var(--ok-bg);color:var(--ok-ink);border-color:var(--ok-ink);box-shadow:1px 1px 0 var(--bevel-mid);animation:opt-pop .4s ease}
+  .optbtn.opt-correct .key{background:var(--ok-ink);color:#fff;border-color:var(--ok-ink)}
+  .optbtn.opt-wrong{background:var(--ng-bg);color:var(--ng-ink);border-color:var(--ng-ink);box-shadow:1px 1px 0 var(--bevel-mid);animation:opt-shake .4s ease}
+  .optbtn.opt-wrong .key{background:var(--ng-ink);color:#fff;border-color:var(--ng-ink)}
+  @keyframes opt-pop{0%{transform:scale(.96)}60%{transform:scale(1.02)}100%{transform:scale(1)}}
+  @keyframes opt-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}
+
+  /* ============ system message box（旧 .exp） ============ */
+  .exp{border:1px solid var(--ink);padding:0 14px;line-height:1.7;font-size:13.5px;display:flex;gap:10px;overflow:hidden;max-height:0;opacity:0;margin-top:0;transition:max-height .45s ease,opacity .4s,margin .4s,padding .4s}
+  .exp.show{max-height:240px;opacity:1;margin-top:18px;padding-top:13px;padding-bottom:13px}
+  .exp.ok{background:var(--ok-bg);color:var(--ok-ink)}
+  .exp.ng{background:var(--ng-bg);color:var(--ng-ink)}
+
+  /* ============ combo badge ============ */
+  .combo{position:absolute;top:-14px;right:16px;padding:4px 13px;background:var(--ctrl-face);border:2px solid;border-color:var(--bevel-lt) var(--bevel-dk) var(--bevel-dk) var(--bevel-lt);box-shadow:1px 1px 0 var(--bevel-mid),3px 3px 0 rgba(0,0,0,.25);font-weight:700;font-size:13px;color:#9a5b00;transform:scale(0)}
+  .combo.show{animation:combo-pop .5s var(--ease-spring) forwards}
+  .combo.hot{color:var(--ng-ink)}
+  @keyframes combo-pop{0%{transform:scale(0) rotate(-10deg)}70%{transform:scale(1.22) rotate(4deg)}100%{transform:scale(1) rotate(0)}}
+
+  .qcard{transition:opacity .18s,transform .18s}
+  .qcard.leaving{opacity:0;transform:scale(.97)}
+
+  /* ============ progress segments（設問インジケータ） ============ */
+  .seg-track{display:flex;gap:4px}
+  .seg{flex:1;height:12px;background:#fff;border:2px solid;border-color:var(--bevel-dk) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk);overflow:hidden;position:relative}
+  .seg .seg-fill{position:absolute;inset:0;background:var(--navy);transform:scaleX(0);transform-origin:left;transition:transform .5s steps(6)}
+  .seg.done .seg-fill{transform:scaleX(1)}
+
+  /* ============ result terminal lines ============ */
+  .tline{display:block;opacity:0;transform:translateY(4px);animation:tline .3s ease-out forwards;animation-delay:calc(.3s + var(--i)*.3s)}
+  @keyframes tline{to{opacity:1;transform:none}}
+
+  /* ============ directory tree（explorer） ============ */
+  .tree-root{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--ink);margin-bottom:6px;font-weight:700}
+  .tree-row{font-family:'JetBrains Mono',monospace;font-size:13px;padding:4px 6px;display:flex;align-items:center;gap:6px;white-space:pre;flex-wrap:wrap}
+  .tree-row.go{cursor:pointer}
+  .tree-row.go:hover{background:var(--sel-bg);color:var(--sel-ink)}
+  .tree-row.go:hover .tree-mark,.tree-row.go:hover .tree-tail{color:inherit}
+  .tree-done .tree-mark{color:var(--ok-ink)}
+  .tree-current .tree-mark{color:var(--navy);font-weight:700}
+  .tree-locked{color:var(--faint);cursor:not-allowed}
+  .tree-locked .tree-mark{color:var(--faint)}
+  .tree-tail{margin-left:auto;color:var(--mute);font-size:12px}
+  .tree-current .tree-tail{color:var(--ink)}
+  .drive-row{font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--mute);padding:4px 2px}
+  .drive-note{color:var(--faint)}
+  .notepad-body{background:#fff;border:2px solid;border-color:var(--bevel-dk) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk);padding:14px;font-size:13px;line-height:1.9;color:var(--ink)}
+  .quest-bar{color:var(--navy);letter-spacing:1px}
+
+  /* ============ charts ============ */
+  .chart95{display:flex;height:150px;align-items:stretch;gap:10px;border:2px solid;border-color:var(--bevel-dk) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk);border-radius:0;padding:14px;background:#fff}
+  .bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0}
+  .bar-area{flex:1;width:100%;display:flex;align-items:flex-end}
+  .vbar95{width:100%;height:0;background:repeating-linear-gradient(0deg,var(--navy) 0 6px,transparent 6px 9px);animation:barh .8s ease-out forwards;animation-delay:calc(.2s + var(--i)*80ms)}
+  @keyframes barh{to{height:var(--h)}}
+  .dist95{display:flex;height:16px;overflow:hidden;border:1.5px solid var(--bevel-dk)}
+  .dist95>div{width:0;animation:distw 1s ease-out forwards;animation-delay:.35s}
+  @keyframes distw{to{width:var(--w)}}
+
+  /* ============ confetti ============ */
+  .confetti-box{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:9990}
+  .confetti{position:absolute;top:-14px;width:9px;height:14px;border-radius:1px;animation:cfall linear forwards}
+  @keyframes cfall{0%{transform:translateY(0) rotate(0)}100%{transform:translateY(105vh) rotate(660deg)}}
+
+  /* ============ XP balloon（実績吹き出し） ============ */
+  .toast{position:fixed;right:20px;bottom:58px;z-index:9995;max-width:300px;padding:12px 16px;background:#ffffe1;border:1px solid #1a1a1a;border-radius:4px;box-shadow:2px 2px 0 rgba(0,0,0,.2);transform:translate(12px,10px) scale(.85);opacity:0;transition:transform .4s var(--ease-spring),opacity .3s}
+  .toast::after{content:'';position:absolute;left:26px;bottom:-9px;width:0;height:0;border:9px solid transparent;border-top-color:#ffffe1;border-bottom:0}
+  .toast.show{transform:translate(0,0) scale(1);opacity:1}
+  .toast-close{position:absolute;top:4px;right:7px;border:0;background:transparent;cursor:pointer;font-size:11px;color:var(--mute);line-height:1}
+  .toast-title{font-size:11px;font-weight:700;color:#7a5c00;letter-spacing:.04em}
+  .toast-body{margin-top:4px;font-size:12.5px;font-weight:600;color:var(--ink)}
+
+  /* ============ taskbar ============ */
+  .taskbar{position:fixed;left:0;right:0;bottom:0;height:42px;background:var(--ctrl-face);border-top:2px solid var(--bevel-lt);box-shadow:0 -1px 0 var(--bevel-mid);display:flex;align-items:center;gap:8px;padding:0 8px;z-index:50}
+  .start-btn{height:30px;flex:none;font-size:13px}
+  .task-btns{display:flex;gap:6px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none}
+  .task-btns::-webkit-scrollbar{display:none}
+  .task-btn{position:relative;flex:none;display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;background:var(--ctrl-face);border:2px solid;border-color:var(--bevel-lt) var(--bevel-dk) var(--bevel-dk) var(--bevel-lt);font-weight:600;font-size:12.5px;color:var(--ink);cursor:pointer}
+  .task-btn.active{border-color:var(--bevel-dk) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk);background:repeating-conic-gradient(#d4d0c8 0 25%,#c8c4bc 0 50%) 0 0/4px 4px}
+  .task-badge{position:absolute;top:-6px;right:-4px;min-width:16px;height:16px;padding:0 3px;background:var(--ng-ink);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;border-radius:9999px;border:1px solid #7a1414}
+  .tray{display:flex;align-items:center;gap:6px;flex:none}
+  .tray-well{display:flex;align-items:center;gap:9px;background:#b9b5ad;border:2px solid;border-color:var(--bevel-dk) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk);padding:4px 10px;height:26px;font-size:11.5px;font-weight:700;color:var(--ink)}
+  .crt-btn{height:24px;padding:0 8px;font-size:10.5px}
+  .crt-btn.active{border-color:var(--bevel-dk) var(--bevel-lt) var(--bevel-lt) var(--bevel-dk)}
+  @media(min-width:921px){.task-btn .short{display:none}}
+
+  /* ============ responsive (SP) ============ */
+  @media(max-width:920px){
+    .view-area{padding:14px 14px 116px}
+    .stat-grid95{grid-template-columns:1fr 1fr}
+    .win-grid2{grid-template-columns:1fr}
+    .chart95{height:120px;gap:6px;padding:10px}
+    .task-btn .full{display:none}
+    .task-btn .short{display:inline}
+    .task-btn{padding:0 8px;font-size:11px}
+    .taskbar{gap:4px}
+    .toast{left:14px;right:14px;max-width:none}
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.01ms !important;animation-delay:0ms !important;transition-duration:.01ms !important}
+    .reveal,.heat-cell,.tline{opacity:1}
+    .pbar-fill{width:var(--w)}
+    .vbar95{height:var(--h)}
+  }
+</style>
+</head>
+<body>
+
+<div class="scanlines" id="scanlines"></div>
+
+<div id="boot" aria-hidden="true">
+  <div class="bline" style="--i:0">DevPath BIOS v0.4.2</div>
+  <div class="bline" style="--i:1">Memory check ......... 640K OK</div>
+  <div class="bline" style="--i:2">Loading SRS engine ... OK</div>
+  <div class="bline" style="--i:3">Mounting content/ .... 4 domains found</div>
+  <div class="bline" style="--i:4">Starting desktop ...</div>
+</div>
+
+<div class="desktop">
+  <main id="view" class="view-area"></main>
+</div>
+
+<!-- ===== TASKBAR ===== -->
+<nav class="taskbar">
+  <button class="btn95 start-btn" data-go="dashboard">◆ DevPath</button>
+  <div class="task-btns">
+    <button class="task-btn" data-nav="dashboard" data-go="dashboard">🖥 <span class="full">ダッシュボード</span><span class="short">ボード</span></button>
+    <button class="task-btn" data-nav="learn" data-go="learn">📄 <span class="full">教材</span><span class="short">教材</span></button>
+    <button class="task-btn" data-nav="quiz" data-go="quizIntro">✏️ <span class="full">演習</span><span class="short">演習</span></button>
+    <button class="task-btn" data-nav="review" data-go="reviewIntro">🔁 <span class="full">復習</span><span class="short">復習</span><span class="task-badge">3</span></button>
+    <button class="task-btn" data-nav="analytics" data-go="analytics">📊 <span class="full">アナリティクス</span><span class="short">解析</span></button>
+    <button class="task-btn" data-nav="domains" data-go="domains">📁 <span class="full">エクスプローラ</span><span class="short">Tree</span></button>
+  </div>
+  <div class="tray">
+    <button class="btn95 crt-btn active mono" id="crtToggle" aria-pressed="true" title="CRTスキャンライン ON/OFF">CRT</button>
+    <div class="tray-well mono">
+      <span>🔥12</span><span>Lv.8</span><span id="clock">--:--</span>
+    </div>
+  </div>
+</nav>
+
+<!-- ===== XP balloon（実績通知） ===== -->
+<div class="toast" id="toast" role="status">
+  <button class="toast-close" id="toastClose" aria-label="閉じる">✕</button>
+  <div class="toast-title mono">🏆 ACHIEVEMENT UNLOCKED</div>
+  <div class="toast-body mono" id="toastBody"></div>
+</div>
+
+<script>
+'use strict';
+
+/* ================= data（Dev-Native Neo Flat 版から流用） ================= */
+const questions = [
+  { id: 'XSS-001', text: 'ユーザー入力をHTML本文へ表示する際、最初に検討すべき対策はどれですか？', options: ['出力時に文脈に応じてエスケープする', '入力値をすべて削除する', 'CookieをHttpOnlyにするだけでよい', 'CSPだけを設定する'], correct: 0, note: 'XSS対策の基本は、HTML本文・属性・URL・JavaScriptなど出力文脈に応じたエスケープです。', srs: { before: '4d', after: '8d', due: '7/16' } },
+  { id: 'XSS-002', text: 'Reactで通常のテキスト埋め込みが比較的安全な理由はどれですか？', options: ['JSXの文字列展開は標準でHTMLエスケープされる', 'ブラウザがscriptタグを必ず無視する', 'Reactは通信を暗号化する', 'DOM APIがすべて無効化される'], correct: 0, note: 'Reactはテキストとして埋め込む値をエスケープします。ただし dangerouslySetInnerHTML などは別途注意が必要です。', srs: { before: '2d', after: '5d', due: '7/13' } },
+  { id: 'XSS-003', text: '保存型XSSの説明として最も適切なものはどれですか？', options: ['悪意ある入力がDBなどに保存され、後から閲覧者へ配信される', 'URLのクエリだけで一時的に発火する', 'HTTPSを使わない通信だけで発生する', 'サーバーのCPU使用率が上がる攻撃である'], correct: 0, note: '保存型XSSは投稿・プロフィール等に保存されたスクリプトが、他ユーザー閲覧時に実行されるタイプです。', srs: { before: '1d', after: '3d', due: '7/11' } },
+];
+
+const glyph = {
+  arrowR: '→', arrowL: '←', lock: '🔒', book: '📄', pencil: '✏️',
+  checkBold: '✓', xBold: '✕',
+};
+
+const domains = [
+  { name: 'Security', pct: 42, emoji: '🛡️', color: 'var(--dom-security)', drive: 'C' },
+  { name: 'Frontend', pct: 68, emoji: '💻', color: 'var(--dom-frontend)', drive: 'D' },
+  { name: 'Backend', pct: 31, emoji: '🗄️', color: 'var(--dom-backend)', drive: 'E' },
+  { name: 'Architecture', pct: 18, emoji: '🏛️', color: 'var(--dom-arch)', drive: 'F' },
+];
+const weekly = [42, 58, 36, 72, 64, 88, 76];
+const days = ['月', '火', '水', '木', '金', '土', '日'];
+const codeSample = '<span style="color:#8a8a8a">// Avoid: userInput contains HTML</span>\n<span style="color:#f85149">&lt;div</span> <span style="color:#58a6ff">dangerouslySetInnerHTML</span>=<span style="color:#e3b341">{{ __html: userInput }}</span> <span style="color:#f85149">/&gt;</span>\n\n<span style="color:#8a8a8a">// Prefer: render as text</span>\n<span style="color:#f85149">&lt;p&gt;</span><span style="color:#e3b341">{userInput}</span><span style="color:#f85149">&lt;/p&gt;</span>';
+
+const skillPath = [
+  { label: 'XSSの基礎', sub: 'xss-basics', state: 'done' },
+  { label: 'エスケープ設計', sub: 'escaping', state: 'done' },
+  { label: '保存型XSS', sub: 'stored-xss', state: 'current', pct: 60 },
+  { label: 'CSP', sub: 'csp', state: 'locked' },
+  { label: '認証・認可', sub: 'authn-authz', state: 'locked' },
+  { label: 'OWASP Top 10', sub: 'owasp-top10', state: 'locked' },
+];
+
+const achievements = [
+  { id: 'first-blood', label: 'first-commit', desc: '初レッスン完了', unlocked: true, emoji: '🌱' },
+  { id: 'night-owl', label: 'night-owl', desc: '深夜2時に演習', unlocked: true, emoji: '🦉' },
+  { id: 'womm', label: 'it-works-on-my-machine', desc: '不正解→復習で定着', unlocked: true, emoji: '🤝' },
+  { id: 'clean-build', label: 'clean-build', desc: '全問正解でセッション完了', unlocked: false, emoji: '✨' },
+  { id: 'streak-30', label: 'uptime-30d', desc: '30日連続学習', unlocked: false, emoji: '📈' },
+];
+
+/* ================= state ================= */
+const state = { route: 'dashboard', mode: 'quiz', lastMode: 'quiz', qIndex: 0, answers: [null, null, null], combo: 0, sessionXp: 0 };
+const view = document.getElementById('view');
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ================= helpers ================= */
+let revealIdx = 0;
+function rv(extraClass = '', extraStyle = '') {
+  return `class="reveal ${extraClass}" style="--i:${revealIdx++};${extraStyle}"`;
+}
+
+function termCrumb(cmd) {
+  return `<div class="term-crumb">${'<span class="p">~/devpath $</span>'}<span>${cmd}</span><span class="cursor"></span></div>`;
+}
+
+function winTitleBar(title) {
+  return `<div class="win-title"><span class="win-title-text mono">${title}</span><span class="win-ctrls"><span class="win-btn">─</span><span class="win-btn">□</span><span class="win-btn close" data-winclose>✕</span></span></div>`;
+}
+function win(title, bodyHtml, extraClass = '', extraStyle = '', bodyStyle = '') {
+  return `<div ${rv(`win ${extraClass}`, extraStyle)}>${winTitleBar(title)}<div class="win-body" style="${bodyStyle}">${bodyHtml}</div></div>`;
+}
+
+function miniBar(pct) {
+  const filled = Math.round(pct / 10);
+  return '█'.repeat(filled) + '░'.repeat(10 - filled);
+}
+
+/* GitHub 風の草（シード付き擬似乱数で生成、直近12日はストリーク） */
+function heatmapHTML(weeks = 26) {
+  let s = 42;
+  const rand = () => { s = (s * 1664525 + 1013904223) % 4294967296; return s / 4294967296; };
+  const total = weeks * 7;
+  let cells = '';
+  for (let i = 0; i < total; i++) {
+    const daysAgo = total - 1 - i;
+    let level;
+    if (daysAgo < 12) level = 2 + Math.floor(rand() * 3);           // ストリーク中
+    else level = rand() < .32 ? 0 : Math.ceil(rand() * 4);          // それ以前
+    const count = level === 0 ? 0 : level * 3 + Math.floor(rand() * 3);
+    cells += `<span class="heat-cell" style="--i:${i};background:var(--heat${level})" title="${count}問 · ${daysAgo}日前"></span>`;
+  }
+  return `<div class="heat-grid" style="grid-template-columns:repeat(${weeks},1fr)">${cells}</div>`;
+}
+
+/* ================= screens ================= */
+function dashboardHTML() {
+  const monitorStats = [
+    { label: '今日の復習 due', value: 3, unit: '問' },
+    { label: '正答率 · 直近7日', value: 78, unit: '%', bar: 78 },
+    { label: '累計XP · Lv.8', value: 1240, unit: ' XP', bar: 65 },
+    { label: '連続学習ストリーク', value: 12, unit: '日', flame: true },
+  ];
+  return `
+  <div ${rv('', 'display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap')}>
+    <div>${termCrumb('devpath status')}<h1 style="margin:10px 0 0;font-size:21px;font-weight:800;color:#fff;text-shadow:1px 1px 0 rgba(0,0,0,.35)">おかえりなさい、田中さん</h1><p style="margin:5px 0 0;font-size:13px;color:rgba(255,255,255,.8);text-shadow:1px 1px 0 rgba(0,0,0,.3)">復習キューに3問。ストリークは12日目です 🔥</p></div>
+    <button class="btn95 primary" data-go="reviewIntro" style="flex:none">復習を始める ${glyph.arrowR}</button>
+  </div>
+  ${win('system_monitor.exe', `
+    <div class="stat-grid95">
+      ${monitorStats.map((s, i) => `
+      <div class="stat-tile">
+        <div class="stv"><span data-count="${s.value}">0</span><span style="font-size:13px;font-weight:600;color:var(--mute)">${s.unit}</span>${s.flame ? ' <span class="wiggle">🔥</span>' : ''}</div>
+        <div class="stl">${s.label}</div>
+        ${s.bar !== undefined ? `<div class="pbar-track" style="margin-top:8px"><div class="pbar-fill" style="--w:${s.bar}%;--i:${i}"></div></div>` : ''}
+      </div>`).join('')}
+    </div>`)}
+  ${win('activity_monitor.exe', `
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <span style="font-size:14px;font-weight:700;color:var(--ink)">学習コントリビューション</span>
+      <span class="mono" style="font-size:11px;color:var(--faint)">直近26週 · 総512問</span>
+    </div>
+    <div style="margin-top:14px">${heatmapHTML()}</div>
+    <div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <span class="mono" style="font-size:11px;color:#9a5b00;font-weight:700">🔥 12日連続 — 草を絶やすな</span>
+      <span class="mono" style="display:flex;align-items:center;gap:4px;font-size:10.5px;color:var(--faint)">Less ${[0, 1, 2, 3, 4].map(l => `<span style="width:10px;height:10px;border-radius:1.5px;background:var(--heat${l});display:inline-block"></span>`).join('')} More</span>
+    </div>`)}
+  <div class="win-grid2">
+    ${win('skills.sys', `
+      <div style="font-size:14px;font-weight:700;color:var(--ink)">領域別の習得状況</div>
+      <div style="margin-top:14px;display:flex;flex-direction:column;gap:14px">
+        ${domains.map((d, i) => `
+        <button class="go" data-go="domains" style="border:0;background:transparent;padding:0;cursor:pointer;font-family:inherit;display:block;width:100%;text-align:left">
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="font-weight:700;color:var(--ink)">${d.emoji} ${d.name}</span><span class="mono" style="font-weight:700;color:${d.color}">${d.pct}%</span></div>
+          <div class="pbar-track"><div class="pbar-fill" style="--w:${d.pct}%;--i:${i}"></div></div>
+        </button>`).join('')}
+      </div>`)}
+    ${win('trophies.dll', `
+      <div style="font-size:14px;font-weight:700;color:var(--ink)">実績</div>
+      <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px">
+        ${achievements.map(a => `<span class="achip ${a.unlocked ? '' : 'locked'}" title="${a.desc}">${a.emoji} ${a.label}</span>`).join('')}
+      </div>
+      <div style="margin-top:16px;padding-top:14px;border-top:2px solid var(--bevel-mid)">
+        <div style="font-size:14px;font-weight:700;color:var(--ink)">最近のアクティビティ</div>
+        <div style="margin-top:6px;display:flex;flex-direction:column">
+          <div class="row95 go" data-go="quizIntro"><span>✓</span><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700">演習を完了 <span class="mono">5/5</span></div><div class="mono" style="font-size:11px;color:var(--faint)">xss-basics · 2分前</div></div><span class="mono" style="font-size:12px;font-weight:700;color:var(--purple)">+30 XP</span></div>
+          <div class="row95 go" data-go="article"><span>📄</span><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700">レッスンを読了</div><div class="mono" style="font-size:11px;color:var(--faint)">security/xss · 15分前</div></div><span class="mono" style="font-size:12px;font-weight:700;color:var(--purple)">+10 XP</span></div>
+          <div class="row95 go" data-go="reviewIntro"><span>🔁</span><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700">SRSがキューを更新</div><div class="mono" style="font-size:11px;color:var(--faint)">3件が due · 1時間前</div></div></div>
+        </div>
+      </div>`)}
+  </div>
+  ${win('notify.exe', `
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <span style="font-size:32px;flex:none">💾</span>
+      <div style="flex:1;min-width:220px"><div class="mono" style="font-size:11px;font-weight:700;color:var(--ok-ink);letter-spacing:.06em">NEXT LESSON</div><div style="margin:4px 0 0;font-size:15px;font-weight:800;color:var(--ink)">次のレッスン: 保存型XSSを理解する</div><p style="margin:3px 0 0;font-size:12.5px;color:var(--mute)">教材本文 → 4択3問</p></div>
+      <div style="display:flex;gap:10px;flex:none">
+        <button class="btn95" style="font-size:12.5px">後で</button>
+        <button class="btn95 primary" data-go="article">続きから ${glyph.arrowR}</button>
+      </div>
+    </div>`)}
+  `;
+}
+
+function learnHTML() {
+  return `
+  <div ${rv('', '')}>${termCrumb('ls content/security/xss/')}<h1 style="margin:10px 0 0;font-size:21px;font-weight:800;color:#fff;text-shadow:1px 1px 0 rgba(0,0,0,.35)">Security / XSS</h1><p style="margin:5px 0 0;font-size:13px;color:rgba(255,255,255,.8);text-shadow:1px 1px 0 rgba(0,0,0,.3)">トピック内のレッスン一覧</p></div>
+  ${win('lesson_browser.exe', `
+    <div class="row95 go" data-go="article" style="gap:16px">
+      <span style="font-size:26px;flex:none">📄</span>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap"><span class="key mono" style="color:var(--dom-frontend)">lesson-01</span><span class="mono" style="font-size:11.5px;color:var(--faint)">~18min · 3 questions</span></div>
+        <div style="margin:8px 0 0;font-size:16px;font-weight:800;color:var(--ink)">xss-basics.md — XSSの基礎とエスケープ設計</div>
+        <p style="margin:3px 0 0;font-size:12.5px;color:var(--mute)">Markdown本文・コード例・4択3問</p>
+      </div>
+      <span class="mono" style="flex:none">${glyph.arrowR}</span>
+    </div>`)}
+  `;
+}
+
+function articleHTML() {
+  return `
+  <div ${rv('', 'display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap')}>
+    <div>${termCrumb('cat security/xss/xss-basics.md')}</div>
+    <button class="btn95 ghost95 go" data-go="learn" style="flex:none">${glyph.arrowL} 目次へ戻る</button>
+  </div>
+  ${win('lesson_viewer.exe — xss-basics.md', `
+    <h1 style="margin:0;font-size:20px;font-weight:800;color:var(--ink)">XSSの基礎とエスケープ設計</h1>
+    <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px"><span class="key mono" style="color:var(--dom-security)">security/xss</span><span class="key mono">~18min</span><span class="key mono">3 questions</span></div>
+    <p style="margin:18px 0 0;font-size:15px;line-height:1.85;color:var(--ink)">XSSは「入力値が危険」なのではなく、値がHTMLやJavaScriptとして解釈される文脈に混入することで成立します。実装では保存前の一律除去より、出力時の文脈別エスケープを軸に考えます。</p>
+    <h2 style="margin:24px 0 0;font-size:16px;font-weight:800;color:var(--ink)">危険な描画例</h2>
+    <p style="margin:10px 0 0;font-size:14px;line-height:1.8;color:var(--ink)">HTMLとして差し込むAPIは、信頼できるサニタイズ済みHTMLだけに限定します。</p>
+    ${win('C:\\devpath\\component.tsx', codeSample, 'term', 'margin-top:14px')}
+    <h2 style="margin:22px 0 0;font-size:16px;font-weight:800;color:var(--ink)">設計チェック</h2>
+    <ul style="margin:12px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px">
+      <li style="display:flex;gap:9px;font-size:14px;line-height:1.7;color:var(--ink)"><span class="mono" style="color:var(--ok-ink);font-weight:700">✓</span>HTML本文、属性、URL、JS文字列でエスケープ方式を分ける</li>
+      <li style="display:flex;gap:9px;font-size:14px;line-height:1.7;color:var(--ink)"><span class="mono" style="color:var(--ok-ink);font-weight:700">✓</span>CSPは防御層として追加し、主対策の代替にしない</li>
+      <li style="display:flex;gap:9px;font-size:14px;line-height:1.7;color:var(--ink)"><span class="mono" style="color:var(--ok-ink);font-weight:700">✓</span>レビュー対象にHTML直挿入の逃げ道を明記する</li>
+    </ul>
+    <div style="margin-top:22px;display:flex;justify-content:flex-end"><button class="btn95 primary" data-start="quiz">問題を解く ${glyph.arrowR}</button></div>`)}
+  `;
+}
+
+function quizIntroHTML() {
+  return `
+  <div ${rv('', '')}>${termCrumb('devpath quiz --lesson xss-basics')}<h1 style="margin:10px 0 0;font-size:21px;font-weight:800;color:#fff;text-shadow:1px 1px 0 rgba(0,0,0,.35)">演習</h1><p style="margin:5px 0 0;font-size:13px;color:rgba(255,255,255,.8);text-shadow:1px 1px 0 rgba(0,0,0,.3)">1問ずつ即時採点。連続正解でコンボボーナス、解答はSRSに記録されます。</p></div>
+  ${win('quiz.exe — setup', `
+    <div style="display:flex;align-items:center;gap:16px">
+      <span class="bounce" style="font-size:32px;flex:none">✏️</span>
+      <div style="flex:1"><span class="key mono" style="color:var(--dom-security)">security/xss</span><div style="margin:9px 0 0;font-size:16px;font-weight:800;color:var(--ink)">XSSの基礎とエスケープ設計</div><p class="mono" style="margin:5px 0 0;font-size:12px;color:var(--faint)">3 questions · ~5min · +10 XP/correct · combo bonus</p></div>
+    </div>
+    <div style="margin-top:20px;padding-top:18px;border-top:2px solid var(--bevel-mid);display:flex;gap:12px;flex-wrap:wrap">
+      <button class="btn95 ghost95 go" data-go="article" style="flex:none">先に教材を読む</button>
+      <button class="btn95 primary" data-start="quiz" style="flex:1;min-width:200px;justify-content:center">START ${glyph.arrowR}</button>
+    </div>`)}
+  `;
+}
+
+function reviewIntroHTML() {
+  const queue = [
+    { id: 'XSS-003', text: '保存型XSSの説明として最も適切なものは？', interval: '1d', ease: 2.1, tag: '2日 滞留', color: 'var(--ng-ink)' },
+    { id: 'XSS-001', text: 'HTML本文へ表示する際、最初に検討すべき対策は？', interval: '4d', ease: 2.4, tag: '1日 滞留', color: '#9a5b00' },
+    { id: 'XSS-002', text: 'Reactのテキスト埋め込みが比較的安全な理由は？', interval: '2d', ease: 2.6, tag: '本日 due', color: 'var(--ok-ink)' },
+  ];
+  return `
+  <div ${rv('', '')}>${termCrumb('devpath review --due')}<h1 style="margin:10px 0 0;font-size:21px;font-weight:800;color:#fff;text-shadow:1px 1px 0 rgba(0,0,0,.35)">今日の復習</h1><p style="margin:5px 0 0;font-size:13px;color:rgba(255,255,255,.8);text-shadow:1px 1px 0 rgba(0,0,0,.3)">SRSが選んだ due キュー。interval と ease はすべて公開 — 自分の記憶の計器盤です。</p></div>
+  ${win('srs_scheduler.exe', `
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px"><span style="font-size:14px;font-weight:700;color:var(--ink)">due queue <span class="mono" style="font-size:11.5px;color:var(--faint);font-weight:400">(dueAt asc · limit 20)</span></span><span class="key mono" style="color:var(--ng-ink)">3 due</span></div>
+    <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px">
+      ${queue.map(qi => `
+      <div class="well95" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <span class="key mono" style="color:var(--dom-frontend)">${qi.id}</span>
+        <span style="font-size:13px;font-weight:600;color:var(--ink);flex:1;min-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${qi.text}</span>
+        <span class="mono" style="font-size:11px;color:var(--faint)">ivl <b style="color:var(--ink)">${qi.interval}</b> · ease <b style="color:var(--ink)">${qi.ease}</b></span>
+        <span class="mono" style="font-size:11px;color:${qi.color};font-weight:700;flex:none">${qi.tag}</span>
+      </div>`).join('')}
+    </div>
+    <div style="margin-top:20px;padding-top:18px;border-top:2px solid var(--bevel-mid);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <button class="btn95 ghost95 go" data-go="dashboard">${glyph.arrowL} ホームへ戻る</button>
+      <button class="btn95 primary" data-start="review">復習を始める ${glyph.arrowR}</button>
+    </div>`)}
+  `;
+}
+
+function exerciseHTML() {
+  const q = questions[state.qIndex];
+  const crumbCmd = state.mode === 'review' ? 'devpath review --run' : 'devpath quiz --run';
+  return `
+  <div ${rv('', '')}>${termCrumb(crumbCmd)}</div>
+  <section ${rv('win qcard', 'position:relative;overflow:visible')} id="qcard">
+    ${winTitleBar(`quiz.exe — question ${state.qIndex + 1}/${questions.length}`)}
+    <div class="win-body" style="padding:22px 24px">
+      <div class="combo" id="combo"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
+        <div class="seg-track" style="flex:1">
+          ${questions.map((_, i) => `<span class="seg ${i < state.qIndex ? 'done' : ''}" id="seg-${i}"><span class="seg-fill"></span></span>`).join('')}
+        </div>
+        <span class="mono" style="font-size:12px;color:var(--faint);flex:none">${state.qIndex + 1}/${questions.length} · <b style="color:var(--purple)">+${state.sessionXp} XP</b></span>
+      </div>
+      <div style="margin-top:20px"><span class="key mono" style="color:var(--dom-frontend)">${q.id}</span></div>
+      <h2 style="margin:14px 0 0;font-size:17px;font-weight:800;line-height:1.55;color:var(--ink)">${q.text}</h2>
+      <div style="margin-top:18px;display:flex;flex-direction:column;gap:11px">
+        ${q.options.map((text, i) => `
+        <button class="optbtn reveal" style="--i:${i + 2}" data-opt="${i}">
+          <span class="key mono">${i + 1}</span>
+          <span>${text}</span>
+        </button>`).join('')}
+      </div>
+      <div class="exp" id="explanation" aria-live="polite"></div>
+      <div style="margin-top:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <span class="mono" style="font-size:11px;color:var(--faint)">[1-4] select · [Enter] next</span>
+        <button class="btn95 primary" id="nextBtn" disabled>${state.qIndex === questions.length - 1 ? '結果を見る' : '次の問題へ'} ${glyph.arrowR}</button>
+      </div>
+    </div>
+  </section>`;
+}
+
+function resultHTML() {
+  const rows = questions.map((q, i) => ({ q, ok: state.answers[i] === q.correct }));
+  const score = rows.filter(r => r.ok).length;
+  const total = questions.length;
+  const lesson = 'xss-basics';
+  let li = 0;
+  const lines = [
+    `<span class="tline mono" style="--i:${li++}"><span style="color:#39d353">$</span> devpath test --lesson ${lesson}\n</span>`,
+    ...rows.map(r => `<span class="tline mono" style="--i:${li++}">${r.ok
+      ? `<span style="color:#39d353">  ✓ ${r.q.id}</span> <span style="color:#8a8a8a">... passed</span>`
+      : `<span style="color:#f85149">  ✗ ${r.q.id}</span> <span style="color:#8a8a8a">... failed</span>`}\n</span>`),
+    `<span class="tline mono" style="--i:${li++}">\n<span style="color:#cccccc">Tests: </span><span style="color:#39d353">${score} passed</span>${score < total ? `<span style="color:#cccccc">, </span><span style="color:#f85149">${total - score} failed</span>` : ''}<span style="color:#cccccc">, ${total} total</span>\n</span>`,
+    `<span class="tline mono" style="--i:${li++}"><span style="color:#bc8cff">XP:    +${state.sessionXp}</span><span style="color:#8a8a8a">${state.combo >= 2 ? ' (combo bonus included)' : ''}</span>\n</span>`,
+    `<span class="tline mono" style="--i:${li++}"><span style="color:#8a8a8a">SRS:   ${total} cards rescheduled</span><span class="cursor"></span></span>`,
+  ];
+  const actions = state.lastMode === 'review'
+    ? `<button class="btn95 primary" data-start="review">間違えた問題だけ再挑戦</button>
+       <button class="btn95 ghost95 go" data-go="dashboard">ホームへ戻る</button>`
+    : `<button class="btn95 primary go" data-go="domains">次のノードへ進む</button>
+       <button class="btn95 ghost95" data-start="quiz">再挑戦</button>`;
+  return `
+  <div ${rv('', '')}>${termCrumb('devpath test --report')}<h1 style="margin:10px 0 0;font-size:21px;font-weight:800;color:#fff;text-shadow:1px 1px 0 rgba(0,0,0,.35)">セッションレポート</h1></div>
+  ${win('test_report.exe', `
+    ${win('C:\\devpath\\test.log', `<div style="min-height:160px">${lines.join('')}</div>`, 'term')}
+    <h2 style="margin:22px 0 0;font-size:14.5px;font-weight:800;color:var(--ink)">SRS スケジュール更新 <span class="mono" style="font-size:11px;color:var(--faint);font-weight:400">— 全パラメータ公開</span></h2>
+    <div style="margin-top:11px;display:flex;flex-direction:column;gap:8px">
+      ${rows.map(r => `
+      <div class="well95" style="display:flex;align-items:center;gap:12px;border-color:${r.ok ? 'var(--ok-ink)' : 'var(--ng-ink)'} !important;flex-wrap:wrap">
+        <span style="color:${r.ok ? 'var(--ok-ink)' : 'var(--ng-ink)'};font-weight:700">${r.ok ? glyph.checkBold : glyph.xBold}</span>
+        <span class="key mono" style="color:var(--dom-frontend)">${r.q.id}</span>
+        <span class="mono" style="font-size:12px;color:var(--mute);flex:1;min-width:200px">interval <b style="color:var(--ink)">${r.q.srs.before}</b> → <b style="color:${r.ok ? 'var(--ok-ink)' : 'var(--ng-ink)'}">${r.ok ? r.q.srs.after : '1d'}</b> · next due <b style="color:var(--ink)">${r.ok ? r.q.srs.due : '明日'}</b></span>
+      </div>`).join('')}
+    </div>
+    <div style="margin-top:22px;display:flex;flex-wrap:wrap;justify-content:center;gap:12px">${actions}</div>`)}
+  `;
+}
+
+function analyticsHTML() {
+  const stats = [
+    { label: '総解答数', value: 142, sub: '直近7日 +38', subColor: 'var(--ok-ink)' },
+    { label: '正答率', value: 78, unit: '%', sub: '+5.2pt', subColor: 'var(--ok-ink)', color: 'var(--ok-ink)' },
+    { label: '平均反応時間', value: 14, unit: 's', sub: '-2s', subColor: 'var(--ok-ink)' },
+    { label: '習得済み', value: 8, unit: '/16', sub: 'ivl ≥ 21d', subColor: 'var(--mute)' },
+  ];
+  return `
+  <div ${rv('', '')}>${termCrumb('devpath stats --verbose')}<h1 style="margin:10px 0 0;font-size:21px;font-weight:800;color:#fff;text-shadow:1px 1px 0 rgba(0,0,0,.35)">アナリティクス</h1><p style="margin:5px 0 0;font-size:13px;color:rgba(255,255,255,.8);text-shadow:1px 1px 0 rgba(0,0,0,.3)">解答ログ・SRS状態の計器盤。アルゴリズムは隠しません。</p></div>
+  <div class="stat-grid95">
+    ${stats.map(s => `
+    <div ${rv('stat-tile', '')}>
+      <div style="font-size:11.5px;color:var(--mute)">${s.label}</div>
+      <div class="stv" style="margin-top:6px;color:${s.color || 'var(--ink)'}"><span data-count="${s.value}">0</span><span style="font-size:13px;font-weight:600;color:var(--mute)">${s.unit || ''}</span></div>
+      <div class="mono" style="margin-top:4px;font-size:11px;color:${s.subColor}">${s.sub}</div>
+    </div>`).join('')}
+  </div>
+  <div class="win-grid2">
+    ${win('srs_monitor.exe', `
+      <div style="font-size:14px;font-weight:700;color:var(--ink)">忘却曲線と復習タイミング</div>
+      <p class="mono" style="margin:5px 0 0;font-size:11px;color:var(--faint)">retention = e^(-t/S) — 復習のたびに記憶強度Sが伸びる</p>
+      <div class="well95" style="margin-top:12px">
+        <svg viewBox="0 0 320 130" style="width:100%;height:auto;display:block">
+          <line x1="0" y1="100" x2="320" y2="100" stroke="var(--bevel-mid)" stroke-width="1.5" stroke-dasharray="5 5"/>
+          <text x="4" y="96" fill="var(--faint)" font-size="8" font-family="JetBrains Mono">忘却ライン</text>
+          <path d="M8,18 Q30,55 58,88" fill="none" stroke="var(--ng-ink)" stroke-width="2.5" stroke-linecap="round" opacity=".85"/>
+          <path d="M58,20 Q100,52 140,80" fill="none" stroke="#c2570a" stroke-width="2.5" stroke-linecap="round" opacity=".9"/>
+          <path d="M140,18 Q195,42 250,62" fill="none" stroke="var(--yellow)" stroke-width="2.5" stroke-linecap="round" opacity=".9"/>
+          <path d="M250,16 Q285,26 318,34" fill="none" stroke="var(--ok-ink)" stroke-width="2.5" stroke-linecap="round"/>
+          <g><circle cx="58" cy="88" r="5" fill="var(--navy)"/><circle cx="140" cy="80" r="5" fill="var(--navy)"/><circle cx="250" cy="62" r="5" fill="var(--navy)"/></g>
+          <text x="50" y="118" fill="var(--navy)" font-size="8.5" font-family="JetBrains Mono">rev.1</text>
+          <text x="132" y="118" fill="var(--navy)" font-size="8.5" font-family="JetBrains Mono">rev.2</text>
+          <text x="242" y="118" fill="var(--navy)" font-size="8.5" font-family="JetBrains Mono">rev.3</text>
+        </svg>
+      </div>
+      <div style="font-size:14px;font-weight:700;color:var(--ink);margin-top:20px">週間アクティビティ</div>
+      <div class="chart95" style="margin-top:10px">
+        ${weekly.map((v, i) => `
+        <div class="bar-col">
+          <div class="bar-area"><div class="vbar95" style="--h:${v}%;--i:${i}" title="${days[i]}: ${v}問"></div></div>
+          <span class="mono" style="font-size:10px;color:var(--faint)">${days[i]}</span>
+        </div>`).join('')}
+      </div>`)}
+    ${win('trends.dat', `
+      <div style="font-size:14px;font-weight:700;color:var(--ink)">SRS 定着度の分布</div>
+      <div class="dist95" style="margin-top:12px"><div style="--w:50%;background:var(--ok-ink)"></div><div style="--w:31%;background:var(--navy);animation-delay:.55s"></div><div style="--w:19%;background:var(--ng-ink);animation-delay:.75s"></div></div>
+      <div class="mono" style="margin-top:12px;display:flex;flex-direction:column;gap:10px;font-size:12.5px">
+        <div style="display:flex;align-items:center;gap:9px"><span style="width:10px;height:10px;background:var(--ok-ink)"></span>mastered <span style="color:var(--faint)">ivl≥21d</span><span style="margin-left:auto;font-weight:700;color:var(--ink)"><span data-count="8">0</span></span></div>
+        <div style="display:flex;align-items:center;gap:9px"><span style="width:10px;height:10px;background:var(--navy)"></span>learning<span style="margin-left:auto;font-weight:700;color:var(--ink)"><span data-count="5">0</span></span></div>
+        <div style="display:flex;align-items:center;gap:9px"><span style="width:10px;height:10px;background:var(--ng-ink)"></span>due<span style="margin-left:auto;font-weight:700;color:var(--ink)"><span data-count="3">0</span></span></div>
+      </div>
+      <div style="font-size:14px;font-weight:700;color:var(--ink);margin-top:20px">間違えやすい問題</div>
+      <div style="margin-top:8px;display:flex;flex-direction:column">
+        <div class="row95"><span class="key mono" style="color:var(--dom-frontend)">XSS-003</span><span style="font-size:12.5px;color:var(--ink);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:8px">保存型XSSの説明…</span><span class="mono" style="font-size:12px;font-weight:700;color:var(--ng-ink);flex:none">46%</span></div>
+        <div class="row95"><span class="key mono" style="color:var(--dom-frontend)">XSS-002</span><span style="font-size:12.5px;color:var(--ink);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:8px">Reactのテキスト埋め込み…</span><span class="mono" style="font-size:12px;font-weight:700;color:#9a5b00;flex:none">28%</span></div>
+        <div class="row95"><span class="key mono" style="color:var(--dom-frontend)">XSS-001</span><span style="font-size:12.5px;color:var(--ink);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:8px">HTML本文へ表示する際…</span><span class="mono" style="font-size:12px;font-weight:700;color:var(--ok-ink);flex:none">12%</span></div>
+      </div>`)}
+  </div>`;
+}
+
+function domainsHTML() {
+  const nodeMark = n => n.state === 'done' ? '✓' : n.state === 'current' ? '▶' : glyph.lock;
+  const treeRows = skillPath.map((n, i) => {
+    const last = i === skillPath.length - 1;
+    const prefix = last ? '└─ ' : '├─ ';
+    const clickable = n.state !== 'locked';
+    let tail;
+    if (n.state === 'done') tail = '[done]';
+    else if (n.state === 'current') tail = `[${n.pct}%] ${miniBar(n.pct)} <span class="blink-tag">← START</span>`;
+    else tail = '[locked]';
+    const cls = n.state === 'done' ? 'tree-done' : n.state === 'current' ? 'tree-current' : 'tree-locked';
+    const target = n.state === 'current' ? 'article' : 'learn';
+    return `<div class="tree-row ${cls} ${clickable ? 'go' : ''}" ${clickable ? `data-go="${target}"` : ''}>`
+      + `<span>${prefix}</span><span class="tree-mark">${nodeMark(n)}</span><span>${n.sub}.md</span><span class="tree-tail">${tail}</span></div>`;
+  }).join('');
+
+  const lockedDrives = domains.slice(1).map(d => `<div class="drive-row">${d.drive}:\\${d.name.toLowerCase()}\\ <span class="drive-note">(locked — Security ${domains[0].pct}% でアンロック)</span></div>`).join('');
+
+  return `
+  <div ${rv('', '')}>${termCrumb('devpath tree security')}<h1 style="margin:10px 0 0;font-size:21px;font-weight:800;color:#fff;text-shadow:1px 1px 0 rgba(0,0,0,.35)">スキルツリー</h1><p style="margin:5px 0 0;font-size:13px;color:rgba(255,255,255,.8);text-shadow:1px 1px 0 rgba(0,0,0,.3)">ノードをクリアすると次がアンロック。依存関係つきの学習パスです。</p></div>
+  <div class="win-grid2">
+    ${win('explorer.exe — C:\\devpath\\', `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><span style="font-size:14px;font-weight:700;color:var(--ink)">Security パス</span><span class="key mono" style="color:var(--ok-ink)">2/6 done</span></div>
+      <div class="tree-root">C:\\devpath\\security\\</div>
+      ${treeRows}`)}
+    <div style="display:flex;flex-direction:column;gap:16px">
+      ${win('explorer.exe — locked drives', lockedDrives, 'inactive')}
+      ${win('quest.txt — メモ帳', `<div class="notepad-body mono">復習を3問クリアする<br>1/3 <span class="quest-bar">██░░░░</span><br>+15 XP</div>`, 'inactive')}
+    </div>
+  </div>`;
+}
+
+const screens = {
+  dashboard: dashboardHTML, learn: learnHTML, article: articleHTML,
+  quizIntro: quizIntroHTML, reviewIntro: reviewIntroHTML,
+  exercise: exerciseHTML, result: resultHTML,
+  analytics: analyticsHTML, domains: domainsHTML,
+};
+
+/* ================= render / transition ================= */
+function render() {
+  revealIdx = 0;
+  view.innerHTML = screens[state.route]();
+  window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+  updateNav();
+  runCountUps();
+  bindView();
+  if (state.route === 'exercise') requestAnimationFrame(() => {
+    const seg = document.getElementById(`seg-${state.qIndex}`);
+    if (seg) seg.classList.add('done');   // 現在の問題まで進行を表示
+    updateCombo(false);
+  });
+}
+
+function go(route) {
+  if (route === state.route) { render(); return; }
+  if (reduceMotion) { state.route = route; render(); return; }
+  view.classList.add('view-exit');
+  setTimeout(() => {
+    view.classList.remove('view-exit');
+    state.route = route;
+    render();
+  }, 140);
+}
+
+function startExercise(mode) {
+  state.mode = mode;
+  state.qIndex = 0;
+  state.answers = questions.map(() => null);
+  state.combo = 0;
+  state.sessionXp = 0;
+  go('exercise');
+  if (state.route === 'exercise') render();
+}
+
+function updateNav() {
+  const r = state.route, m = state.mode, lm = state.lastMode;
+  const activeKey =
+    r === 'dashboard' ? 'dashboard' :
+    (r === 'learn' || r === 'article') ? 'learn' :
+    (r === 'quizIntro' || (r === 'exercise' && m === 'quiz') || (r === 'result' && lm === 'quiz')) ? 'quiz' :
+    (r === 'reviewIntro' || (r === 'exercise' && m === 'review') || (r === 'result' && lm === 'review')) ? 'review' :
+    r === 'analytics' ? 'analytics' :
+    r === 'domains' ? 'domains' : '';
+  document.querySelectorAll('[data-nav]').forEach(el => {
+    el.classList.toggle('active', el.dataset.nav === activeKey);
+  });
+}
+
+/* ================= animations ================= */
+function runCountUps() {
+  view.querySelectorAll('[data-count]').forEach(el => {
+    const target = parseFloat(el.dataset.count);
+    if (reduceMotion) { el.textContent = target.toLocaleString(); return; }
+    const dur = 900;
+    const t0 = performance.now();
+    function tick(t) {
+      const p = Math.min((t - t0) / dur, 1);
+      const eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(target * eased).toLocaleString();
+      if (p < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  });
+}
+
+function updateCombo(pop) {
+  const el = document.getElementById('combo');
+  if (!el) return;
+  if (state.combo >= 2) {
+    el.textContent = `COMBO ×${state.combo}${state.combo >= 3 ? ' 🔥' : ''}`;
+    el.classList.toggle('hot', state.combo >= 3);
+    el.classList.remove('show');
+    if (pop) { void el.offsetWidth; el.classList.add('show'); }
+    else { el.style.transform = 'scale(1)'; }
+  } else {
+    el.classList.remove('show');
+    el.style.transform = 'scale(0)';
+  }
+}
+
+function confetti() {
+  if (reduceMotion) return;
+  const box = document.createElement('div');
+  box.className = 'confetti-box';
+  const colors = ['#39d353', '#58a6ff', '#e3b341', '#bc8cff', '#c2570a', '#000080'];
+  for (let i = 0; i < 80; i++) {
+    const c = document.createElement('span');
+    c.className = 'confetti';
+    c.style.left = Math.random() * 100 + 'vw';
+    c.style.background = colors[i % colors.length];
+    c.style.animationDuration = 2 + Math.random() * 1.6 + 's';
+    c.style.animationDelay = Math.random() * .5 + 's';
+    c.style.transform = `scale(${.7 + Math.random() * .8})`;
+    box.appendChild(c);
+  }
+  document.body.appendChild(box);
+  setTimeout(() => box.remove(), 4600);
+}
+
+let toastTimer = null;
+function showToast(text) {
+  const t = document.getElementById('toast');
+  document.getElementById('toastBody').textContent = text;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 5000);
+}
+
+/* ================= quiz interaction ================= */
+function selectOption(i) {
+  if (state.route !== 'exercise') return;
+  if (state.answers[state.qIndex] !== null) return;
+  const q = questions[state.qIndex];
+  state.answers[state.qIndex] = i;
+  const isCorrect = i === q.correct;
+
+  if (isCorrect) {
+    state.combo++;
+    state.sessionXp += 10 + (state.combo >= 2 ? 5 : 0);
+  } else {
+    state.combo = 0;
+  }
+
+  view.querySelectorAll('.optbtn').forEach((btn, idx) => {
+    btn.classList.add('locked');
+    const key = btn.querySelector('.key');
+    if (idx === q.correct) { btn.classList.add('opt-correct'); key.textContent = glyph.checkBold; }
+    else if (idx === i) { btn.classList.add('opt-wrong'); key.textContent = glyph.xBold; }
+  });
+
+  updateCombo(isCorrect);
+
+  const exp = view.querySelector('#explanation');
+  exp.classList.add(isCorrect ? 'ok' : 'ng');
+  exp.innerHTML = `<span class="mono" style="font-weight:700;flex:none">${isCorrect ? `✓ correct ${state.combo >= 2 ? `(+15 XP)` : '(+10 XP)'}` : '✗ wrong'}</span><span>${q.note}</span>`;
+  requestAnimationFrame(() => exp.classList.add('show'));
+
+  const next = view.querySelector('#nextBtn');
+  next.disabled = false;
+  next.focus({ preventScroll: true });
+}
+
+function nextQuestion() {
+  if (state.answers[state.qIndex] === null) return;
+  const card = view.querySelector('#qcard');
+  const advance = () => {
+    if (state.qIndex < questions.length - 1) {
+      state.qIndex++;
+      render();
+    } else {
+      state.lastMode = state.mode;
+      state.route = 'result';
+      render();
+      const score = questions.filter((q, i) => state.answers[i] === q.correct).length;
+      if (score === questions.length) {
+        setTimeout(confetti, 1600);
+        setTimeout(() => showToast('clean-build — 全問正解でセッション完了 ✨'), 2100);
+      }
+    }
+  };
+  if (reduceMotion || !card) { advance(); return; }
+  card.classList.add('leaving');
+  setTimeout(advance, 160);
+}
+
+/* ================= event wiring ================= */
+function bindView() {
+  view.querySelectorAll('[data-opt]').forEach(btn => {
+    btn.addEventListener('click', () => selectOption(parseInt(btn.dataset.opt, 10)));
+  });
+  const next = view.querySelector('#nextBtn');
+  if (next) next.addEventListener('click', nextQuestion);
+}
+
+document.addEventListener('click', ev => {
+  const closer = ev.target.closest('[data-winclose]');
+  if (closer) { go(state.route === 'exercise' ? 'quizIntro' : 'dashboard'); return; }
+
+  const crt = ev.target.closest('#crtToggle');
+  if (crt) {
+    const on = crt.classList.toggle('active');
+    crt.setAttribute('aria-pressed', String(on));
+    document.getElementById('scanlines').classList.toggle('off', !on);
+    return;
+  }
+
+  const toastClose = ev.target.closest('#toastClose');
+  if (toastClose) { document.getElementById('toast').classList.remove('show'); return; }
+
+  const starter = ev.target.closest('[data-start]');
+  if (starter) { startExercise(starter.dataset.start); return; }
+
+  const goer = ev.target.closest('[data-go]');
+  if (goer && !goer.disabled) { go(goer.dataset.go); return; }
+});
+
+document.addEventListener('keydown', ev => {
+  if (state.route !== 'exercise') return;
+  if (ev.key >= '1' && ev.key <= '4') selectOption(parseInt(ev.key, 10) - 1);
+  if (ev.key === 'Enter') nextQuestion();
+});
+
+/* ================= system tray clock ================= */
+function updateClock() {
+  const el = document.getElementById('clock');
+  if (!el) return;
+  const d = new Date();
+  el.textContent = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+updateClock();
+setInterval(updateClock, 60000);
+
+/* ================= boot sequence ================= */
+function bootThenRender() {
+  const bootEl = document.getElementById('boot');
+  let already = false;
+  try { already = sessionStorage.getItem('devpath-booted') === '1'; } catch (e) {}
+  if (already || reduceMotion) {
+    bootEl.style.display = 'none';
+    render();
+    return;
+  }
+  let done = false;
+  const finish = () => {
+    if (done) return;
+    done = true;
+    try { sessionStorage.setItem('devpath-booted', '1'); } catch (e) {}
+    bootEl.classList.add('hide');
+    setTimeout(() => { bootEl.style.display = 'none'; }, 420);
+    render();
+  };
+  bootEl.addEventListener('click', finish);
+  setTimeout(finish, 1800);
+}
+
+bootThenRender();
+</script>
+</body>
+</html>

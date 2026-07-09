@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DevPath — Unified Mockup (Neo Flat × Terminal)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ==========================================================
+     Design tokens — Playful Dev-Native Neo Flat
+     Duolingo のループと形（チャンキーなボタン・ベタ塗り・バウンス）
+     × GitHub の計器盤（草・ストリーク・数値）
+     × エディタの色彩（シンタックスハイライトパレット）
+     ダークファースト。
+     ========================================================== */
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  :root, :root[data-theme="dark"]{
+    --bg:#0d1117; --surface:#161b22; --well:#1c2330; --border:#30363d; --border-hi:#454d57;
+    --ink:#e6edf3; --ink-2:#c9d1d9; --mute:#9198a1; --faint:#6e7681;
+    /* syntax palette (VS Code / GitHub dark) */
+    --green:#3fb950; --green-shade:#26903b; --green-bg:rgba(63,185,80,.14);
+    --red:#f85149; --red-shade:#c93c36; --red-bg:rgba(248,81,73,.13);
+    --blue:#58a6ff; --blue-shade:#3d7dd6; --blue-bg:rgba(88,166,255,.13);
+    --yellow:#e3b341; --purple:#bc8cff; --purple-bg:rgba(188,140,255,.13);
+    --orange:#f0883e; --cyan:#39c5cf;
+    --heat0:#1c2330; --heat1:#0e4429; --heat2:#006d32; --heat3:#26a641; --heat4:#39d353;
+    --key-bg:#21262d;
+    --ease-out:cubic-bezier(.22,1,.36,1);
+    --ease-spring:cubic-bezier(.34,1.56,.64,1);
+  }
+  :root[data-theme="light"]{
+    --bg:#f6f8fa; --surface:#ffffff; --well:#eef1f4; --border:#d0d7de; --border-hi:#b4bcc4;
+    --ink:#1f2328; --ink-2:#3d444d; --mute:#59636e; --faint:#818b98;
+    --green:#2da44e; --green-shade:#1f7a38; --green-bg:rgba(45,164,78,.12);
+    --red:#cf222e; --red-shade:#a40e26; --red-bg:rgba(207,34,46,.10);
+    --blue:#0969da; --blue-shade:#0550ae; --blue-bg:rgba(9,105,218,.10);
+    --yellow:#9a6700; --purple:#8250df; --purple-bg:rgba(130,80,223,.10);
+    --orange:#bc4c00; --cyan:#1b7c83;
+    --heat0:#ebedf0; --heat1:#9be9a8; --heat2:#40c463; --heat3:#30a14e; --heat4:#216e39;
+    --key-bg:#f0f2f5;
+  }
+  body{background:var(--bg);font-family:'Inter',system-ui,sans-serif;color:var(--ink-2);transition:background .3s,color .3s}
+  button{font-family:inherit}
+  .mono{font-family:'JetBrains Mono',monospace}
+  :focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:6px}
+
+  /* ============ surfaces ============ */
+  .card{background:var(--surface);border:2px solid var(--border);border-radius:16px;transition:background .3s,border-color .3s}
+  .well{background:var(--well);border-radius:12px}
+  .chip{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--border);border-radius:9999px;background:var(--well);font-family:'JetBrains Mono',monospace}
+
+  /* ============ chunky buttons (Duolingo 文法) ============ */
+  .btn{position:relative;overflow:hidden;border:0;border-radius:14px;font-weight:800;letter-spacing:.03em;cursor:pointer;transition:filter .15s,transform .08s,box-shadow .08s,opacity .3s}
+  .btn:active{transform:translateY(4px);box-shadow:0 0 0 transparent !important}
+  .btn-green{background:var(--green);color:#fff;box-shadow:0 4px 0 var(--green-shade)}
+  .btn-green:hover{filter:brightness(1.1)}
+  .btn-blue{background:var(--blue);color:#fff;box-shadow:0 4px 0 var(--blue-shade)}
+  .btn-blue:hover{filter:brightness(1.1)}
+  .btn-ghost{background:var(--surface);color:var(--ink-2);border:2px solid var(--border);box-shadow:0 4px 0 var(--border)}
+  .btn-ghost:hover{border-color:var(--border-hi);color:var(--ink)}
+  .btn[disabled]{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none !important}
+
+  /* ============ layout ============ */
+  .app{display:flex;gap:20px;max-width:1240px;margin:0 auto;padding:20px;min-height:100vh}
+  .sidebar{width:236px;flex:none;display:flex;flex-direction:column;padding:18px 14px;align-self:flex-start;position:sticky;top:20px;max-height:calc(100vh - 40px)}
+  .main{flex:1;display:flex;flex-direction:column;gap:20px;min-width:0;padding-bottom:24px}
+
+  .navitem{position:relative;display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:12px;border:2px solid transparent;background:transparent;cursor:pointer;font-size:14px;font-weight:600;color:var(--mute);width:100%;text-align:left;transition:background .2s,color .2s,border-color .2s}
+  .navitem:hover{background:var(--well);color:var(--ink-2)}
+  .navitem.active{background:var(--blue-bg);border-color:var(--blue);color:var(--blue)}
+  .nav-badge{margin-left:auto;font-size:11px;font-weight:700;color:#fff;background:var(--red);padding:2px 9px;border-radius:9999px;animation:badge-pulse 2.4s ease-in-out infinite}
+  @keyframes badge-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.14)}}
+
+  .theme-toggle{display:grid;place-items:center;width:36px;height:36px;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--mute);cursor:pointer;transition:color .2s,border-color .2s,transform .3s var(--ease-spring)}
+  .theme-toggle:hover{color:var(--yellow);border-color:var(--border-hi);transform:rotate(15deg)}
+
+  .appbar{display:none}
+  .tabbar{display:none}
+
+  /* ============ terminal decorations ============ */
+  .term-crumb{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--faint);display:flex;align-items:center;gap:2px;flex-wrap:wrap}
+  .term-crumb .p{color:var(--green);margin-right:6px}
+  .cursor{display:inline-block;width:7px;height:14px;background:var(--green);margin-left:6px;animation:blink 1.1s steps(1) infinite;vertical-align:-2px}
+  @keyframes blink{50%{opacity:0}}
+  .term-win{border:2px solid var(--border);border-radius:12px;overflow:hidden;background:#0d1117}
+  :root[data-theme="light"] .term-win{background:#0d1117}
+  .term-head{display:flex;align-items:center;gap:9px;padding:8px 14px;background:#161b22;border-bottom:1px solid #30363d}
+  .term-badge{display:grid;place-items:center;padding:3px 6px;border-radius:5px;background:rgba(63,185,80,.15);border:1px solid rgba(63,185,80,.45);color:#3fb950;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;line-height:1}
+  .term-title{font-family:'JetBrains Mono',monospace;font-size:11px;color:#8b949e}
+  .term-meta{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#6e7681}
+  .term-body{padding:16px 18px;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.8;color:#c9d1d9;overflow-x:auto;white-space:pre}
+
+  /* ============ stagger / motion ============ */
+  .reveal{opacity:0;animation:rise .5s var(--ease-out) forwards;animation-delay:calc(var(--i,0)*70ms)}
+  @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+  .view-exit{animation:sink .16s ease-in forwards}
+  @keyframes sink{to{opacity:0;transform:translateY(-10px)}}
+  .pop-in{animation:pop .45s var(--ease-spring)}
+  @keyframes pop{0%{transform:scale(0)}70%{transform:scale(1.25)}100%{transform:scale(1)}}
+  .bounce{animation:bounce .5s var(--ease-spring)}
+  @keyframes bounce{0%{transform:translateY(0)}35%{transform:translateY(-7px)}70%{transform:translateY(2px)}100%{transform:translateY(0)}}
+  .wiggle{animation:wiggle 2.6s ease-in-out infinite}
+  @keyframes wiggle{0%,100%{transform:rotate(0)}8%{transform:rotate(-8deg)}16%{transform:rotate(8deg)}24%{transform:rotate(0)}}
+
+  /* ============ components ============ */
+  .page-head h1{margin:0;font-size:25px;font-weight:900;letter-spacing:-.02em;color:var(--ink)}
+  .page-head p{margin:6px 0 0;font-size:14px;color:var(--mute)}
+
+  .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+  .stat-card{padding:18px}
+  .stat-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:12px}
+  .stat-value{margin-top:12px;font-size:26px;font-weight:800;color:var(--ink);font-family:'JetBrains Mono',monospace;letter-spacing:-.03em}
+  .stat-unit{font-size:13px;font-weight:600;color:var(--mute)}
+  .stat-label{margin-top:2px;font-size:12.5px;color:var(--mute)}
+
+  /* heatmap（草） */
+  .heat-grid{display:grid;grid-template-rows:repeat(7,1fr);grid-auto-flow:column;gap:3px}
+  .heat-cell{width:100%;aspect-ratio:1;border-radius:2.5px;background:var(--heat0);opacity:0;animation:heat-in .3s forwards;animation-delay:calc(var(--i)*4ms)}
+  @keyframes heat-in{to{opacity:1}}
+
+  /* progress（セグメント） */
+  .seg-track{display:flex;gap:6px}
+  .seg{flex:1;height:14px;border-radius:9999px;background:var(--well);border:1.5px solid var(--border);overflow:hidden;position:relative}
+  .seg .seg-fill{position:absolute;inset:0;background:var(--green);border-radius:9999px;transform:scaleX(0);transform-origin:left;transition:transform .5s var(--ease-out)}
+  .seg.done .seg-fill{transform:scaleX(1)}
+
+  .bar-track{height:12px;border-radius:9999px;background:var(--well);border:1.5px solid var(--border);overflow:hidden}
+  .bar-fill{height:100%;border-radius:9999px;width:0;animation:fillw 1s var(--ease-out) forwards;animation-delay:calc(.2s + var(--i,0)*90ms)}
+  @keyframes fillw{to{width:var(--w)}}
+
+  .row-press{display:flex;align-items:center;gap:13px;padding:11px 12px;border-radius:12px;border:2px solid transparent;cursor:pointer;transition:background .2s,border-color .2s,transform .15s}
+  .row-press:hover{background:var(--well);border-color:var(--border);transform:translateX(3px)}
+
+  /* keycap */
+  .key{display:grid;place-items:center;min-width:26px;height:26px;padding:0 6px;border-radius:7px;background:var(--key-bg);border:1.5px solid var(--border);border-bottom-width:3px;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--mute);transition:all .2s}
+
+  /* quiz options */
+  .optbtn{display:flex;width:100%;align-items:center;gap:14px;border:2px solid var(--border);border-radius:14px;background:var(--surface);padding:15px 18px;text-align:left;cursor:pointer;color:var(--ink);font-size:14.5px;font-weight:600;box-shadow:0 3px 0 var(--border);transition:border-color .15s,background .15s,transform .08s,box-shadow .08s,opacity .3s}
+  .optbtn:not(.locked):hover{border-color:var(--blue);background:var(--blue-bg)}
+  .optbtn:not(.locked):active{transform:translateY(3px);box-shadow:0 0 0 transparent}
+  .optbtn.locked{opacity:1;cursor:default;transform:none}
+  .optbtn.locked:not(.opt-correct):not(.opt-wrong){opacity:.42}
+  .optbtn.opt-correct{border-color:var(--green);background:var(--green-bg);color:var(--green);box-shadow:0 3px 0 var(--green-shade);animation:opt-bounce .5s var(--ease-spring)}
+  .optbtn.opt-correct .key{background:var(--green);border-color:var(--green-shade);color:#fff;animation:pop .45s var(--ease-spring)}
+  .optbtn.opt-wrong{border-color:var(--red);background:var(--red-bg);color:var(--red);box-shadow:0 3px 0 var(--red-shade);animation:shake .45s ease-in-out}
+  .optbtn.opt-wrong .key{background:var(--red);border-color:var(--red-shade);color:#fff;animation:pop .45s var(--ease-spring)}
+  @keyframes opt-bounce{0%{transform:translateY(0)}35%{transform:translateY(-6px)}70%{transform:translateY(1px)}100%{transform:translateY(0)}}
+  @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+
+  .exp{border-radius:14px;border:2px solid transparent;padding:0 17px;line-height:1.7;font-size:14px;display:flex;gap:10px;overflow:hidden;max-height:0;opacity:0;margin-top:0;transition:max-height .5s var(--ease-out),opacity .45s,margin .45s,padding .45s}
+  .exp.show{max-height:220px;opacity:1;margin-top:18px;padding-top:14px;padding-bottom:14px}
+  .exp.ok{background:var(--green-bg);border-color:var(--green);color:var(--green)}
+  .exp.ng{background:var(--red-bg);border-color:var(--red);color:var(--red)}
+
+  /* combo */
+  .combo{position:absolute;top:-12px;right:16px;padding:5px 14px;border-radius:9999px;background:var(--orange);color:#fff;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;box-shadow:0 3px 0 rgba(0,0,0,.25);transform:scale(0)}
+  .combo.show{animation:combo-pop .5s var(--ease-spring) forwards}
+  .combo.hot{background:var(--red)}
+  @keyframes combo-pop{0%{transform:scale(0) rotate(-12deg)}70%{transform:scale(1.25) rotate(4deg)}100%{transform:scale(1) rotate(0)}}
+
+  .qcard{transition:opacity .2s,transform .2s}
+  .qcard.leaving{opacity:0;transform:translateX(-26px)}
+
+  /* result terminal lines */
+  .tline{display:block;opacity:0;transform:translateY(6px);animation:tline .35s var(--ease-out) forwards;animation-delay:calc(.3s + var(--i)*.3s)}
+  @keyframes tline{to{opacity:1;transform:none}}
+
+  /* skill tree（ターミナルの tree コマンド出力風） */
+  .tree-line{display:block}
+  .tree-rows{display:flex;flex-direction:column}
+  .tree-row-btn{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:0;background:transparent;color:#c9d1d9;font-family:'JetBrains Mono',monospace;font-size:13px;min-height:44px;padding:10px 14px;margin:0;cursor:pointer;border-radius:6px;transition:background .15s}
+  .tree-row-btn:hover,.tree-row-btn:focus-visible{background:rgba(88,166,255,.12)}
+  .tree-row-btn.locked{cursor:not-allowed;color:#6e7681}
+  .tree-row-btn .tprefix{color:#6e7681;flex:none}
+  .tree-row-btn .tname{flex:1;min-width:0;display:flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tree-row-btn .tstatus{flex:none;white-space:nowrap;display:flex;align-items:center;gap:6px}
+  .tree-locked-line{display:flex;align-items:center;gap:10px;padding:6px 14px;color:#6e7681;font-family:'JetBrains Mono',monospace;font-size:13px}
+  .pulse-tag{animation:pulse-op 1.4s ease-in-out infinite}
+  @keyframes pulse-op{0%,100%{opacity:1}50%{opacity:.35}}
+  @media(max-width:920px){
+    .tree-row-btn{flex-wrap:wrap;min-height:auto;row-gap:4px}
+    .tree-row-btn .tstatus{white-space:normal}
+  }
+
+  /* achievements */
+  .badge{display:inline-flex;align-items:center;gap:8px;padding:7px 13px;border-radius:10px;border:1.5px solid var(--border);background:var(--well);font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:var(--ink-2)}
+  .badge.locked{opacity:.4;filter:grayscale(1)}
+  .toast{position:fixed;right:24px;bottom:24px;z-index:100;display:flex;align-items:center;gap:14px;padding:16px 20px;border-radius:16px;background:var(--surface);border:2px solid var(--yellow);box-shadow:0 5px 0 rgba(0,0,0,.28);transform:translateX(130%);transition:transform .55s var(--ease-spring)}
+  .toast.show{transform:none}
+
+  /* charts */
+  .chart{display:flex;height:180px;align-items:stretch;gap:12px;border:2px solid var(--border);border-radius:14px;padding:16px;background:var(--well)}
+  .bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0}
+  .bar-area{flex:1;width:100%;display:flex;align-items:flex-end}
+  .vbar{width:100%;border-radius:6px 6px 3px 3px;background:var(--blue);height:0;animation:barh .8s var(--ease-out) forwards;animation-delay:calc(.2s + var(--i)*80ms);transition:filter .2s;cursor:pointer}
+  .vbar:hover{filter:brightness(1.25)}
+  @keyframes barh{to{height:var(--h)}}
+  .dist{display:flex;height:16px;border-radius:9999px;overflow:hidden;border:1.5px solid var(--border)}
+  .dist>div{width:0;animation:distw 1s var(--ease-out) forwards;animation-delay:.35s}
+  @keyframes distw{to{width:var(--w)}}
+
+  /* confetti */
+  .confetti-box{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:99}
+  .confetti{position:absolute;top:-14px;width:9px;height:14px;border-radius:2px;animation:cfall linear forwards}
+  @keyframes cfall{0%{transform:translateY(0) rotate(0)}100%{transform:translateY(105vh) rotate(660deg)}}
+
+  /* XP bar */
+  .xp-wrap{margin-top:auto;padding:13px;border-radius:14px;border:2px solid var(--border);background:var(--well)}
+
+  /* ============ responsive (SP) ============ */
+  @media (max-width:920px){
+    .app{flex-direction:column;padding:0 16px 96px;gap:16px}
+    .sidebar{display:none}
+    .appbar{display:flex;align-items:center;justify-content:space-between;padding:14px 2px 2px;position:sticky;top:0;background:var(--bg);z-index:10;transition:background .3s}
+    .stat-grid{grid-template-columns:1fr 1fr;gap:12px}
+    .two-col{grid-template-columns:1fr !important}
+    .page-head h1{font-size:22px}
+    .tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:2px solid var(--border);padding:8px 6px calc(10px + env(safe-area-inset-bottom));z-index:20;transition:background .3s}
+    .tab{flex:1;border:0;background:transparent;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;padding:4px 0;color:var(--faint);position:relative;transition:color .25s}
+    .tab.active{color:var(--blue)}
+    .tab.active svg{animation:bounce .45s var(--ease-spring)}
+    .tab-badge{position:absolute;top:-2px;right:22px;min-width:16px;height:16px;padding:0 4px;border-radius:9999px;background:var(--red);color:#fff;font-size:9px;font-weight:700;display:grid;place-items:center}
+    .chart{height:130px;gap:8px;padding:12px}
+    .hero-cta{flex-direction:column;align-items:stretch !important}
+    .toast{left:16px;right:16px}
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.01ms !important;animation-delay:0ms !important;transition-duration:.01ms !important}
+    .reveal,.heat-cell,.tline{opacity:1}
+    .bar-fill{width:var(--w)}
+    .vbar{height:var(--h)}
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ===== SIDEBAR (PC) ===== -->
+  <aside class="sidebar card">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 2px 18px">
+      <div data-go="dashboard" class="go" style="display:flex;align-items:center;gap:11px;cursor:pointer">
+        <span class="wiggle" style="display:grid;place-items:center;width:42px;height:42px;border-radius:13px;background:var(--green);color:#fff;box-shadow:0 4px 0 var(--green-shade)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></span>
+        <div style="line-height:1.25"><div style="font-size:15px;font-weight:800;color:var(--ink);letter-spacing:-.01em">DevPath</div><div class="mono" style="font-size:10.5px;color:var(--faint)">v0.4.2-beta</div></div>
+      </div>
+      <button class="theme-toggle" aria-label="テーマ切替" title="ライト/ダーク切替"></button>
+    </div>
+    <nav style="display:flex;flex-direction:column;gap:6px">
+      <button class="navitem" data-nav="dashboard" data-go="dashboard"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>ダッシュボード</button>
+      <button class="navitem" data-nav="learn" data-go="learn"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>教材</button>
+      <button class="navitem" data-nav="quiz" data-go="quizIntro"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>演習</button>
+      <button class="navitem" data-nav="review" data-go="reviewIntro"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>復習<span class="nav-badge">3</span></button>
+      <button class="navitem" data-nav="analytics" data-go="analytics"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>アナリティクス</button>
+      <button class="navitem" data-nav="domains" data-go="domains"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/><line x1="12" y1="8" x2="5" y2="16"/><line x1="12" y1="8" x2="19" y2="16"/></svg>スキルツリー</button>
+    </nav>
+    <div class="xp-wrap">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <span style="display:flex;align-items:center;gap:8px"><span style="display:grid;place-items:center;width:30px;height:30px;border-radius:9999px;background:var(--purple);color:#fff;font-weight:800;font-size:12px">田</span><span style="font-size:13px;font-weight:700;color:var(--ink)">田中</span></span>
+        <span class="mono" style="font-size:11.5px;font-weight:700;color:var(--purple)">Lv.8</span>
+      </div>
+      <div class="bar-track" style="margin-top:10px;height:9px"><div class="bar-fill" style="--w:65%;background:var(--purple)"></div></div>
+      <div class="mono" style="margin-top:6px;font-size:10px;color:var(--faint);text-align:right">1,240 / 1,900 XP</div>
+    </div>
+  </aside>
+
+  <!-- ===== APP BAR (SP) ===== -->
+  <div class="appbar">
+    <div class="go" data-go="dashboard" style="display:flex;align-items:center;gap:10px;cursor:pointer">
+      <span style="display:grid;place-items:center;width:36px;height:36px;border-radius:11px;background:var(--green);color:#fff;box-shadow:0 3px 0 var(--green-shade)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></span>
+      <div style="line-height:1.2"><div style="font-size:14px;font-weight:800;color:var(--ink)">DevPath</div><div class="mono" style="font-size:10px;color:var(--faint)">v0.4.2-beta</div></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="chip" style="padding:4px 10px;font-size:11px;font-weight:700;color:var(--orange)">🔥 12</span>
+      <button class="theme-toggle" aria-label="テーマ切替"></button>
+    </div>
+  </div>
+
+  <!-- ===== MAIN VIEW ===== -->
+  <main class="main" id="view"></main>
+</div>
+
+<!-- ===== TAB BAR (SP) ===== -->
+<nav class="tabbar">
+  <button class="tab" data-nav="dashboard" data-go="dashboard"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span style="font-size:10px;font-weight:700">ホーム</span></button>
+  <button class="tab" data-nav="learn" data-go="learn"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span style="font-size:10px;font-weight:700">教材</span></button>
+  <button class="tab" data-nav="quiz" data-go="quizIntro"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span style="font-size:10px;font-weight:700">演習</span></button>
+  <button class="tab" data-nav="review" data-go="reviewIntro"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg><span style="font-size:10px;font-weight:700">復習</span><span class="tab-badge">3</span></button>
+  <button class="tab" data-nav="domains" data-go="domains"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/><line x1="12" y1="8" x2="5" y2="16"/><line x1="12" y1="8" x2="19" y2="16"/></svg><span style="font-size:10px;font-weight:700">ツリー</span></button>
+</nav>
+
+<!-- achievement toast -->
+<div class="toast" id="toast" role="status">
+  <span style="font-size:30px">🏆</span>
+  <div><div class="mono" style="font-size:11px;color:var(--yellow);font-weight:700;letter-spacing:.08em">ACHIEVEMENT UNLOCKED</div><div class="mono" id="toastBody" style="margin-top:3px;font-size:13.5px;font-weight:700;color:var(--ink)"></div></div>
+</div>
+
+<script>
+'use strict';
+
+/* ================= data ================= */
+const questions = [
+  { id: 'XSS-001', text: 'ユーザー入力をHTML本文へ表示する際、最初に検討すべき対策はどれですか？', options: ['出力時に文脈に応じてエスケープする', '入力値をすべて削除する', 'CookieをHttpOnlyにするだけでよい', 'CSPだけを設定する'], correct: 0, note: 'XSS対策の基本は、HTML本文・属性・URL・JavaScriptなど出力文脈に応じたエスケープです。', srs: { before: '4d', after: '8d', due: '7/16' } },
+  { id: 'XSS-002', text: 'Reactで通常のテキスト埋め込みが比較的安全な理由はどれですか？', options: ['JSXの文字列展開は標準でHTMLエスケープされる', 'ブラウザがscriptタグを必ず無視する', 'Reactは通信を暗号化する', 'DOM APIがすべて無効化される'], correct: 0, note: 'Reactはテキストとして埋め込む値をエスケープします。ただし dangerouslySetInnerHTML などは別途注意が必要です。', srs: { before: '2d', after: '5d', due: '7/13' } },
+  { id: 'XSS-003', text: '保存型XSSの説明として最も適切なものはどれですか？', options: ['悪意ある入力がDBなどに保存され、後から閲覧者へ配信される', 'URLのクエリだけで一時的に発火する', 'HTTPSを使わない通信だけで発生する', 'サーバーのCPU使用率が上がる攻撃である'], correct: 0, note: '保存型XSSは投稿・プロフィール等に保存されたスクリプトが、他ユーザー閲覧時に実行されるタイプです。', srs: { before: '1d', after: '3d', due: '7/11' } },
+];
+
+const icons = {
+  refresh: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>',
+  chart: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>',
+  zap: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+  flame: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>',
+  shield: '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+  code: '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>',
+  db: '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>',
+  arch: '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>',
+  book: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
+  file: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
+  pencil: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+  check: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+  checkBold: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+  xBold: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+  checkBig: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+  lock: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
+  star: '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+  arrowR: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>',
+  arrowL: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>',
+  sun: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>',
+  moon: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>',
+};
+
+const domains = [
+  { name: 'Security', pct: 42, icon: icons.shield, color: 'var(--green)' },
+  { name: 'Frontend', pct: 68, icon: icons.code, color: 'var(--blue)' },
+  { name: 'Backend', pct: 31, icon: icons.db, color: 'var(--purple)' },
+  { name: 'Architecture', pct: 18, icon: icons.arch, color: 'var(--orange)' },
+];
+const weekly = [42, 58, 36, 72, 64, 88, 76];
+const days = ['月', '火', '水', '木', '金', '土', '日'];
+const codeSample = '<span style="color:#8b949e">// Avoid: userInput contains HTML</span>\n<span style="color:#ff7b72">&lt;div</span> <span style="color:#79c0ff">dangerouslySetInnerHTML</span>=<span style="color:#a5d6ff">{{ __html: userInput }}</span> <span style="color:#ff7b72">/&gt;</span>\n\n<span style="color:#8b949e">// Prefer: render as text</span>\n<span style="color:#ff7b72">&lt;p&gt;</span><span style="color:#a5d6ff">{userInput}</span><span style="color:#ff7b72">&lt;/p&gt;</span>';
+
+const skillPath = [
+  { label: 'XSSの基礎', sub: 'xss-basics', state: 'done', x: 0 },
+  { label: 'エスケープ設計', sub: 'escaping', state: 'done', x: 70 },
+  { label: '保存型XSS', sub: 'stored-xss', state: 'current', pct: 60, x: 110 },
+  { label: 'CSP', sub: 'csp', state: 'locked', x: 70 },
+  { label: '認証・認可', sub: 'authn-authz', state: 'locked', x: 0 },
+  { label: 'OWASP Top 10', sub: 'owasp', state: 'locked', x: -70 },
+];
+
+const achievements = [
+  { id: 'first-blood', label: 'first-commit', desc: '初レッスン完了', unlocked: true, emoji: '🌱' },
+  { id: 'night-owl', label: 'night-owl', desc: '深夜2時に演習', unlocked: true, emoji: '🦉' },
+  { id: 'womm', label: 'it-works-on-my-machine', desc: '不正解→復習で定着', unlocked: true, emoji: '🤝' },
+  { id: 'clean-build', label: 'clean-build', desc: '全問正解でセッション完了', unlocked: false, emoji: '✨' },
+  { id: 'streak-30', label: 'uptime-30d', desc: '30日連続学習', unlocked: false, emoji: '📈' },
+];
+
+/* ================= state ================= */
+const state = { route: 'dashboard', mode: 'quiz', lastMode: 'quiz', qIndex: 0, answers: [null, null, null], combo: 0, sessionXp: 0 };
+const view = document.getElementById('view');
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ================= theme ================= */
+function setTheme(t) {
+  document.documentElement.dataset.theme = t;
+  try { localStorage.setItem('devpath-unified-theme', t); } catch (e) {}
+  document.querySelectorAll('.theme-toggle').forEach(b => { b.innerHTML = t === 'dark' ? icons.sun : icons.moon; });
+}
+
+/* ================= helpers ================= */
+let revealIdx = 0;
+function rv(extraClass = '', extraStyle = '') {
+  return `class="reveal ${extraClass}" style="--i:${revealIdx++};${extraStyle}"`;
+}
+
+function termCrumb(cmd) {
+  return `<div class="term-crumb"><span class="p">~/devpath $</span><span>${cmd}</span><span class="cursor"></span></div>`;
+}
+
+/* GitHub 風の草（シード付き擬似乱数で生成、直近12日はストリーク） */
+function heatmapHTML(weeks = 26) {
+  let s = 42;
+  const rand = () => { s = (s * 1664525 + 1013904223) % 4294967296; return s / 4294967296; };
+  const total = weeks * 7;
+  let cells = '';
+  for (let i = 0; i < total; i++) {
+    const daysAgo = total - 1 - i;
+    let level;
+    if (daysAgo < 12) level = 2 + Math.floor(rand() * 3);           // ストリーク中
+    else level = rand() < .32 ? 0 : Math.ceil(rand() * 4);          // それ以前
+    const count = level === 0 ? 0 : level * 3 + Math.floor(rand() * 3);
+    cells += `<span class="heat-cell" style="--i:${i};background:var(--heat${level})" title="${count}問 · ${daysAgo}日前"></span>`;
+  }
+  return `<div class="heat-grid" style="grid-template-columns:repeat(${weeks},1fr)">${cells}</div>`;
+}
+
+/* ================= screens ================= */
+function dashboardHTML() {
+  const stats = [
+    { icon: icons.refresh, color: 'var(--blue)', bg: 'var(--blue-bg)', num: 3, unit: ' 問', label: '今日の復習 due' },
+    { icon: icons.chart, color: 'var(--green)', bg: 'var(--green-bg)', num: 78, unit: ' %', label: '正答率 · 直近7日' },
+    { icon: icons.zap, color: 'var(--purple)', bg: 'var(--purple-bg)', num: 1240, unit: ' XP', label: '累計 XP · Lv.8' },
+    { icon: icons.flame, color: 'var(--orange)', bg: 'rgba(240,136,62,.14)', num: 12, unit: ' 日', label: '連続学習ストリーク', flame: true },
+  ];
+  return `
+  <div ${rv('', 'display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:4px 4px 0;flex-wrap:wrap')}>
+    <div class="page-head">${termCrumb('devpath status')}<h1 style="margin-top:10px">おかえりなさい、田中さん</h1><p>復習キューに3問。ストリークは12日目です 🔥</p></div>
+    <button class="btn btn-green" data-go="reviewIntro" style="font-size:14px;padding:13px 22px;display:inline-flex;align-items:center;gap:8px">復習を始める ${icons.arrowR}</button>
+  </div>
+  <div class="stat-grid">
+    ${stats.map(s => `
+    <div ${rv('card stat-card')}>
+      <span class="stat-icon ${s.flame ? 'wiggle' : ''}" style="background:${s.bg};color:${s.color}">${s.icon}</span>
+      <div class="stat-value"><span data-count="${s.num}">0</span><span class="stat-unit">${s.unit}</span></div>
+      <div class="stat-label">${s.label}</div>
+    </div>`).join('')}
+  </div>
+  <section ${rv('card', 'padding:22px')}>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <h2 style="margin:0;font-size:16px;font-weight:800;color:var(--ink)">学習コントリビューション</h2>
+      <span class="mono" style="font-size:11.5px;color:var(--faint)">直近26週 · 総512問</span>
+    </div>
+    <div style="margin-top:16px">${heatmapHTML()}</div>
+    <div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <span class="mono" style="font-size:11px;color:var(--orange);font-weight:700">🔥 12日連続 — 草を絶やすな</span>
+      <span class="mono" style="display:flex;align-items:center;gap:4px;font-size:10.5px;color:var(--faint)">Less ${[0,1,2,3,4].map(l => `<span style="width:10px;height:10px;border-radius:2.5px;background:var(--heat${l});display:inline-block"></span>`).join('')} More</span>
+    </div>
+  </section>
+  <div class="two-col" style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+    <section ${rv('card', 'padding:22px')}>
+      <h2 style="margin:0;font-size:16px;font-weight:800;color:var(--ink)">領域別の習得状況</h2>
+      <div style="margin-top:18px;display:flex;flex-direction:column;gap:17px">
+        ${domains.map((d, i) => `
+        <button class="go" data-go="domains" style="border:0;background:transparent;padding:0;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:13px;text-align:left">
+          <span style="display:grid;place-items:center;width:40px;height:40px;flex:none;border-radius:12px;background:var(--well);border:2px solid var(--border);color:${d.color}">${d.icon}</span>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;justify-content:space-between;font-size:13.5px;margin-bottom:7px"><span style="font-weight:700;color:var(--ink-2)">${d.name}</span><span class="mono" style="font-weight:700;color:var(--ink)">${d.pct}%</span></div>
+            <div class="bar-track"><div class="bar-fill" style="--w:${d.pct}%;--i:${i};background:${d.color}"></div></div>
+          </div>
+        </button>`).join('')}
+      </div>
+    </section>
+    <section ${rv('card', 'padding:22px')}>
+      <h2 style="margin:0;font-size:16px;font-weight:800;color:var(--ink)">実績</h2>
+      <div style="margin-top:14px;display:flex;flex-wrap:wrap;gap:9px">
+        ${achievements.map(a => `<span class="badge ${a.unlocked ? '' : 'locked'}" title="${a.desc}">${a.emoji} ${a.label}</span>`).join('')}
+      </div>
+      <div style="margin-top:18px;padding-top:16px;border-top:2px solid var(--border)">
+        <h2 style="margin:0;font-size:16px;font-weight:800;color:var(--ink)">最近のアクティビティ</h2>
+        <div style="margin-top:8px;display:flex;flex-direction:column;gap:4px">
+          <div class="row-press go" data-go="quizIntro"><span style="display:grid;place-items:center;width:32px;height:32px;flex:none;border-radius:10px;background:var(--green-bg);color:var(--green)">${icons.check}</span><div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:700;color:var(--ink-2)">演習を完了 <span class="mono" style="color:var(--green)">5/5</span></div><div class="mono" style="font-size:11px;color:var(--faint)">xss-basics · 2分前</div></div><span class="mono" style="font-size:12px;font-weight:700;color:var(--purple);flex:none">+30 XP</span></div>
+          <div class="row-press go" data-go="article"><span style="display:grid;place-items:center;width:32px;height:32px;flex:none;border-radius:10px;background:var(--blue-bg);color:var(--blue)">${icons.book}</span><div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:700;color:var(--ink-2)">レッスンを読了</div><div class="mono" style="font-size:11px;color:var(--faint)">security/xss · 15分前</div></div><span class="mono" style="font-size:12px;font-weight:700;color:var(--purple);flex:none">+10 XP</span></div>
+          <div class="row-press go" data-go="reviewIntro"><span style="display:grid;place-items:center;width:32px;height:32px;flex:none;border-radius:10px;background:var(--purple-bg);color:var(--purple)">${icons.refresh}</span><div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:700;color:var(--ink-2)">SRSがキューを更新</div><div class="mono" style="font-size:11px;color:var(--faint)">3件が due · 1時間前</div></div></div>
+        </div>
+      </div>
+    </section>
+  </div>
+  <section ${rv('card hero-cta', 'padding:20px 22px;display:flex;align-items:center;gap:18px;border-color:var(--green)')}>
+    <span style="display:grid;place-items:center;width:52px;height:52px;flex:none;border-radius:15px;background:var(--green-bg);color:var(--green)">${icons.file}</span>
+    <div style="flex:1"><div class="mono" style="font-size:11px;font-weight:700;color:var(--green);letter-spacing:.08em">NEXT LESSON</div><h3 style="margin:5px 0 0;font-size:18px;font-weight:800;color:var(--ink)">保存型XSSを理解する</h3><p style="margin:3px 0 0;font-size:13px;color:var(--mute)">教材本文 → 4択3問 · クリアで次ノードがアンロック</p></div>
+    <button class="btn btn-green" data-go="article" style="font-size:14px;padding:13px 22px;display:inline-flex;align-items:center;gap:8px;flex:none">続きから ${icons.arrowR}</button>
+  </section>`;
+}
+
+function learnHTML() {
+  return `
+  <div ${rv('', 'padding:4px 4px 0')}>${termCrumb('ls content/security/xss/')}<div class="page-head"><h1 style="margin-top:10px">Security / XSS</h1><p>トピック内のレッスン一覧</p></div></div>
+  <button ${rv('card go', 'padding:22px;display:flex;align-items:center;gap:18px;cursor:pointer;text-align:left;transition:border-color .2s,transform .15s')} data-go="article" onmouseover="this.style.borderColor='var(--blue)'" onmouseout="this.style.borderColor='var(--border)'">
+    <span style="display:grid;place-items:center;width:52px;height:52px;flex:none;border-radius:15px;background:var(--blue-bg);color:var(--blue)">${icons.file}</span>
+    <div style="flex:1;min-width:0">
+      <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap"><span class="chip" style="font-size:10.5px;font-weight:700;color:var(--blue);padding:3px 10px">lesson-01</span><span class="mono" style="font-size:11.5px;color:var(--faint)">~18min · 3 questions</span></div>
+      <h3 style="margin:10px 0 0;font-size:19px;font-weight:800;color:var(--ink)">XSSの基礎とエスケープ設計</h3>
+      <p style="margin:4px 0 0;font-size:13px;color:var(--mute)">Markdown本文・コード例・4択3問</p>
+    </div>
+    <span class="key" style="width:40px;height:40px;color:var(--blue)">${icons.arrowR}</span>
+  </button>`;
+}
+
+function articleHTML() {
+  return `
+  <div ${rv('', 'display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:4px 4px 0;flex-wrap:wrap')}>
+    <div>${termCrumb('cat security/xss/xss-basics.md')}<h1 style="margin:10px 0 0;font-size:25px;font-weight:900;letter-spacing:-.02em;color:var(--ink)">XSSの基礎とエスケープ設計</h1></div>
+    <button class="btn btn-ghost go" data-go="learn" style="font-size:13.5px;padding:11px 16px;display:inline-flex;align-items:center;gap:7px;flex:none">${icons.arrowL} 目次へ戻る</button>
+  </div>
+  <article ${rv('card', 'padding:32px 36px')}>
+    <div style="display:flex;flex-wrap:wrap;gap:8px"><span class="chip" style="color:var(--green);padding:5px 13px;font-size:12px;font-weight:700">security/xss</span><span class="chip" style="color:var(--mute);padding:5px 13px;font-size:12px">~18min</span><span class="chip" style="color:var(--mute);padding:5px 13px;font-size:12px">3 questions</span></div>
+    <p style="margin:22px 0 0;font-size:16px;line-height:1.85;color:var(--ink-2)">XSSは「入力値が危険」なのではなく、値がHTMLやJavaScriptとして解釈される文脈に混入することで成立します。実装では保存前の一律除去より、出力時の文脈別エスケープを軸に考えます。</p>
+    <h2 style="margin:30px 0 0;font-size:19px;font-weight:800;color:var(--ink)">危険な描画例</h2>
+    <p style="margin:12px 0 0;font-size:15px;line-height:1.8;color:var(--ink-2)">HTMLとして差し込むAPIは、信頼できるサニタイズ済みHTMLだけに限定します。</p>
+    <div class="term-win" style="margin-top:16px">
+      <div class="term-head"><span class="term-badge">&gt;_</span><span class="term-title">component.tsx</span><span class="term-meta">utf-8 · tsx</span></div>
+      <div class="term-body">${codeSample}</div>
+    </div>
+    <h2 style="margin:30px 0 0;font-size:19px;font-weight:800;color:var(--ink)">設計チェック</h2>
+    <ul style="margin:14px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:11px">
+      <li style="display:flex;gap:10px;font-size:15px;line-height:1.7;color:var(--ink-2)"><span class="mono" style="color:var(--green);font-weight:700">✓</span>HTML本文、属性、URL、JS文字列でエスケープ方式を分ける</li>
+      <li style="display:flex;gap:10px;font-size:15px;line-height:1.7;color:var(--ink-2)"><span class="mono" style="color:var(--green);font-weight:700">✓</span>CSPは防御層として追加し、主対策の代替にしない</li>
+      <li style="display:flex;gap:10px;font-size:15px;line-height:1.7;color:var(--ink-2)"><span class="mono" style="color:var(--green);font-weight:700">✓</span>レビュー対象にHTML直挿入の逃げ道を明記する</li>
+    </ul>
+    <div style="margin-top:28px;display:flex;justify-content:flex-end"><button class="btn btn-green" data-start="quiz" style="font-size:14px;padding:14px 24px;display:inline-flex;align-items:center;gap:8px">問題を解く ${icons.arrowR}</button></div>
+  </article>`;
+}
+
+function quizIntroHTML() {
+  return `
+  <div ${rv('', 'padding:4px 4px 0')}>${termCrumb('devpath quiz --lesson xss-basics')}<div class="page-head"><h1 style="margin-top:10px">演習</h1><p>1問ずつ即時採点。連続正解でコンボボーナス、解答はSRSに記録されます。</p></div></div>
+  <section ${rv('card', 'padding:24px')}>
+    <div style="display:flex;align-items:center;gap:16px">
+      <span class="bounce" style="display:grid;place-items:center;width:52px;height:52px;flex:none;border-radius:15px;background:var(--green-bg);color:var(--green)">${icons.pencil}</span>
+      <div style="flex:1"><span class="chip" style="font-size:10.5px;font-weight:700;color:var(--green);padding:3px 10px">security/xss</span><h3 style="margin:9px 0 0;font-size:19px;font-weight:800;color:var(--ink)">XSSの基礎とエスケープ設計</h3><p class="mono" style="margin:5px 0 0;font-size:12px;color:var(--faint)">3 questions · ~5min · +10 XP/correct · combo bonus</p></div>
+    </div>
+    <div style="margin-top:20px;padding-top:20px;border-top:2px solid var(--border);display:flex;gap:12px;flex-wrap:wrap">
+      <button class="btn btn-ghost go" data-go="article" style="flex:none;font-size:14px;padding:14px 22px">先に教材を読む</button>
+      <button class="btn btn-green" data-start="quiz" style="flex:1;min-width:220px;font-size:15px;padding:14px;display:flex;align-items:center;justify-content:center;gap:8px">START ${icons.arrowR}</button>
+    </div>
+  </section>`;
+}
+
+function reviewIntroHTML() {
+  const queue = [
+    { id: 'XSS-003', text: '保存型XSSの説明として最も適切なものは？', interval: '1d', ease: 2.1, tag: '2日 滞留', color: 'var(--red)' },
+    { id: 'XSS-001', text: 'HTML本文へ表示する際、最初に検討すべき対策は？', interval: '4d', ease: 2.4, tag: '1日 滞留', color: 'var(--orange)' },
+    { id: 'XSS-002', text: 'Reactのテキスト埋め込みが比較的安全な理由は？', interval: '2d', ease: 2.6, tag: '本日 due', color: 'var(--green)' },
+  ];
+  return `
+  <div ${rv('', 'padding:4px 4px 0')}>${termCrumb('devpath review --due')}<div class="page-head"><h1 style="margin-top:10px">今日の復習</h1><p>SRSが選んだ due キュー。interval と ease はすべて公開— 自分の記憶の計器盤です。</p></div></div>
+  <section ${rv('card', 'padding:24px')}>
+    <div style="display:flex;align-items:center;justify-content:space-between"><h2 style="margin:0;font-size:16px;font-weight:800;color:var(--ink)">due queue <span class="mono" style="font-size:12px;color:var(--faint);font-weight:400">(dueAt asc · limit 20)</span></h2><span class="chip" style="font-size:11px;font-weight:700;color:var(--red);padding:3px 11px">3 due</span></div>
+    <div style="margin-top:16px;display:flex;flex-direction:column;gap:10px">
+      ${queue.map((qi, i) => `
+      <div class="well reveal" style="--i:${i + 2};display:flex;align-items:center;gap:12px;padding:13px 15px;border:2px solid var(--border);border-radius:13px;flex-wrap:wrap">
+        <span class="key" style="color:var(--blue)">${qi.id}</span>
+        <span style="font-size:13.5px;font-weight:600;color:var(--ink-2);flex:1;min-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${qi.text}</span>
+        <span class="mono" style="font-size:11px;color:var(--faint)">ivl <b style="color:var(--ink-2)">${qi.interval}</b> · ease <b style="color:var(--ink-2)">${qi.ease}</b></span>
+        <span class="mono" style="font-size:11px;color:${qi.color};font-weight:700;flex:none">${qi.tag}</span>
+      </div>`).join('')}
+    </div>
+    <div style="margin-top:20px;padding-top:20px;border-top:2px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <button class="btn btn-ghost go" data-go="dashboard" style="font-size:13.5px;padding:12px 16px;display:inline-flex;align-items:center;gap:7px">${icons.arrowL} ホームへ戻る</button>
+      <button class="btn btn-green" data-start="review" style="font-size:14px;padding:13px 24px;display:inline-flex;align-items:center;gap:8px">復習を始める ${icons.arrowR}</button>
+    </div>
+  </section>`;
+}
+
+function exerciseHTML() {
+  const q = questions[state.qIndex];
+  const crumbCmd = state.mode === 'review' ? 'devpath review --run' : 'devpath quiz --run';
+  return `
+  <div ${rv('', 'padding:4px 4px 0')}>${termCrumb(crumbCmd)}<h1 style="margin:10px 0 0;font-size:25px;font-weight:900;letter-spacing:-.02em;color:var(--ink)">${state.mode === 'review' ? '今日の復習' : '演習'}</h1></div>
+  <section ${rv('card qcard', 'padding:26px 28px;position:relative;overflow:visible')} id="qcard">
+    <div class="combo" id="combo"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
+      <div class="seg-track" style="flex:1">
+        ${questions.map((_, i) => `<span class="seg ${i < state.qIndex ? 'done' : ''}" id="seg-${i}"><span class="seg-fill"></span></span>`).join('')}
+      </div>
+      <span class="mono" style="font-size:12px;color:var(--faint);flex:none">${state.qIndex + 1}/${questions.length} · <b style="color:var(--purple)">+${state.sessionXp} XP</b></span>
+    </div>
+    <div style="margin-top:22px"><span class="key" style="color:var(--blue)">${q.id}</span></div>
+    <h2 style="margin:14px 0 0;font-size:19px;font-weight:800;line-height:1.55;color:var(--ink)">${q.text}</h2>
+    <div style="margin-top:20px;display:flex;flex-direction:column;gap:12px">
+      ${q.options.map((text, i) => `
+      <button class="optbtn reveal" style="--i:${i + 2}" data-opt="${i}">
+        <span class="key">${i + 1}</span>
+        <span>${text}</span>
+      </button>`).join('')}
+    </div>
+    <div class="exp" id="explanation" aria-live="polite"></div>
+    <div style="margin-top:22px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+      <span class="mono" style="font-size:11px;color:var(--faint)">[1-4] select · [Enter] next</span>
+      <button class="btn btn-green" id="nextBtn" disabled style="font-size:14px;padding:14px 24px;display:inline-flex;align-items:center;gap:8px">${state.qIndex === questions.length - 1 ? '結果を見る' : '次の問題へ'} ${icons.arrowR}</button>
+    </div>
+  </section>`;
+}
+
+function resultHTML() {
+  const rows = questions.map((q, i) => ({ q, ok: state.answers[i] === q.correct }));
+  const score = rows.filter(r => r.ok).length;
+  const total = questions.length;
+  const perfect = score === total;
+  const lesson = 'xss-basics';
+  let li = 0;
+  const lines = [
+    `<span class="tline mono" style="--i:${li++}"><span style="color:#3fb950">$</span> devpath test --lesson ${lesson}\n</span>`,
+    ...rows.map(r => `<span class="tline mono" style="--i:${li++}">${r.ok
+      ? `<span style="color:#3fb950">  ✓ ${r.q.id}</span> <span style="color:#6e7681">... passed</span>`
+      : `<span style="color:#f85149">  ✗ ${r.q.id}</span> <span style="color:#6e7681">... failed</span>`}\n</span>`),
+    `<span class="tline mono" style="--i:${li++}">\n<span style="color:#c9d1d9">Tests: </span><span style="color:#3fb950">${score} passed</span>${score < total ? `<span style="color:#c9d1d9">, </span><span style="color:#f85149">${total - score} failed</span>` : ''}<span style="color:#c9d1d9">, ${total} total</span>\n</span>`,
+    `<span class="tline mono" style="--i:${li++}"><span style="color:#bc8cff">XP:    +${state.sessionXp}</span><span style="color:#6e7681">${state.combo >= 2 ? ' (combo bonus included)' : ''}</span>\n</span>`,
+    `<span class="tline mono" style="--i:${li++}"><span style="color:#6e7681">SRS:   ${total} cards rescheduled</span><span class="cursor"></span></span>`,
+  ];
+  const actions = state.lastMode === 'review'
+    ? `<button class="btn btn-green" data-start="review" style="font-size:14px;padding:14px 22px">間違えた問題だけ再挑戦</button>
+       <button class="btn btn-ghost go" data-go="dashboard" style="font-size:14px;padding:14px 22px">ホームへ戻る</button>`
+    : `<button class="btn btn-green go" data-go="domains" style="font-size:14px;padding:14px 22px">次のノードへ進む</button>
+       <button class="btn btn-ghost" data-start="quiz" style="font-size:14px;padding:14px 22px">再挑戦</button>`;
+  return `
+  <div ${rv('', 'padding:4px 4px 0')}>${termCrumb('devpath test --report')}<h1 style="margin:10px 0 0;font-size:25px;font-weight:900;letter-spacing:-.02em;color:var(--ink)">セッションレポート</h1></div>
+  <section ${rv('card', 'padding:26px 28px')}>
+    <div class="term-win">
+      <div class="term-head"><span class="term-badge">&gt;_</span><span class="term-title">devpath — test report</span><span class="term-meta">exit 0 · 80×24</span></div>
+      <div class="term-body" style="min-height:170px">${lines.join('')}</div>
+    </div>
+    <h2 style="margin:24px 0 0;font-size:15px;font-weight:800;color:var(--ink)">SRS スケジュール更新 <span class="mono" style="font-size:11px;color:var(--faint);font-weight:400">— 全パラメータ公開</span></h2>
+    <div style="margin-top:12px;display:flex;flex-direction:column;gap:9px">
+      ${rows.map((r, i) => `
+      <div class="well reveal" style="--i:${i + 7};display:flex;align-items:center;gap:12px;padding:12px 15px;border:2px solid ${r.ok ? 'var(--green)' : 'var(--red)'};border-radius:12px;flex-wrap:wrap">
+        <span style="color:${r.ok ? 'var(--green)' : 'var(--red)'}">${r.ok ? icons.checkBold : icons.xBold}</span>
+        <span class="key" style="color:var(--blue)">${r.q.id}</span>
+        <span class="mono" style="font-size:12px;color:var(--mute);flex:1;min-width:200px">interval <b style="color:var(--ink-2)">${r.q.srs.before}</b> → <b style="color:${r.ok ? 'var(--green)' : 'var(--red)'}">${r.ok ? r.q.srs.after : '1d'}</b> · next due <b style="color:var(--ink-2)">${r.ok ? r.q.srs.due : '明日'}</b></span>
+      </div>`).join('')}
+    </div>
+    <div style="margin-top:24px;display:flex;flex-wrap:wrap;justify-content:center;gap:12px">${actions}</div>
+  </section>`;
+}
+
+function analyticsHTML() {
+  const stats = [
+    { label: '総解答数', num: 142, sub: '直近7日 +38', subColor: 'var(--green)' },
+    { label: '正答率', num: 78, unit: '%', sub: '+5.2pt', subColor: 'var(--green)', color: 'var(--green)' },
+    { label: '平均反応時間', num: 14, unit: 's', sub: '-2s', subColor: 'var(--green)' },
+    { label: '習得済み', num: 8, unit: '/16', sub: 'ivl ≥ 21d', subColor: 'var(--mute)' },
+  ];
+  return `
+  <div ${rv('page-head', 'padding:4px 4px 0')}>${termCrumb('devpath stats --verbose')}<h1 style="margin-top:10px">アナリティクス</h1><p>解答ログ・SRS状態の計器盤。アルゴリズムは隠しません。</p></div>
+  <div class="stat-grid">
+    ${stats.map(s => `
+    <div ${rv('card stat-card')}>
+      <div style="font-size:12.5px;color:var(--mute)">${s.label}</div>
+      <div class="stat-value" style="margin-top:8px;color:${s.color || 'var(--ink)'}"><span data-count="${s.num}">0</span><span class="stat-unit">${s.unit || ''}</span></div>
+      <div class="mono" style="margin-top:4px;font-size:11px;color:${s.subColor}">${s.sub}</div>
+    </div>`).join('')}
+  </div>
+  <div class="two-col" style="display:grid;grid-template-columns:1.4fr 1fr;gap:20px">
+    <section ${rv('card', 'padding:22px')}>
+      <h2 style="margin:0;font-size:16px;font-weight:800;color:var(--ink)">忘却曲線と復習タイミング</h2>
+      <p class="mono" style="margin:6px 0 0;font-size:11px;color:var(--faint)">retention = e^(-t/S) — 復習のたびに記憶強度Sが伸びる</p>
+      <div style="margin-top:14px;border:2px solid var(--border);border-radius:14px;background:var(--well);padding:14px">
+        <svg viewBox="0 0 320 130" style="width:100%;height:auto;display:block">
+          <line x1="0" y1="100" x2="320" y2="100" stroke="var(--border)" stroke-width="1.5" stroke-dasharray="5 5"/>
+          <text x="4" y="96" fill="var(--faint)" font-size="8" font-family="JetBrains Mono">忘却ライン</text>
+          <path d="M8,18 Q30,55 58,88" fill="none" stroke="var(--red)" stroke-width="2.5" stroke-linecap="round" opacity=".85"/>
+          <path d="M58,20 Q100,52 140,80" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" opacity=".9"/>
+          <path d="M140,18 Q195,42 250,62" fill="none" stroke="var(--yellow)" stroke-width="2.5" stroke-linecap="round" opacity=".9"/>
+          <path d="M250,16 Q285,26 318,34" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linecap="round"/>
+          <g>
+            <circle cx="58" cy="88" r="5" fill="var(--blue)"/><circle cx="140" cy="80" r="5" fill="var(--blue)"/><circle cx="250" cy="62" r="5" fill="var(--blue)"/>
+          </g>
+          <text x="50" y="118" fill="var(--blue)" font-size="8.5" font-family="JetBrains Mono">rev.1</text>
+          <text x="132" y="118" fill="var(--blue)" font-size="8.5" font-family="JetBrains Mono">rev.2</text>
+          <text x="242" y="118" fill="var(--blue)" font-size="8.5" font-family="JetBrains Mono">rev.3</text>
+        </svg>
+      </div>
+      <h2 style="margin:22px 0 0;font-size:16px;font-weight:800;color:var(--ink)">週間アクティビティ</h2>
+      <div class="chart" style="margin-top:12px">
+        ${weekly.map((v, i) => `
+        <div class="bar-col">
+          <div class="bar-area"><div class="vbar" style="--h:${v}%;--i:${i}" title="${days[i]}: ${v}問"></div></div>
+          <span class="mono" style="font-size:10px;color:var(--faint)">${days[i]}</span>
+        </div>`).join('')}
+      </div>
+    </section>
+    <section ${rv('card', 'padding:22px')}>
+      <h2 style="margin:0;font-size:16px;font-weight:800;color:var(--ink)">SRS 定着度の分布</h2>
+      <div class="dist" style="margin-top:14px"><div style="--w:50%;background:var(--green)"></div><div style="--w:31%;background:var(--blue);animation-delay:.55s"></div><div style="--w:19%;background:var(--red);animation-delay:.75s"></div></div>
+      <div class="mono" style="margin-top:14px;display:flex;flex-direction:column;gap:11px;font-size:12.5px">
+        <div style="display:flex;align-items:center;gap:9px"><span style="width:10px;height:10px;border-radius:3px;background:var(--green)"></span>mastered <span style="color:var(--faint)">ivl≥21d</span><span style="margin-left:auto;font-weight:700;color:var(--ink)"><span data-count="8">0</span></span></div>
+        <div style="display:flex;align-items:center;gap:9px"><span style="width:10px;height:10px;border-radius:3px;background:var(--blue)"></span>learning<span style="margin-left:auto;font-weight:700;color:var(--ink)"><span data-count="5">0</span></span></div>
+        <div style="display:flex;align-items:center;gap:9px"><span style="width:10px;height:10px;border-radius:3px;background:var(--red)"></span>due<span style="margin-left:auto;font-weight:700;color:var(--ink)"><span data-count="3">0</span></span></div>
+      </div>
+      <h2 style="margin:22px 0 0;font-size:16px;font-weight:800;color:var(--ink)">間違えやすい問題</h2>
+      <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px">
+        <div class="row-press"><span class="key" style="color:var(--blue)">XSS-003</span><span style="font-size:12.5px;color:var(--ink-2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">保存型XSSの説明…</span><span class="mono" style="font-size:12px;font-weight:700;color:var(--red);flex:none">46%</span></div>
+        <div class="row-press"><span class="key" style="color:var(--blue)">XSS-002</span><span style="font-size:12.5px;color:var(--ink-2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Reactのテキスト埋め込み…</span><span class="mono" style="font-size:12px;font-weight:700;color:var(--orange);flex:none">28%</span></div>
+        <div class="row-press"><span class="key" style="color:var(--blue)">XSS-001</span><span style="font-size:12.5px;color:var(--ink-2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">HTML本文へ表示する際…</span><span class="mono" style="font-size:12px;font-weight:700;color:var(--green);flex:none">12%</span></div>
+      </div>
+    </section>
+  </div>`;
+}
+
+function miniBar(pct) {
+  const filled = Math.round(pct / 10);
+  return '█'.repeat(filled) + '░'.repeat(10 - filled);
+}
+
+function domainsHTML() {
+  const doneCount = skillPath.filter(n => n.state === 'done').length;
+  const currentIdx = skillPath.findIndex(n => n.state === 'current');
+  const currentNode = skillPath[currentIdx];
+  const nextLocked = skillPath[currentIdx + 1];
+
+  const treeRows = skillPath.map((n, i) => {
+    const isLast = i === skillPath.length - 1;
+    const prefix = isLast ? '└─' : '├─';
+    if (n.state === 'done') {
+      return `<button class="tree-row-btn go" data-go="learn">
+        <span class="tprefix">${prefix}</span>
+        <span class="tname"><span style="color:#3fb950">✓</span> ${n.sub}.md</span>
+        <span class="tstatus" style="color:#3fb950">[done]</span>
+      </button>`;
+    }
+    if (n.state === 'current') {
+      return `<button class="tree-row-btn go" data-go="article">
+        <span class="tprefix">${prefix}</span>
+        <span class="tname"><span style="color:#58a6ff">▶</span> ${n.sub}.md</span>
+        <span class="tstatus"><span style="color:#3fb950">[${n.pct}%] ${miniBar(n.pct)}</span> <span class="pulse-tag" style="color:#58a6ff;font-weight:700">← START</span></span>
+      </button>`;
+    }
+    return `<div class="tree-row-btn locked" aria-disabled="true">
+      <span class="tprefix">${prefix}</span>
+      <span class="tname">🔒 ${n.sub}.md</span>
+      <span class="tstatus">[locked]</span>
+    </div>`;
+  }).join('');
+
+  const lockedDomainLines = domains.slice(1).map(d => `
+    <div class="tree-locked-line">
+      <span>content/${d.name.toLowerCase()}/</span>
+      <span style="margin-left:auto;white-space:nowrap">[locked: sec≥60%]</span>
+    </div>`).join('');
+
+  return `
+  <div ${rv('page-head', 'padding:4px 4px 0')}>${termCrumb('devpath tree security')}<h1 style="margin-top:10px">スキルツリー</h1><p>カリキュラムはファイルシステム。クリアで次のノードが解放されます。</p></div>
+  <div class="two-col" style="display:grid;grid-template-columns:1.2fr 1fr;gap:20px;align-items:start">
+    <section ${rv('card', 'padding:22px')}>
+      <div class="term-win">
+        <div class="term-head"><span class="term-badge">&gt;_</span><span class="term-title">devpath tree — security</span><span class="term-meta">80×24</span></div>
+        <div class="term-body" style="white-space:normal">
+          <div class="tree-line"><span style="color:#3fb950">$</span> <span style="color:#8b949e">devpath tree security --progress</span></div>
+          <div class="tree-line" style="margin-top:4px"><span style="color:#79c0ff">content/security/</span>  <span style="color:#3fb950">[${doneCount}/${skillPath.length} done]</span></div>
+          <div class="tree-rows" style="margin-top:6px">${treeRows}</div>
+          <div style="margin-top:14px">${lockedDomainLines}</div>
+        </div>
+      </div>
+    </section>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div ${rv('card', 'padding:20px;border-color:var(--purple)')}>
+        <div class="mono" style="font-size:11px;font-weight:700;color:var(--purple);letter-spacing:.08em">DAILY QUEST</div>
+        <div style="margin-top:8px;font-size:14px;font-weight:700;color:var(--ink)">復習を3問クリアする</div>
+        <div class="bar-track" style="margin-top:10px;height:10px"><div class="bar-fill" style="--w:33%;background:var(--purple)"></div></div>
+        <div class="mono" style="margin-top:6px;font-size:11px;color:var(--faint);display:flex;justify-content:space-between"><span>1/3</span><span>+15 XP</span></div>
+      </div>
+      <div ${rv('card', 'padding:18px 20px')}>
+        <div class="mono" style="font-size:11px;font-weight:700;color:var(--blue);letter-spacing:.08em">NEXT UNLOCK</div>
+        <div class="mono" style="margin-top:8px;font-size:12.5px;color:var(--faint)">🔓 ${nextLocked ? `${nextLocked.sub}.md` : '-'} — ${currentNode.sub}.md をクリアで解放</div>
+        <div class="mono" style="margin-top:6px;font-size:12.5px;color:var(--faint)">🔓 frontend/ ほか2ドメイン — security 60% で解放</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+const screens = {
+  dashboard: dashboardHTML, learn: learnHTML, article: articleHTML,
+  quizIntro: quizIntroHTML, reviewIntro: reviewIntroHTML,
+  exercise: exerciseHTML, result: resultHTML,
+  analytics: analyticsHTML, domains: domainsHTML,
+};
+
+/* ================= render / transition ================= */
+function render() {
+  revealIdx = 0;
+  view.innerHTML = screens[state.route]();
+  window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+  updateNav();
+  runCountUps();
+  bindView();
+  if (state.route === 'exercise') requestAnimationFrame(() => {
+    const seg = document.getElementById(`seg-${state.qIndex}`);
+    if (seg) seg.classList.add('done');   // 現在の問題まで進行を表示
+    updateCombo(false);
+  });
+}
+
+function go(route) {
+  if (route === state.route) { render(); return; }
+  if (reduceMotion) { state.route = route; render(); return; }
+  view.classList.add('view-exit');
+  setTimeout(() => {
+    view.classList.remove('view-exit');
+    state.route = route;
+    render();
+  }, 160);
+}
+
+function startExercise(mode) {
+  state.mode = mode;
+  state.qIndex = 0;
+  state.answers = questions.map(() => null);
+  state.combo = 0;
+  state.sessionXp = 0;
+  go('exercise');
+  if (state.route === 'exercise') render();
+}
+
+function updateNav() {
+  const r = state.route, m = state.mode, lm = state.lastMode;
+  const activeKey =
+    r === 'dashboard' ? 'dashboard' :
+    (r === 'learn' || r === 'article') ? 'learn' :
+    (r === 'quizIntro' || (r === 'exercise' && m === 'quiz') || (r === 'result' && lm === 'quiz')) ? 'quiz' :
+    (r === 'reviewIntro' || (r === 'exercise' && m === 'review') || (r === 'result' && lm === 'review')) ? 'review' :
+    r === 'analytics' ? 'analytics' :
+    r === 'domains' ? 'domains' : '';
+  document.querySelectorAll('[data-nav]').forEach(el => {
+    el.classList.toggle('active', el.dataset.nav === activeKey);
+  });
+}
+
+/* ================= animations ================= */
+function runCountUps() {
+  view.querySelectorAll('[data-count]').forEach(el => {
+    const target = parseFloat(el.dataset.count);
+    if (reduceMotion) { el.textContent = target.toLocaleString(); return; }
+    const dur = 900;
+    const t0 = performance.now();
+    function tick(t) {
+      const p = Math.min((t - t0) / dur, 1);
+      const eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(target * eased).toLocaleString();
+      if (p < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  });
+}
+
+function updateCombo(pop) {
+  const el = document.getElementById('combo');
+  if (!el) return;
+  if (state.combo >= 2) {
+    el.textContent = `COMBO ×${state.combo}${state.combo >= 3 ? ' 🔥' : ''}`;
+    el.classList.toggle('hot', state.combo >= 3);
+    el.classList.remove('show');
+    if (pop) { void el.offsetWidth; el.classList.add('show'); }
+    else { el.style.transform = 'scale(1)'; }
+  } else {
+    el.classList.remove('show');
+    el.style.transform = 'scale(0)';
+  }
+}
+
+function confetti() {
+  if (reduceMotion) return;
+  const box = document.createElement('div');
+  box.className = 'confetti-box';
+  const colors = ['#3fb950', '#58a6ff', '#e3b341', '#bc8cff', '#f0883e', '#39c5cf'];
+  for (let i = 0; i < 80; i++) {
+    const c = document.createElement('span');
+    c.className = 'confetti';
+    c.style.left = Math.random() * 100 + 'vw';
+    c.style.background = colors[i % colors.length];
+    c.style.animationDuration = 2 + Math.random() * 1.6 + 's';
+    c.style.animationDelay = Math.random() * .5 + 's';
+    c.style.transform = `scale(${.7 + Math.random() * .8})`;
+    box.appendChild(c);
+  }
+  document.body.appendChild(box);
+  setTimeout(() => box.remove(), 4600);
+}
+
+let toastTimer = null;
+function showToast(text) {
+  const t = document.getElementById('toast');
+  document.getElementById('toastBody').textContent = text;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 4500);
+}
+
+/* ================= quiz interaction ================= */
+function selectOption(i) {
+  if (state.route !== 'exercise') return;
+  if (state.answers[state.qIndex] !== null) return;
+  const q = questions[state.qIndex];
+  state.answers[state.qIndex] = i;
+  const isCorrect = i === q.correct;
+
+  if (isCorrect) {
+    state.combo++;
+    state.sessionXp += 10 + (state.combo >= 2 ? 5 : 0);
+  } else {
+    state.combo = 0;
+  }
+
+  view.querySelectorAll('.optbtn').forEach((btn, idx) => {
+    btn.classList.add('locked');
+    const key = btn.querySelector('.key');
+    if (idx === q.correct) { btn.classList.add('opt-correct'); key.innerHTML = icons.checkBold; }
+    else if (idx === i) { btn.classList.add('opt-wrong'); key.innerHTML = icons.xBold; }
+  });
+
+  updateCombo(isCorrect);
+
+  const exp = view.querySelector('#explanation');
+  exp.classList.add(isCorrect ? 'ok' : 'ng');
+  exp.innerHTML = `<span class="mono" style="font-weight:700;flex:none">${isCorrect ? `✓ correct ${state.combo >= 2 ? `(+15 XP)` : '(+10 XP)'}` : '✗ wrong'}</span><span style="color:var(--ink-2)">${q.note}</span>`;
+  requestAnimationFrame(() => exp.classList.add('show'));
+
+  const next = view.querySelector('#nextBtn');
+  next.disabled = false;
+  next.focus({ preventScroll: true });
+}
+
+function nextQuestion() {
+  if (state.answers[state.qIndex] === null) return;
+  const card = view.querySelector('#qcard');
+  const advance = () => {
+    if (state.qIndex < questions.length - 1) {
+      state.qIndex++;
+      render();
+    } else {
+      state.lastMode = state.mode;
+      state.route = 'result';
+      render();
+      const score = questions.filter((q, i) => state.answers[i] === q.correct).length;
+      if (score === questions.length) {
+        setTimeout(confetti, 1600);
+        setTimeout(() => showToast('clean-build — 全問正解でセッション完了 ✨'), 2100);
+      }
+    }
+  };
+  if (reduceMotion || !card) { advance(); return; }
+  card.classList.add('leaving');
+  setTimeout(advance, 180);
+}
+
+/* ================= event wiring ================= */
+function bindView() {
+  view.querySelectorAll('[data-opt]').forEach(btn => {
+    btn.addEventListener('click', () => selectOption(parseInt(btn.dataset.opt, 10)));
+  });
+  const next = view.querySelector('#nextBtn');
+  if (next) next.addEventListener('click', nextQuestion);
+}
+
+document.addEventListener('click', ev => {
+  const tt = ev.target.closest('.theme-toggle');
+  if (tt) { setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'); return; }
+
+  const starter = ev.target.closest('[data-start]');
+  if (starter) { startExercise(starter.dataset.start); return; }
+
+  const goer = ev.target.closest('[data-go]');
+  if (goer && !goer.disabled) { go(goer.dataset.go); return; }
+});
+
+document.addEventListener('keydown', ev => {
+  if (state.route !== 'exercise') return;
+  if (ev.key >= '1' && ev.key <= '4') selectOption(parseInt(ev.key, 10) - 1);
+  if (ev.key === 'Enter') nextQuestion();
+});
+
+/* ================= boot（ダークファースト） ================= */
+let initialTheme = 'dark';
+try { initialTheme = localStorage.getItem('devpath-unified-theme') || 'dark'; } catch (e) {}
+setTheme(initialTheme);
+render();
+</script>
+</body>
+</html>
