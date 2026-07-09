@@ -1,0 +1,57 @@
+{
+  "skill_name": "pr-review-fix",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "develop向けに出しているPR #128に、Zodバリデーションの抜けとテスト不足を指摘するレビューコメントが3件ついています。まだ何も対応していません。指摘に対応してください。",
+      "expected_output": "gh pr-review threads list（無ければ gh pr view --comments）でレビュー内容を取得し、各指摘を Read で該当ファイルと突き合わせて重要度（High/Medium/Low）を分類する。妥当な指摘は Edit/Write で修正し、Zodスキーマは packages/shared に集約、SRS等の純粋関数に触れる場合は Vitest のテストも追加する。修正後に pnpm typecheck / pnpm lint / pnpm test を実行してすべて通過を確認してからコミット・プッシュする。全てのオープンスレッドに対応内容を返信し、confirmationまたはフォローアップ不在を確認した上でスレッドを解決する。gh pr merge は一切実行しない。",
+      "files": [],
+      "expectations": [
+        "gh pr-review threads list または gh pr view --comments でレビュー内容を取得している",
+        "指摘されたファイルを Read で確認してから修正している",
+        "修正前に pnpm typecheck / pnpm lint / pnpm test を実行して結果を確認している",
+        "gh pr merge を一切実行していない",
+        "全てのオープンスレッドに、対応内容が分かる返信を投稿している",
+        "gh pr-review threads resolve でスレッドを解決している",
+        "コミットメッセージに対応内容の要約が含まれている"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "PR #131 にレビュースレッドは無いけど、gh pr view で見ると通常コメントで「このAPIのエラーハンドリングがちょっと雑じゃない？」って書かれてる。対応して。",
+      "expected_output": "gh pr-review threads list で空を確認した後、gh pr view --comments で通常コメントを検索する。指摘内容をファイルを読んで具体化し、妥当なら修正、品質ゲートを通してコミット・プッシュする。レビュースレッドではないため gh pr comment で返信する（gh pr-review comments reply は使わない）。",
+      "files": [],
+      "expectations": [
+        "gh pr-review threads list を実行しスレッドが無いことを確認している",
+        "gh pr view --comments で通常コメントを検索している",
+        "通常コメントへの返信に gh pr comment を使っている（gh pr-review comments reply ではない）",
+        "修正前に品質ゲート（typecheck/lint/test）を実行している",
+        "gh pr merge を一切実行していない"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "PR #140 のレビューで「このバリデーション、Zodじゃなくて手書きのif文に書き換えて」という指摘が来てるんだけど、対応して。ちなみにこのプロジェクトはAPI入力バリデーションをZodのzValidatorに集約する方針。",
+      "expected_output": "指摘内容を鵜呑みにせず、AGENTS.md / docs/design.md の方針（Zodへの集約）と照らして矛盾すると判断する。実装は行わず、方針との不整合を理由として明確に説明した上でスレッドに返信する。時間がかかるからという理由でスキップするのではなく、明確な技術的理由を示す。",
+      "files": [],
+      "expectations": [
+        "指摘を無条件に実装せず、プロジェクト方針（Zod集約）との整合性を確認している",
+        "実装しない場合、理由を明確に説明する返信をしている（スキップの言い訳ではなく技術的根拠を示している）",
+        "gh pr merge を一切実行していない",
+        "他の指摘や無関係な変更を行っていない（指摘対象外への手出しがない）"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "PR #145 に古いレビュースレッドが2件（isOutdated: true）と、アクティブなスレッドが1件ある。全部処理して最終的に全スレッドresolved状態にして。",
+      "expected_output": "gh pr-review threads list で isOutdated: true のスレッドは返信不要でそのまま resolve する。アクティブなスレッドは指摘内容を分析・対応し、返信してから resolve する。最終確認で gh pr-review threads list を実行し、全スレッドが isResolved: true であることを確認して報告する。",
+      "files": [],
+      "expectations": [
+        "isOutdated: true のスレッドには返信せず resolve している",
+        "アクティブなスレッドには返信してから resolve している",
+        "最終確認として gh pr-review threads list を実行し全スレッドの isResolved を確認している",
+        "gh pr merge を一切実行していない"
+      ]
+    }
+  ]
+}
