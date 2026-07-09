@@ -40,9 +40,25 @@ argument-hint: <issue番号> [sonnet|codex]
    ```
    - `develop` がローカル・リモートともに存在しない初回は、上記でローカルに新規作成される。その旨をユーザーに報告する（`develop` の初期化）。
 
+## エージェント起動の共通ルール（ツール呼び出し崩れの防止）
+
+> **重要**: サブエージェント（`issue-investigator` / `reviewer` / `developer` / `test-fixer`）を起動する際、issue 本文全文やレビュー観点などの**長文ブリーフを Agent tool のプロンプト引数に直接インラインで貼らない**。長大なツール引数を反復生成すると開始タグの生成が不安定になり、`Your tool call was malformed and could not be parsed` で失敗しやすい（複数回リトライを招く）。
+>
+> 代わりに、codex プロンプトと同じ方式でブリーフを scratchpad ファイルに書き出し、Agent プロンプトは**短いポインタ**に留める:
+> 1. `<scratchpad>/agent-brief-<phase>-<N>.md` にブリーフ全文を Write する（例: `agent-brief-investigate-16.md`）。
+> 2. Agent tool のプロンプトは数行に収める。例:
+>    ```
+>    issue #16 の調査を行ってください。ブリーフ全文は次のファイルを Read してください:
+>    /path/to/scratchpad/agent-brief-investigate-16.md
+>    調査レポート（仕様サマリ／design.md 整合性／影響範囲／実装方針／テスト観点）を返してください。
+>    ```
+> 3. これによりインライン引数が小さくなり、同一パイプラインで複数 issue を連続処理してもツール呼び出しが崩れにくくなる。
+>
+> なお、万一 `malformed` エラーが出た場合は**同じ長い呼び出しをそのまま再送しない**。まずブリーフをファイルに逃がしてから、短いポインタで再起動する。
+
 ## フェーズ1: 調査
 
-`issue-investigator` エージェント（Agent tool, subagent_type: issue-investigator）に issue 番号・タイトル・本文全文を渡して起動する。調査レポート（仕様サマリ／design.md 整合性／影響範囲／実装方針の推奨案・代替案／テスト観点）を受け取る。
+`issue-investigator` エージェント（Agent tool, subagent_type: issue-investigator）を起動する。上記「エージェント起動の共通ルール」に従い、issue 番号・タイトル・本文全文・調査観点は `<scratchpad>/agent-brief-investigate-<N>.md` に書き出し、Agent プロンプトはそのファイルパスを指すポインタに留める。調査レポート（仕様サマリ／design.md 整合性／影響範囲／実装方針の推奨案・代替案／テスト観点）を受け取る。
 
 ## フェーズ2: 方針決定
 
@@ -71,10 +87,11 @@ argument-hint: <issue番号> [sonnet|codex]
      - < <scratchpad>/codex-prompt-<N>.md
    ```
 3. 完了通知を受けたら `codex-result-<N>.md` と `git status` / `git diff --stat` で成果を確認する。差分がない・失敗している場合はログを確認し、1回だけプロンプトを改善して再実行する（それでも失敗ならユーザーに報告）。
+4. **codex サンドボックスの制約（D1 マイグレーション）**: codex は `--sandbox workspace-write` で動くため `127.0.0.1` へのバインドができず、`pnpm --filter @tsl/api db:migrate:local`（wrangler / miniflare 経由のローカル D1 適用）や `wrangler d1 execute --local` が `listen EPERM` で失敗する。codex がマイグレーション生成（`db:generate`）まで完了して「`--local` 適用は未実施」と報告してきても**失敗ではない**。生成 SQL の目視（DROP 不在の確認）と、**ローカル D1 への適用・`sqlite_master` での定義検証はオーケストレータ（サンドボックス外の Bash）側で実行する**。手順は `d1-migration` スキルに従う。
 
 ## フェーズ4: レビュー
 
-`reviewer` エージェント（subagent_type: reviewer）に issue 番号・方針サマリを渡して起動する。**この時点で実装は未コミット**（コミットはフェーズ7）なので、差分は **`git diff develop`（作業ツリーを含む）** で取得させる。`git diff develop...HEAD`（3ドット）はコミット済みのみで未コミット段階では空になるため使わない。must-fix / should-fix / nit の重要度付き指摘を受け取る。
+`reviewer` エージェント（subagent_type: reviewer）を起動する。「エージェント起動の共通ルール」に従い、issue 番号・方針サマリ・レビュー観点・変更ファイル一覧は `<scratchpad>/agent-brief-review-<N>.md` に書き出し、Agent プロンプトはそのファイルパスを指すポインタに留める。**この時点で実装は未コミット**（コミットはフェーズ7）なので、差分は **`git diff develop`（作業ツリーを含む）** で取得させる。`git diff develop...HEAD`（3ドット）はコミット済みのみで未コミット段階では空になるため使わない。must-fix / should-fix / nit の重要度付き指摘を受け取る。
 
 ## フェーズ5: テスト
 
