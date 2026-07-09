@@ -36,7 +36,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "set -o pipefail; content=$(jq -r '(.tool_input.new_string // .tool_input.content) // empty'); if printf '%s\\n' \"$content\" | grep -qiE '(//|#|/\\*).*\\b(TODO|FIXME|HACK|XXX)\\b'; then printf '⚠️  先送りコード(TODO/FIXME/HACK)が検出されました。今すぐ実装してください。\\n' >&2; exit 2; fi; exit 0"
+            "command": "content=$(jq -r '(.tool_input.new_string // .tool_input.content) // empty'); if printf '%s\\n' \"$content\" | grep -qiE '(//|#|/\\*).*\\b(TODO|FIXME|HACK|XXX)\\b'; then printf '⚠️  先送りコード(TODO/FIXME/HACK)が検出されました。今すぐ実装してください。\\n' >&2; exit 2; fi; exit 0"
           }
         ]
       }
@@ -48,6 +48,15 @@
           {
             "type": "command",
             "command": "jq -r '.tool_input.file_path | select(test(\"\\\\.(ts|tsx|js|jsx|json)$\"))' | xargs -r pnpm exec biome check --write --no-errors-on-unmatched"
+          }
+        ]
+      },
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "input=$(cat); name=$(printf '%s' \"$input\" | jq -r '.tool_input.skill // \"unknown\"'); safe=$(printf '%s' \"$name\" | tr -c 'A-Za-z0-9._-' '-'); dir=\"${CLAUDE_PROJECT_DIR:-.}/.claude/logs\"; mkdir -p \"$dir\"; printf '%s' \"$input\" | jq -c '{ts: (now | todate), skill: (.tool_input.skill // \"unknown\"), args: (.tool_input.args // null)}' >> \"$dir/skill-$safe.jsonl\"; exit 0"
           }
         ]
       }
