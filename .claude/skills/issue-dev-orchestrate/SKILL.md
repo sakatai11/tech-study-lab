@@ -1,7 +1,7 @@
 ---
 name: issue-dev-orchestrate
 description: GitHub issue に登録された仕様を起点に「調査→方針決定→実装→レビュー→テスト→fix」を一気通貫で実行する issue 駆動開発パイプライン。「issue #N を実装して」「/issue-dev-orchestrate N」などで起動。実装は Sonnet エージェント（デフォルト）またはバックグラウンドの codex CLI を選択できる。
-argument-hint: <issue番号> [sonnet|codex]
+argument-hint: "[issue番号] [sonnet|codex]"
 ---
 
 # Issue 駆動開発パイプライン

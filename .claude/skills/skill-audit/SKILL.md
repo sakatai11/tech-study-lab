@@ -1,7 +1,7 @@
 ---
 name: skill-audit
 description: リポジトリ管理のスキル（.claude/skills/）・エージェント・hooks に実行時の問題がないかを監査するスキル。静的チェック（参照切れ・絶対パス・権限整合）と実行ログ（.claude/logs/skill-*.jsonl）の解析を行う。「スキルを監査して」「スキルの問題を調べて」/skill-audit で起動。修正はレポート提示後、ユーザー承認を得てから行う。
-argument-hint: [対象スキル名（省略時は全スキル）]
+argument-hint: "[対象スキル名（省略時は全スキル）]"
 ---
 
 # スキル監査

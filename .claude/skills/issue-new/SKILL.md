@@ -1,7 +1,7 @@
 ---
 name: issue-new
 description: 会話やメモの粗い仕様・タスクを、構造化された GitHub issue に整形して登録するスキル。機能仕様（feature）だけでなく、開発中に発生したバグ修正・リファクタ・ドキュメント・テスト・雑務（task）も登録できる。「これをissueにして」「仕様を登録して」「バグをissueにして」/issue-new で起動。登録後は /issue-dev-orchestrate でそのまま実装パイプラインに乗せられる。
-argument-hint: [仕様・タスクの概要（省略時は直前の会話から抽出）]
+argument-hint: "[仕様・タスクの概要（省略時は直前の会話から抽出）]"
 ---
 
 # 仕様・タスク → GitHub issue 登録

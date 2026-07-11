@@ -1,7 +1,7 @@
 ---
 name: retro-refine
 description: 直前のタスク・セッションで起きた摩擦（繰り返したエラー・回り道・手戻り・曖昧だった指示）を振り返り、再発を防ぐハーネス（スキル / エージェント / CLAUDE.md・AGENTS.md / settings.json・hooks / docs）の追加・更新に落とし込むスキル。「振り返って」「今回の反省を反映して」「retrospective」/retro-refine で起動。実害のある摩擦だけを対象に選別し、修正はユーザー承認後に適用する。
-argument-hint: [振り返り対象（省略時は直前のタスク/セッション）]
+argument-hint: "[振り返り対象（省略時は直前のタスク/セッション）]"
 ---
 
 # retro-refine — セッションの摩擦をハーネス改善に変換する

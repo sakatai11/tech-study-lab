@@ -1,7 +1,7 @@
 ---
 name: content-new
 description: 教材・4択問題の新規レッスンを執筆するワークフロー。「XSSの教材を書いて」「frontendに新しいレッスンを追加して」などの依頼、または /content-new で起動。content-author エージェントで執筆し、レビューと検証まで行う。
-argument-hint: <domain> <topic> [テーマ・補足]
+argument-hint: "[domain] [topic] [テーマ・補足]"
 ---
 
 # 教材執筆ワークフロー

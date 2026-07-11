@@ -1,7 +1,7 @@
 ---
 name: pr-review-fix
 description: PRのレビューコメント・指摘事項を gh CLI（gh pr-review 拡張）で取得し、各指摘の適用可否を判断した上で修正を実装、品質ゲート（typecheck/lint/test）を通してコミット・プッシュし、レビュースレッドへの返信・解決まで一気通貫で行う。「PRの指摘に対応して」「レビューコメントを直して」「PRコメントを解消して」などで使用する。
-argument-hint: [PR番号（省略時は現在ブランチのPR）]
+argument-hint: "[PR番号（省略時は現在ブランチのPR）]"
 ---
 
 # PR レビュー指摘対応
