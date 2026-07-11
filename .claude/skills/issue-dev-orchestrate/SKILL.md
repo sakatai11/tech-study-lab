@@ -89,9 +89,24 @@ argument-hint: <issue番号> [sonnet|codex]
 3. 完了通知を受けたら `codex-result-<N>.md` と `git status` / `git diff --stat` で成果を確認する。差分がない・失敗している場合はログを確認し、1回だけプロンプトを改善して再実行する（それでも失敗ならユーザーに報告）。
 4. **codex サンドボックスの制約（D1 マイグレーション）**: codex は `--sandbox workspace-write` で動くため `127.0.0.1` へのバインドができず、`pnpm --filter @tsl/api db:migrate:local`（wrangler / miniflare 経由のローカル D1 適用）や `wrangler d1 execute --local` が `listen EPERM` で失敗する。codex がマイグレーション生成（`db:generate`）まで完了して「`--local` 適用は未実施」と報告してきても**失敗ではない**。生成 SQL の目視（DROP 不在の確認）と、**ローカル D1 への適用・`sqlite_master` での定義検証はオーケストレータ（サンドボックス外の Bash）側で実行する**。手順は `d1-migration` スキルに従う。
 
-## フェーズ4: レビュー
+## フェーズ4: レビュー（並列）
 
-`reviewer` エージェント（subagent_type: reviewer）を起動する。「エージェント起動の共通ルール」に従い、issue 番号・方針サマリ・レビュー観点・変更ファイル一覧は `<scratchpad>/agent-brief-review-<N>.md` に書き出し、Agent プロンプトはそのファイルパスを指すポインタに留める。**この時点で実装は未コミット**（コミットはフェーズ7）なので、差分は **`git diff develop`（作業ツリーを含む）** で取得させる。`git diff develop...HEAD`（3ドット）はコミット済みのみで未コミット段階では空になるため使わない。must-fix / should-fix / nit の重要度付き指摘を受け取る。
+2つのレビューエージェントを**1メッセージで並列起動**する。**この時点で実装は未コミット**（コミットはフェーズ7）なので、差分は **`git diff develop`（作業ツリーを含む）** で取得させる。`git diff develop...HEAD`（3ドット）はコミット済みのみで未コミット段階では空になるため使わない。
+
+1. **`reviewer` エージェント**（subagent_type: reviewer）: issue 番号・方針サマリを渡す。仕様準拠（design.md）・ガードレール・正確性を担当。
+2. **`coderabbit-reviewer` エージェント**（subagent_type: coderabbit-reviewer）: issue 番号を渡す。CodeRabbit CLI による独立した外部AIレビューを担当。
+
+### coderabbit-reviewer が「auth-required」を返した場合
+
+**黙ってスキップしない。** ユーザーに以下を案内して認証を促す:
+
+> CodeRabbit CLI が未認証です。プロンプトで `! coderabbit auth login` を実行して認証してください（`!` プレフィックスでこのセッション内で実行できます）。
+
+認証完了を確認したら coderabbit-reviewer を再起動する。ユーザーが「認証しない・後回しにする」と明示した場合のみ、reviewer 単独の結果で続行する。rate-limited / error の場合はその旨をユーザーに報告し、reviewer 単独で続行してよい。
+
+### 結果の統合
+
+両者の指摘リストをマージする。**同一 `ファイル:行` かつ指摘内容が実質的に同じ場合のみ**1件に束ね（重要度は高い方を採用）、出典タグ `[coderabbit]` は保持する。同じ行でも指摘内容が異なる場合（例: 入力検証漏れと認可漏れが同じ行にある）は別指摘として両方残す。迷う場合は統合せず両方残す。**CodeRabbit の指摘をオーケストレーターの判断で取捨選択しない**（独立レビューの価値を保つため）。マージ後の must-fix / should-fix / nit リストをフェーズ6に渡す。
 
 ## フェーズ5: テスト
 
@@ -104,7 +119,7 @@ argument-hint: <issue番号> [sonnet|codex]
 1. レビューの must-fix / should-fix と、test-fixer の残課題を fix 対象リストにまとめる（nit は含めない）。
 2. fix 対象が空ならフェーズ7へ。
 3. fix 対象を実装者（sonnet モード: `developer` エージェント / codex モード: codex exec 再実行）に渡して修正させる。
-4. フェーズ4（レビューは fix 箇所の再確認のみ）→フェーズ5 を再実行する。
+4. フェーズ4（レビューは fix 箇所の再確認のみ、**`reviewer` 単独で実施**。CodeRabbit はレート制限があるため初回のみ）→フェーズ5 を再実行する。
 5. **最大2周**。収束しない場合は残課題を整理してユーザーに報告し、指示を仰ぐ。
 
 ## フェーズ7: 完了
