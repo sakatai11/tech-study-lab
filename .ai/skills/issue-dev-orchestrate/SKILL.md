@@ -7,6 +7,8 @@ description: GitHub issue に登録された仕様を起点に「調査→方針
 
 実行前に `.ai/runtime-compatibility.md` を全文読む。
 
+Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runtime codex --skill issue-dev-orchestrate --status started|completed` を実行して共通ログへ記録する（Claudeではhookが自動記録する）。
+
 引数を解析する: 第1引数 = issue 番号（**必須**。なければユーザーに確認して停止）。
 
 進捗は現在のランタイムで利用可能な plan/todo 機能でフェーズごとに管理し、各フェーズの完了時に要点を1-2行でユーザーに報告する。

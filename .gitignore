@@ -21,8 +21,9 @@ out/
 # test / coverage
 coverage/
 
-# claude code skill execution logs
+# AI harness execution logs
 .claude/logs/
+.ai/logs/
 
 # misc
 .DS_Store

@@ -7,6 +7,8 @@ description: PRのレビューコメント・指摘事項を gh CLI（gh pr-revi
 
 実行前に `.ai/runtime-compatibility.md` を全文読み、現在のランタイムに合わせてツールを読み替える。
 
+Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runtime codex --skill pr-review-fix --status started|completed` を実行して共通ログへ記録する（Claudeではhookが自動記録する）。
+
 利用可能なら `gh pr-review` 拡張（[agynio/gh-pr-review](https://github.com/agynio/gh-pr-review)）を使い、PRへのレビュー指摘の取得 → 適用可否判断 → 修正実装 → 品質ゲート → コミット・プッシュ → スレッド返信・解決までを行う。
 
 進捗は現在のランタイムで利用可能な plan/todo 機能でフェーズごとに管理する。利用できなければフェーズ完了時の短い報告で代替する。

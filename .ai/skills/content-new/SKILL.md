@@ -7,6 +7,8 @@ description: 教材・4択問題の新規レッスンを執筆するワークフ
 
 実行前に `.ai/runtime-compatibility.md` を全文読み、エージェント起動方法を現在のランタイムに合わせる。
 
+Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runtime codex --skill content-new --status started|completed` を実行して共通ログへ記録する（Claudeではhookが自動記録する）。
+
 引数を解析する: `<domain>`（security | frontend | backend | architecture）、`<topic>`（トピックキー、小文字英数ハイフン）、以降は任意のテーマ・補足指示。domain / topic が不明確なら執筆内容と合わせてユーザーに確認する。
 
 ## 手順

@@ -7,6 +7,8 @@ description: 会話やメモの粗い仕様・タスクを、構造化された 
 
 実行前に `.ai/runtime-compatibility.md` を全文読み、ユーザー確認方法を現在のランタイムに合わせる。
 
+Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runtime codex --skill issue-new --status started|completed` を実行して共通ログへ記録する（Claudeではhookが自動記録する）。
+
 入力は引数のテキスト、または直前の会話で議論された仕様・タスク。どちらもなければユーザーに内容を尋ねて停止する。
 
 ## 手順
