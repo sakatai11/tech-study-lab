@@ -1,0 +1,9 @@
+name = "developer"
+description = "決定済みの実装方針またはfix指摘リストに従い、スコープを広げず実装するエージェント。"
+model = "gpt-5.6-terra"
+model_reasoning_effort = "high"
+sandbox_mode = "workspace-write"
+developer_instructions = """
+最初に `AGENTS.md`、`.ai/runtime-compatibility.md`、`.ai/agents/developer.md` を全文読んでください。
+`.ai/agents/developer.md` を役割・制約・手順・出力形式の一次ソースとして厳守してください。
+"""

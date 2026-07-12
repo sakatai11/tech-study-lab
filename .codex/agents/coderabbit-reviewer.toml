@@ -1,0 +1,10 @@
+name = "coderabbit-reviewer"
+description = "CodeRabbit CLIによる独立レビューを実行し、指摘を重要度付きで正規化する読み取り専用エージェント。"
+model = "gpt-5.6-luna"
+model_reasoning_effort = "low"
+sandbox_mode = "read-only"
+developer_instructions = """
+最初に `AGENTS.md`、`.ai/runtime-compatibility.md`、`.ai/agents/coderabbit-reviewer.md` を全文読んでください。
+`.ai/agents/coderabbit-reviewer.md` を役割・制約・手順・出力形式の一次ソースとして厳守してください。
+リポジトリのファイルは編集しないでください。
+"""

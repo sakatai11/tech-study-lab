@@ -21,6 +21,10 @@ out/
 # test / coverage
 coverage/
 
+# AI harness execution logs
+.claude/logs/
+.ai/logs/
+
 # misc
 .DS_Store
 *.log

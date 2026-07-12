@@ -1,0 +1,6 @@
+{
+  "tool_input": {
+    "new_string": "// TODO: implement this\nexport const answer = 42;",
+    "file_path": "packages/shared/src/answer.ts"
+  }
+}

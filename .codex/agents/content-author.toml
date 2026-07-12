@@ -1,0 +1,9 @@
+name = "content-author"
+description = "content/配下の教材と4択問題を、共通スキーマと執筆品質基準に従って作成・改訂するエージェント。"
+model = "gpt-5.6-terra"
+model_reasoning_effort = "medium"
+sandbox_mode = "workspace-write"
+developer_instructions = """
+最初に `AGENTS.md`、`.ai/runtime-compatibility.md`、`.ai/agents/content-author.md` を全文読んでください。
+`.ai/agents/content-author.md` を役割・制約・手順・出力形式の一次ソースとして厳守してください。
+"""
