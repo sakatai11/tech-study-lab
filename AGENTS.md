@@ -32,6 +32,16 @@ content/         # 教材・問題（Markdown + frontmatter）= 一次ソース
 docs/design.md   # 設計文書（一次ソース）
 ```
 
+## AI ハーネスの共通管理
+
+- 共通スキルの一次ソースは `.ai/skills/`、共通サブエージェント定義は `.ai/agents/`。
+- `.claude/skills/` と `.agents/skills/` は同じ `.ai/skills/` への発見用シンボリックリンク。本文を複製・直接編集しない。
+- `.claude/agents/` は `.ai/agents/` へのシンボリックリンク。Claude Code 固有の settings / rules / hooks は `.claude/` に残す。
+- `.codex/agents/*.toml` はCodexネイティブのカスタムエージェント登録。詳細指示を複製せず、`developer_instructions` から対応する `.ai/agents/*.md` を読む。
+- 共通hook処理は `.ai/hooks/`、ランタイム別アダプターは `.claude/hooks/` / `.codex/hooks/` に置く。配線生成後は `pnpm sync:agents --check`、fixture検証は `pnpm test:hooks` を実行する。
+- Codexサブエージェントは通常 `gpt-5.6-terra` を使う。CodeRabbit結果の正規化だけは `gpt-5.6-luna`。難易度が高い実装・セキュリティレビュー時だけ一時的に `gpt-5.6` へ上げる。
+- 共通定義の変更後は、Claude/Codex 両方のリンク切れとスキル検証を行う。
+
 - フロント ⇔ API は Hono の `hc`（型安全RPC）で接続する。
 - 型・スキーマは `packages/shared` に集約し、二重定義しない。
 

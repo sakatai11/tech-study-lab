@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "hooks": [
+    {
+      "id": "block-deferred-markers",
+      "intent": "Block TODO, FIXME, HACK, and XXX comments before a file edit."
+    },
+    {
+      "id": "format-changed-file",
+      "intent": "Format supported source files after a file edit."
+    },
+    {
+      "id": "log-skill-usage",
+      "intent": "Record requested, started, and completed skill lifecycle events."
+    }
+  ]
+}

@@ -1117,6 +1117,17 @@ content/
 | topic のラベル・並び順・概要文 | `content/<domain>/<topic>/index.md`（frontmatter: `{ topic, title, order }`、本文: 概要文） | コンテンツと一緒に増えるため content 側で管理。概要文はレッスン一覧ページの説明に使う |
 | lesson のタイトル | レッスン frontmatter の `title`（既存どおり） | — |
 
+`DOMAIN_LABELS` の確定値（`order` は表示順で 1 始まり。`domainKeySchema` の enum 宣言順・§1 の学習領域の並びと一致させる）:
+
+| domain | label | order |
+| --- | --- | --- |
+| `security` | セキュリティ | 1 |
+| `frontend` | フロントエンド | 2 |
+| `backend` | バックエンド | 3 |
+| `architecture` | アーキテクチャ | 4 |
+
+topic frontmatter の `order` も同様に表示順（0 以上の整数、小さいほど先）とする。
+
 ### 11.4 実装タスク
 
 - `packages/shared/src/schema/content.ts`：topic index 用の Zod（`topicFrontmatterSchema`）と、lessonId / questionId の形式検証（regex・`questionId` が `lessonId` を接頭辞に持つこと）を追加

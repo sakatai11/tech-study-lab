@@ -10,8 +10,7 @@
       "Bash(pnpm install)",
       "Bash(git checkout:*)",
       "Bash(git pull:*)",
-      "Bash(git branch:*)",
-      "Bash(codex exec:*)"
+      "Bash(git branch:*)"
     ],
     "deny": [
       "Read(./.env)",
@@ -36,7 +35,16 @@
         "hooks": [
           {
             "type": "command",
-            "command": "set -o pipefail; content=$(jq -r '(.tool_input.new_string // .tool_input.content) // empty'); if printf '%s\\n' \"$content\" | grep -qiE '(//|#|/\\*).*\\b(TODO|FIXME|HACK|XXX)\\b'; then printf '⚠️  先送りコード(TODO/FIXME/HACK)が検出されました。今すぐ実装してください。\\n' >&2; exit 2; fi; exit 0"
+            "command": "./.claude/hooks/pre-edit.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.claude/hooks/pre-skill.sh"
           }
         ]
       }
@@ -47,7 +55,16 @@
         "hooks": [
           {
             "type": "command",
-            "command": "jq -r '.tool_input.file_path | select(test(\"\\\\.(ts|tsx|js|jsx|json)$\"))' | xargs -r pnpm exec biome check --write --no-errors-on-unmatched"
+            "command": "./.claude/hooks/post-edit.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.claude/hooks/post-skill.sh"
           }
         ]
       }
