@@ -742,24 +742,7 @@ apps/web/src/features/
 
 ViewModel・mapper は feature ごとに独立させ、同じ DTO の使い方が feature ごとに異なることを認める。`apps/web/src/features/shared` は共通 ViewModel を持つ場所ではなく、`contentQuestionToQuizQuestion` のような小さい純粋変換だけを置く場所とする。
 
-### 9.8 フロントエンドのテスト戦略
-
-フロントエンドは、見た目を探索する UI 実装と、入出力が明確なロジックでテストファーストの効果が異なるため、**実装先行と TDD を使い分ける**。
-
-| 対象 | 開発・検証方法 |
-| --- | --- |
-| UI・スタイル・単純な presentational component | モックアップと本章の仕様に沿って実装し、ブラウザで表示・レスポンシブ・操作を確認してから、重要な振る舞いだけをテストする |
-| mapper・ViewModel・小さい純粋変換 | テストファースト。content/API DTO の join・sort・filter、欠損値・境界値、クライアントへ渡してよいデータ境界を検証する |
-| hook・reducer・状態遷移 | テストファースト。Quiz/Review の `intro → exercise → result`、問題送り、選択肢ロック、スコア集計、`wrongOnly`、二重送信防止、エラー・再試行を検証する |
-| Server loader | 単純な委譲は詳細にテストせず、複数データの join・sort・filter・ViewModel 化を担う場合に検証する |
-| API wrapper | 薄い RPC 呼び出しを重複してテストせず、独自の呼び出し条件・エラー変換がある場合だけ検証する |
-| ページ統合・Walking Skeleton | ユーザーが観測できる主要フローを少数の統合テストまたはブラウザ確認で貫通させる |
-
-- Tailwind のクラス名や内部 DOM 構造を固定するだけの壊れやすいテストは避け、role・label・表示文言・操作結果など、ユーザーが観測できる振る舞いを検証する。
-- バグ修正は、自動テストで安定して再現できる場合、失敗する回帰テストを先に追加してから修正する。CSS・ブラウザ固有の表示崩れは、ブラウザまたはスクリーンショットで修正前後を確認する。
-- Walking Skeleton では「教材表示 → 問題へ遷移 → 解答 → 即時採点 → 結果表示」を貫通確認する。細かなコンポーネント単体テストを増やすより、この主要フローと mapper・状態遷移のテストを優先する。
-
-### 9.9 → 第10章へ
+### 9.8 → 第10章へ
 
 本章でフロントエンドのデータフロー（Content data / API DTO → Mapper → ViewModel → page）を確定した。API 側（`apps/api`）の内部構造（How）は **第10章** で確定する。その後の実装フェーズでは、Walking Skeleton（`セキュリティ > XSS > 教材1本 + 4択3問`、第6章）を第8〜10章の設計に沿って縦に 1 本貫通させる。
 
