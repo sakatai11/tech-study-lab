@@ -1,0 +1,5 @@
+{
+  "tool_input": {
+    "patch": "*** Begin Patch\n*** Update File: packages/shared/src/answer.ts\n@@\n+// TODO: implement this\n*** End Patch"
+  }
+}

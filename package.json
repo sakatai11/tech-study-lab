@@ -16,7 +16,9 @@
     "dev": "pnpm --parallel --filter @tsl/api --filter @tsl/web dev",
     "dev:web": "pnpm --filter @tsl/web dev",
     "dev:api": "pnpm --filter @tsl/api dev",
-    "content:sync": "pnpm --filter @tsl/api content:sync"
+    "content:sync": "pnpm --filter @tsl/api content:sync",
+    "sync:agents": "node scripts/sync-agent-config.mjs",
+    "test:hooks": "sh scripts/test-hooks.sh"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
