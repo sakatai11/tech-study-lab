@@ -37,9 +37,17 @@ Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runt
    ```bash
    git status --porcelain   # クリーンでなければユーザーに確認して停止
    git fetch origin
-   git switch develop
-   # develop が無い場合だけ origin/develop から作成。どちらも無い初回だけローカル作成
-   git pull --ff-only
+   # develop がローカルにあれば更新、なければ origin/develop から作成する。
+   # どちらも無い初回だけローカルの develop を初期化する。
+   if git show-ref --verify --quiet refs/heads/develop; then
+     git switch develop
+     git pull --ff-only
+   elif git show-ref --verify --quiet refs/remotes/origin/develop; then
+     git switch -c develop origin/develop
+     git pull --ff-only
+   else
+     git switch -c develop
+   fi
    git switch -c <種別>/issue-<N>-<英語スラッグ>   # 例: feature/issue-12-lesson-filter
    ```
    - `develop` がローカル・リモートともに存在しない初回は、上記でローカルに新規作成される。その旨をユーザーに報告する（`develop` の初期化）。
