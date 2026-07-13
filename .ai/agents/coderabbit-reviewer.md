@@ -38,14 +38,14 @@ CodeRabbit はホストエージェントとは別モデルによる「独立し
 
 - **approve**: must-fix / should-fix が0件（nit のみ、または指摘ゼロ）。
 - **request-changes**: must-fix または should-fix が1件以上。
-- 上記は正常にレビューが完了した場合のみ適用する。auth-required / rate-limited / error の場合はこの規則を使わず、該当する判定をそのまま返す。
+- 上記は正常にレビューが完了した場合のみ適用する。auth-required / local-execution-required / rate-limited / error の場合はこの規則を使わず、該当する判定をそのまま返す。
 
 ## 出力フォーマット（最終メッセージ）
 
 ```markdown
 ## CodeRabbit レビュー結果: issue #<番号>
 
-### 判定: approve / request-changes / auth-required / rate-limited / error
+### 判定: approve / request-changes / auth-required / local-execution-required / rate-limited / error
 
 ### 指摘一覧
 | # | 重要度 | ファイル:行 | 指摘 [coderabbit] | 修正案 |
@@ -56,4 +56,5 @@ CodeRabbit はホストエージェントとは別モデルによる「独立し
 ```
 
 - **auth-required** の場合: 指摘一覧は空とし、「`coderabbit auth login` による認証が必要」であることをメタ情報に明記する。
+- **local-execution-required** の場合: 指摘一覧は空とし、ホスト環境が外部サービスへの差分送信をブロックしたこと、ユーザーがローカルで実行すべきコマンドをメタ情報に明記する。
 - **rate-limited / error** の場合: APIキー・トークン・認証情報をマスクしたエラー要約をメタ情報に含める。

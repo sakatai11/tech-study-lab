@@ -104,6 +104,18 @@ Issueで「使用する」が選ばれている、または以下のいずれか
 1. **`reviewer` エージェント**: `.ai/agents/reviewer.md` の定義と issue 番号・方針サマリを渡す。
 2. **`coderabbit-reviewer` エージェント**: `.ai/agents/coderabbit-reviewer.md` の定義と issue 番号を渡す。
 
+### CodeRabbit の事前判定（Codex）
+
+CodeRabbit のレビューは差分を第三者サービスへ送信する。Codex では、実行前に次を確認する。
+
+1. `coderabbit auth status` で認証済みか確認する。
+2. 認証済みであっても、外部サービスへのコード送信についてユーザーの明示承認を得る。未承認なら、CodeRabbit は実行せず通常 reviewer の結果だけで続行する。
+3. 実行環境が外部送信をブロックした場合、同じコマンドを再試行・別経路で迂回してはならない。ユーザー自身のターミナルで、対象ブランチ上から次を実行してもらい、結果を貼り付けてもらう。
+   ```bash
+   coderabbit review --agent --base develop --type uncommitted
+   ```
+   結果が届くまでは CodeRabbit の指摘を「未取得」として明記し、通常 reviewer の結果だけで進めるかをユーザーに確認する。
+
 ### coderabbit-reviewer が「auth-required」を返した場合
 
 **黙ってスキップしない。** ユーザーに以下を案内して認証を促す:
