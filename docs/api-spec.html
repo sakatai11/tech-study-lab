@@ -219,6 +219,10 @@
         <section aria-labelledby="planned-title">
           <h2 id="planned-title">Walking Skeleton 後に追加するAPI</h2>
           <p class="legend"><span class="status planned">planned · DTO未確定</span><span>目的・成功ステータス・予定スキーマを先に共有し、フィールドは各実装Issueで共有Zodスキーマとして確定します。</span></p>
+          <div class="callout">
+            <p><strong>後続Issueで必ず更新するもの</strong></p>
+            <p>各APIの実装に着手するときは、返却値を共有Zodスキーマで確定し、このページの成功・エラー応答と実装状態も同じPRで更新します。APIのIF（URL、HTTPステータス、JSON形式、エラー形式）を実装だけで先に変えないでください。</p>
+          </div>
           <div class="endpoint-list">
             <article class="endpoint" id="domains"><header><span class="method">GET</span><h3><code>/domains</code></h3><span class="status planned">planned</span></header><p>4領域の習得率、トピック数、レッスン数を返し、スキルツリーとダッシュボードの領域別カードで共用します。</p><table class="contract"><tbody><tr><th>リクエスト</th><td>body・query parameterなし。</td></tr><tr><th>成功</th><td><span class="http">200 OK</span>。レスポンスbodyは未確定。</td></tr><tr><th>エラー</th><td>実装時に共通の400（入力検証時）・500（<code>INTERNAL</code>）を適用。</td></tr><tr><th>Zod</th><td>予定: <code>domainsResponseSchema</code></td></tr></tbody></table></article>
             <article class="endpoint" id="analytics-summary"><header><span class="method">GET</span><h3><code>/analytics/summary</code></h3><span class="status planned">planned</span></header><p>総解答数、正答率、平均反応時間、習得済み問題数、連続学習日数、今週の学習時間を返します。</p><table class="contract"><tbody><tr><th>リクエスト</th><td>body・query parameterなし。</td></tr><tr><th>成功</th><td><span class="http">200 OK</span>。レスポンスbodyは未確定。</td></tr><tr><th>エラー</th><td>実装時に共通の400（入力検証時）・500（<code>INTERNAL</code>）を適用。</td></tr><tr><th>Zod</th><td>予定: <code>analyticsSummaryResponseSchema</code></td></tr></tbody></table></article>
