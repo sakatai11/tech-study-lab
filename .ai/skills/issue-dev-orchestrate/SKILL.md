@@ -112,7 +112,7 @@ CodeRabbit のレビューは差分を第三者サービスへ送信する。Cod
 2. 認証済みであっても、外部サービスへのコード送信についてユーザーの明示承認を得る。未承認なら、CodeRabbit は実行せず通常 reviewer の結果だけで続行する。
 3. 実行環境が外部送信をブロックした場合、同じコマンドを再試行・別経路で迂回してはならない。ユーザー自身のターミナルで、対象ブランチ上から次を実行してもらい、結果を貼り付けてもらう。
    ```bash
-   coderabbit review --agent --base develop --type committed
+   coderabbit review --agent --base develop --type uncommitted
    ```
    結果が届くまでは CodeRabbit の指摘を「未取得」として明記し、通常 reviewer の結果だけで進めるかをユーザーに確認する。
 
