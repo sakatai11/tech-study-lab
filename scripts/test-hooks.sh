@@ -16,7 +16,7 @@ expect_blocked sh -c './.claude/hooks/pre-edit.sh < .ai/hooks/fixtures/claude-ed
 expect_blocked sh -c './.codex/hooks/pre-tool-use.sh < .ai/hooks/fixtures/codex-apply-patch-todo.json'
 
 log_dir=$(mktemp -d)
-trap 'rm -f "$log_dir/skill-usage.jsonl"; rmdir "$log_dir"' EXIT
+trap 'rm -rf "$log_dir"' EXIT
 AI_HARNESS_LOG_DIR="$log_dir" ./.codex/hooks/user-prompt-submit.sh < .ai/hooks/fixtures/codex-user-prompt.json
 AI_HARNESS_LOG_DIR="$log_dir" ./.ai/hooks/log-skill-usage.sh --runtime codex --skill skill-audit --status started
 AI_HARNESS_LOG_DIR="$log_dir" ./.ai/hooks/log-skill-usage.sh --runtime codex --skill skill-audit --status completed

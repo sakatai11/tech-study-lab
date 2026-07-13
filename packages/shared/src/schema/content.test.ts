@@ -97,7 +97,7 @@ describe('lessonIdSchema and questionIdSchema', () => {
 })
 
 describe('validatedLessonFrontmatterSchema', () => {
-  it('accepts questions whose ids share the lesson prefix', () => {
+  it('accepts questions whose ids match the lesson question ID pattern', () => {
     expect(validatedLessonFrontmatterSchema.safeParse(validLessonFrontmatter).success).toBe(true)
   })
 
@@ -119,6 +119,23 @@ describe('validatedLessonFrontmatterSchema', () => {
 
     expect(result.error.issues[0]?.path).toEqual(['questions', 0, 'id'])
   })
+
+  it.each(['security-xss-01-q', 'security-xss-01-q-abc'])(
+    'rejects questions whose ids omit a numeric suffix',
+    (questionId) => {
+      const result = validatedLessonFrontmatterSchema.safeParse({
+        ...validLessonFrontmatter,
+        questions: [
+          {
+            ...validLessonFrontmatter.questions[0],
+            id: questionId,
+          },
+        ],
+      })
+
+      expect(result.success).toBe(false)
+    },
+  )
 })
 
 describe('DOMAIN_LABELS', () => {

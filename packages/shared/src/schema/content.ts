@@ -65,13 +65,13 @@ export const validatedMcqSchema = mcqQuestionSchema.refine(
 
 export const validatedLessonFrontmatterSchema = lessonFrontmatterSchema.superRefine(
   (lesson, ctx) => {
-    const prefix = `${lesson.lessonId}-q`
+    const questionIdPattern = new RegExp(`^${lesson.lessonId}-q\\d+$`)
 
     for (const [i, question] of lesson.questions.entries()) {
-      if (!question.id.startsWith(prefix)) {
+      if (!questionIdPattern.test(question.id)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: `questionId must start with ${prefix}`,
+          message: `questionId must match pattern ${lesson.lessonId}-q<number>`,
           path: ['questions', i, 'id'],
         })
       }
