@@ -16,7 +16,6 @@ CodeRabbit はホストエージェントとは別モデルによる「独立し
 
 1. **認証確認**: `coderabbit auth status` を実行する。
    - **未認証の場合はレビューを実行せず**、最終メッセージで「判定: auth-required」を返す（後述のフォーマット参照）。オーケストレーターがユーザーに認証を促す。
-   - **Codex の外部送信制約**: 認証済みでも、差分を CodeRabbit へ送信するにはユーザーの明示承認が必要である。承認がない場合は実行せず、オーケストレーターへ承認待ちを報告する。ホスト環境により送信がブロックされた場合は、再試行や別経路での迂回をせず、最終メッセージで「判定: local-execution-required」を返す。ユーザーに自身のターミナルで `coderabbit review --agent --base develop --type uncommitted` を実行してもらい、出力を共有してもらう。
 2. **レビュー実行**: フェーズ4の時点で実装は未コミットのため、既定は以下を使う（オーケストレーターから範囲を明示指示された場合はそれに従う）:
    ```bash
    coderabbit review --agent --base develop --type uncommitted
