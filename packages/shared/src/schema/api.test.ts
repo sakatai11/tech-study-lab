@@ -122,6 +122,17 @@ describe('reviewQueueResponseSchema', () => {
     ).toBe(true)
   })
 
+  it('items が21件だと失敗する', () => {
+    expect(
+      reviewQueueResponseSchema.safeParse({
+        items: Array.from({ length: 21 }, (_, i) => ({
+          questionId: `q-${i}`,
+          dueAt: 1_700_000_000_000 + i,
+        })),
+      }).success,
+    ).toBe(false)
+  })
+
   it('dueAt が小数だと失敗する', () => {
     expect(
       reviewQueueResponseSchema.safeParse({

@@ -21,12 +21,14 @@ export const answerResponseSchema = z.object({
 export type AnswerResponse = z.infer<typeof answerResponseSchema>
 
 export const reviewQueueResponseSchema = z.object({
-  items: z.array(
-    z.object({
-      questionId: z.string().min(1),
-      dueAt: z.number().int(),
-    }),
-  ),
+  items: z
+    .array(
+      z.object({
+        questionId: z.string().min(1),
+        dueAt: z.number().int(),
+      }),
+    )
+    .max(20),
 })
 export type ReviewQueueResponse = z.infer<typeof reviewQueueResponseSchema>
 
