@@ -56,13 +56,13 @@ Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runt
 
 承認後に登録する:
 
-Codexでは GitHub コネクタで Issue を作成し、ラベルを設定する。コネクタが利用できない場合のみ、認証済みの `gh` CLI を使う:
+Codex AppではGitHubコネクタでIssueを作成し、ラベルを設定する。Codex CLIでは認証済みの `gh` CLI を使う。以下はCodex CLIの例:
 
 ```bash
 gh issue create --title "<接頭辞> <タイトル>" --label <種別のラベル> --body "<本文>"
 ```
 
-ラベルが存在しない場合は、同じ優先順位で先に作成する（CLIフォールバック: `gh label create <名前> --description "<説明>"`）。
+ラベルが存在しない場合は、同じ実行環境で先に作成する（Codex CLIの例: `gh label create <名前> --description "<説明>"`）。
 
 ### 5. 完了報告
 
