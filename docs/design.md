@@ -1005,12 +1005,12 @@ export type AnswerRequest = z.infer<typeof answerRequestSchema>
 
 export const answerResponseSchema = z.object({
   isCorrect: z.boolean(),
-  correctIndex: z.number().int().nonnegative(),
+  correctIndex: z.number().int().min(0).max(5),  // choices は最大6（schema/content と整合）
 })
 export type AnswerResponse = z.infer<typeof answerResponseSchema>
 
 export const reviewQueueResponseSchema = z.object({
-  items: z.array(z.object({ questionId: z.string().min(1), dueAt: z.number().int() })),
+  items: z.array(z.object({ questionId: z.string().min(1), dueAt: z.number().int() })),  // dueAt は Unixエポックミリ秒
 })
 export const dueCountResponseSchema = z.object({
   dueCount: z.number().int().nonnegative(),

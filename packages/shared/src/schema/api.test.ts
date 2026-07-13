@@ -100,6 +100,15 @@ describe('answerResponseSchema', () => {
       }).success,
     ).toBe(false)
   })
+
+  it('correctIndex が6以上だと失敗する', () => {
+    expect(
+      answerResponseSchema.safeParse({
+        isCorrect: false,
+        correctIndex: 6,
+      }).success,
+    ).toBe(false)
+  })
 })
 
 describe('reviewQueueResponseSchema', () => {

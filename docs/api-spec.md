@@ -17,7 +17,7 @@
 | 項目 | 契約 |
 | --- | --- |
 | リクエスト | JSON。`answerRequestSchema`: `{ questionId: string（1文字以上）, selectedIndex: 0〜5 の整数, responseTimeMs?: 0以上の整数 }` |
-| 成功 | `200 OK`。`answerResponseSchema`: `{ isCorrect: boolean, correctIndex: 0以上の整数 }` |
+| 成功 | `200 OK`。`answerResponseSchema`: `{ isCorrect: boolean, correctIndex: 0〜5 の整数 }` |
 | エラー | `400` — リクエスト JSON が `answerRequestSchema` を満たさない。`404` — `QUESTION_NOT_FOUND`（質問 ID が content 同期済み `questions` にない）。`500` — `INTERNAL` |
 | Zod スキーマ | **実装済み**: `answerRequestSchema` / `answerResponseSchema`（`packages/shared/src/schema/api.ts`） |
 
@@ -30,7 +30,7 @@
 | 項目 | 契約 |
 | --- | --- |
 | リクエスト | body・query parameter なし |
-| 成功 | `200 OK`。`reviewQueueResponseSchema`: `{ items: Array<{ questionId: string, dueAt: integer }> }`。`items` は `dueAt` 昇順で最大20件 |
+| 成功 | `200 OK`。`reviewQueueResponseSchema`: `{ items: Array<{ questionId: string, dueAt: Unixエポックミリ秒の整数 }> }`。`items` は `dueAt` 昇順で最大20件 |
 | エラー | `500` — `INTERNAL`。エンドポイント固有のエラーコードは現時点で不要 |
 | Zod スキーマ | **実装済み**: `reviewQueueResponseSchema`（`packages/shared/src/schema/api.ts`） |
 
