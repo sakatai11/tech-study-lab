@@ -1010,7 +1010,7 @@ export const answerResponseSchema = z.object({
 export type AnswerResponse = z.infer<typeof answerResponseSchema>
 
 export const reviewQueueResponseSchema = z.object({
-  items: z.array(z.object({ questionId: z.string().min(1), dueAt: z.number().int() })),  // dueAt は Unixエポックミリ秒
+  items: z.array(z.object({ questionId: z.string().min(1), dueAt: z.number().int() })).max(20),  // dueAt は Unixエポックミリ秒
 })
 export const dueCountResponseSchema = z.object({
   dueCount: z.number().int().nonnegative(),
