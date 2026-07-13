@@ -51,7 +51,34 @@ docs/design.md   # 設計文書（一次ソース）
 - TypeScript は strict。`any` を避け、型は `packages/shared` から共有する。
 - **SRSロジックは純粋関数として切り出し、Vitest で重点的にテストする**（副作用と分離）。
 - バリデーションは Zod に集約（API入力は `zValidator`、フロントも同じスキーマを使う）。
-- 変更後は型チェック・lint・test を通す。CI（GitHub Actions）が PR ゲート。
+- 変更後は影響範囲に応じて `pnpm typecheck`・`pnpm lint`・`pnpm test` を実行する。CI では型チェック・lint・test・build を PR ゲートとする。
+
+### TDD 戦略
+
+すべての層を一律にテストファーストで実装せず、**仕様先行の選択的 TDD**を採用する。
+
+#### バックエンド
+
+service を中心にテストファーストで進める。
+
+1. `docs/design.md` で仕様を確定する。仕様変更が必要なら、実装やテストより先に更新する。
+2. `packages/shared` の Zod スキーマで API の入出力契約を定義する。
+3. Hono・D1・Drizzle に依存しない service のテストを、インメモリ fake deps を使って先に書く。
+4. テストを満たす最小限の service 実装を書く。
+5. 薄い route と DAL を実装する。
+6. 主要経路を Cloudflare Workers + migration 適用済みのローカル D1 で貫通テストする。
+
+- 純粋関数と service はテストファーストを原則とする。
+- route は HTTP 契約、DAL は実 D1 のクエリ・制約・upsert・`db.batch()` を重点的に検証し、service の振る舞いを重複してテストしない。
+
+#### フロントエンド
+
+- UI・スタイル・単純な presentational component は実装とブラウザ確認を先に行い、重要な振る舞いだけを後からテストする。
+- mapper・ViewModel 変換、hook・reducer、Quiz/Review の状態遷移、join・sort・filter などの純粋ロジックはテストファーストを原則とする。
+- API wrapper や内部 DOM 構造をなぞるテストを増やさず、ユーザーが観測できる振る舞いを少数の統合テストで検証する。
+- バグ修正は、安定して自動化できる場合、失敗する回帰テストを先に書く。CSS・ブラウザ固有の表示問題はブラウザまたはスクリーンショットで修正前後を確認する。
+
+共通して、テストを仕様の一次ソースにはしない。優先順位は **`docs/design.md` → 共有 Zod 契約 → テスト → 実装**とする。詳細はフロントエンドが `docs/design.md` §9.8、バックエンドが §10.9 を参照する。Claude Code では `.claude/rules/testing.md` も適用する。
 
 ### 作業の進め方
 
@@ -67,24 +94,6 @@ docs/design.md   # 設計文書（一次ソース）
 - 作業ブランチは Conventional Branch 命名: `<種別>/issue-<番号>-<英語スラッグ>`（種別: `feature` / `fix` / `refactor` / `docs` / `test` / `chore`）。
 - feature → develop は PR を作成する（**マージは人間**）。`develop` → `main` の PR・マージは人間が任意タイミングで行う。
 - `gh pr merge` は使わない（マージは常に人間の判断）。
-
-## コマンド
-
-> pnpm は corepack で有効化（`corepack enable`）。
-
-```bash
-# 依存インストール
-pnpm install
-
-# 開発
-pnpm --filter @tsl/web dev    # Next.js dev server (localhost:3000)
-pnpm --filter @tsl/api dev    # Hono / wrangler dev
-
-# 品質チェック
-pnpm biome check .
-pnpm test
-pnpm typecheck
-```
 
 ## 進捗の確認方法
 

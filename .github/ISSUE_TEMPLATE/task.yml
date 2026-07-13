@@ -47,13 +47,14 @@ body:
     validations:
       required: true
   - type: dropdown
-    id: implementer
+    id: background-agent-cli
     attributes:
-      label: 実装エージェント
-      description: impl:codex ラベルを付けると codex モードになります（このフィールドは参考情報）
+      label: バックグラウンドAIエージェントCLI
+      description: 実装は現在実行中のAIコーディング環境が標準で担当します。独立した長時間作業や、その環境にない能力が必要な場合だけCLI実行を選び、理由を補足に記載してください。
       options:
-        - sonnet（デフォルト）
-        - codex CLI（バックグラウンド）
+        - 使用しない（標準）
+        - 使用する（理由を補足に記載）
+      default: 0
     validations:
       required: false
   - type: textarea

@@ -1,0 +1,9 @@
+name = "test-fixer"
+description = "変更起因のtypecheck・Biome・テスト失敗を、スコープ内の最小修正で解消するエージェント。"
+model = "gpt-5.6-terra"
+model_reasoning_effort = "medium"
+sandbox_mode = "workspace-write"
+developer_instructions = """
+最初に `AGENTS.md`、`.ai/runtime-compatibility.md`、`.ai/agents/test-fixer.md` を全文読んでください。
+`.ai/agents/test-fixer.md` を役割・制約・手順・出力形式の一次ソースとして厳守してください。
+"""
