@@ -105,7 +105,7 @@ Issueで「使用する」が選ばれている、または以下のいずれか
 
 1. **`reviewer` エージェント**: `.ai/agents/reviewer.md` の定義と issue 番号・方針サマリを渡す。
 2. **Codex App / Codex CLI**: `reviewer` をもう1件、1件目と並列に起動する。2件のブリーフは分け、1件目は仕様・正しさ・回帰、2件目は境界条件・保守性・テスト十分性を重点確認する。`coderabbit-reviewer` は起動しない。認証状態やユーザー承認の確認、CodeRabbit CLI の実行・再試行・認証案内もしない。完了報告には「CodeRabbit は Codex 環境の運用方針によりスキップ。通常 reviewer 2件を並列実行」と明記する。
-3. **Codex 以外のランタイム**: 利用可能な場合は `reviewer` と **`coderabbit-reviewer`**（`.ai/agents/coderabbit-reviewer.md` の定義）を並列起動する。`coderabbit-reviewer` が `auth-required` を返した場合は、ユーザーに `coderabbit auth login` の実行を案内し、認証確認後に再起動する。ユーザーが認証しない・後回しにすると明示した場合、または rate-limited / error の場合は、その旨を報告し、CodeRabbit の代わりに2件目の `reviewer` を起動して並列レビューを維持する。
+3. **Codex 以外のランタイム**: 利用可能な場合は `reviewer` と **`coderabbit-reviewer`**（`.ai/agents/coderabbit-reviewer.md` の定義）を並列起動する。`coderabbit-reviewer` が `auth-required` を返した場合は、ユーザーに `coderabbit auth login` の実行を案内し、認証確認後に再起動する。ユーザーが認証しない・後回しにすると明示した場合、または rate-limited / error の場合は、その旨を報告し、CodeRabbit の代わりに2件目の `reviewer` を起動する。代替 reviewer の役割は項2と同じく、1件目と重複しないよう境界条件・保守性・テスト十分性を重点確認する。CodeRabbit が起動前に利用不可と判明している場合は、最初から2件の reviewer をこの役割分担で並列起動する。並列起動済みの CodeRabbit が失敗した場合は、1件目の完了を待たず代替 reviewer を直ちに起動し、2件分の独立したレビュー結果を統合する。
 
 ### 結果の統合
 
@@ -122,7 +122,7 @@ Issueで「使用する」が選ばれている、または以下のいずれか
 1. レビューの must-fix / should-fix と、test-fixer の残課題を fix 対象リストにまとめる（nit は含めない）。
 2. fix 対象が空ならフェーズ7へ。
 3. fix 対象を `developer` エージェントに渡して修正させる。
-4. フェーズ4（レビューは fix 箇所の再確認のみに絞り、**`reviewer` を2件並列で実施**。CodeRabbit はレート制限があるため初回のみ）→フェーズ5 を再実行する。
+4. フェーズ4（レビューは fix 箇所の再確認のみに絞り、初回と同様に役割を分けて**`reviewer` を2件並列で実施**。CodeRabbit はレート制限があるため初回のみ）→フェーズ5 を再実行する。
 5. **最大2周**。収束しない場合は残課題を整理してユーザーに報告し、指示を仰ぐ。
 
 ## フェーズ7: 完了
