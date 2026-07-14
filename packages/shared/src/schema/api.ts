@@ -27,7 +27,7 @@ export const reviewQueueResponseSchema = z.object({
       z.object({
         questionId: z.string().min(1),
         // Unix epoch milliseconds（SRS の dueAt と同じ表現）。
-        dueAt: z.number().int(),
+        dueAt: z.number().int().nonnegative(),
       }),
     )
     .max(20),

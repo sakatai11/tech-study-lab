@@ -150,6 +150,14 @@ describe('reviewQueueResponseSchema', () => {
     ).toBe(false)
   })
 
+  it('dueAt が負数だと失敗する', () => {
+    expect(
+      reviewQueueResponseSchema.safeParse({
+        items: [{ questionId: 'q-1', dueAt: -1 }],
+      }).success,
+    ).toBe(false)
+  })
+
   it('questionId が空文字だと失敗する', () => {
     expect(
       reviewQueueResponseSchema.safeParse({
