@@ -1,0 +1,104 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root,
+  :root[data-theme="dark"] {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --well: #1c2330;
+    --border: #30363d;
+    --border-hi: #454d57;
+    --ink: #e6edf3;
+    --ink-2: #c9d1d9;
+    --mute: #9198a1;
+    --faint: #6e7681;
+    --green: #3fb950;
+    --green-shade: #26903b;
+    --green-bg: rgba(63, 185, 80, 0.14);
+    --red: #f85149;
+    --red-shade: #c93c36;
+    --red-bg: rgba(248, 81, 73, 0.13);
+    --blue: #58a6ff;
+    --blue-shade: #3d7dd6;
+    --blue-bg: rgba(88, 166, 255, 0.13);
+    --purple: #bc8cff;
+    --purple-shade: #8957e5;
+    --purple-bg: rgba(188, 140, 255, 0.13);
+    --yellow: #e3b341;
+    --yellow-shade: #bb8009;
+    --yellow-bg: rgba(227, 179, 65, 0.13);
+    --orange: #f0883e;
+    --orange-shade: #c75d1c;
+    --orange-bg: rgba(240, 136, 62, 0.14);
+    --heat-0: #1c2330;
+    --heat-1: #0e4429;
+    --heat-2: #006d32;
+    --heat-3: #26a641;
+    --heat-4: #39d353;
+  }
+
+  :root[data-theme="light"] {
+    --bg: #f6f8fa;
+    --surface: #ffffff;
+    --well: #eef1f4;
+    --border: #d0d7de;
+    --border-hi: #b4bcc4;
+    --ink: #1f2328;
+    --ink-2: #3d444d;
+    --mute: #59636e;
+    --faint: #818b98;
+    --green: #2da44e;
+    --green-shade: #1f7a38;
+    --green-bg: rgba(45, 164, 78, 0.12);
+    --red: #cf222e;
+    --red-shade: #a40e26;
+    --red-bg: rgba(207, 34, 46, 0.1);
+    --blue: #0969da;
+    --blue-shade: #0550ae;
+    --blue-bg: rgba(9, 105, 218, 0.1);
+    --purple: #8250df;
+    --purple-shade: #6639ba;
+    --purple-bg: rgba(130, 80, 223, 0.1);
+    --yellow: #9a6700;
+    --yellow-shade: #7d5100;
+    --yellow-bg: rgba(154, 103, 0, 0.1);
+    --orange: #bc4c00;
+    --orange-shade: #953800;
+    --orange-bg: rgba(188, 76, 0, 0.1);
+    --heat-0: #ebedf0;
+    --heat-1: #9be9a8;
+    --heat-2: #40c463;
+    --heat-3: #30a14e;
+    --heat-4: #216e39;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    background: var(--bg);
+  }
+
+  body {
+    min-height: 100dvh;
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink-2);
+    font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 3px;
+  }
+}
