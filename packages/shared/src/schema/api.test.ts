@@ -100,6 +100,15 @@ describe('answerResponseSchema', () => {
       }).success,
     ).toBe(false)
   })
+
+  it('correctIndex が6以上だと失敗する', () => {
+    expect(
+      answerResponseSchema.safeParse({
+        isCorrect: false,
+        correctIndex: 6,
+      }).success,
+    ).toBe(false)
+  })
 })
 
 describe('reviewQueueResponseSchema', () => {
@@ -137,6 +146,14 @@ describe('reviewQueueResponseSchema', () => {
     expect(
       reviewQueueResponseSchema.safeParse({
         items: [{ questionId: 'q-1', dueAt: 1.5 }],
+      }).success,
+    ).toBe(false)
+  })
+
+  it('dueAt が負数だと失敗する', () => {
+    expect(
+      reviewQueueResponseSchema.safeParse({
+        items: [{ questionId: 'q-1', dueAt: -1 }],
       }).success,
     ).toBe(false)
   })

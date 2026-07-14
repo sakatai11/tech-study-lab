@@ -1,6 +1,6 @@
 ---
 name: pr-review-fix
-description: PRのレビューコメント・指摘事項を gh CLI（gh pr-review 拡張）で取得し、各指摘の適用可否を判断した上で修正を実装、品質ゲート（typecheck/lint/test）を通してコミット・プッシュし、レビュースレッドへの返信・解決まで一気通貫で行う。「PRの指摘に対応して」「レビューコメントを直して」「PRコメントを解消して」などで使用する。
+description: PRのレビューコメント・指摘事項を確認し、各指摘の適用可否を判断した上で修正を実装、品質ゲート（typecheck/lint/test）を通してコミット・プッシュし、レビュースレッドへの返信・解決まで一気通貫で行う。Codex AppではGitHubコネクタ、Codex CLIではgh CLIを使う。「PRの指摘に対応して」「レビューコメントを直して」「PRコメントを解消して」などで使用する。
 ---
 
 # PR レビュー指摘対応
@@ -9,7 +9,7 @@ description: PRのレビューコメント・指摘事項を gh CLI（gh pr-revi
 
 Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runtime codex --skill pr-review-fix --status started|completed` を実行して共通ログへ記録する（Claudeではhookが自動記録する）。
 
-利用可能なら `gh pr-review` 拡張（[agynio/gh-pr-review](https://github.com/agynio/gh-pr-review)）を使い、PRへのレビュー指摘の取得 → 適用可否判断 → 修正実装 → 品質ゲート → コミット・プッシュ → スレッド返信・解決までを行う。
+Codex Appでは GitHubコネクタを使い、PR・コメント・レビュー スレッドを取得し、返信・解決する。Codex CLIでは認証済みの `gh pr-review` 拡張または `gh api` を使う。ローカルの修正・コミット・プッシュは Git を使う。
 
 進捗は現在のランタイムで利用可能な plan/todo 機能でフェーズごとに管理する。利用できなければフェーズ完了時の短い報告で代替する。
 
@@ -25,21 +25,25 @@ git status --porcelain
 
 - `baseRefName` を確認する（本プロジェクトの feature ブランチは `develop` がベース）。
 - 作業ツリーがクリーンでない場合はユーザーに確認してから進める。
-- `gh pr-review` が無い場合は `gh api graphql` で reviewThreads の取得・返信・resolve を行う。`gh` 未認証なら読み取れたローカル情報まで報告して停止する。
+- Codex Appでは、PRメタデータ・コメント・レビュー スレッドをGitHubコネクタで取得する。Codex CLIでは、`gh` の認証状態を確認する。
 
 ## フェーズ1: レビュースレッド一覧取得
+
+Codex AppではGitHubコネクタでレビュー スレッド一覧を取得する。以下はCodex CLIのフォールバック:
 
 ```bash
 gh pr-review threads list --pr <N> --repo <OWNER/REPO>
 ```
 
-スレッドが無ければ通常コメントを検索する:
+スレッドが無ければ、Codex AppではGitHubコネクタで通常コメントを検索する。以下はCodex CLIのフォールバック:
 
 ```bash
 gh pr view <N> --comments --json author,comments,reviews
 ```
 
 ## フェーズ2: 指摘内容の分析・適用可否判断
+
+Codex AppではGitHubコネクタから対象コメント・行・投稿者を確認する。以下はCodex CLIのフォールバック:
 
 ```bash
 gh api repos/<OWNER>/<REPO>/pulls/<N>/comments --jq '.[] | {id,body,author,created_at,line,path}'
@@ -87,6 +91,8 @@ git push
 
 全てのオープンスレッドに、対応内容 or スキップ理由を返信する。
 
+Codex AppではGitHubコネクタで対象のインラインコメントへ返信する。以下はCodex CLIのフォールバック:
+
 ```bash
 gh pr-review comments reply \
   --pr <N> --repo <OWNER/REPO> --thread-id <THREAD_ID> \
@@ -101,7 +107,7 @@ EOF
 )"
 ```
 
-指摘を適用しなかった場合は、上記の代わりに理由を明記して返信する。通常コメント（レビュースレッドでない場合）は以下で返信する:
+指摘を適用しなかった場合は、上記の代わりに理由を明記して返信する。通常コメントもCodex AppではGitHubコネクタで返信する。以下はCodex CLIのフォールバック:
 
 ```bash
 gh pr comment <N> --body "..."
@@ -110,6 +116,8 @@ gh pr comment <N> --body "..."
 ## フェーズ7: フォローアップ待機・スレッド解決
 
 ユーザーが待機を明示した場合のみ最大5分フォローアップを待つ。ランタイムの wait/monitor 機能を優先し、CLI しかない場合は短い poll を別々に実行して進捗を共有する:
+
+Codex AppではGitHubコネクタでレビュー スレッドを再取得する。以下はCodex CLIのフォールバック:
 
 ```bash
 gh pr-review threads list --pr <N> --repo <OWNER/REPO>
@@ -122,11 +130,15 @@ gh pr-review threads list --pr <N> --repo <OWNER/REPO>
 - outdated スレッド（`isOutdated: true`）: 返信不要で解決
 - active スレッド: 返信確認後に解決
 
+Codex AppではGitHubコネクタでアクティブなスレッドを解決する。以下はCodex CLIのフォールバック:
+
 ```bash
 gh pr-review threads resolve --pr <N> --repo <OWNER/REPO> --thread-id <THREAD_ID>
 ```
 
 ## フェーズ8: 最終確認
+
+Codex AppではGitHubコネクタでスレッド状態を確認し、`git status` で作業ツリーを確認する。以下はCodex CLIのフォールバック:
 
 ```bash
 gh pr-review threads list --pr <N> --repo <OWNER/REPO>

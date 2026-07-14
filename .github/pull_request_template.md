@@ -10,10 +10,10 @@
 
 ## 関連 Issue
 
-<!-- Closes #issue番号 と記載する -->
-<!-- 例: Closes #123 / Fixes #123 / Resolves #123 -->
+<!-- develop 向けPRでは `refs #issue番号` と記載する（Issueを自動クローズしない） -->
+<!-- 例: refs #123 -->
 
-Closes #
+refs #
 
 ## スクリーンショット（必要に応じて）
 
