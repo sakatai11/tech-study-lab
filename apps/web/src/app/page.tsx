@@ -85,6 +85,7 @@ export default function Home() {
           <div
             aria-label="84日間の学習コントリビューション見本"
             className="mt-5 grid grid-flow-col grid-rows-7 gap-1 overflow-x-auto"
+            role="img"
           >
             {heatmap.map((cell) => (
               <span

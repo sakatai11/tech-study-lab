@@ -24,13 +24,13 @@ export function ThemeToggle({ className }: { className?: string }) {
   const toggleTheme = () => {
     const nextTheme: Theme = readTheme() === 'dark' ? 'light' : 'dark'
 
+    document.documentElement.dataset.theme = nextTheme
+    setTheme(nextTheme)
+
     try {
-      document.documentElement.dataset.theme = nextTheme
       localStorage.setItem('tsl-theme', nextTheme)
-      setTheme(nextTheme)
     } catch {
-      document.documentElement.dataset.theme = 'dark'
-      setTheme('dark')
+      // ストレージが使えない場合も、現在のセッションのテーマを維持する。
     }
   }
 

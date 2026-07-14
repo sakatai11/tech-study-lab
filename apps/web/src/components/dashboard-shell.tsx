@@ -68,11 +68,10 @@ function DesktopNavigation() {
                 </span>
                 {item.desktopLabel}
                 {item.dueCount ? (
-                  <span
-                    aria-label={`期限の復習が${item.dueCount}件`}
-                    className="ml-auto grid size-5 place-items-center rounded-full bg-red font-mono text-[10px] font-bold tabular-nums text-white"
-                  >
+                  <span className="ml-auto grid size-5 place-items-center rounded-full bg-red font-mono text-[10px] font-bold tabular-nums text-white">
+                    <span className="sr-only">期限の復習が</span>
                     {item.dueCount}
+                    <span className="sr-only">件</span>
                   </span>
                 ) : null}
                 {!isCurrent ? <span className="ml-auto font-mono text-[10px]">準備中</span> : null}
@@ -123,7 +122,7 @@ function MobileNavigation() {
                 : 'relative flex min-h-11 flex-1 cursor-not-allowed flex-col items-center justify-center gap-0.5 rounded-lg font-semibold text-faint opacity-70'
             }
             disabled={!isCurrent}
-            key={item.mobileLabel}
+            key={item.desktopLabel}
             type="button"
           >
             <span aria-hidden="true" className="font-mono text-base">
@@ -131,11 +130,10 @@ function MobileNavigation() {
             </span>
             <span className="text-[11px]">{item.mobileLabel}</span>
             {item.dueCount ? (
-              <span
-                aria-label={`期限の復習が${item.dueCount}件`}
-                className="absolute right-2 top-0 grid size-4 place-items-center rounded-full bg-red font-mono text-[9px] font-bold tabular-nums text-white"
-              >
+              <span className="absolute right-2 top-0 grid size-4 place-items-center rounded-full bg-red font-mono text-[9px] font-bold tabular-nums text-white">
+                <span className="sr-only">期限の復習が</span>
                 {item.dueCount}
+                <span className="sr-only">件</span>
               </span>
             ) : null}
           </button>
