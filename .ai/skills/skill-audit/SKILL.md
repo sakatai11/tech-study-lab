@@ -19,7 +19,7 @@ Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runt
 |---|---|---|
 | 参照の実在 | スキルが参照するファイル・pnpm スクリプト・エージェント名（`.ai/agents/`）・他スキル名（`.ai/skills/`）が実在するか | 存在しない参照は must-fix |
 | 絶対パス | `/Users/...` 等のマシン固有パスが含まれていないか（リポジトリ相対か `$(pwd)` にする） | must-fix |
-| 権限整合 | Claude Code は `settings.json`、Codex は現在の sandbox/approval 規則に照らす。一方の allow を他方にも有効とみなさない | 抵触は must-fix、allow 漏れは info |
+| 権限整合 | Claude Code は `settings.json`、Codex App / CLI は現在のグローバル `config.toml`・sandbox・approval 規則に照らす。GitHub操作は認証済みの `gh` CLI を両方で利用できる前提を確認し、一方の製品固有設定を他方へ転用しない | 抵触は must-fix、設定漏れは info |
 | 環境依存 | `gh` / `codex` / ブラウザツール等、環境によって存在しないツールへの依存にフォールバックや前提の明記があるか | should-fix |
 | ランタイム互換 | Claude Code 固有ツール名・`subagent_type`・モデル指定に Codex の読み替えがあるか | 欠落は must-fix |
 | リンク整合 | `.claude/skills/<name>` と `.agents/skills/<name>` が同じ `.ai/skills/<name>` を指すか。`.claude/agents/*` が `.ai/agents/*` を指すか | リンク切れ・誤リンクは must-fix |

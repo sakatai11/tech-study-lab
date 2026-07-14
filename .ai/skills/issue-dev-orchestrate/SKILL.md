@@ -17,7 +17,7 @@ Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runt
 
 > **ブランチ戦略（Git Flow 型）**: `main` は保護。**パイプラインは main で作業しない・main に直接コミットしない**。統合ブランチ `develop` をベースに作業ブランチを切る。`develop` → `main` の PR・マージは人間が任意タイミングで行う（パイプラインの対象外）。
 
-1. issue を取得する。Codex AppではGitHubコネクタを使い、Codex CLIでは認証済みの `gh` CLI を使う:
+1. `gh auth status` で認証を確認してから、認証済みの `gh` CLI で issue を取得する。Codex AppでGitHubコネクタが接続済みの場合は、同等の操作にコネクタを使ってよい:
    ```bash
    gh issue view <N> --json number,title,body,labels,comments
    ```
@@ -76,7 +76,7 @@ Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runt
 
 1. 調査レポートの推奨案をベースに実装方針を決定する。方針が複数あり優劣が拮抗している、または「要確認事項」が実装内容を左右する場合のみ、利用可能なユーザー確認機能で確認する。それ以外は推奨案を採用して先へ進む。
 2. **design.md との乖離が報告された場合**: 仕様駆動開発の原則に従い、実装前に `docs/design.md` を更新する。
-3. 決定した方針を issue にコメントで記録する。Codex AppではGitHubコネクタを使い、以下はCodex CLIの例とする:
+3. 決定した方針を issue にコメントで記録する。認証済みの `gh` CLI を使う。Codex AppでGitHubコネクタが接続済みの場合は、同等の操作にコネクタを使ってよい:
    ```bash
    gh issue comment <N> --body "<方針サマリ（決定方針・影響範囲・テスト観点）>"
    ```
@@ -150,10 +150,10 @@ CodeRabbit のレビューは差分を第三者サービスへ送信する。Cod
    ```bash
    git push -u origin <種別>/issue-<N>-<英語スラッグ>
    ```
-4. **feature → develop の PR をユーザー確認後に作成する**。利用可能なら `pr-creator` skill を使用し、なければ `.github/pull_request_template.md` を読む。Codex AppではGitHubコネクタでPRを作成し、Codex CLIでは `gh pr create` を使う:
-   - **ベースブランチは `develop`**（`main` ではない）。Codex CLIの例: `gh pr create --base develop ...`
+4. **feature → develop の PR をユーザー確認後に作成する**。利用可能なら `pr-creator` skill を使用し、なければ `.github/pull_request_template.md` を読む。認証済みの `gh pr create` を使う。Codex AppでGitHubコネクタが接続済みの場合は、同等の操作にコネクタを使ってよい:
+   - **ベースブランチは `develop`**（`main` ではない）。例: `gh pr create --base develop ...`
    - PR 本文には `refs #<N>` を書く（参照のみ）。**`closes #<N>` は使わない**: GitHub の自動クローズはデフォルトブランチ（`main`）へのマージでのみ発火するため、develop マージでは効かず誤解を招く。issue のクローズは `develop` → `main` のリリース時に人間が判断する。
-   - **マージはしない**。feature → develop のマージ、および develop → main の PR・マージはすべて人間が任意タイミングで行う（`gh pr merge` は settings.json で禁止）。
+   - **マージはしない**。feature → develop のマージ、および develop → main の PR・マージはすべて人間が任意タイミングで行う（`gh pr merge` は `AGENTS.md` で禁止）。
 5. ユーザーに完了報告する: 実装サマリ／レビュー・テスト結果／作業ブランチ名／PR URL（作成した場合）。
 
 ## 中断・失敗時の原則
