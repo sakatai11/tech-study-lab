@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process'
-import { readFileSync, readdirSync } from 'node:fs'
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -36,11 +37,22 @@ function collectContentFiles(contentRoot: string, directory = contentRoot): Cont
 const contentRoot = fileURLToPath(new URL('../../../content/', import.meta.url))
 const payload = createContentSyncPayload(collectContentFiles(contentRoot), FIXED_USER_ID)
 const sql = createContentSyncSql(payload, Date.now())
-const result = spawnSync('wrangler', createLocalD1ExecuteArgs(sql), { stdio: 'inherit' })
+const temporaryDirectory = mkdtempSync(join(tmpdir(), 'tech-study-lab-content-sync-'))
+const sqlPath = join(temporaryDirectory, 'content-sync.sql')
 
-if (result.error) {
-  throw result.error
-}
-if (result.status !== 0) {
-  throw new Error(`wrangler d1 execute failed with status ${result.status ?? 'unknown'}`)
+try {
+  writeFileSync(sqlPath, sql, 'utf8')
+  const result = spawnSync('wrangler', createLocalD1ExecuteArgs(sqlPath), {
+    shell: process.platform === 'win32',
+    stdio: 'inherit',
+  })
+
+  if (result.error) {
+    throw result.error
+  }
+  if (result.status !== 0) {
+    throw new Error(`wrangler d1 execute failed with status ${result.status ?? 'unknown'}`)
+  }
+} finally {
+  rmSync(temporaryDirectory, { force: true, recursive: true })
 }

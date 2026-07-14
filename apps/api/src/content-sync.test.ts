@@ -169,13 +169,13 @@ describe('createContentSyncSql', () => {
 
 describe('createLocalD1ExecuteArgs', () => {
   it('uses a local-only wrangler command', () => {
-    expect(createLocalD1ExecuteArgs('SELECT 1')).toEqual([
+    expect(createLocalD1ExecuteArgs('/tmp/content-sync.sql')).toEqual([
       'd1',
       'execute',
       'tech-study-lab',
       '--local',
-      '--command',
-      'SELECT 1',
+      '--file',
+      '/tmp/content-sync.sql',
     ])
   })
 })

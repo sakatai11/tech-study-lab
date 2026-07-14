@@ -191,6 +191,6 @@ export function createContentSyncSql(payload: ContentSyncPayload, createdAt: num
 /**
  * remote実行を混入させないため、wranglerへの引数をこの固定形に限定する。
  */
-export function createLocalD1ExecuteArgs(sql: string): readonly string[] {
-  return ['d1', 'execute', 'tech-study-lab', '--local', '--command', sql]
+export function createLocalD1ExecuteArgs(filePath: string): readonly string[] {
+  return ['d1', 'execute', 'tech-study-lab', '--local', '--file', filePath]
 }
