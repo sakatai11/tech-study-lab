@@ -29,7 +29,7 @@ git status --porcelain
 
 ## フェーズ1: レビュースレッド一覧取得
 
-レビュー スレッド一覧を取得する。Codex AppでGitHubコネクタが接続済みの場合は、同等の取得にコネクタを使ってよい:
+レビュースレッド一覧を取得する。Codex AppでGitHubコネクタが接続済みの場合は、同等の取得にコネクタを使ってよい:
 
 ```bash
 gh pr-review threads list --pr <N> --repo <OWNER/REPO>
@@ -117,7 +117,7 @@ gh pr comment <N> --body-file <返信本文を保存した一時ファイル>
 
 ユーザーが待機を明示した場合のみ最大5分フォローアップを待つ。ランタイムの wait/monitor 機能を優先し、CLI しかない場合は短い poll を別々に実行して進捗を共有する:
 
-レビュー スレッドを再取得する。Codex AppでGitHubコネクタが接続済みの場合は、同等の取得にコネクタを使ってよい:
+レビュースレッドを再取得する。Codex AppでGitHubコネクタが接続済みの場合は、同等の取得にコネクタを使ってよい:
 
 ```bash
 gh pr-review threads list --pr <N> --repo <OWNER/REPO>
@@ -149,6 +149,6 @@ git status
 
 ## 注意事項
 
-- **`gh pr merge` は使わない**（マージは常に人間の判断。settings.json で禁止されている）。
+- **`gh pr merge` は使わない**（マージは常に人間の判断。`AGENTS.md` で禁止されている）。
 - 本スキルは PR の指摘対応・返信・スレッド解決のみを行い、`develop` → `main` のマージ判断には関与しない。
 - 同じコマンド・操作が2回失敗した場合は繰り返さず、根本原因を分析して別のアプローチを取る。
