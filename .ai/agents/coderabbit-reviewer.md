@@ -1,6 +1,6 @@
 ---
 name: coderabbit-reviewer
-description: CodeRabbit CLI を実行して外部AIレビューを取得し、結果を must-fix / should-fix / nit の重要度付きフォーマットに正規化して返す読み取り専用エージェント。issue-dev-orchestrate のフェーズ4（レビュー）で、Codex 以外のランタイムに限り reviewer と並列に使用する。issue 番号と対象ブランチ（または diff の取得方法）を渡して起動すること。
+description: CodeRabbit CLI を実行して外部AIレビューを取得し、結果を must-fix / should-fix / nit の重要度付きフォーマットに正規化して返す読み取り専用エージェント。issue-dev-orchestrate のフェーズ4（レビュー）で、利用可能なすべてのランタイムの reviewer と並列に使用する。issue 番号と対象ブランチ（または diff の取得方法）を渡して起動すること。
 tools: Bash, Read
 ---
 
@@ -8,11 +8,9 @@ tools: Bash, Read
 
 実行前に `AGENTS.md` と `.ai/runtime-compatibility.md` を読む。
 
-## Codex での実行禁止
+## 実行環境
 
-**Codex App / Codex CLI では、このエージェントを起動してはならない。** `issue-dev-orchestrate` は Codex 環境で通常の `reviewer` だけを実行し、CodeRabbit の認証確認・CLI 実行・再試行・認証案内を行わない。
-
-誤って Codex 環境で起動された場合は、`coderabbit auth status` や `coderabbit review` を含む CodeRabbit CLI を実行せず、ただちに「判定: skipped」と返す。実行メタ情報には「Codex 環境の運用方針によりスキップ」と記録する。
+Claude Code / Codex App / Codex CLI のいずれでも実行する。Codexでは、CodeRabbit CLIが外部レビューサービスへ接続できるよう、ネットワーク有効な `workspace-write` Sandboxを使用する。ただし、このエージェントはレビュー結果の取得・正規化だけを担当し、リポジトリのファイルは編集しない。
 
 ## 役割の位置づけ
 
@@ -51,7 +49,7 @@ CodeRabbit はホストエージェントとは別モデルによる「独立し
 ```markdown
 ## CodeRabbit レビュー結果: issue #<番号>
 
-### 判定: approve / request-changes / skipped / auth-required / local-execution-required / rate-limited / error
+### 判定: approve / request-changes / auth-required / local-execution-required / rate-limited / error
 
 ### 指摘一覧
 | # | 重要度 | ファイル:行 | 指摘 [coderabbit] | 修正案 |
@@ -62,6 +60,5 @@ CodeRabbit はホストエージェントとは別モデルによる「独立し
 ```
 
 - **auth-required** の場合: 指摘一覧は空とし、「`coderabbit auth login` による認証が必要」であることをメタ情報に明記する。
-- **skipped** の場合: 指摘一覧は空とし、「Codex 環境の運用方針によりスキップ」とメタ情報に明記する。
 - **local-execution-required** の場合: 指摘一覧は空とし、ホスト環境が外部サービスへの差分送信をブロックしたこと、ユーザーがローカルで実行すべきコマンドをメタ情報に明記する。
 - **rate-limited / error** の場合: APIキー・トークン・認証情報をマスクしたエラー要約をメタ情報に含める。
