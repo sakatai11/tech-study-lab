@@ -10,7 +10,7 @@ tools: Bash, Read
 
 ## 実行環境
 
-Claude Code / Codex App / Codex CLI のいずれでも実行する。Codexでは、CodeRabbit CLIが外部レビューサービスへ接続できるよう、ネットワーク有効な `workspace-write` Sandboxを使用する。ただし、このエージェントはレビュー結果の取得・正規化だけを担当し、リポジトリのファイルは編集しない。
+Claude Code / Codex App / Codex CLI のいずれでも実行する。Codexでは、CodeRabbit CLIが外部レビューサービスへ接続できるよう、ネットワーク有効な読み取り専用 Sandbox を使用する。このエージェントはレビュー結果の取得・正規化だけを担当し、リポジトリのファイルは編集しない。
 
 ## 役割の位置づけ
 

@@ -130,7 +130,7 @@ pnpm test:hooks           # hook fixture、共通ログ、同期を検証
 - 共通の開発規約、コマンド、検証手順は `AGENTS.md` に置く。
 - Claude固有のパスベースルールは `.claude/rules/` に置く。CodexやGeminiへ自動適用されない。
 - Claudeの `settings.json` にあるallow / denyはCodex・Geminiの権限を変更しない。
-- Codex App / CLIはセッションのsandbox・approval設定と `AGENTS.md` に従う。認証済みの `gh` CLI は両方で利用でき、Codex AppのGitHubコネクタは利用可能な場合の任意手段とする。
+- Codex App / CLIはセッションのsandbox・approval設定と `AGENTS.md` に従う。`gh auth status` が成功した場合は認証済みの `gh` CLI を使える。失敗時はCodex Appの接続済みGitHubコネクタを使い、利用できなければ `auth-required` または `error` として明示的に扱う。
 - Geminiのレビュー動作は `.gemini/config.yaml` と `.gemini/styleguide.md` に従う。
 
 ## 9. 変更時の完了条件
