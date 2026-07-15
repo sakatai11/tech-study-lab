@@ -3,6 +3,11 @@
 # Append a runtime-neutral skill lifecycle event to a local, ignored JSONL log.
 set -eu
 
+command -v jq >/dev/null 2>&1 || {
+  printf '%s\n' 'jq is required to write skill usage logs. Install jq and retry.' >&2
+  exit 127
+}
+
 usage() {
   printf '%s\n' 'usage: log-skill-usage.sh --runtime <claude|codex> --skill <name> --status <requested|started|completed> [--source <hook|skill>]' >&2
   exit 64

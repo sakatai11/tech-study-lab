@@ -10,11 +10,10 @@
 - バックグラウンドプロセスは Claude Code では Bash のバックグラウンド実行、Codex では継続セッション付きコマンド実行を使い、返された ID でログ確認・停止を行う。
 - ブラウザ確認は Claude Code では利用可能な Chrome/browser 機能、Codex では in-app browser skill を使う。利用できなければ HTTP レベルの検証まで行い、UI は未確認と報告する。
 
-## GitHub 操作（Codex App / Codex CLI）
+## GitHub 操作（Claude Code / Codex App / Codex CLI）
 
-- **Codex App**: PR・Issue・レビュー・コメント・レビュー スレッドの取得／作成／更新／解決は、接続済みの **GitHubコネクタ** を使う。非公開リポジトリも Codex App 側の認可で操作できる。
-- **Codex CLI**: 認証済みの `gh` CLI を使う。`gh auth status` が失敗した場合は、認証を復旧するまでGitHub操作を行わない。
-- Codex Appでは、`gh auth status` の失敗だけを理由にGitHub操作を停止しない。コネクタが未接続・未提供の場合だけ、認証済みの `gh` CLI をフォールバックとして使う。
+- すべてのハーネスで、認証済みの `gh` CLI を使って PR・Issue・レビュー・コメント・レビュー スレッドを取得／作成／更新／解決できる。開始時に `gh auth status` を確認し、失敗した場合は認証を復旧するまでGitHub操作を行わない。
+- Codex AppでGitHubコネクタが接続済みの場合は、同等のGitHub操作にコネクタを使ってよい。コネクタは `gh` の必須代替ではない。
 - ローカル変更の `git fetch` / `git push` / コミットはコネクタの対象外であり、ローカル Git の認証・権限に従う。
 
 ## サブエージェントの起動

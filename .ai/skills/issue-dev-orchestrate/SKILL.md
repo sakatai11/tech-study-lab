@@ -17,7 +17,7 @@ Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runt
 
 > **ブランチ戦略（Git Flow 型）**: `main` は保護。**パイプラインは main で作業しない・main に直接コミットしない**。統合ブランチ `develop` をベースに作業ブランチを切る。`develop` → `main` の PR・マージは人間が任意タイミングで行う（パイプラインの対象外）。
 
-1. issue を取得する。Codex AppではGitHubコネクタを使い、Codex CLIでは認証済みの `gh` CLI を使う:
+1. `gh auth status` で認証を確認してから、認証済みの `gh` CLI で issue を取得する。Codex AppでGitHubコネクタが接続済みの場合は、同等の操作にコネクタを使ってよい:
    ```bash
    gh issue view <N> --json number,title,body,labels,comments
    ```
@@ -76,9 +76,9 @@ Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runt
 
 1. 調査レポートの推奨案をベースに実装方針を決定する。方針が複数あり優劣が拮抗している、または「要確認事項」が実装内容を左右する場合のみ、利用可能なユーザー確認機能で確認する。それ以外は推奨案を採用して先へ進む。
 2. **design.md との乖離が報告された場合**: 仕様駆動開発の原則に従い、実装前に `docs/design.md` を更新する。
-3. 決定した方針を issue にコメントで記録する。Codex AppではGitHubコネクタを使い、以下はCodex CLIの例とする:
+3. 決定した方針を issue にコメントで記録する。本文は安全な一時ファイルに書き出して `--body-file` で渡す。認証済みの `gh` CLI を使う。Codex AppでGitHubコネクタが接続済みの場合は、同等の操作にコネクタを使ってよい:
    ```bash
-   gh issue comment <N> --body "<方針サマリ（決定方針・影響範囲・テスト観点）>"
+   gh issue comment <N> --body-file <方針本文を保存した一時ファイル>
    ```
 
 ## フェーズ3: 実装
@@ -97,36 +97,19 @@ Issueで「使用する」が選ばれている、または以下のいずれか
 
 起動前に理由、担当範囲、モデル、sandbox、成果物の確認方法を短いブリーフに記録する。バックエンド作業であることだけを理由に起動しない。CLIの実行に追加の承認や外部認証が必要な場合は、現在のランタイムの正規の承認経路に従う。
 
-## フェーズ4: レビュー（並列）
+## フェーズ4: レビュー（利用可能なレビューエージェントは並列）
 
-2つのレビューエージェントをランタイムで利用可能な並列起動機能で同時に起動する。**この時点で実装は未コミット**なので、`git diff develop` と `git status --short` を併用し、未追跡ファイルもレビュー対象に含める。
+**この時点で実装は未コミット**なので、`git diff develop` と `git status --short` を併用する。さらに `git ls-files --others --exclude-standard` で未追跡ファイルを列挙し、各ファイルの内容もレビュー用ブリーフへ明示的に含める。
+
+並列実行を利用できるランタイムでは、`reviewer` と `coderabbit-reviewer` を並列起動して独立したレビューを実施する。並列実行を利用できない場合は、同じ役割分担で順次実行する。CodeRabbit CLIが未インストール・未認証・外部サービス接続不可の場合だけ、原因を確認してから通常の `reviewer` 2件へフォールバックする。
 
 1. **`reviewer` エージェント**: `.ai/agents/reviewer.md` の定義と issue 番号・方針サマリを渡す。
-2. **`coderabbit-reviewer` エージェント**: `.ai/agents/coderabbit-reviewer.md` の定義と issue 番号を渡す。
-
-### CodeRabbit の事前判定（Codex）
-
-CodeRabbit のレビューは差分を第三者サービスへ送信する。Codex では、実行前に次を確認する。
-
-1. `coderabbit auth status` で認証済みか確認する。
-2. 認証済みであっても、外部サービスへのコード送信についてユーザーの明示承認を得る。未承認なら、CodeRabbit は実行せず通常 reviewer の結果だけで続行する。
-3. 実行環境が外部送信をブロックした場合、同じコマンドを再試行・別経路で迂回してはならない。ユーザー自身のターミナルで、対象ブランチ上から次を実行してもらい、結果を貼り付けてもらう。
-   ```bash
-   coderabbit review --agent --base develop --type uncommitted
-   ```
-   結果が届くまでは CodeRabbit の指摘を「未取得」として明記し、通常 reviewer の結果だけで進めるかをユーザーに確認する。
-
-### coderabbit-reviewer が「auth-required」を返した場合
-
-**黙ってスキップしない。** ユーザーに以下を案内して認証を促す:
-
-> CodeRabbit CLI が未認証です。ご自身のターミナルで `coderabbit auth login` を実行して認証してください。
-
-認証完了を確認したら coderabbit-reviewer を再起動する。ユーザーが「認証しない・後回しにする」と明示した場合のみ、reviewer 単独の結果で続行する。rate-limited / error の場合はその旨をユーザーに報告し、reviewer 単独で続行してよい。
+2. **`coderabbit-reviewer` エージェント**: `.ai/agents/coderabbit-reviewer.md` の定義に従い、CodeRabbit CLIで独立レビューを実行する。`auth-required` の場合は `coderabbit auth login` 後に再起動する。rate-limited / error / local-execution-required の場合は、その理由を報告し、CodeRabbitの代わりに境界条件・保守性・テスト十分性を重点確認する2件目の `reviewer` を起動する。
+3. CodeRabbitが起動前に利用不可と判明している場合は、最初から2件の `reviewer` を役割分担して起動する。並列実行が可能なら並列、できなければ順次実行する。並列起動済みの CodeRabbitが失敗した場合は、1件目の完了を待たず代替 reviewer を直ちに起動し、2件分の独立したレビュー結果を統合する。順次実行中に失敗した場合は、直後に代替 reviewer を実行する。
 
 ### 結果の統合
 
-両者の指摘リストをマージする。**同一 `ファイル:行` かつ指摘内容が実質的に同じ場合のみ**1件に束ね（重要度は高い方を採用）、出典タグ `[coderabbit]` は保持する。同じ行でも指摘内容が異なる場合（例: 入力検証漏れと認可漏れが同じ行にある）は別指摘として両方残す。迷う場合は統合せず両方残す。**CodeRabbit の指摘をオーケストレーターの判断で取捨選択しない**（独立レビューの価値を保つため）。マージ後の must-fix / should-fix / nit リストをフェーズ6に渡す。
+取得できたすべてのレビュー結果を統合する。**同一 `ファイル:行` かつ指摘内容が実質的に同じ場合**に1件へ束ね（重要度は高い方を採用）、CodeRabbit 由来の出典タグ `[coderabbit]` は保持する。同じ行でも指摘内容が異なる場合（例: 入力検証漏れと認可漏れが同じ行にある）は別指摘として両方残す。迷う場合は統合せず両方残す。**各レビューエージェントの指摘をオーケストレーターの判断で取捨選択しない**（独立レビューの価値を保つため）。CodeRabbitが利用できない場合は、代替 reviewer 2件の結果を統合して must-fix / should-fix / nit リストとしてフェーズ6に渡す。
 
 ## フェーズ5: テスト
 
@@ -139,7 +122,7 @@ CodeRabbit のレビューは差分を第三者サービスへ送信する。Cod
 1. レビューの must-fix / should-fix と、test-fixer の残課題を fix 対象リストにまとめる（nit は含めない）。
 2. fix 対象が空ならフェーズ7へ。
 3. fix 対象を `developer` エージェントに渡して修正させる。
-4. フェーズ4（レビューは fix 箇所の再確認のみ、**`reviewer` 単独で実施**。CodeRabbit はレート制限があるため初回のみ）→フェーズ5 を再実行する。
+4. フェーズ4（レビューは fix 箇所の再確認のみに絞り、初回と同じ役割分担で **`reviewer` と `coderabbit-reviewer` を並列実行可能なら並列、できなければ順次実施**。利用できない場合は代替 reviewer 2件）→フェーズ5 を再実行する。
 5. **最大2周**。収束しない場合は残課題を整理してユーザーに報告し、指示を仰ぐ。
 
 ## フェーズ7: 完了
@@ -150,10 +133,10 @@ CodeRabbit のレビューは差分を第三者サービスへ送信する。Cod
    ```bash
    git push -u origin <種別>/issue-<N>-<英語スラッグ>
    ```
-4. **feature → develop の PR をユーザー確認後に作成する**。利用可能なら `pr-creator` skill を使用し、なければ `.github/pull_request_template.md` を読む。Codex AppではGitHubコネクタでPRを作成し、Codex CLIでは `gh pr create` を使う:
-   - **ベースブランチは `develop`**（`main` ではない）。Codex CLIの例: `gh pr create --base develop ...`
+4. **feature → develop の PR をユーザー確認後に作成する**。利用可能なら `pr-creator` skill を使用し、なければ `.github/pull_request_template.md` を読む。認証済みの `gh pr create` を使う。Codex AppでGitHubコネクタが接続済みの場合は、同等の操作にコネクタを使ってよい:
+   - **ベースブランチは `develop`**（`main` ではない）。例: `gh pr create --base develop ...`
    - PR 本文には `refs #<N>` を書く（参照のみ）。**`closes #<N>` は使わない**: GitHub の自動クローズはデフォルトブランチ（`main`）へのマージでのみ発火するため、develop マージでは効かず誤解を招く。issue のクローズは `develop` → `main` のリリース時に人間が判断する。
-   - **マージはしない**。feature → develop のマージ、および develop → main の PR・マージはすべて人間が任意タイミングで行う（`gh pr merge` は settings.json で禁止）。
+   - **マージはしない**。feature → develop のマージ、および develop → main の PR・マージはすべて人間が任意タイミングで行う（`gh pr merge` は `AGENTS.md` で禁止）。
 5. ユーザーに完了報告する: 実装サマリ／レビュー・テスト結果／作業ブランチ名／PR URL（作成した場合）。
 
 ## 中断・失敗時の原則
