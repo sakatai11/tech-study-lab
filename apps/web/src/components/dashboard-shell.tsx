@@ -108,7 +108,7 @@ function MobileNavigation() {
   return (
     <nav
       aria-label="モバイルナビゲーション"
-      className="fixed inset-x-0 bottom-0 z-20 flex border-t-2 border-border bg-surface px-1.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))] pt-2 lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-20 flex border-t-2 border-border bg-surface px-1.5 pb-[calc(0.625rem_+_env(safe-area-inset-bottom))] pt-2 lg:hidden"
     >
       {mobileNavigation.map((item, index) => {
         const isCurrent = index === 0
