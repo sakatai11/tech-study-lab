@@ -2,16 +2,8 @@
 
 ## Scheduled task prompt
 
-Automationに登録する本文:
-
-```text
-.ai/automations/weekly-retro-refine/prompt.md を全文読み、その手順に従って前回実行後から今回までの週次レトロスペクティブと既存Issueのリファイメントを実施し、固定HTMLレポートを生成してください。
-```
-
 推奨設定:
 
-- 毎週月曜 09:00（Asia/Tokyo）
-- このプロジェクトを対象にする
 - 専用worktreeで実行する
 - workspace-write。ネットワークまたはGitHub情報が利用できない場合は権限を広げず、レポートに制約として記録する
 
