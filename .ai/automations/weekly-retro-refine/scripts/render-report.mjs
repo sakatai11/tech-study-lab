@@ -265,14 +265,19 @@ const replacements = {
   APPROVALS: renderApprovals(report.approvals),
 }
 
+const templatePlaceholders = new Set(template.match(/\{\{[A-Z_]+\}\}/g) || [])
+
 let html = template
 for (const [key, value] of Object.entries(replacements)) {
-  html = html.replaceAll(`{{${key}}}`, value)
+  const placeholder = `{{${key}}}`
+  html = html.replaceAll(placeholder, value)
+  templatePlaceholders.delete(placeholder)
 }
 
-const unresolved = html.match(/\{\{[A-Z_]+\}\}/g)
-if (unresolved) {
-  throw new Error(`Unresolved template placeholders: ${unresolved.join(', ')}`)
+if (templatePlaceholders.size > 0) {
+  throw new Error(
+    `Unresolved template placeholders: ${Array.from(templatePlaceholders).join(', ')}`,
+  )
 }
 
 await mkdir(path.dirname(outputPath), { recursive: true })
