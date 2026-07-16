@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>{{DOCUMENT_TITLE}}</title>
+    <style>
+      :root {
+        --paper: #f4f1ea;
+        --surface: #fffdf8;
+        --ink: #202522;
+        --muted: #66706a;
+        --line: #d8d4ca;
+        --accent: #1f5d50;
+        --accent-soft: #e2eee9;
+        --blue: #315e91;
+        --blue-soft: #e9eff7;
+        --amber: #8a5a14;
+        --amber-soft: #f8ecd5;
+        --red: #93473e;
+        --red-soft: #f7e5e1;
+        --gray-soft: #ecebe7;
+        --shadow: 0 12px 35px rgb(52 55 48 / 8%);
+      }
+
+      * { box-sizing: border-box; }
+
+      html { scroll-behavior: smooth; }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background: var(--paper);
+        font-family: Inter, "Hiragino Sans", "Yu Gothic UI", "Yu Gothic", sans-serif;
+        font-size: 15px;
+        line-height: 1.7;
+      }
+
+      a { color: var(--blue); }
+
+      .shell {
+        width: min(1180px, calc(100% - 32px));
+        margin: 32px auto 72px;
+      }
+
+      .masthead {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 24px;
+        align-items: end;
+        padding: 28px 30px;
+        color: #f7fbf9;
+        background: #173f37;
+        border: 1px solid #12342d;
+        border-radius: 18px;
+        box-shadow: var(--shadow);
+      }
+
+      .eyebrow {
+        margin: 0 0 6px;
+        color: #bcd9d1;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+      }
+
+      h1, h2, h3, p { margin-top: 0; }
+
+      h1 {
+        margin-bottom: 8px;
+        font-family: Georgia, "Yu Mincho", serif;
+        font-size: clamp(28px, 4vw, 44px);
+        line-height: 1.15;
+        letter-spacing: -0.02em;
+      }
+
+      h2 {
+        margin-bottom: 18px;
+        font-size: 21px;
+        line-height: 1.35;
+      }
+
+      h3 {
+        margin-bottom: 7px;
+        font-size: 16px;
+        line-height: 1.45;
+      }
+
+      .period { margin: 0; color: #d7e8e3; }
+
+      .meta {
+        min-width: 250px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        color: #d7e8e3;
+        font-size: 13px;
+      }
+
+      .meta li + li { margin-top: 4px; }
+      .meta strong { color: #ffffff; }
+
+      .evidence {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 18px;
+      }
+
+      .badge, .status {
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        min-height: 26px;
+        padding: 3px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.01em;
+      }
+
+      .badge { color: #dff0eb; background: rgb(255 255 255 / 12%); }
+      .status.good { color: var(--accent); background: var(--accent-soft); }
+      .status.info { color: var(--blue); background: var(--blue-soft); }
+      .status.warn { color: var(--amber); background: var(--amber-soft); }
+      .status.danger { color: var(--red); background: var(--red-soft); }
+      .status.neutral { color: #555d58; background: var(--gray-soft); }
+
+      .nav {
+        display: flex;
+        gap: 6px;
+        margin: 14px 0 24px;
+        padding: 6px;
+        overflow-x: auto;
+        background: rgb(255 253 248 / 82%);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+      }
+
+      .nav a {
+        flex: 0 0 auto;
+        padding: 7px 11px;
+        color: var(--muted);
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .nav a:hover, .nav a:focus-visible { color: var(--accent); background: var(--accent-soft); }
+
+      .panel {
+        margin-top: 18px;
+        padding: 24px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        box-shadow: var(--shadow);
+      }
+
+      .section-heading {
+        display: flex;
+        gap: 12px;
+        align-items: baseline;
+        justify-content: space-between;
+        padding-bottom: 13px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .section-heading p { margin: 0; color: var(--muted); font-size: 13px; }
+
+      .summary-list {
+        display: grid;
+        gap: 10px;
+        margin: 0;
+        padding-left: 22px;
+        font-size: 16px;
+        font-weight: 650;
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 20px;
+      }
+
+      .metric {
+        min-height: 116px;
+        padding: 16px;
+        background: #f7f5ef;
+        border: 1px solid var(--line);
+        border-top: 4px solid var(--accent);
+        border-radius: 11px;
+      }
+
+      .metric.info { border-top-color: var(--blue); }
+      .metric.warn { border-top-color: var(--amber); }
+      .metric.danger { border-top-color: var(--red); }
+      .metric-label { display: block; color: var(--muted); font-size: 12px; font-weight: 800; }
+      .metric-value { display: block; margin: 3px 0; font-size: 26px; font-weight: 850; line-height: 1.2; }
+      .metric-detail { color: var(--muted); font-size: 12px; }
+
+      .three-column, .two-column {
+        display: grid;
+        gap: 14px;
+        margin-top: 18px;
+      }
+
+      .three-column { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .two-column { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+      .card {
+        padding: 17px;
+        background: #fbfaf6;
+        border: 1px solid var(--line);
+        border-radius: 11px;
+      }
+
+      .card p:last-child, .card ul:last-child, .card dl:last-child { margin-bottom: 0; }
+      .card .status { margin-bottom: 10px; }
+      .evidence-text { color: var(--muted); font-size: 13px; }
+
+      .detail-list {
+        display: grid;
+        grid-template-columns: 110px minmax(0, 1fr);
+        gap: 7px 12px;
+        margin: 13px 0 0;
+        font-size: 13px;
+      }
+
+      .detail-list dt { color: var(--muted); font-weight: 800; }
+      .detail-list dd { margin: 0; }
+
+      .table-wrap { overflow-x: auto; }
+
+      table {
+        width: 100%;
+        margin-top: 16px;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+
+      th, td {
+        padding: 12px 10px;
+        text-align: left;
+        vertical-align: top;
+        border-bottom: 1px solid var(--line);
+      }
+
+      th { color: var(--muted); font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; }
+      td:first-child { width: 76px; font-weight: 850; white-space: nowrap; }
+      .issue-title { min-width: 220px; font-weight: 800; }
+      .issue-note { display: block; margin-top: 4px; color: var(--muted); font-weight: 400; }
+
+      .focus {
+        display: grid;
+        grid-template-columns: 1.25fr 1fr 1fr;
+        gap: 14px;
+        margin-top: 18px;
+      }
+
+      .focus .card:first-child { border-top: 4px solid var(--accent); }
+
+      .approval {
+        display: grid;
+        grid-template-columns: 42px minmax(0, 1fr);
+        gap: 13px;
+        align-items: start;
+      }
+
+      .approval + .approval { margin-top: 12px; }
+
+      .approval-id {
+        display: grid;
+        width: 36px;
+        height: 36px;
+        place-items: center;
+        color: white;
+        background: var(--accent);
+        border-radius: 50%;
+        font-weight: 850;
+      }
+
+      .empty {
+        margin: 14px 0 0;
+        padding: 16px;
+        color: var(--muted);
+        background: #f7f5ef;
+        border: 1px dashed var(--line);
+        border-radius: 10px;
+      }
+
+      .limitations {
+        margin-top: 18px;
+        padding: 14px 16px;
+        color: #674c22;
+        background: var(--amber-soft);
+        border-left: 4px solid var(--amber);
+        border-radius: 8px;
+      }
+
+      .limitations strong { display: block; margin-bottom: 4px; }
+      .limitations ul { margin: 0; padding-left: 20px; }
+
+      footer { margin-top: 26px; color: var(--muted); font-size: 12px; text-align: center; }
+
+      @media (max-width: 900px) {
+        .masthead { grid-template-columns: 1fr; align-items: start; }
+        .meta { min-width: 0; }
+        .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .three-column, .focus { grid-template-columns: 1fr; }
+      }
+
+      @media (max-width: 620px) {
+        .shell { width: min(100% - 20px, 1180px); margin-top: 10px; }
+        .masthead, .panel { padding: 19px; border-radius: 12px; }
+        .metrics, .two-column { grid-template-columns: 1fr; }
+        .section-heading { display: block; }
+        .detail-list { grid-template-columns: 1fr; gap: 2px; }
+        .detail-list dd + dt { margin-top: 8px; }
+      }
+
+      @media print {
+        body { background: white; font-size: 11px; }
+        .shell { width: 100%; margin: 0; }
+        .masthead, .panel { box-shadow: none; break-inside: avoid; }
+        .nav { display: none; }
+        a { color: inherit; text-decoration: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="masthead">
+        <div>
+          <p class="eyebrow">Engineering improvement review</p>
+          <h1>{{REPORT_TITLE}}</h1>
+          <p class="period">{{PERIOD}}</p>
+          <div class="evidence" aria-label="利用した情報源">{{EVIDENCE_BADGES}}</div>
+        </div>
+        <ul class="meta">
+          <li><strong>生成日時:</strong> {{GENERATED_AT}}</li>
+          <li><strong>リポジトリ:</strong> {{REPOSITORY}}</li>
+        </ul>
+      </header>
+
+      <nav class="nav" aria-label="レポート内ナビゲーション">
+        <a href="#summary">要約</a>
+        <a href="#retro">振り返り</a>
+        <a href="#issues">既存Issue</a>
+        <a href="#candidates">新規候補</a>
+        <a href="#focus">次週</a>
+        <a href="#approvals">承認事項</a>
+      </nav>
+
+      <section class="panel" id="summary">
+        <div class="section-heading"><h2>エグゼクティブサマリー</h2><p>事実に基づく最大5項目</p></div>
+        {{SUMMARY}}
+        {{METRICS}}
+        {{LIMITATIONS}}
+      </section>
+
+      <section class="panel" id="retro">
+        <div class="section-heading"><h2>レトロスペクティブ</h2><p>Keep / Problem / Try</p></div>
+        <h3>Keep</h3>
+        <div class="three-column">{{KEEP}}</div>
+        <h3 style="margin-top: 25px">Problem</h3>
+        <div class="two-column">{{PROBLEMS}}</div>
+        <h3 style="margin-top: 25px">Try</h3>
+        <div class="three-column">{{TRIES}}</div>
+      </section>
+
+      <section class="panel" id="issues">
+        <div class="section-heading"><h2>既存Issueのリファイメント</h2><p>新規作成より先に確認</p></div>
+        <div class="table-wrap">{{ISSUES}}</div>
+      </section>
+
+      <section class="panel" id="candidates">
+        <div class="section-heading"><h2>新規Issue候補</h2><p>既存Issueでカバーされないものだけ</p></div>
+        <div class="two-column">{{NEW_ISSUES}}</div>
+      </section>
+
+      <section class="panel" id="focus">
+        <div class="section-heading"><h2>次週フォーカス</h2><p>WIPを増やさない</p></div>
+        <div class="focus">{{FOCUS}}</div>
+      </section>
+
+      <section class="panel" id="approvals">
+        <div class="section-heading"><h2>人間の承認が必要な事項</h2><p>未承認の変更は実施しない</p></div>
+        {{APPROVALS}}
+      </section>
+
+      <footer>Generated by weekly-retro-refine · Fixed report template</footer>
+    </main>
+  </body>
+</html>
