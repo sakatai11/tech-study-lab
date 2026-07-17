@@ -37,8 +37,14 @@ function escapeHtml(value) {
 }
 
 function safeUrl(value) {
+  const rawValue = text(value).trim()
+
+  if (rawValue && !rawValue.startsWith('//') && !/^[a-z][a-z\d+.-]*:/i.test(rawValue)) {
+    return escapeHtml(rawValue)
+  }
+
   try {
-    const url = new URL(text(value))
+    const url = new URL(rawValue)
     return url.protocol === 'https:' || url.protocol === 'http:' ? escapeHtml(url.href) : '#'
   } catch {
     return '#'
