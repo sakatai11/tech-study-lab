@@ -1,0 +1,117 @@
+{
+  "meta": {
+    "title": "Weekly Retro & Refinement",
+    "periodStart": "2026-07-06 09:00 JST",
+    "periodEnd": "2026-07-13 09:00 JST",
+    "generatedAt": "2026-07-13 09:05 JST",
+    "repository": "tech-study-lab",
+    "evidence": ["Git", "GitHub Issues", "Pull Requests", "CI", "Skill usage log"],
+    "limitations": ["CIの一部は権限制約により未確認です。"]
+  },
+  "summary": [
+    "既存Issue 4件を確認し、2件が着手可能な状態です。",
+    "同種のレビュー指摘が2件あり、恒久対策候補として採用しました。",
+    "入力例に {{IMPORTANT}} が含まれていても、ユーザーデータとして扱います。"
+  ],
+  "metrics": [
+    { "label": "更新Issue", "value": "4", "detail": "対象期間内", "tone": "good" },
+    { "label": "Ready", "value": "2", "detail": "実装へ引き継ぎ可能", "tone": "info" },
+    { "label": "要リファイン", "value": "1", "detail": "受け入れ条件不足", "tone": "warn" },
+    { "label": "Blocked", "value": "1", "detail": "依存Issue待ち", "tone": "danger" }
+  ],
+  "keep": [
+    {
+      "title": "共有Zod契約を先行",
+      "summary": "API変更前に共有契約を確定する流れが機能しました。",
+      "evidence": "対象PRで契約変更後にservice実装が行われています。"
+    }
+  ],
+  "problems": [
+    {
+      "title": "レビューで同じ境界値漏れが再発",
+      "summary": "配列上限の不足が複数PRで指摘されました。",
+      "evidence": "PR #51と#52のレビューコメント",
+      "rootCause": "API契約レビュー観点に上限値確認が明記されていません。",
+      "harnessCoverage": "reviewerには一般的な入力検証のみ記載されています。",
+      "decision": "採用",
+      "reason": "品質への実害があり、別変更でも再発しています。",
+      "target": ".ai/agents/reviewer.md"
+    }
+  ],
+  "tries": [
+    {
+      "title": "受け入れ条件の事前確認",
+      "summary": "着手前にIssueの境界値条件を1回確認します。",
+      "evidence": "次のAPI Issueで検証します。"
+    }
+  ],
+  "issueRefinement": [
+    {
+      "number": 42,
+      "title": "Review Queue API",
+      "url": "https://github.com/example/tech-study-lab/issues/42",
+      "summary": "SRS対象問題を優先順で返すAPIです。",
+      "readiness": "Ready",
+      "priority": "P1",
+      "gaps": [],
+      "dependencies": [],
+      "nextAction": "issue-dev-orchestrateへ引き継ぐ"
+    },
+    {
+      "number": 43,
+      "title": "Dashboard empty state",
+      "url": "https://github.com/example/tech-study-lab/issues/43",
+      "summary": "初回利用者向けの空状態を整備します。",
+      "readiness": "Needs refinement",
+      "priority": "P2",
+      "gaps": ["受け入れ条件", "design.md該当節"],
+      "dependencies": [],
+      "nextAction": "Issue本文の更新案を承認依頼"
+    }
+  ],
+  "newIssueCandidates": [
+    {
+      "type": "chore",
+      "title": "レビュー観点にAPI境界値を追加",
+      "purpose": "同じ上限値漏れの再発を防ぎます。",
+      "gapEvidence": "既存Issueにハーネス改善を扱うものがありません。",
+      "acceptanceCriteria": ["reviewer定義に配列上限の確認観点がある"],
+      "relatedIssues": ["#42"]
+    }
+  ],
+  "focus": {
+    "primary": {
+      "title": "#42 Review Queue API",
+      "reason": "ReadyかつWalking Skeletonの次の縦切りです。"
+    },
+    "maintenance": {
+      "title": "API境界値レビュー観点",
+      "reason": "再発した品質課題を小さく恒久対策します。"
+    },
+    "priorityCandidates": [
+      {
+        "title": "#42 Review Queue API",
+        "reason": "価値・緊急性が高く、SRS改善の次の縦切りとしてリスクを下げられ、依存関係がなく規模も見積もりやすい候補です。"
+      },
+      {
+        "title": "API境界値レビュー観点",
+        "reason": "同種の不具合再発リスクを小さな変更で下げられ、既存の開発フローへすぐ適用できます。"
+      }
+    ],
+    "notDoing": ["Blocked Issueへの着手", "新しい教材カテゴリの追加"]
+  },
+  "approvals": [
+    {
+      "id": 1,
+      "title": "Issue #43の本文更新案を作る",
+      "action": "不足している受け入れ条件とdesign.md参照を補います。",
+      "reason": "現状では実装判断が分岐します。"
+    },
+    {
+      "id": 2,
+      "title": "新規chore Issueの草案を作る",
+      "action": "API境界値レビュー観点の追加をIssue候補にします。",
+      "reason": "既存Issueではカバーされていません。"
+    }
+  ]
+}
