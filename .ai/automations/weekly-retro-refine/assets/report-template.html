@@ -264,6 +264,12 @@
 
       .focus .card:first-child { border-top: 4px solid var(--accent); }
 
+      .priority-candidates { margin-top: 18px; }
+      .priority-list { margin: 0; padding-left: 24px; }
+      .priority-list li + li { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+      .priority-list strong { display: block; }
+      .priority-list p { margin: 3px 0 0; color: var(--muted); font-size: 13px; }
+
       .approval {
         display: grid;
         grid-template-columns: 42px minmax(0, 1fr);
@@ -384,8 +390,10 @@
       </section>
 
       <section class="panel" id="focus">
-        <div class="section-heading"><h2>次週フォーカス</h2><p>WIPを増やさない</p></div>
+        <div class="section-heading"><h2>次週フォーカス</h2><p>WIPを増やさない・優先候補の根拠を確認</p></div>
         <div class="focus">{{FOCUS}}</div>
+        <h3 style="margin-top: 25px">優先候補</h3>
+        <div class="priority-candidates">{{PRIORITY_CANDIDATES}}</div>
       </section>
 
       <section class="panel" id="approvals">

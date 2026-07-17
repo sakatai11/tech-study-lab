@@ -88,6 +88,16 @@
       "title": "API境界値レビュー観点",
       "reason": "再発した品質課題を小さく恒久対策します。"
     },
+    "priorityCandidates": [
+      {
+        "title": "#42 Review Queue API",
+        "reason": "価値・緊急性が高く、SRS改善の次の縦切りとしてリスクを下げられ、依存関係がなく規模も見積もりやすい候補です。"
+      },
+      {
+        "title": "API境界値レビュー観点",
+        "reason": "同種の不具合再発リスクを小さな変更で下げられ、既存の開発フローへすぐ適用できます。"
+      }
+    ],
     "notDoing": ["Blocked Issueへの着手", "新しい教材カテゴリの追加"]
   },
   "approvals": [

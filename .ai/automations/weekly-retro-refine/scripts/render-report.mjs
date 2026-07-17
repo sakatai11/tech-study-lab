@@ -217,6 +217,24 @@ function renderFocus(value) {
   return `${focusCard('主目標', focus.primary, 'good')}${focusCard('品質・保守', focus.maintenance, 'info')}${notDoingCard}`
 }
 
+function renderPriorityCandidates(items) {
+  const candidates = list(items)
+  if (candidates.length > 3) {
+    throw new Error('Priority candidates must contain at most 3 items')
+  }
+  return candidates.length
+    ? `<ol class="priority-list">${candidates
+        .map(
+          (item) => `
+      <li>
+        <strong>${escapeHtml(item?.title || '無題')}</strong>
+        <p>${escapeHtml(item?.reason || '選定根拠未記載')}</p>
+      </li>`,
+        )
+        .join('')}</ol>`
+    : empty('優先候補はありません。')
+}
+
 function renderApprovals(items) {
   return list(items).length
     ? list(items)
@@ -268,23 +286,16 @@ const replacements = {
   ISSUES: renderIssues(report.issueRefinement),
   NEW_ISSUES: renderNewIssues(report.newIssueCandidates),
   FOCUS: renderFocus(report.focus),
+  PRIORITY_CANDIDATES: renderPriorityCandidates(report.focus?.priorityCandidates),
   APPROVALS: renderApprovals(report.approvals),
 }
 
-const templatePlaceholders = new Set(template.match(/\{\{[A-Z_]+\}\}/g) || [])
-
-let html = template
-for (const [key, value] of Object.entries(replacements)) {
-  const placeholder = `{{${key}}}`
-  html = html.replaceAll(placeholder, value)
-  templatePlaceholders.delete(placeholder)
-}
-
-if (templatePlaceholders.size > 0) {
-  throw new Error(
-    `Unresolved template placeholders: ${Array.from(templatePlaceholders).join(', ')}`,
-  )
-}
+const html = template.replace(/\{\{([A-Z_]+)\}\}/g, (placeholder, key) => {
+  if (!Object.hasOwn(replacements, key)) {
+    throw new Error(`Unresolved template placeholder: ${placeholder}`)
+  }
+  return replacements[key]
+})
 
 await mkdir(path.dirname(outputPath), { recursive: true })
 await writeFile(outputPath, html, 'utf8')
