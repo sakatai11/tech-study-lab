@@ -104,7 +104,7 @@ Issueで「使用する」が選ばれている、または以下のいずれか
 並列実行を利用できるランタイムでは、`reviewer` と `coderabbit-reviewer` を並列起動して独立したレビューを実施する。並列実行を利用できない場合は、同じ役割分担で順次実行する。CodeRabbit CLIが未インストール・未認証・外部サービス接続不可の場合だけ、原因を確認してから通常の `reviewer` 2件へフォールバックする。
 
 1. **`reviewer` エージェント**: `.ai/agents/reviewer.md` の定義と issue 番号・方針サマリを渡す。
-2. **`coderabbit-reviewer` エージェント**: `.ai/agents/coderabbit-reviewer.md` の定義に従い、CodeRabbit CLIで独立レビューを実行する。`auth-required` の場合は `coderabbit auth login` 後に再起動する。rate-limited / error / local-execution-required の場合は、その理由を報告し、CodeRabbitの代わりに境界条件・保守性・テスト十分性を重点確認する2件目の `reviewer` を起動する。
+2. **`coderabbit-reviewer` エージェント**: `.ai/agents/coderabbit-reviewer.md` の定義に従い、CodeRabbit CLIで独立レビューを実行する。Sandbox 内の `signed out` や通信失敗だけで未認証と断定せず、同エージェント定義に従って対象コマンドを正規の権限昇格経路で再確認する。Sandbox 外でも未認証と確認された `auth-required` の場合だけ `coderabbit auth login` 後に再起動する。rate-limited / error / local-execution-required の場合は、その理由を報告し、CodeRabbitの代わりに境界条件・保守性・テスト十分性を重点確認する2件目の `reviewer` を起動する。
 3. CodeRabbitが起動前に利用不可と判明している場合は、最初から2件の `reviewer` を役割分担して起動する。並列実行が可能なら並列、できなければ順次実行する。並列起動済みの CodeRabbitが失敗した場合は、1件目の完了を待たず代替 reviewer を直ちに起動し、2件分の独立したレビュー結果を統合する。順次実行中に失敗した場合は、直後に代替 reviewer を実行する。
 
 ### 結果の統合

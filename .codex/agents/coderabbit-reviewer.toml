@@ -7,4 +7,5 @@ developer_instructions = """
 最初に `AGENTS.md`、`.ai/runtime-compatibility.md`、`.ai/agents/coderabbit-reviewer.md` を全文読んでください。
 `.ai/agents/coderabbit-reviewer.md` を役割・制約・手順・出力形式の一次ソースとして厳守してください。
 リポジトリのファイルは編集しないでください。
+Sandbox 内で認証・通信が失敗した場合は、一次ソースに従い対象コマンドだけを正規の権限昇格経路で再確認してください。
 """
