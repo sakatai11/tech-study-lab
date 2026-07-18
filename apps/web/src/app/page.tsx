@@ -1,8 +1,11 @@
+import type { CSSProperties } from 'react'
+
 import { DashboardShell } from '@/components/dashboard-shell'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { ProgressBar } from '@/components/ui/progress-bar'
+import { TermCrumb } from '@/components/ui/term-crumb'
 
 const stats = [
   { label: '今日の復習 due', value: '3', unit: '問', icon: '↻', tone: 'blue' },
@@ -18,8 +21,9 @@ const domains = [
   { label: 'Architecture', value: 18, color: 'orange' },
 ] as const
 
-const heatmap = Array.from({ length: 84 }, (_, index) => ({
+const heatmap = Array.from({ length: 26 * 7 }, (_, index) => ({
   id: `sample-day-${index}`,
+  index,
   level: (index * 7 + Math.floor(index / 4)) % 5,
 }))
 
@@ -32,13 +36,20 @@ const statToneClasses = {
   orange: 'bg-orange-bg text-orange',
 } as const
 
+function revealStyle(index: number): CSSProperties {
+  return { '--reveal-index': index } as CSSProperties
+}
+
 export default function Home() {
   return (
     <DashboardShell>
       <div className="flex flex-col gap-5">
-        <section className="flex flex-wrap items-start justify-between gap-4 px-1 pt-1">
+        <section
+          className="reveal flex flex-wrap items-start justify-between gap-4 px-1 pt-1"
+          style={revealStyle(0)}
+        >
           <div>
-            <p className="m-0 font-mono text-xs font-bold text-green">~/devpath $ status</p>
+            <TermCrumb command="status" />
             <h1 className="mb-0 mt-2 text-balance text-3xl font-black text-ink sm:text-4xl">
               開発者のための学習ワークベンチ
             </h1>
@@ -53,8 +64,8 @@ export default function Home() {
         </section>
 
         <section aria-label="学習サマリー" className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-          {stats.map((stat) => (
-            <Card className="p-4" key={stat.label}>
+          {stats.map((stat, index) => (
+            <Card className="reveal p-4" key={stat.label} style={revealStyle(index + 1)}>
               <span
                 aria-hidden="true"
                 className={`grid size-10 place-items-center rounded-xl font-mono text-lg ${statToneClasses[stat.tone]}`}
@@ -70,7 +81,7 @@ export default function Home() {
           ))}
         </section>
 
-        <Card className="p-5 sm:p-6">
+        <Card className="reveal p-5 sm:p-6" style={revealStyle(5)}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="m-0 text-balance text-lg font-black text-ink">
@@ -83,15 +94,16 @@ export default function Home() {
             <Badge className="tabular-nums">12 day streak</Badge>
           </div>
           <div
-            aria-label="84日間の学習コントリビューション見本"
-            className="mt-5 grid grid-flow-col grid-rows-7 gap-1 overflow-x-auto"
+            aria-label="直近26週・182日間の学習コントリビューション見本"
+            className="heatmap-grid mt-5 grid grid-flow-col grid-rows-7 gap-1"
             role="img"
           >
             {heatmap.map((cell) => (
               <span
                 aria-hidden="true"
-                className={`size-3 rounded-sm ${heatmapClasses[cell.level]}`}
+                className={`heatmap-cell rounded-sm ${heatmapClasses[cell.level]}`}
                 key={cell.id}
+                style={{ '--heatmap-index': cell.index } as CSSProperties}
               />
             ))}
           </div>
@@ -107,7 +119,7 @@ export default function Home() {
         </Card>
 
         <div className="grid gap-5 xl:grid-cols-2">
-          <Card className="p-5 sm:p-6">
+          <Card className="reveal p-5 sm:p-6" style={revealStyle(6)}>
             <h2 className="m-0 text-balance text-lg font-black text-ink">領域別の習得状況</h2>
             <p className="mb-0 mt-1 text-pretty text-sm text-mute">
               表示用サンプル。学習データには接続していません。
@@ -131,7 +143,7 @@ export default function Home() {
             </div>
           </Card>
 
-          <Card className="p-5 sm:p-6">
+          <Card className="reveal p-5 sm:p-6" style={revealStyle(7)}>
             <h2 className="m-0 text-balance text-lg font-black text-ink">設計システムの状態</h2>
             <p className="mb-0 mt-1 text-pretty text-sm text-mute">
               基盤で提供するUI語彙を明示しています。
@@ -157,7 +169,7 @@ export default function Home() {
           </Card>
         </div>
 
-        <Card className="border-green p-5 sm:p-6">
+        <Card className="reveal border-green p-5 sm:p-6" style={revealStyle(8)}>
           <div className="flex flex-wrap items-center gap-4">
             <span
               aria-hidden="true"

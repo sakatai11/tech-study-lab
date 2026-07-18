@@ -102,3 +102,115 @@
     outline-offset: 3px;
   }
 }
+
+@layer components {
+  .term-crumb {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem;
+    margin: 0;
+    color: var(--faint);
+    font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  .term-crumb-prompt {
+    margin-right: 0.25rem;
+    color: var(--green);
+  }
+
+  .term-cursor {
+    width: 0.5rem;
+    height: 1em;
+    margin-left: 0.125rem;
+    background: var(--green);
+    animation: term-cursor-blink 1s steps(1, end) infinite;
+  }
+
+  .heatmap-grid {
+    grid-template-columns: repeat(26, minmax(0, 1fr));
+  }
+
+  .reveal {
+    animation: reveal-rise 500ms ease-out both;
+    animation-delay: calc(var(--reveal-index, 0) * 70ms);
+  }
+
+  .heatmap-cell {
+    width: 100%;
+    min-width: 0;
+    aspect-ratio: 1;
+    animation: heatmap-enter 240ms ease-out both;
+    animation-delay: calc(var(--heatmap-index, 0) * 8ms);
+  }
+
+  .progress-bar-fill {
+    width: var(--progress-value);
+    animation: progress-bar-fill 700ms ease-out both;
+  }
+
+  @keyframes term-cursor-blink {
+    50% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes reveal-rise {
+    from {
+      opacity: 0;
+      transform: translateY(1rem);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes heatmap-enter {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes progress-bar-fill {
+    from {
+      width: 0;
+    }
+
+    to {
+      width: var(--progress-value);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important;
+      transition-delay: 0ms !important;
+      transition-duration: 0ms !important;
+    }
+
+    .term-cursor,
+    .reveal,
+    .heatmap-cell,
+    .progress-bar-fill {
+      animation: none;
+    }
+
+    .reveal,
+    .heatmap-cell {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
