@@ -71,6 +71,16 @@ describe('answerRequestSchema', () => {
       }).success,
     ).toBe(false)
   })
+
+  it('クライアント送信の userId を受け付けない', () => {
+    expect(
+      answerRequestSchema.safeParse({
+        questionId: 'q-1',
+        selectedIndex: 1,
+        userId: 'untrusted-user',
+      }).success,
+    ).toBe(false)
+  })
 })
 
 describe('answerResponseSchema', () => {
