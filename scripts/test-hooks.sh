@@ -36,3 +36,9 @@ jq -e -s '
 ' "$log_dir/skill-usage.jsonl" >/dev/null
 
 node scripts/sync-agent-config.mjs --check
+
+# 外部CLIの認証と通信をSandbox内の結果だけで誤判定しない契約を固定する。
+grep -F 'Sandbox 内で `signed out` の場合' .ai/agents/coderabbit-reviewer.md >/dev/null
+grep -F '正規の権限昇格経路で再確認してください' .codex/agents/coderabbit-reviewer.toml >/dev/null
+grep -F '通信失敗を未認証と報告しない' .ai/runtime-compatibility.md >/dev/null
+grep -F 'Sandbox 外でも未認証と確認された `auth-required`' .ai/skills/issue-dev-orchestrate/SKILL.md >/dev/null
