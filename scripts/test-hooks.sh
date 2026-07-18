@@ -38,7 +38,20 @@ jq -e -s '
 node scripts/sync-agent-config.mjs --check
 
 # 外部CLIの認証と通信をSandbox内の結果だけで誤判定しない契約を固定する。
-grep -F 'Sandbox 内で `signed out` の場合' .ai/agents/coderabbit-reviewer.md >/dev/null
-grep -F '正規の権限昇格経路で再確認してください' .codex/agents/coderabbit-reviewer.toml >/dev/null
-grep -F '通信失敗を未認証と報告しない' .ai/runtime-compatibility.md >/dev/null
-grep -F 'Sandbox 外でも未認証と確認された `auth-required`' .ai/skills/issue-dev-orchestrate/SKILL.md >/dev/null
+check_agent_contract() {
+  label=$1
+  expected=$2
+  file=$3
+
+  if ! grep -F "$expected" "$file" >/dev/null; then
+    printf '%s\n' "agent contract check failed: $label ($file)" >&2
+    exit 1
+  fi
+}
+
+printf '%s\n' "Checking agent contract consistency..."
+check_agent_contract "sandbox auth visibility" 'Sandbox 内で `signed out` の場合' .ai/agents/coderabbit-reviewer.md
+check_agent_contract "escalated auth/network retry" '正規の権限昇格経路で再確認してください' .codex/agents/coderabbit-reviewer.toml
+check_agent_contract "communication is not authentication" '通信失敗を未認証と報告しない' .ai/runtime-compatibility.md
+check_agent_contract "auth-required after outside check" 'Sandbox 外でも未認証と確認された `auth-required`' .ai/skills/issue-dev-orchestrate/SKILL.md
+printf '%s\n' "Agent contract checks passed!"
