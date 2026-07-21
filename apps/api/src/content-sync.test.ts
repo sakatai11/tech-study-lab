@@ -120,21 +120,19 @@ describe('createContentSyncPayload', () => {
     expect(() => createContentSyncPayload([file], FIXED_USER_ID)).toThrow(file.relativePath)
   })
 
-  it('rejects duplicate questionIds across lessons before SQL generation', () => {
-    const duplicateQuestionId = 'security-xss-01-q1'
-
+  it('rejects duplicate lessonIds across paths before SQL generation', () => {
     expect(() =>
       createContentSyncPayload(
         [
           {
             relativePath: 'security/xss/security-xss-01.md',
-            source: lessonSource({ questionId: duplicateQuestionId, answerIndex: 0 }),
+            source: lessonSource({ questionId: 'security-xss-01-q1', answerIndex: 0 }),
           },
           {
             relativePath: 'security/other/security-xss-01.md',
             source: lessonSource({
               topic: 'other',
-              questionId: duplicateQuestionId,
+              questionId: 'security-xss-01-q2',
               answerIndex: 1,
             }),
           },
@@ -142,7 +140,7 @@ describe('createContentSyncPayload', () => {
         FIXED_USER_ID,
       ),
     ).toThrow(
-      'security/xss/security-xss-01.md: questionId "security-xss-01-q1" is also defined in "security/other/security-xss-01.md"',
+      'security/xss/security-xss-01.md: lessonId "security-xss-01" is also defined in "security/other/security-xss-01.md"',
     )
   })
 })
