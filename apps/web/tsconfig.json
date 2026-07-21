@@ -3,6 +3,7 @@
   "compilerOptions": {
     "lib": ["dom", "dom.iterable", "ES2022"],
     "jsx": "preserve",
+    "types": ["@cloudflare/workers-types"],
     "allowJs": true,
     "incremental": true,
     "noEmit": true,

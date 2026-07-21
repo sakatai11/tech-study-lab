@@ -63,6 +63,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@tsl/api':
+        specifier: workspace:^
+        version: link:../api
       '@tsl/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -85,6 +88,9 @@ importers:
         specifier: 2.6.0
         version: 2.6.0
     devDependencies:
+      '@cloudflare/workers-types':
+        specifier: 4.20260621.1
+        version: 4.20260621.1
       '@opennextjs/cloudflare':
         specifier: 1.19.11
         version: 1.19.11(next@16.2.9(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(wrangler@4.103.0(@cloudflare/workers-types@4.20260621.1))
