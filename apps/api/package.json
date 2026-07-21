@@ -11,7 +11,7 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "typecheck": "tsc --project tsconfig.json && tsc --project tsconfig.scripts.json",
-    "test": "vitest run --exclude src/core-endpoints.integration.test.ts && vitest run --config vitest.workers.config.ts src/core-endpoints.integration.test.ts",
+    "test": "vitest run",
     "build": "wrangler deploy --dry-run --outdir dist",
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply tech-study-lab --local",

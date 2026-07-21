@@ -1,5 +1,6 @@
 import { type ErrorHandler, Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { HTTPException } from 'hono/http-exception'
 
 import type { AppEnv } from './env'
 import { userContext } from './middleware/user-context'
@@ -10,7 +11,7 @@ import { QuestionNotFoundError } from './services/errors'
 
 const app = new Hono<AppEnv>()
 
-app.use('*', async (c, next) => cors({ origin: c.env.WEB_ORIGIN })(c, next))
+app.use('*', cors({ origin: (_origin, c) => c.env.WEB_ORIGIN }))
 app.use('*', userContext)
 export const apiErrorHandler: ErrorHandler<AppEnv> = (error, c) => {
   if (error instanceof QuestionNotFoundError) {
@@ -23,6 +24,10 @@ export const apiErrorHandler: ErrorHandler<AppEnv> = (error, c) => {
       },
       404,
     )
+  }
+
+  if (error instanceof HTTPException) {
+    return error.getResponse()
   }
 
   console.error(error)
