@@ -6,7 +6,15 @@
     "useIgnoreFile": true
   },
   "files": {
-    "ignore": [".next", ".open-next", ".wrangler", "dist", "node_modules"]
+    "ignore": [
+      ".next",
+      ".open-next",
+      ".wrangler",
+      "dist",
+      "node_modules",
+      "apps/web/next-env.d.ts",
+      "docs/mockups/support.js"
+    ]
   },
   "formatter": {
     "enabled": true,
