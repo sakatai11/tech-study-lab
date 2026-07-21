@@ -124,7 +124,7 @@ D1 側（動的データ）:
 
 - `users`: 将来公開用。初期は単一ユーザーでも user_id を持つ
 - `answer_logs`: `{ id, user_id, question_id, is_correct, answered_at, response_time_ms? }`（`response_time_ms` は §7 アナリティクス画面の「平均反応時間」向け。Quiz クライアントが選択肢表示から解答確定までを計測して送信する任意項目）
-- `srs_states`: `{ user_id, question_id, ease, interval, due_at, reps, lapses }`（SRSパラメータ。アルゴリズムは実装時に SM-2 ベースを想定）
+- `srs_states`: `{ user_id, question_id, ease, interval, due_at, reps, lapses, version }`（SRSパラメータ。`version` は同時解答による更新消失を防ぐ楽観的ロック用。アルゴリズムは実装時に SM-2 ベースを想定）
 - `lesson_views`: `{ id, user_id, lesson_id, viewed_at }`（アナリティクス画面の「学習時間」「最近のアクティビティ」向け。教材本文ページ表示時に fire-and-forget で記録する最小ログ。学習時間は「閲覧したレッスンの frontmatter 所要時間（例：約18分）の合計」＋「`answer_logs.response_time_ms` の合計」で近似する簡易集計とし、精緻な計測は行わない）
 
 D1 側（content 同期キャッシュ。4.2 の seed/upsert 対象）:
@@ -1045,8 +1045,8 @@ app.onError((err, c) => {
 ### 10.7 D1 の整合性と書き込み
 
 - **D1 は対話型トランザクション（`BEGIN`〜`COMMIT` を複数往復で跨ぐ形）をサポートしない**。複数文の原子的書き込みは `db.batch([...])` を使う。`POST /answers` の「`answer_log` 挿入＋`srs_state` upsert」は必ず 1 batch にまとめる（片方だけ書けた状態を作らない）。
-- 「読み（現 SRS 状態）→ 計算 → 書き」の間に別リクエストが割り込む競合は、単一ユーザー MVP では許容する（同一問題への同時解答は実運用上起きない）。将来マルチユーザー化しても user 単位で直列なら問題にならない。
-- `srs_states` は `(user_id, question_id)` の**複合主キー**とし、upsert は `onConflictDoUpdate` で書く。
+- 「読み（現 SRS 状態）→ 計算 → 書き」の間に別リクエストが割り込む競合は、`version` で検出して再読み込み・再計算する。最大試行回数を超えた場合は明示的に失敗させ、解答ログを残さない。
+- `srs_states` は `(user_id, question_id)` の**複合主キー**とし、`version` を使った条件付き upsert で同時解答による更新消失を防ぐ。解答ログ挿入とSRS更新は `db.batch()` にまとめ、競合時はログを挿入せず再試行する。
 - Drizzle インスタンスは route ハンドラ内で `drizzle(c.env.DB)` を生成して dal へ渡す（リクエストスコープ。グローバルに保持しない）。
 
 ### 10.8 content → D1 同期スクリプト

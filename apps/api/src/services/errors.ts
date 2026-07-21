@@ -4,3 +4,10 @@ export class QuestionNotFoundError extends Error {
     this.name = 'QuestionNotFoundError'
   }
 }
+
+export class SrsConflictError extends Error {
+  constructor(userId: string, questionId: string) {
+    super(`SRS state was updated concurrently: ${userId}/${questionId}`)
+    this.name = 'SrsConflictError'
+  }
+}

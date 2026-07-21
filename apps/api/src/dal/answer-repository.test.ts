@@ -99,6 +99,7 @@ describe('createAnswerDeps', () => {
         isCorrect: true,
         answeredAt: 1_700_000_000_000,
         responseTimeMs: 800,
+        expectedVersion: 0,
         nextSrs: {
           ease: 2500,
           intervalDays: 1,
@@ -112,8 +113,8 @@ describe('createAnswerDeps', () => {
     expect(client.batches).toHaveLength(1)
     expect(client.batches[0]).toHaveLength(2)
     expect(client.batches[0]?.map((statement) => statement.sql)).toEqual([
-      expect.stringContaining('insert into "answer_logs"'),
       expect.stringContaining('insert into "srs_states"'),
+      expect.stringContaining('insert into "answer_logs"'),
     ])
   })
 })

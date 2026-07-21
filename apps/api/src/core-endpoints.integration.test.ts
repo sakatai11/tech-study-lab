@@ -3,6 +3,7 @@ import { drizzle } from 'drizzle-orm/d1'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import initialMigration from '../drizzle/migrations/0000_flowery_quasar.sql?raw'
+import srsVersionMigration from '../drizzle/migrations/0001_add_srs_version.sql?raw'
 
 import { createReviewDeps } from './dal/review-repository'
 import { FIXED_USER_ID } from './fixed-user'
@@ -14,10 +15,12 @@ declare module 'cloudflare:test' {
   }
 }
 
-const migrationQueries = initialMigration
-  .split('--> statement-breakpoint')
-  .map((query) => query.trim())
-  .filter((query) => query.length > 0)
+function migrationQueries(sql: string): string[] {
+  return sql
+    .split('--> statement-breakpoint')
+    .map((query) => query.trim())
+    .filter((query) => query.length > 0)
+}
 
 async function seedQuestion(questionId: string, answerIndex: number): Promise<void> {
   await env.DB.prepare('INSERT INTO questions (question_id, answer_index) VALUES (?, ?)')
@@ -40,7 +43,8 @@ async function seedSrsState(
 describe('core API endpoints', () => {
   beforeAll(async () => {
     await applyD1Migrations(env.DB, [
-      { name: '0000_flowery_quasar.sql', queries: migrationQueries },
+      { name: '0000_flowery_quasar.sql', queries: migrationQueries(initialMigration) },
+      { name: '0001_add_srs_version.sql', queries: migrationQueries(srsVersionMigration) },
     ])
   })
 
