@@ -973,8 +973,8 @@ export type AppEnv = { Bindings: Bindings; Variables: Variables }
 const app = new Hono<AppEnv>()
 
 // CORS はブラウザ経路（§3.1）用。Service Binding 経由の呼び出しには関与しない。
-// 許可オリジンは env から解決するため、ハンドラ内で cors() を生成して適用する
-app.use('*', async (c, next) => cors({ origin: c.env.WEB_ORIGIN })(c, next))
+// origin resolver はリクエストコンテキストから環境別の許可オリジンを解決する。
+app.use('*', cors({ origin: (_origin, c) => c.env.WEB_ORIGIN }))
 app.use('*', userContext)
 app.onError(errorHandler)  // §10.6
 
@@ -1024,12 +1024,16 @@ export const dueCountResponseSchema = z.object({
 
 - service は **HTTP を知らないドメインエラー**（`services/errors.ts` の `QuestionNotFoundError` 等）を throw する。
 - route 層の `app.onError` がドメインエラーを HTTP ステータスへ写像し、レスポンス形を `{ error: { code, message } }` に統一する。未知のエラーは 500（`INTERNAL`）とし、詳細メッセージを外に漏らさない。
+- Hono や middleware が意図して throw した `HTTPException` は、例外が持つステータスとレスポンスを保持する。未知の例外として 500 に上書きしない。
 
 ```typescript
 // index.ts（抜粋）
 app.onError((err, c) => {
   if (err instanceof QuestionNotFoundError) {
     return c.json({ error: { code: 'QUESTION_NOT_FOUND', message: err.message } }, 404)
+  }
+  if (err instanceof HTTPException) {
+    return err.getResponse()
   }
   console.error(err)  // Workers Logs で観測
   return c.json({ error: { code: 'INTERNAL', message: 'Internal Server Error' } }, 500)

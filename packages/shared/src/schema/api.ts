@@ -6,12 +6,14 @@ import { z } from 'zod'
  * （design.md §8.6, §10.6）。
  */
 
-export const answerRequestSchema = z.object({
-  questionId: z.string().min(1),
-  // choices は最大6（schema/content の .max(6) と整合）。
-  selectedIndex: z.number().int().min(0).max(5),
-  responseTimeMs: z.number().int().nonnegative().optional(),
-})
+export const answerRequestSchema = z
+  .object({
+    questionId: z.string().min(1),
+    // choices は最大6（schema/content の .max(6) と整合）。
+    selectedIndex: z.number().int().min(0).max(5),
+    responseTimeMs: z.number().int().nonnegative().optional(),
+  })
+  .strict()
 export type AnswerRequest = z.infer<typeof answerRequestSchema>
 
 export const answerResponseSchema = z.object({
