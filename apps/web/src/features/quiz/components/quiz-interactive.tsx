@@ -14,10 +14,11 @@ import { QuestionCard } from './question-card'
 type QuizPhase = 'intro' | 'exercise' | 'result'
 
 type QuizInteractiveProps = {
+  onComplete?: () => void
   viewModel: QuizViewModel
 }
 
-export function QuizInteractive({ viewModel }: QuizInteractiveProps) {
+export function QuizInteractive({ onComplete, viewModel }: QuizInteractiveProps) {
   const [activeQuestions, setActiveQuestions] = useState(viewModel.questions)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [error, setError] = useState<string>()
@@ -28,6 +29,9 @@ export function QuizInteractive({ viewModel }: QuizInteractiveProps) {
 
   const question = activeQuestions[currentIndex]
   const result = question ? results[question.id] : undefined
+
+  const resultHomeHref = viewModel.resultHomeHref ?? `/learn/${viewModel.domain}/${viewModel.topic}`
+  const resultHomeLabel = viewModel.resultHomeLabel ?? 'レッスン一覧へ'
 
   useEffect(() => {
     if (phase === 'exercise' && question) {
@@ -186,6 +190,11 @@ export function QuizInteractive({ viewModel }: QuizInteractiveProps) {
           <Button disabled={wrongQuestions.length === 0} onClick={startWrongOnly} variant="blue">
             間違えた問題だけ復習
           </Button>
+          {onComplete && viewModel.hasNextBatch ? (
+            <Button onClick={onComplete} variant="green">
+              次の復習を取得 →
+            </Button>
+          ) : null}
           {viewModel.nextLessonId ? (
             <Link
               className="inline-flex min-h-11 items-center justify-center rounded-xl bg-green px-4 py-2.5 font-bold text-white shadow-[0_4px_0_var(--green-shade)] transition-transform hover:brightness-110 active:translate-y-1 active:shadow-none"
@@ -196,9 +205,9 @@ export function QuizInteractive({ viewModel }: QuizInteractiveProps) {
           ) : (
             <Link
               className="inline-flex min-h-11 items-center justify-center rounded-xl border-2 border-border bg-surface px-4 py-2.5 font-bold text-ink-2 shadow-[0_4px_0_var(--border)] transition-transform hover:border-border-hi hover:text-ink active:translate-y-1 active:shadow-none"
-              href={`/learn/${viewModel.domain}/${viewModel.topic}`}
+              href={resultHomeHref}
             >
-              レッスン一覧へ
+              {resultHomeLabel}
             </Link>
           )}
         </div>
