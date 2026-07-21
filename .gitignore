@@ -21,6 +21,9 @@ out/
 # test / coverage
 coverage/
 
+# generated weekly reports
+reports/
+
 # AI harness execution logs
 .claude/logs/
 .ai/logs/
