@@ -145,7 +145,9 @@ export function createContentBundle(files: readonly ParsedContentSourceFile[]): 
   const lessonPaths = new Map<string, string>()
   const questionPaths = new Map<string, string>()
 
-  for (const file of [...files].sort((a, b) => a.relativePath.localeCompare(b.relativePath))) {
+  for (const file of [...files].sort((a, b) =>
+    a.relativePath.localeCompare(b.relativePath, 'en'),
+  )) {
     const path = contentPathFor(file.relativePath)
 
     if (path.filename === 'index.md') {
@@ -187,8 +189,8 @@ export function createContentBundle(files: readonly ParsedContentSourceFile[]): 
     }
   }
 
-  topics.sort((a, b) => a.relativePath.localeCompare(b.relativePath))
-  lessons.sort((a, b) => a.lessonId.localeCompare(b.lessonId))
+  topics.sort((a, b) => a.relativePath.localeCompare(b.relativePath, 'en'))
+  lessons.sort((a, b) => a.lessonId.localeCompare(b.lessonId, 'en'))
 
   return { topics, lessons, questions }
 }

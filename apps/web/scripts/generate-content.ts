@@ -14,7 +14,7 @@ const generatedContentPath = join(repositoryRoot, 'apps/web/src/lib/generated-co
 
 function collectContentFiles(directory: string, sourceRoot = directory): ParsedContentSourceFile[] {
   return readdirSync(directory, { withFileTypes: true })
-    .sort((a, b) => a.name.localeCompare(b.name))
+    .sort((a, b) => a.name.localeCompare(b.name, 'en'))
     .flatMap((entry) => {
       const entryPath = join(directory, entry.name)
 
@@ -41,8 +41,9 @@ export function createGeneratedContentModule(bundle: ContentBundle): string {
 }
 
 function formatGeneratedContentModule(source: string): string {
+  const biomeBin = process.platform === 'win32' ? 'biome.cmd' : 'biome'
   const result = spawnSync(
-    join(repositoryRoot, 'node_modules/.bin/biome'),
+    join(repositoryRoot, 'node_modules/.bin', biomeBin),
     ['format', '--stdin-file-path', generatedContentPath],
     { cwd: repositoryRoot, encoding: 'utf8', input: source },
   )
