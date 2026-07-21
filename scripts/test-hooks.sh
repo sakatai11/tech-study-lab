@@ -50,11 +50,17 @@ check_agent_contract() {
 }
 
 extract_section() {
-  file=$1
-  start=$2
-  end=$3
+  _file=$1
+  _start=$2
+  _end=$3
 
-  awk -v start="$start" -v end="$end" '
+  awk '
+    BEGIN {
+      start = ARGV[1]
+      end = ARGV[2]
+      ARGV[1] = ""
+      ARGV[2] = ""
+    }
     $0 == start { active = 1; found_start = 1 }
     active && $0 == end { found_end = 1; exit }
     active { print }
@@ -63,7 +69,7 @@ extract_section() {
         exit 1
       }
     }
-  ' "$file"
+  ' "$_start" "$_end" "$_file"
 }
 
 check_section_contract() {
