@@ -38,6 +38,7 @@ export const srsStates = sqliteTable(
     dueAt: integer('due_at', { mode: 'timestamp_ms' }).notNull(),
     reps: integer('reps').notNull(),
     lapses: integer('lapses').notNull(),
+    version: integer('version').notNull().default(0),
   },
   (t) => ({
     pk: primaryKey({ columns: [t.userId, t.questionId] }),

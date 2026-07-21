@@ -51,6 +51,11 @@ Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runt
    git switch -c <種別>/issue-<N>-<英語スラッグ>   # 例: feature/issue-12-lesson-filter
    ```
    - `develop` がローカル・リモートともに存在しない初回は、上記でローカルに新規作成される。その旨をユーザーに報告する（`develop` の初期化）。
+5. **レビュー方式を選択する**。実装前に、利用可能なユーザー確認機能で必ず次のどちらかを選んでもらい、選択結果を `<scratchpad>/review-mode-<N>.md` に記録する。
+   - **GitHub App（推奨）**: PR作成後にGitHub上のCodeRabbit Appレビューを取得する。Codexから未コミット差分を外部送信しない。
+   - **CodeRabbit CLI**: フェーズ4で未コミット差分をCodeRabbitへ送信してレビューする。
+   - CLIを選んだ場合は、選択とは別に「privateの未コミット差分がCodeRabbitへ送信される」こと、対象issue・ブランチ・base・現在の差分範囲を明示して、実行直前の明示同意を取得する。肯定の原文、時刻、対象を同じファイルに `reviewMode: coderabbit-cli` と `externalEgressApproved: true` として記録する。スキル・AGENTS.md・過去の同意だけで代用してはならない。
+   - GitHub Appを選んだ場合は、PR作成後にAppレビューが取得できるまでCodeRabbit由来のapproveを主張しない。App未導入またはレビュー未到着の扱いはフェーズ7に従う。
 
 ## エージェント起動の共通ルール（ツール呼び出し崩れの防止）
 
@@ -76,7 +81,7 @@ Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runt
 
 1. 調査レポートの推奨案をベースに実装方針を決定する。方針が複数あり優劣が拮抗している、または「要確認事項」が実装内容を左右する場合のみ、利用可能なユーザー確認機能で確認する。それ以外は推奨案を採用して先へ進む。
 2. **design.md との乖離が報告された場合**: 仕様駆動開発の原則に従い、実装前に `docs/design.md` を更新する。
-3. 決定した方針を issue にコメントで記録する。本文は安全な一時ファイルに書き出して `--body-file` で渡す。認証済みの `gh` CLI を使う。Codex AppでGitHubコネクタが接続済みの場合は、同等の操作にコネクタを使ってよい:
+3. 決定した方針とフェーズ0で選んだレビュー方式を issue にコメントで記録する。CLI方式では外部送信同意の原文を転載せず、同意を記録済みであることだけを記載する。本文は安全な一時ファイルに書き出して `--body-file` で渡す。認証済みの `gh` CLI を使う。Codex AppでGitHubコネクタが接続済みの場合は、同等の操作にコネクタを使ってよい:
    ```bash
    gh issue comment <N> --body-file <方針本文を保存した一時ファイル>
    ```
@@ -97,19 +102,27 @@ Issueで「使用する」が選ばれている、または以下のいずれか
 
 起動前に理由、担当範囲、モデル、sandbox、成果物の確認方法を短いブリーフに記録する。バックエンド作業であることだけを理由に起動しない。CLIの実行に追加の承認や外部認証が必要な場合は、現在のランタイムの正規の承認経路に従う。
 
-## フェーズ4: レビュー（利用可能なレビューエージェントは並列）
+## フェーズ4: コミット前レビュー（利用可能なレビューエージェントは並列）
 
 **この時点で実装は未コミット**なので、`git diff develop` と `git status --short` を併用する。さらに `git ls-files --others --exclude-standard` で未追跡ファイルを列挙し、各ファイルの内容もレビュー用ブリーフへ明示的に含める。
 
-並列実行を利用できるランタイムでは、`reviewer` と `coderabbit-reviewer` を並列起動して独立したレビューを実施する。並列実行を利用できない場合は、同じ役割分担で順次実行する。CodeRabbit CLIが未インストール・未認証・外部サービス接続不可の場合だけ、原因を確認してから通常の `reviewer` 2件へフォールバックする。
+フェーズ0で選んだ方式ごとに、次の手順を使う。
 
-1. **`reviewer` エージェント**: `.ai/agents/reviewer.md` の定義と issue 番号・方針サマリを渡す。
-2. **`coderabbit-reviewer` エージェント**: `.ai/agents/coderabbit-reviewer.md` の定義に従い、CodeRabbit CLIで独立レビューを実行する。`auth-required` の場合は `coderabbit auth login` 後に再起動する。rate-limited / error / local-execution-required の場合は、その理由を報告し、CodeRabbitの代わりに境界条件・保守性・テスト十分性を重点確認する2件目の `reviewer` を起動する。
-3. CodeRabbitが起動前に利用不可と判明している場合は、最初から2件の `reviewer` を役割分担して起動する。並列実行が可能なら並列、できなければ順次実行する。並列起動済みの CodeRabbitが失敗した場合は、1件目の完了を待たず代替 reviewer を直ちに起動し、2件分の独立したレビュー結果を統合する。順次実行中に失敗した場合は、直後に代替 reviewer を実行する。
+### CodeRabbit CLIを選んだ場合
+
+1. **`reviewer`** と **`coderabbit-reviewer`** を並列起動する。CLI用ブリーフには `reviewMode: coderabbit-cli`、base、対象ブランチ、現在の差分範囲、`externalEgressApproved: true`、ユーザー同意の原文・時刻・対象を明示する。
+2. **`coderabbit-reviewer`** は `.ai/agents/coderabbit-reviewer.md` に従い、`--agent` の認証確認と正規の権限昇格経路を使う。Sandbox 外でも未認証と確認された `auth-required` の場合だけ `coderabbit auth login --agent` 後に再起動する。
+3. `external-egress-confirmation-required` を返した場合はCLIを実行せず、境界条件・保守性・テスト十分性を重点確認する2件目の `reviewer` を起動する。次回CLIを選ぶ場合はフェーズ0の明示同意を正しく記録してから開始する。
+4. rate-limited / error / local-execution-required の場合は理由を報告し、2件目の `reviewer` を起動する。CodeRabbitの指摘ゼロや実行失敗をapproveとして扱わない。
+
+### GitHub Appを選んだ場合
+
+1. コミット前は `reviewer` を2件、役割分担して実行する。CodeRabbit CLIは起動しない。
+2. ブリーフに `reviewMode: github-app` と記録し、CodeRabbit AppレビューはPR作成後のフェーズ7で取得することを明示する。
 
 ### 結果の統合
 
-取得できたすべてのレビュー結果を統合する。**同一 `ファイル:行` かつ指摘内容が実質的に同じ場合**に1件へ束ね（重要度は高い方を採用）、CodeRabbit 由来の出典タグ `[coderabbit]` は保持する。同じ行でも指摘内容が異なる場合（例: 入力検証漏れと認可漏れが同じ行にある）は別指摘として両方残す。迷う場合は統合せず両方残す。**各レビューエージェントの指摘をオーケストレーターの判断で取捨選択しない**（独立レビューの価値を保つため）。CodeRabbitが利用できない場合は、代替 reviewer 2件の結果を統合して must-fix / should-fix / nit リストとしてフェーズ6に渡す。
+取得できたすべてのレビュー結果を統合する。**同一 `ファイル:行` かつ指摘内容が実質的に同じ場合**に1件へ束ね（重要度は高い方を採用）、CodeRabbit 由来の出典タグ `[coderabbit]` は保持する。同じ行でも指摘内容が異なる場合（例: 入力検証漏れと認可漏れが同じ行にある）は別指摘として両方残す。迷う場合は統合せず両方残す。**各レビューエージェントの指摘をオーケストレーターの判断で取捨選択しない**（独立レビューの価値を保つため）。GitHub App方式では、コミット前の2件のreviewer結果だけをフェーズ6に渡し、Appの結果はフェーズ7で別途処理する。
 
 ## フェーズ5: テスト
 
@@ -122,7 +135,7 @@ Issueで「使用する」が選ばれている、または以下のいずれか
 1. レビューの must-fix / should-fix と、test-fixer の残課題を fix 対象リストにまとめる（nit は含めない）。
 2. fix 対象が空ならフェーズ7へ。
 3. fix 対象を `developer` エージェントに渡して修正させる。
-4. フェーズ4（レビューは fix 箇所の再確認のみに絞り、初回と同じ役割分担で **`reviewer` と `coderabbit-reviewer` を並列実行可能なら並列、できなければ順次実施**。利用できない場合は代替 reviewer 2件）→フェーズ5 を再実行する。
+4. フェーズ4をfix箇所の再確認のみに絞って再実行する。CLI方式では、現在の差分範囲を再掲した新しい明示同意を実行直前に取得・記録してから `reviewer` と `coderabbit-reviewer` を使う。初回または過去の同意記録を再利用してはならない。GitHub App方式ではreviewer 2件を使う。その後フェーズ5を再実行する。
 5. **最大2周**。収束しない場合は残課題を整理してユーザーに報告し、指示を仰ぐ。
 
 ## フェーズ7: 完了
@@ -137,7 +150,9 @@ Issueで「使用する」が選ばれている、または以下のいずれか
    - **ベースブランチは `develop`**（`main` ではない）。例: `gh pr create --base develop ...`
    - PR 本文には `refs #<N>` を書く（参照のみ）。**`closes #<N>` は使わない**: GitHub の自動クローズはデフォルトブランチ（`main`）へのマージでのみ発火するため、develop マージでは効かず誤解を招く。issue のクローズは `develop` → `main` のリリース時に人間が判断する。
    - **マージはしない**。feature → develop のマージ、および develop → main の PR・マージはすべて人間が任意タイミングで行う（`gh pr merge` は `AGENTS.md` で禁止）。
-5. ユーザーに完了報告する: 実装サマリ／レビュー・テスト結果／作業ブランチ名／PR URL（作成した場合）。
+5. GitHub App方式で**PRを作成した場合に限り**、設定済みのCodeRabbit AppによるPRレビューを最大10分待機し、PR review・review thread・通常コメントを確認する。Appを起動する未確認のメンションやWebhookを推測して実行してはならない。PRを作成しなかった場合はAppレビュー未実行として完了報告へ進む。App未導入、レビュー未到着、または取得不能なら、その事実を報告してユーザーに次の指示を求める。
+6. GitHub Appのmust-fix / should-fixがあれば、`pr-review-fix` の手順で対応する。修正後は品質ゲート、commit、pushを行い、PRの最新HEADを取得する。最大10分待機し、そのHEADを対象とするApp reviewまたはthreadだけを再確認対象にする。古いHEADのレビューだけで再レビュー済みと扱ってはならない。最大2周で収束しなければ残課題を報告する。
+7. ユーザーに完了報告する: 実装サマリ／選択されたレビュー方式／CodeRabbit結果または未取得理由／テスト結果／作業ブランチ名／PR URL（作成した場合）。
 
 ## 中断・失敗時の原則
 

@@ -1,4 +1,4 @@
-name = "tech-study-lab"
+name = "tech-study-lab-api"
 main = "src/index.ts"
 compatibility_date = "2025-01-09"
 compatibility_flags = ["nodejs_compat"]
@@ -8,3 +8,6 @@ binding = "DB"
 database_name = "tech-study-lab"
 database_id = "REPLACE_WITH_REAL_D1_ID"
 migrations_dir = "drizzle/migrations"
+
+[vars]
+WEB_ORIGIN = "http://localhost:3000"

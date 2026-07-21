@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react'
+
 import { cn } from '@/lib/cn'
 
 type ProgressBarProps = {
@@ -28,8 +30,8 @@ export function ProgressBar({ className, color = 'green', label, value }: Progre
       tabIndex={0}
     >
       <div
-        className={cn('h-full rounded-full', colorClasses[color])}
-        style={{ width: `${boundedValue}%` }}
+        className={cn('progress-bar-fill h-full rounded-full', colorClasses[color])}
+        style={{ '--progress-value': `${boundedValue}%` } as CSSProperties}
       />
     </div>
   )

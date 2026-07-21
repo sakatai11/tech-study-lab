@@ -1,4 +1,5 @@
 export * as db from './db/schema'
+export * from './content-parser'
 export * from './schema/api'
 export * from './schema/content'
 export * from './srs/sm2'

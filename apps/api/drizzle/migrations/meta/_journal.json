@@ -8,6 +8,13 @@
       "when": 1783601017335,
       "tag": "0000_flowery_quasar",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1784630000000,
+      "tag": "0001_add_srs_version",
+      "breakpoints": true
     }
   ]
 }

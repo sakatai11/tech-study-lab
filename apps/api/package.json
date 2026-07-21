@@ -18,13 +18,14 @@
     "content:sync": "tsx scripts/sync-content.ts"
   },
   "dependencies": {
-    "@tsl/shared": "workspace:*",
     "@hono/zod-validator": "0.4.2",
+    "@tsl/shared": "workspace:*",
     "drizzle-orm": "0.38.3",
     "hono": "4.6.16",
     "zod": "3.24.1"
   },
   "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.8.0",
     "@cloudflare/workers-types": "4.20260621.1",
     "@types/node": "22.10.5",
     "drizzle-kit": "0.30.1",
