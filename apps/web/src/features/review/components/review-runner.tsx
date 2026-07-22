@@ -12,7 +12,11 @@ export function ReviewRunner({ viewModel }: { viewModel: ReviewViewModel }) {
   return (
     <QuizInteractive
       key={viewModel.batchKey}
-      onComplete={() => router.refresh()}
+      onComplete={() => {
+        if (viewModel.hasNextBatch) {
+          router.refresh()
+        }
+      }}
       viewModel={viewModel}
     />
   )

@@ -280,7 +280,7 @@ apps/web/src/
 - 実行場所はディレクトリ名ではなく import 境界で決まる。`apps/web/src/features/*/server` は `apps/web/src/app/**/page.tsx` など Server Component から import する限りサーバー側で実行される。誤用防止のため `import 'server-only'` を必須にする。
 - Server Actions は使わず、動的データは Hono API に一本化する。初回取得は page / Server loader から `hc` で実行し、mutation・再取得は Client hook から `hc` を叩く（API 契約を `apps/api` に一本化し、RPC 型を素直に効かせる）。
   - **不採用の根拠**：変更系を Hono に一本化することで ①契約（`AppType`）と `user_id` 注入点（§7.2）を単一ソースに保てる、②Hono+Cloudflare の学習目的（§2）を素通りしない。Server Actions の利点（フォームのプログレッシブエンハンスメント等）は、即時採点の Client 主導 Quiz・変更系が `POST /answers` ほぼ一択の本アプリでは恩恵が小さい。重いフォームが必要になった時点で再検討する。
-- **キャッシュ方針**：`/`（due-count・統計）・`/domains`（習得率）・`/analytics`（各集計）・`/review`（queue）は動的データ。Next.js 15+ は `fetch` をデフォルトで無キャッシュにするが、`hc` 経由の fetch やカスタム fetch は静的解析で動的依存として扱われない場合がある。API-backed page は build 時の API 呼び出しを避けるため、ページ側で `export const dynamic = "force-dynamic"` を明記する。feature の `api/` wrapper にキャッシュオプションを持ち込まず、`use cache` / `cacheTag` / `revalidateTag` は現時点では採用しない。解答後・画面復帰時の鮮度回復は Client 側の `router.refresh()` で RSC を再実行して担う（§9.2）。
+- **キャッシュ方針**：`/`（due-count・統計）・`/domains`（習得率）・`/analytics`（各集計）・`/review`（queue）は動的データ。Next.js 16+ は `fetch` をデフォルトで無キャッシュにするが、`hc` 経由の fetch やカスタム fetch は静的解析で動的依存として扱われない場合がある。API-backed page は build 時の API 呼び出しを避けるため、ページ側で `export const dynamic = "force-dynamic"` を明記する。feature の `api/` wrapper にキャッシュオプションを持ち込まず、`use cache` / `cacheTag` / `revalidateTag` は現時点では採用しない。解答後・画面復帰時の鮮度回復は Client 側の `router.refresh()` で RSC を再実行して担う（§9.2）。
 ### 8.4 `hc` クライアントの取り回し
 
 - `apps/api` が `AppType` をエクスポート → `apps/web` は `hc<AppType>` で型安全クライアントを生成（既存 `apps/api/src/client.ts` のファクトリを利用。Service Binding の fetch を渡せるよう、ファクトリは `hc` の第2引数（`fetch` オプション等）を受け取れる形に拡張する）。

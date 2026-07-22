@@ -1,18 +1,13 @@
-import 'server-only'
-
-import { createClient } from '@tsl/api/client'
 import { type ReviewQueueResponse, reviewQueueResponseSchema } from '@tsl/shared'
 
-const apiBaseUrl =
-  process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8787'
-const apiClient = createClient(apiBaseUrl)
+import type { ApiClient } from '@/lib/api'
+import { requestJson } from '@/lib/api-response'
 
-export async function fetchReviewQueue(): Promise<ReviewQueueResponse> {
-  const response = await apiClient.review.queue.$get()
+export async function fetchReviewQueue(client: ApiClient): Promise<ReviewQueueResponse> {
+  const response = await requestJson(
+    () => client.review.queue.$get(),
+    '復習キューの取得に失敗しました。',
+  )
 
-  if (!response.ok) {
-    throw new Error('復習キューの取得に失敗しました。')
-  }
-
-  return reviewQueueResponseSchema.parse(await response.json())
+  return reviewQueueResponseSchema.parse(response)
 }

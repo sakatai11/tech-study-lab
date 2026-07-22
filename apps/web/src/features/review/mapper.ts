@@ -10,21 +10,23 @@ export function reviewQueueToViewModel(
   questions: ReadonlyMap<string, McqQuestion>,
   now: number,
 ): ReviewViewModel {
-  const joinedItems = queue.items.flatMap((item) => {
-    const question = questions.get(item.questionId)
+  const joinedItems = queue.items
+    .flatMap((item) => {
+      const question = questions.get(item.questionId)
 
-    if (!question) {
-      return []
-    }
+      if (!question) {
+        return []
+      }
 
-    return [
-      {
-        dueAt: item.dueAt,
-        overdueDays: Math.max(0, Math.floor((now - item.dueAt) / DAY_MS)),
-        question,
-      },
-    ]
-  })
+      return [
+        {
+          dueAt: item.dueAt,
+          overdueDays: Math.max(0, Math.floor((now - item.dueAt) / DAY_MS)),
+          question,
+        },
+      ]
+    })
+    .sort((left, right) => left.dueAt - right.dueAt)
 
   return {
     domain: '',

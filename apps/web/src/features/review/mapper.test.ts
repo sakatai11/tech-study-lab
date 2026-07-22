@@ -13,7 +13,19 @@ const firstQuestion: McqQuestion = {
   explanation: '理由',
 }
 
-const questions = new Map([[firstQuestion.id, firstQuestion]])
+const secondQuestion: McqQuestion = {
+  id: 'security-xss-01-q2',
+  type: 'mcq',
+  prompt: 'どっち？',
+  choices: ['A', 'B', 'C', 'D'],
+  answerIndex: 2,
+  explanation: '別の理由',
+}
+
+const questions = new Map([
+  [firstQuestion.id, firstQuestion],
+  [secondQuestion.id, secondQuestion],
+])
 const queue: ReviewQueueResponse = {
   items: [
     { questionId: firstQuestion.id, dueAt: 0 },
@@ -34,6 +46,23 @@ describe('reviewQueueToViewModel', () => {
     })
     expect(viewModel.explanations).toEqual({ [firstQuestion.id]: '理由' })
     expect(viewModel.questions[0]).not.toHaveProperty('answerIndex')
+  })
+
+  it('sorts non-ordered API items by dueAt for questions and previews', () => {
+    const unorderedQueue: ReviewQueueResponse = {
+      items: [
+        { questionId: secondQuestion.id, dueAt: 200 },
+        { questionId: firstQuestion.id, dueAt: 100 },
+      ],
+    }
+
+    const viewModel = reviewQueueToViewModel(unorderedQueue, questions, 200)
+
+    expect(viewModel.questions.map(({ id }) => id)).toEqual([firstQuestion.id, secondQuestion.id])
+    expect(viewModel.previews).toEqual([
+      { questionId: firstQuestion.id, overdueDays: 0 },
+      { questionId: secondQuestion.id, overdueDays: 0 },
+    ])
   })
 
   it('marks a full API batch as eligible for refresh', () => {
