@@ -4,6 +4,7 @@
   "name": "tech-study-lab-web",
   "compatibility_date": "2025-01-09",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "services": [{ "binding": "API", "service": "tech-study-lab-api" }],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
