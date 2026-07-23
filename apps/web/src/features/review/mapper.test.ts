@@ -27,6 +27,7 @@ const questions = new Map([
   [secondQuestion.id, secondQuestion],
 ])
 const queue: ReviewQueueResponse = {
+  hasMore: false,
   items: [
     { questionId: firstQuestion.id, dueAt: 0 },
     { questionId: 'deleted-question', dueAt: 0 },
@@ -48,8 +49,9 @@ describe('reviewQueueToViewModel', () => {
     expect(viewModel.questions[0]).not.toHaveProperty('answerIndex')
   })
 
-  it('sorts non-ordered API items by dueAt for questions and previews', () => {
+  it('preserves the API dueAt order for questions and previews', () => {
     const unorderedQueue: ReviewQueueResponse = {
+      hasMore: false,
       items: [
         { questionId: secondQuestion.id, dueAt: 200 },
         { questionId: firstQuestion.id, dueAt: 100 },
@@ -58,21 +60,26 @@ describe('reviewQueueToViewModel', () => {
 
     const viewModel = reviewQueueToViewModel(unorderedQueue, questions, 200)
 
-    expect(viewModel.questions.map(({ id }) => id)).toEqual([firstQuestion.id, secondQuestion.id])
+    expect(viewModel.questions.map(({ id }) => id)).toEqual([secondQuestion.id, firstQuestion.id])
     expect(viewModel.previews).toEqual([
-      { questionId: firstQuestion.id, overdueDays: 0 },
       { questionId: secondQuestion.id, overdueDays: 0 },
+      { questionId: firstQuestion.id, overdueDays: 0 },
     ])
   })
 
-  it('marks a full API batch as eligible for refresh', () => {
+  it('uses the API hasMore flag for refresh eligibility', () => {
     const fullQueue: ReviewQueueResponse = {
+      hasMore: true,
       items: Array.from({ length: 20 }, (_, index) => ({
         questionId: `${firstQuestion.id}-${index}`,
         dueAt: 0,
       })),
     }
 
-    expect(reviewQueueToViewModel(fullQueue, questions, 0).hasNextBatch).toBe(true)
+    expect(reviewQueueToViewModel(fullQueue, questions, 0).hasMore).toBe(true)
+
+    expect(reviewQueueToViewModel({ ...fullQueue, hasMore: false }, questions, 0).hasMore).toBe(
+      false,
+    )
   })
 })

@@ -43,33 +43,7 @@ export default async function ReviewPage() {
             </Link>
           </Card>
         ) : (
-          <>
-            <Card className="p-5 sm:p-7">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 className="m-0 text-lg font-black text-ink">due プレビュー</h2>
-                  <p className="mb-0 mt-1 text-sm text-mute">
-                    API の dueAt 順を保ったまま、コンテンツと Server loader で join しています。
-                  </p>
-                </div>
-                <Badge className="border-purple bg-purple-bg text-purple">max 20</Badge>
-              </div>
-              <ul className="mt-5 grid gap-2 p-0">
-                {viewModel.previews.map((preview) => (
-                  <li
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border-2 border-border bg-well px-4 py-3"
-                    key={preview.questionId}
-                  >
-                    <span className="font-mono text-xs text-ink-2">{preview.questionId}</span>
-                    <span className="font-mono text-xs text-red">
-                      {preview.overdueDays > 0 ? `${preview.overdueDays}日滞留` : '今日 due'}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-            <ReviewRunner viewModel={viewModel} />
-          </>
+          <ReviewRunner viewModel={viewModel} />
         )}
       </div>
     </DashboardShell>

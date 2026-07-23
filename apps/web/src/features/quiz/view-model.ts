@@ -12,7 +12,6 @@ export type QuizViewModel = {
   nextLessonId?: string
   resultHomeHref?: string
   resultHomeLabel?: string
-  hasNextBatch?: boolean
 }
 
 export type SubmittedAnswer = {

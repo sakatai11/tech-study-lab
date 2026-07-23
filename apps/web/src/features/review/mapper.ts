@@ -10,28 +10,23 @@ export function reviewQueueToViewModel(
   questions: ReadonlyMap<string, McqQuestion>,
   now: number,
 ): ReviewViewModel {
-  const joinedItems = queue.items
-    .flatMap((item) => {
-      const question = questions.get(item.questionId)
+  const joinedItems = queue.items.flatMap((item) => {
+    const question = questions.get(item.questionId)
 
-      if (!question) {
-        return []
-      }
+    if (!question) {
+      return []
+    }
 
-      return [
-        {
-          dueAt: item.dueAt,
-          overdueDays: Math.max(0, Math.floor((now - item.dueAt) / DAY_MS)),
-          question,
-        },
-      ]
-    })
-    .sort((left, right) => left.dueAt - right.dueAt)
+    return [
+      {
+        dueAt: item.dueAt,
+        overdueDays: Math.max(0, Math.floor((now - item.dueAt) / DAY_MS)),
+        question,
+      },
+    ]
+  })
 
   return {
-    domain: '',
-    topic: '',
-    lessonId: 'review',
     title: '今日の復習',
     questions: joinedItems.map((item) => contentQuestionToQuizQuestion(item.question)),
     explanations: Object.fromEntries(
@@ -39,7 +34,7 @@ export function reviewQueueToViewModel(
     ),
     resultHomeHref: '/',
     resultHomeLabel: 'ホームへ',
-    hasNextBatch: queue.items.length === 20,
+    hasMore: queue.hasMore,
     batchKey: joinedItems.map((item) => `${item.question.id}:${item.dueAt}`).join('|'),
     dueCount: joinedItems.length,
     previews: joinedItems.map((item) => ({
