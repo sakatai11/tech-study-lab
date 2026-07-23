@@ -18,12 +18,15 @@ export function createReviewDeps(db: DrizzleD1Database): ReviewDeps {
         .from(schema.srsStates)
         .where(and(eq(schema.srsStates.userId, userId), lte(schema.srsStates.dueAt, new Date(now))))
         .orderBy(asc(schema.srsStates.dueAt))
-        .limit(REVIEW_QUEUE_LIMIT)
+        .limit(REVIEW_QUEUE_LIMIT + 1)
 
-      return states.map((state) => ({
-        questionId: state.questionId,
-        dueAt: state.dueAt.getTime(),
-      }))
+      return {
+        hasMore: states.length > REVIEW_QUEUE_LIMIT,
+        items: states.slice(0, REVIEW_QUEUE_LIMIT).map((state) => ({
+          questionId: state.questionId,
+          dueAt: state.dueAt.getTime(),
+        })),
+      }
     },
 
     async countDueQuestions(userId, now) {

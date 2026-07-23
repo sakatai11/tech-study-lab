@@ -1,31 +1,57 @@
 'use client'
 
 import Link from 'next/link'
+import type { ReactNode } from 'react'
 import { useCallback, useEffect, useState } from 'react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 
+import type { QuizQuestionViewModel } from '@/features/shared/quiz-question'
 import { submitAnswer } from '../api/answers'
-import type { QuizViewModel, SubmittedAnswer } from '../view-model'
+
+import type { SubmittedAnswer } from '../view-model'
 import { QuestionCard } from './question-card'
 
 type QuizPhase = 'intro' | 'exercise' | 'result'
 
-type QuizInteractiveProps = {
-  viewModel: QuizViewModel
+export type QuizInteractiveProps = {
+  explanations: Record<string, string>
+  hasMore?: boolean
+  introContent?: ReactNode
+  introStartLabel?: string
+  nextLessonId?: string
+  onComplete?: () => void
+  questions: QuizQuestionViewModel[]
+  resultHomeHref: string
+  resultHomeLabel: string
+  title: string
 }
 
-export function QuizInteractive({ viewModel }: QuizInteractiveProps) {
-  const [activeQuestions, setActiveQuestions] = useState(viewModel.questions)
+export function QuizInteractive({
+  explanations,
+  hasMore,
+  introContent,
+  introStartLabel = '演習を開始 →',
+  nextLessonId,
+  onComplete,
+  questions,
+  resultHomeHref,
+  resultHomeLabel,
+  title,
+}: QuizInteractiveProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [error, setError] = useState<string>()
   const [phase, setPhase] = useState<QuizPhase>('intro')
   const [results, setResults] = useState<Record<string, SubmittedAnswer>>({})
   const [submitting, setSubmitting] = useState(false)
   const [questionStartedAt, setQuestionStartedAt] = useState(0)
+  const [wrongOnlyQuestionIds, setWrongOnlyQuestionIds] = useState<string[]>()
 
+  const activeQuestions = wrongOnlyQuestionIds
+    ? questions.filter((currentQuestion) => wrongOnlyQuestionIds.includes(currentQuestion.id))
+    : questions
   const question = activeQuestions[currentIndex]
   const result = question ? results[question.id] : undefined
 
@@ -35,8 +61,8 @@ export function QuizInteractive({ viewModel }: QuizInteractiveProps) {
     }
   }, [phase, question])
 
-  const resetQuiz = (questions = viewModel.questions) => {
-    setActiveQuestions(questions)
+  const resetQuiz = () => {
+    setWrongOnlyQuestionIds(undefined)
     setCurrentIndex(0)
     setError(undefined)
     setPhase('intro')
@@ -44,11 +70,11 @@ export function QuizInteractive({ viewModel }: QuizInteractiveProps) {
   }
 
   const startWrongOnly = () => {
-    const wrongQuestions = activeQuestions.filter((currentQuestion) => {
+    const wrongQuestionIds = activeQuestions.flatMap((currentQuestion) => {
       const currentResult = results[currentQuestion.id]
-      return currentResult ? !currentResult.isCorrect : false
+      return currentResult && !currentResult.isCorrect ? [currentQuestion.id] : []
     })
-    setActiveQuestions(wrongQuestions)
+    setWrongOnlyQuestionIds(wrongQuestionIds)
     setCurrentIndex(0)
     setError(undefined)
     setPhase('exercise')
@@ -106,24 +132,26 @@ export function QuizInteractive({ viewModel }: QuizInteractiveProps) {
   if (phase === 'intro') {
     return (
       <Card className="p-5 sm:p-7">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="m-0 font-mono text-xs font-bold uppercase tracking-[0.18em] text-blue">
-              quiz / intro
+        {introContent ?? (
+          <>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="m-0 font-mono text-xs font-bold uppercase tracking-[0.18em] text-blue">
+                  quiz / intro
+                </p>
+                <h1 className="mb-0 mt-3 text-2xl font-black text-ink sm:text-3xl">{title}</h1>
+              </div>
+              <Badge className="border-purple bg-purple-bg text-purple">
+                {activeQuestions.length}問
+              </Badge>
+            </div>
+            <p className="mb-0 mt-5 leading-7 text-ink-2">
+              1問ずつ解答し、APIで採点された結果と解説を確認します。選択肢表示からの反応時間も記録します。
             </p>
-            <h1 className="mb-0 mt-3 text-2xl font-black text-ink sm:text-3xl">
-              {viewModel.title}
-            </h1>
-          </div>
-          <Badge className="border-purple bg-purple-bg text-purple">
-            {activeQuestions.length}問
-          </Badge>
-        </div>
-        <p className="mb-0 mt-5 leading-7 text-ink-2">
-          1問ずつ解答し、APIで採点された結果と解説を確認します。選択肢表示からの反応時間も記録します。
-        </p>
+          </>
+        )}
         <Button className="mt-6" onClick={() => setPhase('exercise')} variant="green">
-          演習を開始 →
+          {introStartLabel}
         </Button>
       </Card>
     )
@@ -186,19 +214,24 @@ export function QuizInteractive({ viewModel }: QuizInteractiveProps) {
           <Button disabled={wrongQuestions.length === 0} onClick={startWrongOnly} variant="blue">
             間違えた問題だけ復習
           </Button>
-          {viewModel.nextLessonId ? (
+          {onComplete && hasMore ? (
+            <Button onClick={onComplete} variant="green">
+              次の復習を取得 →
+            </Button>
+          ) : null}
+          {nextLessonId ? (
             <Link
               className="inline-flex min-h-11 items-center justify-center rounded-xl bg-green px-4 py-2.5 font-bold text-white shadow-[0_4px_0_var(--green-shade)] transition-transform hover:brightness-110 active:translate-y-1 active:shadow-none"
-              href={`/quiz/${viewModel.nextLessonId}`}
+              href={`/quiz/${nextLessonId}`}
             >
               次のレッスンへ →
             </Link>
           ) : (
             <Link
               className="inline-flex min-h-11 items-center justify-center rounded-xl border-2 border-border bg-surface px-4 py-2.5 font-bold text-ink-2 shadow-[0_4px_0_var(--border)] transition-transform hover:border-border-hi hover:text-ink active:translate-y-1 active:shadow-none"
-              href={`/learn/${viewModel.domain}/${viewModel.topic}`}
+              href={resultHomeHref}
             >
-              レッスン一覧へ
+              {resultHomeLabel}
             </Link>
           )}
         </div>
@@ -224,7 +257,7 @@ export function QuizInteractive({ viewModel }: QuizInteractiveProps) {
         <Badge className="border-blue bg-blue-bg text-blue">1–{question.choices.length} keys</Badge>
       </div>
       <QuestionCard
-        explanation={viewModel.explanations[question.id] ?? '解説を取得できませんでした。'}
+        explanation={explanations[question.id] ?? '解説を取得できませんでした。'}
         onAnswer={handleAnswer}
         onNext={() => {
           if (currentIndex === activeQuestions.length - 1) {

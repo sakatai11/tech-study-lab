@@ -10,6 +10,8 @@ export type QuizViewModel = {
   questions: QuizQuestionViewModel[]
   explanations: Record<string, string>
   nextLessonId?: string
+  resultHomeHref?: string
+  resultHomeLabel?: string
 }
 
 export type SubmittedAnswer = {

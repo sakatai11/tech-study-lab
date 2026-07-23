@@ -149,6 +149,7 @@ describe('core API endpoints', () => {
 
     expect(queueResponse.status).toBe(200)
     await expect(queueResponse.json()).resolves.toEqual({
+      hasMore: true,
       items: Array.from({ length: 20 }, (_, index) => ({
         questionId: `question-${index + 1}`,
         dueAt: now - (21 - index) * 1_000,
@@ -166,10 +167,13 @@ describe('core API endpoints', () => {
 
     const reviewDeps = createReviewDeps(drizzle(env.DB))
 
-    await expect(reviewDeps.findDueQuestions(FIXED_USER_ID, now)).resolves.toEqual([
-      { questionId: 'before', dueAt: now - 1 },
-      { questionId: 'at-boundary', dueAt: now },
-    ])
+    await expect(reviewDeps.findDueQuestions(FIXED_USER_ID, now)).resolves.toEqual({
+      hasMore: false,
+      items: [
+        { questionId: 'before', dueAt: now - 1 },
+        { questionId: 'at-boundary', dueAt: now },
+      ],
+    })
     await expect(reviewDeps.countDueQuestions(FIXED_USER_ID, now)).resolves.toBe(2)
   })
 })

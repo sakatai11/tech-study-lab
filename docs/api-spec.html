@@ -197,7 +197,7 @@
               <p>復習対象の問題IDとSRSメタデータを返します。本文・選択肢・解説はフロントエンドがcontentから解決します。</p>
               <table class="contract"><tbody>
                 <tr><th>リクエスト</th><td>body・query parameterなし。</td></tr>
-                <tr><th>成功</th><td><span class="http">200 OK</span>。<code>reviewQueueResponseSchema</code>: <code>{ items: Array&lt;{ questionId, dueAt }&gt; }</code>。<code>dueAt</code> はUnixエポックミリ秒の整数で、昇順・最大20件です。</td></tr>
+                <tr><th>成功</th><td><span class="http">200 OK</span>。<code>reviewQueueResponseSchema</code>: <code>{ hasMore: boolean, items: Array&lt;{ questionId, dueAt }&gt; }</code>。<code>dueAt</code> はUnixエポックミリ秒の整数で、APIが昇順・最大20件を保証し、残バッチの有無を<code>hasMore</code>で返します。</td></tr>
                 <tr><th>エラー</th><td><span class="http">500</span> <code>INTERNAL</code>。</td></tr>
                 <tr><th>Zod</th><td>実装済み: <code>reviewQueueResponseSchema</code></td></tr>
               </tbody></table>

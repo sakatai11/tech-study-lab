@@ -26,7 +26,14 @@ export default async function QuizPage({ params }: QuizPageProps) {
             正解データはクライアントへ渡さず、解答のたびに API で採点・記録します。
           </p>
         </header>
-        <QuizInteractive viewModel={viewModel} />
+        <QuizInteractive
+          explanations={viewModel.explanations}
+          nextLessonId={viewModel.nextLessonId}
+          questions={viewModel.questions}
+          resultHomeHref={`/learn/${viewModel.domain}/${viewModel.topic}`}
+          resultHomeLabel="レッスン一覧へ"
+          title={viewModel.title}
+        />
       </div>
     </DashboardShell>
   )

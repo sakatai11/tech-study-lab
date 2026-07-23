@@ -8,18 +8,26 @@ declare global {
 
 export type ApiClient = ReturnType<typeof createClient>
 
-const browserApiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8787'
+const localApiBaseUrl = 'http://localhost:8787'
 const serviceBindingBaseUrl = 'https://api.internal'
 
 function createFallbackApiClient(): ApiClient {
-  return createClient(process.env.API_BASE_URL ?? 'http://localhost:8787')
+  return createClient(process.env.API_BASE_URL ?? localApiBaseUrl)
 }
 
 export function createBrowserApiClient(): ApiClient {
-  return createClient(browserApiBaseUrl)
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL
+
+  if (!apiBaseUrl && process.env.NODE_ENV === 'production') {
+    throw new Error('NEXT_PUBLIC_API_BASE_URL is required in production')
+  }
+
+  return createClient(apiBaseUrl ?? localApiBaseUrl)
 }
 
 export async function createServerApiClient(): Promise<ApiClient> {
+  const isLocalRuntime = process.env.NODE_ENV !== 'production'
+
   try {
     const { getCloudflareContext } = await import('@opennextjs/cloudflare')
     const { env } = await getCloudflareContext({ async: true })
@@ -28,15 +36,13 @@ export async function createServerApiClient(): Promise<ApiClient> {
       return createClient(serviceBindingBaseUrl, { fetch: apiFetcher })
     }
 
-    if (process.env.NODE_ENV === 'production') {
+    if (!isLocalRuntime) {
       throw new Error('Cloudflare API service binding (API) is not configured.')
     }
   } catch (error) {
-    if (process.env.NODE_ENV === 'production') {
+    if (!isLocalRuntime) {
       throw error
     }
-
-    // Next.js Node runtime and local scripts use the URL fallback below.
   }
 
   return createFallbackApiClient()
