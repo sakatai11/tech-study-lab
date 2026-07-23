@@ -1,12 +1,12 @@
-export async function requestJson<T>(
+export async function requestJson(
   request: () => Promise<Response>,
   errorMessage: string,
-): Promise<T> {
+): Promise<unknown> {
   const response = await request()
 
   if (!response.ok) {
     throw new Error(errorMessage)
   }
 
-  return (await response.json()) as T
+  return response.json()
 }

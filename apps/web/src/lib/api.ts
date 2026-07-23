@@ -9,6 +9,11 @@ declare global {
 export type ApiClient = ReturnType<typeof createClient>
 
 const localApiBaseUrl = 'http://localhost:8787'
+const serviceBindingBaseUrl = 'https://api.internal'
+
+function createFallbackApiClient(): ApiClient {
+  return createClient(process.env.API_BASE_URL ?? localApiBaseUrl)
+}
 
 export function createBrowserApiClient(): ApiClient {
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL
@@ -28,7 +33,11 @@ export async function createServerApiClient(): Promise<ApiClient> {
     const { env } = await getCloudflareContext({ async: true })
     if (env.API) {
       const apiFetcher: NonNullable<ClientRequestOptions['fetch']> = env.API.fetch.bind(env.API)
-      return createClient('https://api.internal', { fetch: apiFetcher })
+      return createClient(serviceBindingBaseUrl, { fetch: apiFetcher })
+    }
+
+    if (!isLocalRuntime) {
+      throw new Error('Cloudflare API service binding (API) is not configured.')
     }
   } catch (error) {
     if (!isLocalRuntime) {
@@ -36,9 +45,5 @@ export async function createServerApiClient(): Promise<ApiClient> {
     }
   }
 
-  if (!isLocalRuntime) {
-    throw new Error('Cloudflare API Service Binding is required in production')
-  }
-
-  return createClient(process.env.API_BASE_URL ?? localApiBaseUrl)
+  return createFallbackApiClient()
 }
