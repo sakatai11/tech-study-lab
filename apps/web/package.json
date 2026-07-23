@@ -17,6 +17,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@tsl/api": "workspace:^",
     "@tsl/shared": "workspace:*",
     "clsx": "2.1.1",
     "next": "16.2.9",
@@ -27,6 +28,7 @@
     "tailwind-merge": "2.6.0"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "4.20260621.1",
     "@opennextjs/cloudflare": "1.19.11",
     "@types/node": "22.10.5",
     "@types/react": "19.2.17",
