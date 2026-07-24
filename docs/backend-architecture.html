@@ -378,8 +378,10 @@
         <h2>基本方針</h2>
         <p>
           <code>apps/api</code>（Hono / Cloudflare Workers）は
-          <strong>route → service → dal の 3 層</strong>
-          に分けます。層を分ける目的はただ一つ、「HTTP の関心事」「業務の手順」「SQL
+          <strong>route・service・dal の 3 層</strong>
+          に分けます。リクエストの処理フローは
+          <code>route → service → deps（dal 実装）→ D1</code>
+          です。層を分ける目的は、「HTTP の関心事」「業務の手順」「SQL
           の関心事」を混ぜないことです。
         </p>
         <div class="grid three">
@@ -387,7 +389,9 @@
             <h3>route は HTTP の入口</h3>
             <p>
               <code>routes/</code> はパス・メソッド・<code>zValidator</code>
-              による入力検証・ステータスコード・レスポンス整形を扱います。ビジネスロジックは書きません。
+              による入力検証・ステータスコード・レスポンス整形を扱います。リクエストスコープの
+              Drizzle / deps を生成して service へ渡す composition root
+              でもあります。ビジネスロジックは書きません。
             </p>
           </article>
           <article class="card">
@@ -411,14 +415,20 @@
         </div>
         <ul>
           <li>
-            依存方向は
-            <strong><code>routes → services → dal →（D1）</code>の一方向のみ</strong>。逆方向の
-            import は禁止。<code>packages/shared</code> はどの層からも参照可。
+            処理フローと import 方向は同じではない。route は service
+            と dal の deps factory を import し、dal は service が宣言する deps
+            型だけを <code>import type</code> する。service は dal を import
+            しない。
           </li>
           <li>
             service が「必要な関数の型（<code>AnswerDeps</code> など）」を宣言し、dal
             がそれを実装する。route が両者を接続する。<strong
               >DI コンテナは使わず、関数引数で依存を渡す</strong>。
+          </li>
+          <li>
+            <code>packages/shared</code> の参照先も層ごとに限定する。route は API
+            schema・DTO、service は純粋ドメインロジック・型、dal は db schema
+            を利用する。
           </li>
           <li>
             <strong>採点の権威は API</strong>（design.md
@@ -514,9 +524,9 @@
           /domains</code>（領域別の習得率・トピック/レッスン数）、<code>GET
           /analytics/summary</code>・<code>GET /analytics/weekly</code>・<code>GET
           /analytics/mistakes</code>（アナリティクス画面の各集計）、<code>GET
-          /activity/recent</code>（最近のアクティビティ）。これらは
-          Walking Skeleton 貫通後に<strong>同じ route → service → dal
-          パターン</strong>で追加します（§10.1）。集計クエリ主体（読み取りのみ）のため
+          /activity/recent</code>（最近のアクティビティ）。これらは Walking Skeleton
+          貫通後に<strong>同じ route → service → deps（dal
+          実装）の処理パターン</strong>で追加します（§10.1）。集計クエリ主体（読み取りのみ）のため
           service 層は薄くなります。
         </div>
       </section>
@@ -679,9 +689,10 @@ flowchart LR
         <h3>依存方向と deps 注入</h3>
         <div class="diagram">
           <p>
-            import の矢印は常に一方向です。service は dal を import
-            しません。代わりに「必要な関数の型（AnswerDeps）」を自分で宣言し、dal
-            がそれを実装し、route が接続します。
+            処理フローと import 方向を区別します。service は dal を import
+            せず、「必要な関数の型（AnswerDeps）」を自分で宣言します。dal
+            はその型だけを <code>import type</code> して実装し、route
+            がリクエストスコープで両者を接続します。
           </p>
           <div class="diagram-toolbar" aria-label="依存方向の図操作">
             <button type="button" data-zoom-action="in">拡大</button>
@@ -698,15 +709,18 @@ flowchart LR
   routes["routes/answers.ts\nHTTP 契約"]:::route
   services["services/answer-service.ts\nAnswerDeps 型を宣言\nユースケースを実装"]:::service
   dal["dal/answer-repository.ts\ncreateAnswerDeps\nAnswerDeps を実装"]:::dal
-  shared["@tsl/shared\nsm2 / schema-api / db schema"]:::shared
+  apiSchema["@tsl/shared/schema/api\nAPI schema・DTO"]:::shared
+  domainLogic["@tsl/shared\n純粋ドメインロジック・型"]:::shared
+  dbSchema["@tsl/shared/db/schema\nDrizzle schema"]:::shared
   d1[("D1")]:::dal
 
   routes -->|"submitAnswer を呼ぶ"| services
   routes -->|"createAnswerDeps(db) で生成し渡す"| dal
   dal -.->|"型のみ import（実装対象の宣言）"| services
   dal -->|"Drizzle クエリ"| d1
-  services -->|"純粋関数を利用"| shared
-  routes -->|"zValidator スキーマ"| shared</pre>
+  routes -->|"zValidator・DTO"| apiSchema
+  services -->|"純粋関数・型"| domainLogic
+  dal -->|"Drizzle schema"| dbSchema</pre>
         </div>
 
         <h3>content → D1 同期（seed/upsert）</h3>
@@ -773,8 +787,10 @@ flowchart LR
             <tr>
               <td><code>apps/api/src/routes/</code></td>
               <td>
-                HTTP 契約。<code>zValidator</code>・deps 生成・<code>now</code>
-                注入・レスポンスの <code>satisfies</code>。
+                HTTP 契約とリクエストスコープの composition root。<code
+                  >zValidator</code
+                >・Drizzle / deps 生成・<code>now</code> 注入・レスポンスの
+                <code>satisfies</code>。
               </td>
               <td>採点判定、SRS 計算、Drizzle クエリ。</td>
             </tr>

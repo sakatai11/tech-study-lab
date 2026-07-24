@@ -476,7 +476,8 @@
             <h3>features は画面価値の単位</h3>
             <p>
               <code>features</code> は lesson、quiz、review
-              のような機能単位です。表示部品、ViewModel、mapper、初回取得、再取得を近くに置きます。
+              のような機能単位です。表示部品、ViewModel、mapper、Server
+              loader、Client hook を責務別に近くへ置きます。
             </p>
           </article>
           <article class="card">
@@ -509,8 +510,11 @@
             演習・復習は 1 ルート内でクライアント状態遷移（<code>intro →
             exercise → result</code>）を持つ（別 URL に切らない）。初回データ
             （問題・解説、<code>/review</code> は due queue）は Server loader で
-            ViewModel 化して props 渡しし、Client Component が画面フェーズ・解答結果・送信エラーだけを
-            state に持つ。
+            ViewModel 化して props 渡しする。Client Component は画面フェーズ・現在問題・<code
+              >wrongOnly</code
+            >・キーボード操作を、Client hook は
+            <code>submitting</code>・送信エラー・API 由来の解答結果を state
+            に持つ。
           </li>
           <li>
             web と API は<strong>別 Worker</strong>（design.md
@@ -522,7 +526,8 @@
           <li>
             初回表示は Server loader で ViewModel 化して props 渡し、Client
             Component はその VM をそのまま描画に使う（state に複製しない）。Client
-            hook が持つのは「解答結果」「送信エラー」だけ。
+            hook は mutation と、それに伴う <code>submitting</code>・送信エラー・API
+            由来の結果だけを持つ。
           </li>
           <li>
             due queue の再取得は Client 側で content join
@@ -534,12 +539,11 @@
             （<code>answerIndex</code>）を含めない。
           </li>
           <li>
-            動的データを読むページ（<code>/</code>（due-count・統計）・<code>/domains</code>（習得率）・<code>/analytics</code>（各集計）・<code>/review</code>（queue））は無キャッシュ
-            fetch により route segment config の既定（<code>dynamic = 'auto'</code>）のまま
-            自動的に動的レンダリングになる。<code
-              >'use cache'</code
-            >・<code>cacheTag</code>・<code>revalidateTag</code> は現時点では
-            採用しない。
+            動的データを読むページ（<code>/</code>（due-count・統計）・<code>/domains</code>（習得率）・<code>/analytics</code>（各集計）・<code>/review</code>（queue））は
+            <code>dynamic = 'force-dynamic'</code>
+            を明記する。将来 Cache Components を有効化する場合は
+            <code>'use cache'</code>・<code>cacheLife</code>・Suspense
+            境界へ移行する。feature の API wrapper にはキャッシュ方針を持ち込まない。
           </li>
         </ul>
         <div class="note">
@@ -550,6 +554,35 @@
           から import されることでサーバー側で実行されます。誤 import 防止として
           <code>import 'server-only'</code> を置きます。
         </div>
+        <h3>依存方向</h3>
+        <p>
+          基本方向は
+          <code>app → features → components/ui・lib → packages/shared / 外部ライブラリ</code>
+          です。feature 内でも実行環境と責務を跨いだ近道を作りません。
+        </p>
+        <ul>
+          <li>
+            <code>app</code> は feature の Server loader と component
+            だけを利用し、content・API wrapper・mapper・hook を直接利用しない。
+          </li>
+          <li>
+            component は同 feature の hook と ViewModel を利用し、Server
+            loader・content loader・API client を直接利用しない。
+          </li>
+          <li>
+            hook は同 feature の API wrapper を利用し、Server
+            loader・content loader・mapper・ViewModel を保持しない。
+          </li>
+          <li>
+            Server loader だけが content loader を利用し、取得・join・mapper
+            呼び出しを経て ViewModel を返す。
+          </li>
+          <li>
+            feature 間の再利用は <code>features/shared</code> の小さい純粋変換か、公開された
+            component の props 契約を境界にする。他 feature の内部層を直接 import
+            しない。
+          </li>
+        </ul>
       </section>
 
       <section>
@@ -728,8 +761,8 @@ flowchart LR
   classDef api fill:#ecfdf5,stroke:#86efac,color:#1f2328;
 
   subgraph client["Client"]
-    ui["QuizInteractive / ReviewRunner\n選択・採点表示"]:::client
-    hook["features/quiz/hooks\nuseAnswerSubmit"]:::client
+    ui["QuizInteractive / ReviewRunner\n画面フェーズ・現在問題・wrongOnly"]:::client
+    hook["features/quiz/hooks\nmutation・submitting・error・API結果"]:::client
     apiWrapper["features/quiz/api\npostAnswer"]:::client
   end
 
@@ -764,26 +797,30 @@ flowchart LR
             <tr>
               <td><code>apps/web/src/features/*/components</code></td>
               <td>
-                feature 固有の表示コンポーネント。必要に応じて Client Component
-                とする。
+                feature 固有の表示と、画面フェーズ・現在問題・<code>wrongOnly</code>・キーボード操作などの表示操作
+                state。必要に応じて Client Component とする。
               </td>
-              <td>DBアクセス、Hono route 直書き、content の直接走査。</td>
+              <td>
+                Server loader、content loader、API client の直接利用、DTO変換。
+              </td>
             </tr>
             <tr>
               <td><code>apps/web/src/features/*/hooks</code></td>
               <td>
-                Client 専用。mutation、再取得、loading/error state、UI state
-                を扱う。
+                Client 専用。mutation・再取得と、それに伴う
+                <code>submitting</code>・error・API 由来の結果 state を扱う。
               </td>
               <td>
-                初回取得の必須データ形成、<code>server-only</code> import。
+                初回取得の必須データ形成、ViewModel の複製保持、画面フェーズなどの表示操作
+                state、<code>server-only</code> import。
               </td>
             </tr>
             <tr>
               <td><code>apps/web/src/features/*/server</code></td>
               <td>
-                Server loader。初回取得、content/API DTO の取得、mapper
-                呼び出し、ViewModel 生成。
+                Server loader。初回取得、content/API DTO の取得、join、mapper
+                呼び出し、ViewModel 生成。初回表示経路で content loader
+                を利用できる唯一の feature 層。
               </td>
               <td>Client Component からの import、ブラウザ専用API。</td>
             </tr>
@@ -961,9 +998,11 @@ export async function loadReviewQueue(): Promise&lt;ReviewViewModel&gt; {
         <pre
           data-code-title="apps/web/src/app/review/page.tsx"
         ><code class="language-tsx">// apps/web/src/app/review/page.tsx
-// 無キャッシュ fetch により dynamic = 'auto' のまま動的レンダリングになる
 import { ReviewRunner } from '@/features/review/components/review-runner';
 import { loadReviewQueue } from '@/features/review/server/load-review-queue';
+
+// API-backed page は force-dynamic。再取得は router.refresh() に委譲
+export const dynamic = 'force-dynamic';
 
 export default async function ReviewPage() {
   const viewModel = await loadReviewQueue(); // API queue + content join 済み VM
@@ -976,26 +1015,36 @@ export default async function ReviewPage() {
         ><code class="language-ts">// apps/web/src/features/review/hooks/use-answer-submit.ts
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { createBrowserApiClient } from '@/lib/api';
 import { postAnswer } from '../api/review-api';
 import type { AnswerResult } from '@tsl/shared/schema/api';
 
-// VM は保持しない。解答結果とエラーだけを扱う mutation 専用 hook
+// VM は保持しない。mutation と通信状態だけを扱う hook
 export function useAnswerSubmit() {
+  const client = useMemo(() =&gt; createBrowserApiClient(), []);
   const [results, setResults] = useState&lt;Record&lt;string, AnswerResult&gt;&gt;({});
   const [error, setError] = useState&lt;Error | null&gt;(null);
+  const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const submitAnswer = useCallback(async (questionId: string, selectedIndex: number) =&gt; {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setSubmitting(true);
+    setError(null);
     try {
-      const result = await postAnswer(createBrowserApiClient(), { questionId, selectedIndex });
+      const result = await postAnswer(client, { questionId, selectedIndex });
       setResults((prev) =&gt; ({ ...prev, [questionId]: result }));
     } catch (cause) {
       setError(cause instanceof Error ? cause : new Error('Failed to submit answer'));
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
     }
-  }, []);
+  }, [client]);
 
-  return { results, error, submitAnswer };
+  return { results, error, submitting, submitAnswer };
 }</code></pre>
 
         <pre
@@ -1013,7 +1062,7 @@ type Props = {
 
 export function ReviewRunner({ viewModel }: Props) {
   const router = useRouter();
-  const { results, error, submitAnswer } = useAnswerSubmit();
+  const { results, error, submitting, submitAnswer } = useAnswerSubmit();
 
   const handleAllAnswered = () =&gt; {
     router.refresh(); // Server loader を再実行し、次の due queue を props で受け直す
@@ -1027,6 +1076,7 @@ export function ReviewRunner({ viewModel }: Props) {
     &lt;QuizRenderer
       viewModel={viewModel}
       results={results}
+      submitting={submitting}
       onAnswer={submitAnswer}
       onComplete={handleAllAnswered}
     /&gt;
