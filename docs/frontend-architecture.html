@@ -476,8 +476,9 @@
             <h3>features は画面価値の単位</h3>
             <p>
               <code>features</code> は lesson、quiz、review
-              のような機能単位です。表示部品、ViewModel、mapper、Server
-              loader、Client hook を責務別に近くへ置きます。
+              のような機能単位です。実行環境固有処理は
+              <code>client/</code>・<code>server/</code>、両環境で使う処理は
+              <code>api/</code>・mapper・ViewModel として責務別に近くへ置きます。
             </p>
           </article>
           <article class="card">
@@ -543,7 +544,7 @@
             <code>dynamic = 'force-dynamic'</code>
             を明記する。将来 Cache Components を有効化する場合は
             <code>'use cache'</code>・<code>cacheLife</code>・Suspense
-            境界へ移行する。feature の API wrapper にはキャッシュ方針を持ち込まない。
+            境界へ移行する。feature の API adapter にはキャッシュ方針を持ち込まない。
           </li>
         </ul>
         <div class="note">
@@ -554,6 +555,14 @@
           から import されることでサーバー側で実行されます。誤 import 防止として
           <code>import 'server-only'</code> を置きます。
         </div>
+        <div class="note">
+          <code>client/</code>・<code>server/</code>
+          は実行環境の境界、<code>components</code>・<code>hooks</code>・loader
+          は責務の境界です。両環境から使える endpoint
+          アダプター・mapper・ViewModel はどちらにも複製せず feature
+          直下へ置きます。Client Component の入口には
+          <code>'use client'</code> を置きます。
+        </div>
         <h3>依存方向</h3>
         <p>
           基本方向は
@@ -562,16 +571,19 @@
         </p>
         <ul>
           <li>
-            <code>app</code> は feature の Server loader と component
-            だけを利用し、content・API wrapper・mapper・hook を直接利用しない。
+            <code>app</code> は feature の <code>server</code> と
+            <code>client/components</code>
+            だけを利用し、content・API adapter・mapper・hook を直接利用しない。
           </li>
           <li>
-            component は同 feature の hook と ViewModel を利用し、Server
-            loader・content loader・API client を直接利用しない。
+            <code>client/components</code> は同 feature の
+            <code>client/hooks</code> と ViewModel を利用し、
+            <code>server</code>・content loader・API client を直接利用しない。
           </li>
           <li>
-            hook は同 feature の API wrapper を利用し、Server
-            loader・content loader・mapper・ViewModel を保持しない。
+            <code>client/hooks</code> は Browser API client を生成して同 feature
+            の API adapter に渡し、<code>server</code>・content
+            loader・mapper・ViewModel を保持しない。
           </li>
           <li>
             Server loader だけが content loader を利用し、取得・join・mapper
@@ -624,12 +636,12 @@
               <td><code>client.review.queue.$get()</code> を呼ぶ</td>
               <td><code>features/review/api</code></td>
               <td>
-                Hono RPC の endpoint wrapper として feature 単位に閉じるため。
+                Hono RPC の endpoint アダプターとして feature 単位に閉じるため。
               </td>
             </tr>
             <tr>
               <td><code>res.ok</code> チェックと <code>res.json()</code></td>
-              <td><code>lib/api-response.ts</code></td>
+              <td><code>lib/api.ts</code></td>
               <td>全 endpoint で同じ横断処理だから。</td>
             </tr>
             <tr>
@@ -761,9 +773,9 @@ flowchart LR
   classDef api fill:#ecfdf5,stroke:#86efac,color:#1f2328;
 
   subgraph client["Client"]
-    ui["QuizInteractive / ReviewRunner\n画面フェーズ・現在問題・wrongOnly"]:::client
-    hook["features/quiz/hooks\nmutation・submitting・error・API結果"]:::client
-    apiWrapper["features/quiz/api\npostAnswer"]:::client
+    ui["features/*/client/components\n画面フェーズ・現在問題・wrongOnly"]:::client
+    hook["features/*/client/hooks\nBrowser client・mutation・通信state"]:::client
+    apiWrapper["features/*/api\npostAnswer"]:::client
   end
 
   subgraph api["Hono API / D1"]
@@ -777,6 +789,16 @@ flowchart LR
 
       <section>
         <h2>ディレクトリの役割</h2>
+        <pre><code>features/quiz/
+├── client/
+│   ├── components/       # Client Components・表示操作 state
+│   └── hooks/            # Browser client・mutation・通信 state
+├── server/
+│   ├── components/       # Server Components（必要な場合のみ）
+│   └── load-quiz.ts      # 初回取得・join・ViewModel 生成
+├── api/                  # Server / Client 共用 endpoint アダプター
+├── mapper.ts             # 環境非依存の純粋変換
+└── view-model.ts         # Server / Client 間の表示契約</code></pre>
         <table>
           <thead>
             <tr>
@@ -795,32 +817,34 @@ flowchart LR
               <td>DTO変換、APIレスポンス処理、複雑なUI state。</td>
             </tr>
             <tr>
-              <td><code>apps/web/src/features/*/components</code></td>
+              <td><code>apps/web/src/features/*/client/components</code></td>
               <td>
                 feature 固有の表示と、画面フェーズ・現在問題・<code>wrongOnly</code>・キーボード操作などの表示操作
-                state。必要に応じて Client Component とする。
+                state。入口に <code>'use client'</code> を置く。
               </td>
               <td>
                 Server loader、content loader、API client の直接利用、DTO変換。
               </td>
             </tr>
             <tr>
-              <td><code>apps/web/src/features/*/hooks</code></td>
+              <td><code>apps/web/src/features/*/client/hooks</code></td>
               <td>
-                Client 専用。mutation・再取得と、それに伴う
+                Client 専用。Browser API client
+                の生成、mutation と、それに伴う
                 <code>submitting</code>・error・API 由来の結果 state を扱う。
               </td>
               <td>
                 初回取得の必須データ形成、ViewModel の複製保持、画面フェーズなどの表示操作
-                state、<code>server-only</code> import。
+                state、<code>server</code> の import。
               </td>
             </tr>
             <tr>
               <td><code>apps/web/src/features/*/server</code></td>
               <td>
-                Server loader。初回取得、content/API DTO の取得、join、mapper
-                呼び出し、ViewModel 生成。初回表示経路で content loader
-                を利用できる唯一の feature 層。
+                Server loader と必要な Server Component。初回取得、content/API DTO
+                の取得、join、mapper 呼び出し、ViewModel
+                生成。初回表示経路で content loader を利用できる唯一の feature
+                層。<code>import 'server-only'</code> で境界を強制する。
               </td>
               <td>Client Component からの import、ブラウザ専用API。</td>
             </tr>
@@ -828,10 +852,12 @@ flowchart LR
               <td><code>apps/web/src/features/*/api</code></td>
               <td>
                 <code>hc</code> の endpoint
-                wrapper。path・method・引数・エラーメッセージだけを持つ。
+                adapter。呼び出し側から <code>ApiClient</code> を受け取り、path・method・引数・共有
+                Zod による入出力検証・機能固有のエラーメッセージを持つ。
               </td>
               <td>
-                ViewModel 化、UI state、cookies/headers など環境専用処理。
+                API client の生成、ViewModel 化、UI state、cookies/headers
+                など環境専用処理。
               </td>
             </tr>
             <tr>
@@ -873,17 +899,13 @@ flowchart LR
                 <code>createServerApiClient</code>（本番は Service Binding の
                 fetch、dev は URL フォールバック）/
                 <code>createBrowserApiClient</code>（公開 URL）の Hono client
-                生成。
+                生成と、<code>requestJson</code> による
+                <code>res.ok</code>・<code>res.json()</code> の共通処理。
               </td>
-              <td>endpoint ごとの business wrapper。</td>
-            </tr>
-            <tr>
-              <td><code>apps/web/src/lib/api-response.ts</code></td>
               <td>
-                <code>requestJson</code>。<code>res.ok</code> チェックと
-                <code>res.json()</code> を共通化する。
+                endpoint 固有の path・method・引数・Zod 検証、ViewModel
+                変換。
               </td>
-              <td>Hono path の文字列汎用 fetch 化。</td>
             </tr>
             <tr>
               <td><code>apps/web/src/lib/content.ts</code></td>
@@ -911,7 +933,7 @@ flowchart LR
         <pre
           data-code-title="apps/web/src/app/learn/[domain]/[topic]/[lesson]/page.tsx"
         ><code class="language-tsx">// apps/web/src/app/learn/[domain]/[topic]/[lesson]/page.tsx
-import { LessonDisplay } from '@/features/lesson/components/lesson-display';
+import { LessonDisplay } from '@/features/lesson/server/components/lesson-display';
 import { loadLesson } from '@/features/lesson/server/load-lesson';
 
 type Props = {
@@ -968,8 +990,7 @@ export function lessonContentToViewModel(content: LessonContent): LessonViewMode
         <pre
           data-code-title="apps/web/src/features/review/api/review-api.ts"
         ><code class="language-ts">// apps/web/src/features/review/api/review-api.ts
-import type { ApiClient } from '@/lib/api';
-import { requestJson } from '@/lib/api-response';
+import { type ApiClient, requestJson } from '@/lib/api';
 import type { ReviewQueueDTO } from '@tsl/shared/schema/review';
 
 export function fetchReviewQueue(client: ApiClient): Promise&lt;ReviewQueueDTO&gt; {
@@ -998,7 +1019,7 @@ export async function loadReviewQueue(): Promise&lt;ReviewViewModel&gt; {
         <pre
           data-code-title="apps/web/src/app/review/page.tsx"
         ><code class="language-tsx">// apps/web/src/app/review/page.tsx
-import { ReviewRunner } from '@/features/review/components/review-runner';
+import { ReviewRunner } from '@/features/review/client/components/review-runner';
 import { loadReviewQueue } from '@/features/review/server/load-review-queue';
 
 // API-backed page は force-dynamic。再取得は router.refresh() に委譲
@@ -1011,13 +1032,13 @@ export default async function ReviewPage() {
 }</code></pre>
 
         <pre
-          data-code-title="apps/web/src/features/review/hooks/use-answer-submit.ts"
-        ><code class="language-ts">// apps/web/src/features/review/hooks/use-answer-submit.ts
+          data-code-title="apps/web/src/features/review/client/hooks/use-answer-submit.ts"
+        ><code class="language-ts">// apps/web/src/features/review/client/hooks/use-answer-submit.ts
 'use client';
 
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { createBrowserApiClient } from '@/lib/api';
-import { postAnswer } from '../api/review-api';
+import { postAnswer } from '../../api/review-api';
 import type { AnswerResult } from '@tsl/shared/schema/api';
 
 // VM は保持しない。mutation と通信状態だけを扱う hook
@@ -1044,17 +1065,22 @@ export function useAnswerSubmit() {
     }
   }, [client]);
 
-  return { results, error, submitting, submitAnswer };
+  const resetAnswers = useCallback(() =&gt; {
+    setResults({});
+    setError(null);
+  }, []);
+
+  return { results, error, submitting, submitAnswer, resetAnswers };
 }</code></pre>
 
         <pre
-          data-code-title="apps/web/src/features/review/components/review-runner.tsx"
-        ><code class="language-tsx">// apps/web/src/features/review/components/review-runner.tsx
+          data-code-title="apps/web/src/features/review/client/components/review-runner.tsx"
+        ><code class="language-tsx">// apps/web/src/features/review/client/components/review-runner.tsx
 'use client';
 
 import { useRouter } from 'next/navigation';
 import { useAnswerSubmit } from '../hooks/use-answer-submit';
-import type { ReviewViewModel } from '../view-model';
+import type { ReviewViewModel } from '../../view-model';
 
 type Props = {
   viewModel: ReviewViewModel;
@@ -1062,14 +1088,23 @@ type Props = {
 
 export function ReviewRunner({ viewModel }: Props) {
   const router = useRouter();
-  const { results, error, submitting, submitAnswer } = useAnswerSubmit();
+  const { results, error, submitting, submitAnswer, resetAnswers } = useAnswerSubmit();
 
   const handleAllAnswered = () =&gt; {
+    resetAnswers();
     router.refresh(); // Server loader を再実行し、次の due queue を props で受け直す
   };
 
   if (error) {
-    return &lt;ErrorDisplay error={error} retry={() =&gt; router.refresh()} /&gt;;
+    return (
+      &lt;ErrorDisplay
+        error={error}
+        retry={() =&gt; {
+          resetAnswers();
+          router.refresh();
+        }}
+      /&gt;
+    );
   }
 
   return (
@@ -1078,6 +1113,8 @@ export function ReviewRunner({ viewModel }: Props) {
       results={results}
       submitting={submitting}
       onAnswer={submitAnswer}
+      onAttemptStart={resetAnswers}
+      onWrongOnlyStart={resetAnswers}
       onComplete={handleAllAnswered}
     /&gt;
   );

@@ -714,13 +714,13 @@ flowchart LR
   dbSchema["@tsl/shared/db/schema\nDrizzle schema"]:::shared
   d1[("D1")]:::dal
 
-  routes -->|"submitAnswer を呼ぶ"| services
-  routes -->|"createAnswerDeps(db) で生成し渡す"| dal
-  dal -.->|"型のみ import（実装対象の宣言）"| services
-  dal -->|"Drizzle クエリ"| d1
-  routes -->|"zValidator・DTO"| apiSchema
-  services -->|"純粋関数・型"| domainLogic
-  dal -->|"Drizzle schema"| dbSchema</pre>
+  routes --&gt;|"submitAnswer を呼ぶ"| services
+  routes --&gt;|"createAnswerDeps(db) で生成し渡す"| dal
+  dal -.-&gt;|"型のみ import（実装対象の宣言）"| services
+  dal --&gt;|"Drizzle クエリ"| d1
+  routes --&gt;|"zValidator・DTO"| apiSchema
+  services --&gt;|"純粋関数・型"| domainLogic
+  dal --&gt;|"Drizzle schema"| dbSchema</pre>
         </div>
 
         <h3>content → D1 同期（seed/upsert）</h3>

@@ -243,39 +243,48 @@ apps/web/src/
 │   ├── quiz/[lesson]/        # 演習（page が Server loader で初期化 → Client が intro/exercise/result 状態を持つ）
 │   ├── review/               # 復習（同上。初回 due queue は Server loader）
 │   └── analytics/            # アナリティクス
-├── features/                 # 機能集約（状態・ロジックを持つ単位）
-│   ├── dashboard/            # 統計・領域別進捗・最近のアクティビティの集約（components / server / mapper / view-model）
-│   ├── domains/              # 領域一覧の取得・ViewModel化
-│   ├── lesson/                # components / server / mapper / view-model
-│   ├── quiz/                  # components / hooks / server / api / mapper / view-model
-│   ├── review/                # components / hooks / server / api / mapper / view-model
-│   └── analytics/             # 集計値の取得・ViewModel化（components / server / api / mapper / view-model）
+├── features/                 # 機能単位。実行環境は各 feature の client / server で分離
+│   ├── dashboard/
+│   ├── domains/
+│   ├── lesson/
+│   ├── quiz/                 # 下記の feature 標準構成に従う
+│   │   ├── client/
+│   │   │   ├── components/  # Client Components。表示と表示操作 state
+│   │   │   └── hooks/       # mutation・通信 state
+│   │   ├── server/
+│   │   │   ├── components/  # feature 固有の Server Components（必要な場合のみ）
+│   │   │   └── load-quiz.ts # 初回取得・join・ViewModel 生成
+│   │   ├── api/              # Server / Client 共用の環境非依存 endpoint アダプター
+│   │   ├── mapper.ts         # 環境非依存の純粋変換
+│   │   └── view-model.ts     # Server / Client 間の表示契約
+│   ├── review/               # client / server / api / mapper / view-model
+│   └── analytics/
 ├── components/ui/            # 汎用UI（Button / Card / Badge / ProgressBar / TermWin / Keycap 等）。デザイントークンを土台に Tailwind で実装（§8.7）
 └── lib/                      # hc クライアントファクトリ / API response helper / content ローダー / env
 ```
 
-- **Quiz 表示コンポーネント**は `apps/web/src/features/quiz` に置く。問題・解説・intro 内容・結果導線を表示 props で受け取り、画面フェーズと問題送りを管理する再利用可能な Client Component とする。`/quiz`（レッスン全問）・`/review`（due 問題）・`wrongOnly`（間違えonly）は供給する ViewModel / 表示 props だけを差し替え、解答 mutation は共通の Client hook を通す（7.2 の方針を実体化）。
-- feature 内の通信責務は `api/`・`server/`・`hooks/` に分ける。`api/` は Hono RPC（`hc`）呼び出しの薄い wrapper、`server/` は page / Server Component から呼ぶ初回取得と ViewModel 化、`hooks/` は Client Component から呼ぶ mutation・再取得と、それに伴う `submitting`・`error`・API 由来の結果 state を担当する。画面フェーズ・現在問題・`wrongOnly`・キーボード操作のような表示操作 state は Client Component が担当する。`apps/web/src/features/*/server` 配下のファイルには `import 'server-only'` を置き、Client Component からの誤 import を防ぐ。
+- **Quiz 表示コンポーネント**は `apps/web/src/features/quiz/client/components` に置く。問題・解説・intro 内容・結果導線を表示 props で受け取り、画面フェーズと問題送りを管理する再利用可能な Client Component とする。`/quiz`（レッスン全問）・`/review`（due 問題）・`wrongOnly`（間違えた問題だけ）は供給する ViewModel / 表示 props だけを差し替え、解答 mutation は `client/hooks` の共通 hook を通す（7.2 の方針を実体化）。
+- feature 内の実行環境固有処理は `client/`・`server/` に分ける。`client/components` は Client Component、`client/hooks` は mutation と通信 state、`server/` は page / Server Component から呼ぶ初回取得・join・ViewModel 化を担当する。両環境から使える `api/`・`mapper.ts`・`view-model.ts` は feature 直下に置き、client/server のどちらかへ重複配置しない。`server/` 配下には `import 'server-only'`、Client Component の入口には `'use client'` を置き、ディレクトリ名だけに境界の強制を任せない。
 - `features/*/server` は「page からしか呼ばれないから app 所有」ではなく、「feature の ViewModel を作るための Server 専用 loader」として feature 所有にする。`src/app` は URL・metadata・layout・route params の受け渡し、loader 呼び出し、feature component への ViewModel の props 渡しだけを担う。feature 固有の表示 UI、content/API DTO の取得、join、sort、filter、ViewModel 化は `features` に閉じ込める。例外として、複数 feature を横断して 1 ページ専用に合成するだけの処理は `app` 直下ではなく、必要になった時点で `features/<page-feature>/server` のようなページ feature として切り出す。
 - `apps/web` 側では `_DAL` / `dal` という名前を使わない。DB へ直接アクセスしないため、Data Access Layer は `apps/api` 側の Drizzle / D1 アクセス層として定義する。
 - 共通 UI は**必要になった時点で** `components/ui` に薄く切り出す（先回りして作らない）。
 
 #### フロントエンドの依存方向
 
-依存方向は `app → features → components/ui・lib → packages/shared / 外部ライブラリ` を基本とする。`server`・`hooks`・`api`・`mapper` は実行環境と責務が異なるため、feature 内でも次の import 境界を守る。
+依存方向は `app → features → components/ui・lib → packages/shared / 外部ライブラリ` を基本とする。`client`・`server`・`api`・`mapper` は実行環境と責務が異なるため、feature 内でも次の import 境界を守る。
 
 | 層 | 責務 | import してよいもの | 禁止する依存・処理 |
 | --- | --- | --- | --- |
-| `app/**/page.tsx`・`layout.tsx` | URL、metadata、layout、route params、`notFound()`、loader 呼び出し、feature component への props 渡し | `features/*/server`、`features/*/components`、全画面共通 component | `lib/content`、feature の `api`・`mapper`・`hooks` の直接利用、DTO の join・sort・filter、feature 固有 UI の実装 |
-| `features/*/components` | ViewModel の表示、画面フェーズ・現在問題・`wrongOnly`・キーボード操作などの表示操作 state | 同 feature の `hooks`・`view-model`、`components/ui`、props 契約が公開された再利用 component | Server loader、content loader、API client の直接利用、DTO 変換 |
-| `features/*/hooks` | mutation・再取得と、それに伴う `submitting`・`error`・API 由来の結果 state | 同 feature の `api`、`lib/api`、共有 DTO 型 | Server loader、content loader、mapper、ViewModel の複製保持、画面レイアウト |
-| `features/*/server` | 初回データ取得、複数データの join、mapper 呼び出し、ViewModel の返却 | 同 feature の `api`・`mapper`・`view-model`、`lib/api`・`lib/content` | Client hook・Client Component からの import、表示 UI |
+| `app/**/page.tsx`・`layout.tsx` | URL、metadata、layout、route params、`notFound()`、loader 呼び出し、feature component への props 渡し | `features/*/server`、`features/*/client/components`、全画面共通 component | `lib/content`、feature の `api`・`mapper`・`client/hooks` の直接利用、DTO の join・sort・filter、feature 固有 UI の実装 |
+| `features/*/client/components` | Client Component。ViewModel の表示、画面フェーズ・現在問題・`wrongOnly`・キーボード操作などの表示操作 state | 同 feature の `client/hooks`・`view-model`、`components/ui`、props 契約が公開された再利用 component | `server`、content loader、API client の直接利用、DTO 変換 |
+| `features/*/client/hooks` | Browser API client の生成、mutation と、それに伴う `submitting`・`error`・API 由来の結果 state | 同 feature の `api`、`lib/api`、共有 DTO 型 | Server data の再取得、`server`、content loader、mapper、ViewModel の複製保持、画面レイアウト |
+| `features/*/server` | Server loaderと必要なServer Component。初回データ取得、複数データの join、mapper 呼び出し、ViewModel の返却 | 同 feature の `api`・`mapper`・`view-model`、`lib/api`・`lib/content`、Server専用ライブラリ | `client` からの import、ブラウザ専用 API、Client state |
 | `features/*/mapper` | Content data / DTO から ViewModel への純粋変換 | 共有入力型、同 feature の `view-model`、`features/shared` の小さい純粋変換 | fetch、content loader、API client、React state、副作用 |
-| `features/*/api` | endpoint 固有の `hc` 呼び出しと入出力検証 | `ApiClient` 型、`lib/api-response`、共有 DTO / Zod | API client の生成、ViewModel 化、UI state、Server / Browser 固有 API |
+| `features/*/api` | endpoint 固有の `hc` path・method・引数、共有 Zod による入出力検証、機能固有のエラーメッセージ | `ApiClient` 型・`requestJson`（`lib/api`）、共有 DTO / Zod | API client の生成、ViewModel 化、UI state、Server / Browser 固有 API |
 | `components/ui` | feature 非依存の汎用表示部品 | `lib/cn`、React、スタイル関連ライブラリ | `app`・`features`・content・API への依存 |
 | `lib` | API client 生成、HTTP response 処理、content index など横断インフラ | `packages/shared`、`@tsl/api`、外部ライブラリ | `app`・`features` への依存、画面都合の変換 |
 
-- feature 間の再利用は、`features/shared` の小さい純粋変換、または公開された表示 component の props 契約を境界にする。他 feature の `server`・`hooks`・`api`・`mapper` を直接 import しない。
+- feature 間の再利用は、`features/shared` の小さい純粋変換、または公開された表示 component の props 契約を境界にする。他 feature の `client`・`server`・`api`・`mapper` を直接 import しない。
 - `packages/shared` の利用は Content data / API DTO / Zod / 純粋ドメイン型に限り、web 固有の ViewModel や表示状態を置かない。
 
 ### 8.2 content ロード方式（ビルド時バンドル）
@@ -296,27 +305,27 @@ apps/web/src/
 - **演習系（Quiz / Review）= Client Component**。イントロ・演習・結果の画面フェーズと現在問題を持ち、Client hook が返す採点結果・通信状態を表示へ反映するため。初回データは Server loader（`/quiz` は content、`/review` は due queue）で ViewModel 化し props で渡す（§9.2）。
 - **レイアウト / ヘッダー = Server**。
 - 実行場所はディレクトリ名ではなく import 境界で決まる。`apps/web/src/features/*/server` は `apps/web/src/app/**/page.tsx` など Server Component から import する限りサーバー側で実行される。誤用防止のため `import 'server-only'` を必須にする。
-- Server Actions は使わず、動的データは Hono API に一本化する。初回取得は Server loader から `hc` で実行し、mutation・再取得は Client hook から `hc` を叩く（API 契約を `apps/api` に一本化し、RPC 型を素直に効かせる）。
+- Server Actions は使わず、動的データは Hono API に一本化する。初回取得は Server loader、mutation は Client hook から `hc` で実行する。Server data の再取得は Client Component が `router.refresh()` で Server loader を再実行する（API 契約を `apps/api` に一本化し、RPC 型を素直に効かせる）。
   - **不採用の根拠**：変更系を Hono に一本化することで ①契約（`AppType`）と `user_id` 注入点（§7.2）を単一ソースに保てる、②Hono+Cloudflare の学習目的（§2）を素通りしない。Server Actions の利点（フォームのプログレッシブエンハンスメント等）は、即時採点の Client 主導 Quiz・変更系が `POST /answers` ほぼ一択の本アプリでは恩恵が小さい。重いフォームが必要になった時点で再検討する。
-- **キャッシュ方針**：`/`（due-count・統計）・`/domains`（習得率）・`/analytics`（各集計）・`/review`（queue）は動的データ。現在の `apps/web` は Cache Components を有効化していないため、`hc` 経由の fetch やカスタム fetch が静的解析で動的依存として扱われない場合に備え、API-backed page はページ側で `export const dynamic = "force-dynamic"` を明記する。将来 Cache Components を有効化する場合は `dynamic` の代わりに `use cache` / `cacheLife` と Suspense 境界の方針へ移行する。feature の `api/` wrapper にキャッシュオプションを持ち込まず、`cacheTag` / `revalidateTag` は現時点では採用しない。解答後・画面復帰時の鮮度回復は Client 側の `router.refresh()` で RSC を再実行して担う（§9.2）。
+- **キャッシュ方針**：`/`（due-count・統計）・`/domains`（習得率）・`/analytics`（各集計）・`/review`（queue）は動的データ。現在の `apps/web` は Cache Components を有効化していないため、`hc` 経由の fetch やカスタム fetch が静的解析で動的依存として扱われない場合に備え、API-backed page はページ側で `export const dynamic = "force-dynamic"` を明記する。将来 Cache Components を有効化する場合は `dynamic` の代わりに `use cache` / `cacheLife` と Suspense 境界の方針へ移行する。feature の `api/` adapter にキャッシュオプションを持ち込まず、`cacheTag` / `revalidateTag` は現時点では採用しない。解答後・画面復帰時の鮮度回復は Client 側の `router.refresh()` で RSC を再実行して担う（§9.2）。
 ### 8.4 `hc` クライアントの取り回し
 
 - `apps/api` が `AppType` をエクスポート → `apps/web` は `hc<AppType>` で型安全クライアントを生成（既存 `apps/api/src/client.ts` のファクトリを利用。Service Binding の fetch を渡せるよう、ファクトリは `hc` の第2引数（`fetch` オプション等）を受け取れる形に拡張する）。
-- `apps/web/src/lib/api.ts` に**クライアント生成を集約**し、§3.1 の接続経路に対応する 2 系統を分ける。baseURL は env（Workers バインディング / 環境変数）から解決し、ハードコードしない。
+- `apps/web/src/lib/api.ts` に**API 共通基盤を集約**する。クライアント生成と共通レスポンス処理は同じ小さな責務群であり、現規模ではファイルを分けない。将来、独立した変更理由や十分な規模が生じた場合だけ分割する。baseURL は env（Workers バインディング / 環境変数）から解決し、ハードコードしない。
   - `createServerApiClient`：Server loader 用。本番は Service Binding（`getCloudflareContext().env.API.fetch` を `hc` のカスタム `fetch` に渡す）を必須とし、binding欠落や取得失敗は fail-fast する。ローカル開発だけ env の URL にフォールバックする。
   - `createBrowserApiClient`：Client hook 用。env から解決した API Worker の公開 baseURL を使う。
-- feature の `api/` は `hc` の path・method 呼び出しを薄く包む。server / client 両方から使うため、`server-only`・cookies・headers・秘密情報など環境専用処理を入れない。
-- `res.ok` チェックと `res.json()` 変換は `apps/web/src/lib/api-response.ts` の `requestJson` に共通化する。feature の `api/` は path・method・引数・エラーメッセージだけを持つ。
+- feature の `api/` は呼び出し側から `ApiClient` を受け取り、`hc` の path・method・引数、共有 Zod による入出力検証、機能固有のエラーメッセージを薄く閉じ込める。Server loader と Client hook の両方から使うため、client 生成、`server-only`、cookies、headers、秘密情報など環境専用処理を入れない。
+- `res.ok` チェックと `res.json()` 変換は `apps/web/src/lib/api.ts` の `requestJson` に共通化する。
 - `hc` の path 呼び出し自体は文字列パスの汎用 fetch に置き換えない。`client.review.queue.$get()` のような endpoint ごとの wrapper を残すことで、Hono RPC の型推論を維持する。
 - 初回表示に必要な `GET /dashboard/due-count`・`GET /review/queue` は Server loader から呼び、ViewModel に整形して page 経由で feature component へ props として渡す。
-- ユーザー操作後の `POST /answers`・`GET /review/queue` 再取得は Client hook から呼ぶ。初回表示で不要なスピナーを出さない。
+- ユーザー操作後の `POST /answers` は Client hook から呼ぶ。`GET /review/queue` の再取得は Client Component の `router.refresh()` で Server loader に委譲する。初回表示で不要なスピナーを出さない。
 
 ### 8.5 演習（Quiz）の状態管理
 
 - **クライアント state のみ**（`useState` と専用 hook で feature 内に閉じる）。MVP として最小化する。Client Component は画面フェーズ（`intro → exercise → result`）・現在の問題インデックス・`wrongOnly`・キーボード操作を保持し、`useAnswerSubmit` hook は mutation・`submitting`・送信エラー・API から返った解答結果を保持する（§7.2）。初期 ViewModel は immutable な props として参照し、Client state に複製しない。
   - MVP フローは「イントロ確認 → 1 問表示 → 選択 → 即時採点 → ロック → 解説表示 → 次問 → 結果」で線形・シンプルなため、`useState` で充分。複雑な状態遷移が出現（例：問題セット内での再検索・フィルタ等）したら、その時点で `useReducer` へ段階的にリファクタリング。
 - **リロードで進捗はリセット（許容）**。リロードすると `intro` フェーズに戻る。ただし「1 問解答＝1 `answer_log` POST」（7.2 で定義済みの原則）なので、解答そのものは即サーバーに残る。途中復帰（sessionStorage）やサーバー復元は将来拡張ポイントとして留保。
-- フロー：イントロ（概要／due プレビュー）→ 1 問表示 → 即時採点（正誤＋解説）→ 選択肢ロック → 末尾に結果サマリ → 出し分け動線（`/quiz`=次のレッスンへ／`/review`=ホームへ、両者「間違えonly」提供）。
+- フロー：イントロ（概要／due プレビュー）→ 1 問表示 → 即時採点（正誤＋解説）→ 選択肢ロック → 末尾に結果サマリ → 出し分け動線（`/quiz`=次のレッスンへ／`/review`=ホームへ、両者「間違えた問題だけ」提供）。
 
 ### 8.6 `packages/shared` の Zod 利用パターン
 
@@ -386,12 +395,12 @@ apps/web/src/
 
 ### 9.1 層構造（Content data / DTO → Mapper → ViewModel → page → feature component）
 
-```
+```text
 初回表示（Server）
 
 page
   → Server loader
-      → content loader または feature API wrapper
+      → content loader または feature API adapter
           → Content data または serializable DTO（@tsl/shared）
       → Mapper（純粋関数、web 固有）
           → ViewModel（web 固有型）
@@ -401,7 +410,7 @@ page
 
 feature component
   → Client hook
-      → feature API wrapper
+      → feature API adapter
           → API（Hono）
       → submitting / error / API 由来の結果 state
   → state を受けて再描画
@@ -448,7 +457,7 @@ export default function LessonPage({ params }: Props) {
   - `/review`：Server loader で `GET /review/queue` を呼び、返却された `question_id` を content の問題本文・解説へ join して VM 化する。**join は Server loader 内でのみ行い、contentローダーや全教材データをClient bundleへimportしない**。Clientへ渡すVMには表示に必要な問題文・選択肢・解説だけを含め、`answerIndex`は含めない。解答完了後に次の due を引き直す場面では、Client から API を再度叩いて join し直すのではなく `router.refresh()` で Server Component を再実行し、Server loader が新しい VM を props として渡し直す（§8.3 のキャッシュ方針）。
 
 ```typescript
-// lib/api-response.ts
+// lib/api.ts（client factory と共通 response helper を同じファイルで管理）
 type JsonResponse<T> = Response & {
   json(): Promise<T>;
 };
@@ -484,7 +493,7 @@ export default async function ReviewPage() {
   return <ReviewRunner viewModel={viewModel} />;
 }
 
-// features/review/hooks/use-answer-submit.ts（Client）— VM は保持しない。mutation のみ担当
+// features/review/client/hooks/use-answer-submit.ts（Client）— VM は保持しない。mutation のみ担当
 'use client';
 export function useAnswerSubmit() {
   const client = useMemo(() => createBrowserApiClient(), []);
@@ -509,26 +518,44 @@ export function useAnswerSubmit() {
     }
   }, [client]);
 
-  return { results, error, submitting, submitAnswer };
+  const resetAnswers = useCallback(() => {
+    setResults({});
+    setError(null);
+  }, []);
+
+  return { results, error, submitting, submitAnswer, resetAnswers };
 }
 
-// features/review/components/review-runner.tsx（Client）
+// features/review/client/components/review-runner.tsx（Client）
 'use client';
 export function ReviewRunner({ viewModel }: Props) {
   const router = useRouter();
-  const { results, error, submitting, submitAnswer } = useAnswerSubmit();
+  const { results, error, submitting, submitAnswer, resetAnswers } = useAnswerSubmit();
 
   const handleAllAnswered = () => {
+    resetAnswers();
     router.refresh();  // Server loader を再実行し、次の due queue を VM ごと props で受け直す
   };
 
-  if (error) return <ErrorDisplay error={error} retry={() => router.refresh()} />;
+  if (error) {
+    return (
+      <ErrorDisplay
+        error={error}
+        retry={() => {
+          resetAnswers();
+          router.refresh();
+        }}
+      />
+    );
+  }
   return (
     <QuizRenderer
       viewModel={viewModel}       // props をそのまま描画に使う。state に複製しない
       results={results}
       submitting={submitting}
       onAnswer={submitAnswer}
+      onAttemptStart={resetAnswers}
+      onWrongOnlyStart={resetAnswers}
       onComplete={handleAllAnswered}
     />
   );
@@ -537,7 +564,7 @@ export function ReviewRunner({ viewModel }: Props) {
 
 - **初回＝Server loader で VM 化し、page は feature component への props 渡しのみ**。`/quiz` は content のみ、`/review` は API queue + content join。loader は毎回同じ mapper を通すため、整形ロジックは一本のまま（§9.1 の原則）。
 - **VM はクライアント state に複製しない**。`ReviewRunner` は Review VM を Quiz 表示コンポーネントの props へ変換して渡す。`useAnswerSubmit` hook が解答結果（`results`）・`submitting`・送信エラーを保持し、Client Component は画面フェーズ・現在問題などの表示操作 state だけを保持する。due queue の再取得は `router.refresh()` による Server Component 再実行に一本化し、content との join を常にサーバー側に閉じ込める。
-- **RPC 呼び出しは `apps/web/src/features/*/api` の薄い wrapper 経由**。Server loader と Client hook は同じ wrapper を使い、実行環境ごとの client 生成だけを差し替える。HTTP レスポンス処理は `requestJson` に寄せ、feature 側では重複させない。
+- **RPC 呼び出しは `apps/web/src/features/*/api` の endpoint アダプター経由**。Server loader と Client hook は同じアダプターへ実行環境に合った `ApiClient` を渡す。HTTP レスポンス処理は `requestJson` に寄せ、feature 側では重複させない。
 - **初回スピナー不要**（本節冒頭で述べた原則の実装上の帰結）：ウォーターフォールを回避し初回表示が速い。`router.refresh()` 中の待機表示が必要なら `loading.tsx` かローカルな `isRefreshing` フラグで扱う。
 - **将来：**TanStack Query 等へ置き換える際、mapper・ViewModel 型・page は変わらず、hook（`useAnswerSubmit` 相当）内部だけ差し替わる（契約保証）。
 
@@ -557,28 +584,31 @@ apps/web/src/
 │       ├── view-model.ts           # type QuizViewModel = { ... }
 │       ├── mapper.ts               # quizContentToViewModel(content) {...}
 │       ├── api/
-│       │   └── quiz-api.ts         # hc 呼び出しの薄い wrapper（POST /answers 等）
-│       ├── hooks/
-│       │   └── use-answer-submit.ts # mutation・submitting・error・API 由来の結果 state
+│       │   └── quiz-api.ts         # Server / Client 共用 endpoint アダプター
+│       ├── client/
+│       │   ├── hooks/
+│       │   │   └── use-answer-submit.ts # Browser client・mutation・通信 state
+│       │   └── components/
+│       │       └── quiz-interactive.tsx # 表示・表示操作 state
 │       ├── server/
-│       │   └── load-quiz.ts        # 初回取得・ViewModel 化
-│       └── components/
-│           └── quiz-interactive.tsx
+│       │   ├── components/         # Server Component が必要な場合だけ作る
+│       │   └── load-quiz.ts        # 初回取得・join・ViewModel 化
+│       ├── mapper.ts               # 環境非依存の純粋変換
+│       └── view-model.ts           # Server / Client 間の表示契約
 ├── features/shared/
 │   └── quiz-question.ts            # content question -> quiz表示用データの小さい純粋変換
 └── lib/
-    ├── api.ts                      # createServerApiClient / createBrowserApiClient
-    ├── api-response.ts             # requestJson
+    ├── api.ts                      # API client factory / requestJson
     └── content.ts                  # content loader / question index
 ```
 
 - **Content data / DTO は shared**（複数パッケージで共有、単一ソース）。
 - **ViewModel は `apps/web/src/features` 配下**（表示都合なので web 固有）。
 - **mapper は feature 単位で配置**。同じ DTO / content data を複数 feature で使う場合も、ViewModel 全体の mapper は各 feature に置く。重複した小さい純粋変換だけを `apps/web/src/features/shared` に逃がす。
-- **`apps/web/src/features/*/api` は RPC wrapper**。`hc` の path・method 呼び出しと endpoint 固有の引数だけを薄く閉じ込める。`res.ok` チェック・`res.json()` は `apps/web/src/lib/api-response.ts` の共通関数に寄せる。ViewModel 化・UI state はここに入れない。
-- **`apps/web/src/features/*/server` は初回取得**。page / Server Component から呼ばれ、content data や API DTO を mapper に通して ViewModel を返す。ファイル先頭に `import 'server-only'` を置く。
-- **`apps/web/src/features/*/hooks` は Client 専用**。ユーザー操作後の mutation・再取得と、それに伴う `submitting`・`error`・API 由来の結果 state を扱う。初期 ViewModel は component が immutable な props として参照し、hook へ複製しない。
-- **`apps/web/src/features/*/components` は表示と表示操作 state を担当**。画面フェーズ・現在問題・`wrongOnly`・キーボード操作を保持し、hook が返す通信状態と結果を表示へ反映する。content loader・API client・DTO には直接触れない。
+- **`apps/web/src/features/*/api` は endpoint アダプター**。呼び出し側から `ApiClient` を受け取り、`hc` の path・method・引数、共有 Zod による入出力検証、機能固有のエラーメッセージを薄く閉じ込める。`res.ok` チェック・`res.json()` は `apps/web/src/lib/api.ts` の共通関数に寄せる。client 生成・ViewModel 化・UI state はここに入れない。
+- **`apps/web/src/features/*/server` は Server 専用**。page / Server Component から呼ばれる loader が content data や API DTO を mapper に通して ViewModel を返す。feature 固有の Server Component が必要なら `server/components` に置く。配下のファイルには `import 'server-only'` を置く。
+- **`apps/web/src/features/*/client/hooks` は Client 専用**。Browser API client を生成し、ユーザー操作後の mutation と、それに伴う `submitting`・`error`・API 由来の結果 state を扱う。Server data の再取得は行わない。初期 ViewModel は component が immutable な props として参照し、hook へ複製しない。
+- **`apps/web/src/features/*/client/components` は Client Component**。画面フェーズ・現在問題・`wrongOnly`・キーボード操作を保持し、hook が返す通信状態と結果を表示へ反映する。content loader・API client・DTO には直接触れない。
 - **`apps/web/src/features/shared` は小さい純粋変換だけ**。`contentQuestionToQuizQuestion` のように `/quiz` と `/review` の両方で同じ表示用 question 形へ変換する helper はここへ置く。ViewModel 全体・loader・hook は共有しない。
 - **`apps/web/src/lib` は横断インフラだけ**。API client 生成、HTTP response 処理、content index など feature 非依存の関数を置く。画面都合の整形は feature mapper に残す。
 
@@ -625,7 +655,9 @@ export function loadLesson(lessonId: string): LessonViewModel {
   return lessonContentToViewModel(content);
 }
 
-// features/lesson/components/lesson-display.tsx
+// features/lesson/server/components/lesson-display.tsx
+import 'server-only';
+
 export function LessonDisplay({ viewModel }: { viewModel: LessonViewModel }) {
   return (
     <article className="prose">
@@ -690,7 +722,7 @@ export default function QuizPage({ params }: Props) {
   return <QuizInteractive viewModel={viewModel} />;
 }
 
-// features/quiz/components/quiz-interactive.tsx（Client）
+// features/quiz/client/components/quiz-interactive.tsx（Client）
 'use client';
 export function QuizInteractive({ viewModel }: Props) {
   // 表示操作 state は component が持つ。
@@ -699,7 +731,7 @@ export function QuizInteractive({ viewModel }: Props) {
   const [wrongOnlyQuestionIds, setWrongOnlyQuestionIds] = useState<string[]>();
 
   // mutation・通信 state・API 由来の結果は hook が持つ。
-  const { submitAnswer, results, submitting, error } = useAnswerSubmit();
+  const { submitAnswer, resetAnswers, results, submitting, error } = useAnswerSubmit();
 
   // ViewModel は immutable な props として参照し、state に複製しない。
   const questions = wrongOnlyQuestionIds
@@ -708,7 +740,15 @@ export function QuizInteractive({ viewModel }: Props) {
   const question = questions[currentIndex];
 
   if (phase === 'intro') {
-    return <QuizIntro viewModel={viewModel} onStart={() => setPhase('exercise')} />;
+    return (
+      <QuizIntro
+        viewModel={viewModel}
+        onStart={() => {
+          resetAnswers();
+          setPhase('exercise');
+        }}
+      />
+    );
   }
   if (phase === 'result' || !question) {
     return (
@@ -716,6 +756,7 @@ export function QuizInteractive({ viewModel }: Props) {
         questions={questions}
         results={results}
         onWrongOnly={questionIds => {
+          resetAnswers();
           setWrongOnlyQuestionIds(questionIds);
           setCurrentIndex(0);
           setPhase('exercise');
@@ -784,17 +825,27 @@ export default function Error({ error }: { error: Error }) {
 初回データは Server loader で VM 化済みのため（9.2 参照）、**初回にローディング表示は出ない**。Client 側で扱うのは以下の 2 つ：
 
 - **初回データ形成の失敗**：content 未検出・検証失敗、または `/review` の初回 queue 取得失敗 → ルートの `error.tsx` で捕捉（Server 系と同じ経路）。
-- **再取得・mutation の失敗/待機**：hook が返す `error`・（再取得中の）状態を component で出し分ける。
+- **mutation の失敗/待機**：hook が返す `error`・`submitting` を component で出し分ける。`router.refresh()` による再取得中の表示が必要なら、component の `isRefreshing` または route の `loading.tsx` で扱う。
 
 ```typescript
-// features/review/components/review-runner.tsx
+// features/review/client/components/review-runner.tsx
 'use client';
 export function ReviewRunner({ viewModel }: Props) {
   const router = useRouter();
-  const { results, error, submitAnswer } = useAnswerSubmit();
+  const { results, error, submitAnswer, resetAnswers } = useAnswerSubmit();
 
   // 初回は props で描画済み。ここで扱うのは解答送信エラーのみ
-  if (error) return <ErrorDisplay error={error} retry={() => router.refresh()} />;
+  if (error) {
+    return (
+      <ErrorDisplay
+        error={error}
+        retry={() => {
+          resetAnswers();
+          router.refresh();
+        }}
+      />
+    );
+  }
 
   return <QuizRenderer viewModel={viewModel} results={results} onAnswer={submitAnswer} />;  // 初回からスピナーなしで描画
 }
@@ -831,7 +882,7 @@ Quiz と Review の表示再利用は、feature VM同士を継承・交差させ
 | Client Component・reducer・表示操作 state | テストファースト。Quiz/Review の `intro → exercise → result`、問題送り、最終問題、選択肢ロック、スコア集計、`wrongOnly`、キーボード操作を検証する |
 | Client hook・通信 state | テストファースト。mutation、`submitting`、API 由来の結果、二重送信防止、エラー・再試行を検証する |
 | Server loader | 単純な委譲は詳細にテストせず、複数データの join・sort・filter・ViewModel 化を担う場合に検証する |
-| API wrapper | 薄い RPC 呼び出しを重複してテストせず、独自の呼び出し条件・エラー変換がある場合だけ検証する |
+| API adapter | 薄い RPC 呼び出しを重複してテストせず、独自の呼び出し条件・エラー変換がある場合だけ検証する |
 | ページ統合・Walking Skeleton | ユーザーが観測できる主要フローを少数の統合テストまたはブラウザ確認で貫通させる |
 
 - Tailwind のクラス名や内部 DOM 構造を固定するだけの壊れやすいテストは避け、role・label・表示文言・操作結果など、ユーザーが観測できる振る舞いを検証する。

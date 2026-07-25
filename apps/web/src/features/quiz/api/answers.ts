@@ -5,12 +5,11 @@ import {
   answerResponseSchema,
 } from '@tsl/shared'
 
-import { type ApiClient, createBrowserApiClient } from '@/lib/api'
-import { requestJson } from '@/lib/api-response'
+import { type ApiClient, requestJson } from '@/lib/api'
 
 export async function submitAnswer(
+  client: ApiClient,
   input: AnswerRequest,
-  client: ApiClient = createBrowserApiClient(),
 ): Promise<AnswerResponse> {
   const response = await requestJson(
     () => client.answers.$post({ json: answerRequestSchema.parse(input) }),
