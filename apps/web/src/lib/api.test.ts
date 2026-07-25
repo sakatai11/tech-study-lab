@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { getCloudflareContext } from '@opennextjs/cloudflare'
 
-import { createServerApiClient } from './api'
+import { createServerApiClient, requestJson } from './api'
 
 vi.mock('@opennextjs/cloudflare', () => ({
   getCloudflareContext: vi.fn(),
@@ -51,5 +51,19 @@ describe('createServerApiClient', () => {
     mockGetCloudflareContext.mockRejectedValue(new Error('Node runtime'))
 
     await expect(createServerApiClient()).resolves.toBeDefined()
+  })
+})
+
+describe('requestJson', () => {
+  it('returns the decoded response body for successful requests', async () => {
+    await expect(
+      requestJson(() => Promise.resolve(Response.json({ ok: true })), '失敗'),
+    ).resolves.toEqual({ ok: true })
+  })
+
+  it('throws the feature error for unsuccessful requests', async () => {
+    await expect(
+      requestJson(() => Promise.resolve(new Response(null, { status: 503 })), 'API unavailable'),
+    ).rejects.toThrow('API unavailable')
   })
 })

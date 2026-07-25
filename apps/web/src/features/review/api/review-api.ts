@@ -1,7 +1,6 @@
 import { type ReviewQueueResponse, reviewQueueResponseSchema } from '@tsl/shared'
 
-import type { ApiClient } from '@/lib/api'
-import { requestJson } from '@/lib/api-response'
+import { type ApiClient, requestJson } from '@/lib/api'
 
 export async function fetchReviewQueue(client: ApiClient): Promise<ReviewQueueResponse> {
   const response = await requestJson(

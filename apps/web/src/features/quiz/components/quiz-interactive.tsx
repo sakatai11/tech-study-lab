@@ -9,9 +9,8 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 
 import type { QuizQuestionViewModel } from '@/features/shared/quiz-question'
-import { submitAnswer } from '../api/answers'
 
-import type { SubmittedAnswer } from '../view-model'
+import { useAnswerSubmit } from '../hooks/use-answer-submit'
 import { QuestionCard } from './question-card'
 
 type QuizPhase = 'intro' | 'exercise' | 'result'
@@ -42,12 +41,10 @@ export function QuizInteractive({
   title,
 }: QuizInteractiveProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [error, setError] = useState<string>()
   const [phase, setPhase] = useState<QuizPhase>('intro')
-  const [results, setResults] = useState<Record<string, SubmittedAnswer>>({})
-  const [submitting, setSubmitting] = useState(false)
   const [questionStartedAt, setQuestionStartedAt] = useState(0)
   const [wrongOnlyQuestionIds, setWrongOnlyQuestionIds] = useState<string[]>()
+  const { error, resetAnswers, results, submitAnswer, submitting } = useAnswerSubmit()
 
   const activeQuestions = wrongOnlyQuestionIds
     ? questions.filter((currentQuestion) => wrongOnlyQuestionIds.includes(currentQuestion.id))
@@ -64,9 +61,8 @@ export function QuizInteractive({
   const resetQuiz = () => {
     setWrongOnlyQuestionIds(undefined)
     setCurrentIndex(0)
-    setError(undefined)
     setPhase('intro')
-    setResults({})
+    resetAnswers()
   }
 
   const startWrongOnly = () => {
@@ -76,9 +72,8 @@ export function QuizInteractive({
     })
     setWrongOnlyQuestionIds(wrongQuestionIds)
     setCurrentIndex(0)
-    setError(undefined)
     setPhase('exercise')
-    setResults({})
+    resetAnswers()
   }
 
   const handleAnswer = useCallback(
@@ -87,27 +82,14 @@ export function QuizInteractive({
         return
       }
 
-      setError(undefined)
-      setSubmitting(true)
-
-      try {
-        const responseTimeMs = Math.max(0, Date.now() - (questionStartedAt || Date.now()))
-        const response = await submitAnswer({
-          questionId: question.id,
-          responseTimeMs,
-          selectedIndex,
-        })
-        setResults((currentResults) => ({
-          ...currentResults,
-          [question.id]: { ...response, selectedIndex },
-        }))
-      } catch (caughtError) {
-        setError(caughtError instanceof Error ? caughtError.message : '解答の送信に失敗しました。')
-      } finally {
-        setSubmitting(false)
-      }
+      const responseTimeMs = Math.max(0, Date.now() - (questionStartedAt || Date.now()))
+      await submitAnswer({
+        questionId: question.id,
+        responseTimeMs,
+        selectedIndex,
+      })
     },
-    [question, result, submitting, questionStartedAt],
+    [question, questionStartedAt, result, submitAnswer, submitting],
   )
 
   useEffect(() => {
@@ -150,7 +132,14 @@ export function QuizInteractive({
             </p>
           </>
         )}
-        <Button className="mt-6" onClick={() => setPhase('exercise')} variant="green">
+        <Button
+          className="mt-6"
+          onClick={() => {
+            resetAnswers()
+            setPhase('exercise')
+          }}
+          variant="green"
+        >
           {introStartLabel}
         </Button>
       </Card>
@@ -215,7 +204,13 @@ export function QuizInteractive({
             間違えた問題だけ復習
           </Button>
           {onComplete && hasMore ? (
-            <Button onClick={onComplete} variant="green">
+            <Button
+              onClick={() => {
+                resetAnswers()
+                onComplete()
+              }}
+              variant="green"
+            >
               次の復習を取得 →
             </Button>
           ) : null}
