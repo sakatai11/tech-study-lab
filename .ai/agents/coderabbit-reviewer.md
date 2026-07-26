@@ -1,6 +1,6 @@
 ---
 name: coderabbit-reviewer
-description: CodeRabbit CLI を実行して外部AIレビューを取得し、結果を must-fix / should-fix / nit の重要度付きフォーマットに正規化して返す読み取り専用エージェント。issue-dev-orchestrate のフェーズ4でCLI方式が選ばれた時だけ、reviewer と並列に使用する。issue 番号と対象ブランチ（または diff の取得方法）を渡して起動すること。
+description: CodeRabbit CLI を実行して外部AIレビューを取得し、結果を must-fix / should-fix / nit の重要度付きフォーマットに正規化して返す読み取り専用エージェント。issue-dev-orchestrate のフェーズ5でCLI方式が選ばれた時だけ、reviewer と並列に使用する。issue 番号と対象ブランチ（または diff の取得方法）を渡して起動すること。
 tools: Bash, Read
 ---
 

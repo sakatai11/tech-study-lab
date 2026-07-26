@@ -96,6 +96,9 @@ check_absent_contract() {
 
 printf '%s\n' "Checking agent contract consistency..."
 check_agent_contract "sandbox auth visibility" 'Sandbox 内で `signed out` の場合' .ai/agents/coderabbit-reviewer.md
+check_agent_contract "coderabbit reviewer runs in phase 5" 'issue-dev-orchestrate のフェーズ5でCLI方式が選ばれた時だけ' .ai/agents/coderabbit-reviewer.md
+legacy_coderabbit_phase=$(printf '%s%s' 'issue-dev-orchestrate のフェーズ' '4でCLI方式が選ばれた時だけ')
+check_absent_contract "legacy coderabbit reviewer phase 4" "$legacy_coderabbit_phase" .ai/agents/coderabbit-reviewer.md
 check_agent_contract "escalated auth/network retry" '正規の権限昇格経路で再確認してください' .codex/agents/coderabbit-reviewer.toml
 check_agent_contract "communication is not authentication" '通信失敗を未認証と報告しない' .ai/runtime-compatibility.md
 check_agent_contract "auth-required after outside check" 'Sandbox 外でも未認証と確認された `auth-required`' .ai/skills/issue-dev-orchestrate/SKILL.md
