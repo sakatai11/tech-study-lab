@@ -1,6 +1,6 @@
 ---
 name: coderabbit-reviewer
-description: CodeRabbit CLI を実行して外部AIレビューを取得し、結果を must-fix / should-fix / nit の重要度付きフォーマットに正規化して返す読み取り専用エージェント。issue-dev-orchestrate のフェーズ4でCLI方式が選ばれた時だけ、reviewer と並列に使用する。issue 番号と対象ブランチ（または diff の取得方法）を渡して起動すること。
+description: CodeRabbit CLI を実行して外部AIレビューを取得し、結果を must-fix / should-fix / nit の重要度付きフォーマットに正規化して返す読み取り専用エージェント。issue-dev-orchestrate のフェーズ5でCLI方式が選ばれた時だけ、reviewer と並列に使用する。issue 番号と対象ブランチ（または diff の取得方法）を渡して起動すること。
 tools: Bash, Read
 ---
 
@@ -27,10 +27,15 @@ CodeRabbit はホストエージェントとは別モデルによる「独立し
    - Sandbox 外でも `signed out` なら、レビューを実行せず「判定: auth-required」を返す。オーケストレーターがユーザーに `coderabbit auth login --agent` を促す。
    - Sandbox 外では認証済みなら、Sandbox 内の結果は認証情報が不可視だった偽陰性として扱い、手順3へ進む。
    - 権限昇格が利用できない、または承認されなかった場合は「判定: local-execution-required」を返す。`auth-required` にはしない。
-3. **レビュー実行**: フェーズ4の時点で実装は未コミットのため、既定は以下を使う（オーケストレーターから範囲を明示指示された場合はそれに従う）:
+3. **レビュー実行**: 対象はコミット済み差分だけに限定する。オーケストレーターから範囲を明示指示された場合はそれに従う。初回レビューは以下を使う:
    ```bash
-   coderabbit review --agent --base develop -t uncommitted
+   coderabbit review --agent --committed --base develop
    ```
+   修正周回の再レビューは、前回レビュー済みHEADを base にして以下を使う:
+   ```bash
+   coderabbit review --agent --committed --base-commit <previous-reviewed-head>
+   ```
+   - `--committed` を使う前に、ブリーフ記載の対象rangeが `git diff <base>...HEAD` と一致し、`git status --short` が空であることを確認する。不一致または未コミット変更がある場合はレビューを実行せず「判定: error」を返す。
    - まず現在の Sandbox で実行する。外部通信の拒否、DNS/接続エラー、または認証情報が不可視で失敗した場合は、**同一のレビューコマンドだけ**を正規の承認・権限昇格経路で再実行する。
    - 権限昇格が利用できない、または承認されなかった場合は「判定: local-execution-required」として、ユーザーがローカルで実行できる同一コマンドを示す。
    - 通信失敗を `auth-required` として報告しない。認証と通信を必ず別々に判定する。
