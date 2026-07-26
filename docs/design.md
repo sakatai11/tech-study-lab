@@ -160,7 +160,18 @@ SM-2 の計算式（`packages/shared/src/srs/sm2.ts`）の周辺で、実装時�
 - Biome による lint/format（差分を安定させAIの編集と相性良く）
 - Vitest。**SRSロジックは純粋関数として切り出し重点テスト**
 - Zod でスキーマ駆動バリデーション（`zValidator` ＋ フロント共有）
-- GitHub Actions で型チェック・lint・test・build を **PR ゲート**化
+- 依存境界（レイヤー間の import 許可）を dependency-cruiser（`.dependency-cruiser.cjs`）で機械検証
+- GitHub Actions で型チェック・lint（Biome＋依存境界）・test・build を **PR ゲート**化
+
+### 依存境界の機械検証（dependency-cruiser）
+
+`.dependency-cruiser.cjs` の forbidden ルールは `pnpm lint` の一部として実行され、CI の PR ゲートに含まれる。Biome（`biome check .`）は lint/format を、dependency-cruiser はレイヤー間の import 境界を担当する分業とし、`biome.json` の linter 設定はこの分業のために変更しない。
+
+- **ルールの一次ソースは §8.1（フロントエンドの依存方向）と §10.1（バックエンドの import 許可）**。この2節と `.dependency-cruiser.cjs` が乖離した場合は、まず本書（§8.1・§10.1）を更新してからルールを直す（仕様駆動開発）。ルールの `comment` には対応する design.md の節番号を含め、違反時のエラーメッセージから参照すべき節が分かるようにする。
+- **機械検証できる範囲**：`app` → content ローダー・feature 内部層（api / mapper / client hooks）、`mapper` → content ローダー・API client・React、`client` → server・content ローダー、`components/ui` → 上位レイヤー、`components`（root） → feature 内部層・content・API、`lib` → app・features、`features/shared` → content ローダー・API client・React、feature 間の internals（server / api / mapper.ts / client/hooks）直接 import（他 feature の `client/components` は公開表示 component として許可）、`server` → `client/hooks`（同 feature・他 feature を問わず禁止）、`service` → routes・dal・Hono・Drizzle、`dal` → routes・Hono、`dal` → `services`（deps 型の `import type` を除く値 import）、`middleware` → routes・services・dal、`content-sync` → routes・services・dal・middleware。なお `server` が `client/components`（同 feature・他 feature のいずれも）を props 契約経由で子として描画すること（合成）は禁止しない。禁止するのは `client/hooks`（mutation・通信 state ロジック）の取り込みである。テストコード（`*.test.ts(x)`・`*.integration.test.ts`）は検証対象外とし、依存方向の代表とはみなさない。
+- **lint では担保できず、レビューに委ねる範囲**（import グラフの検証では表現できない）：
+  1. **service → D1 型**：`D1Database` 等は `@cloudflare/workers-types` が提供する ambient 型で、import 文を伴わない。import グラフに現れないため検証対象にできない。
+  2. **route → dal repository 関数の直接呼び出し**：route は deps factory を取得するために dal を import すること自体は許可されており（§10.1）、import の有無では「deps factory 経由の呼び出し」と「repository 関数の直接呼び出し」を区別できない。「呼び出し方」の制約はレビューで担保する。
 
 ## 6. 最初のマイルストーン（Walking Skeleton）
 
@@ -282,7 +293,7 @@ apps/web/src/
 | `app/**/page.tsx`・`layout.tsx` | URL、metadata、layout、route params、`notFound()`、loader 呼び出し、feature component への props 渡し | `features/*/server`、`features/*/client/components`、全画面共通 component | `lib/content`、feature の `api`・`mapper`・`client/hooks` の直接利用、DTO の join・sort・filter、feature 固有 UI の実装 |
 | `features/*/client/components` | Client Component。ViewModel の表示、画面フェーズ・現在問題・`wrongOnly`・キーボード操作などの表示操作 state | 同 feature の `client/hooks`・`view-model`、`components/ui`、props 契約が公開された再利用 component | `server`、content loader、API client の直接利用、DTO 変換 |
 | `features/*/client/hooks` | Browser API client の生成、mutation と、それに伴う `submitting`・`error`・API 由来の結果 state | 同 feature の `api`、`lib/api`、共有 DTO 型 | Server data の再取得、`server`、content loader、mapper、ViewModel の複製保持、画面レイアウト |
-| `features/*/server` | Server loaderと必要なServer Component。初回データ取得、複数データの join、mapper 呼び出し、ViewModel の返却 | 同 feature の `api`・`mapper`・`view-model`、`lib/api`・`lib/content`、Server専用ライブラリ | `client` からの import、ブラウザ専用 API、Client state |
+| `features/*/server` | Server loaderと必要なServer Component。初回データ取得、複数データの join、mapper 呼び出し、ViewModel の返却 | 同 feature の `api`・`mapper`・`view-model`、`lib/api`・`lib/content`、Server専用ライブラリ、**子として描画するための** `client/components`（props 契約経由の合成。ロジックの取り込みではない） | `client/hooks`（mutation・通信 state ロジックの取り込み）、ブラウザ専用 API、Client state の複製 |
 | `features/*/mapper` | Content data / DTO から ViewModel への純粋変換 | 共有入力型、同 feature の `view-model`、`features/shared` の小さい純粋変換 | fetch、content loader、API client、React state、副作用 |
 | `features/*/api` | endpoint 固有の `hc` path・method・引数、共有 Zod による入出力検証、機能固有のエラーメッセージ | `ApiClient` 型・`requestJson`（`lib/api`）、共有 DTO / Zod | API client の生成、ViewModel 化、UI state、Server / Browser 固有 API |
 | `components`（root） | 全画面共通のレイアウト shell・テーマ切替 | `components/ui`・`lib/cn`・React | feature 内部層（`server`/`client`/`api`/`mapper`）・content・API への直接アクセス |
