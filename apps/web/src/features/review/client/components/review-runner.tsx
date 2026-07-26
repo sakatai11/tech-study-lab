@@ -2,9 +2,9 @@
 
 import { useRouter } from 'next/navigation'
 
-import { QuizInteractive } from '@/features/quiz/components/quiz-interactive'
+import { QuizInteractive } from '@/features/quiz/client/components/quiz-interactive'
 
-import type { ReviewViewModel } from '../view-model'
+import type { ReviewViewModel } from '../../view-model'
 import { ReviewIntro } from './review-intro'
 
 export function ReviewRunner({ viewModel }: { viewModel: ReviewViewModel }) {

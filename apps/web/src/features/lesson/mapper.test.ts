@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { BundledLesson, BundledTopic } from '@tsl/shared'
 
-import { lessonContentToViewModel, topicContentToViewModel } from './view-model'
+import { lessonContentToViewModel, topicContentToViewModel } from './mapper'
 
 const topic: BundledTopic = {
   topic: 'xss',

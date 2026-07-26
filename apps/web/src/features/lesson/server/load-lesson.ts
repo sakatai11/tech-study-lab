@@ -2,7 +2,8 @@ import 'server-only'
 
 import { getLessonContent } from '@/lib/content'
 
-import { type LessonViewModel, lessonContentToViewModel } from '../view-model'
+import { lessonContentToViewModel } from '../mapper'
+import type { LessonViewModel } from '../view-model'
 
 export function loadLesson(
   domain: string,

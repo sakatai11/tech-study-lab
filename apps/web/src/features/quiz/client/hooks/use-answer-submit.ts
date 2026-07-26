@@ -5,8 +5,8 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 
 import { createBrowserApiClient } from '@/lib/api'
 
-import { submitAnswer as postAnswer } from '../api/answers'
-import type { SubmittedAnswer } from '../view-model'
+import { submitAnswer as postAnswer } from '../../api/quiz-api'
+import type { SubmittedAnswer } from '../../view-model'
 
 export function useAnswerSubmit() {
   const client = useMemo(() => createBrowserApiClient(), [])
@@ -29,7 +29,10 @@ export function useAnswerSubmit() {
         const response = await postAnswer(client, input)
         setResults((currentResults) => ({
           ...currentResults,
-          [input.questionId]: { ...response, selectedIndex: input.selectedIndex },
+          [input.questionId]: {
+            ...response,
+            selectedIndex: input.selectedIndex,
+          },
         }))
       } catch (caughtError) {
         setError(caughtError instanceof Error ? caughtError.message : '解答の送信に失敗しました。')

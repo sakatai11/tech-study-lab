@@ -248,7 +248,7 @@ apps/web/src/
 ├── features/                 # 機能単位。実行環境は各 feature の client / server で分離
 │   ├── dashboard/
 │   ├── domains/
-│   ├── lesson/
+│   ├── lesson/                # server / mapper / view-model（client なし。教材表示は RSC のみ）
 │   ├── quiz/                 # 下記の feature 標準構成に従う
 │   │   ├── client/
 │   │   │   ├── components/  # Client Components。表示と表示操作 state
@@ -485,23 +485,26 @@ export async function fetchReviewQueue(client: ApiClient): Promise<ReviewQueueRe
   return reviewQueueResponseSchema.parse(response);
 }
 
-// features/review/server/load-review-queue.ts
+// features/review/server/load-review.ts
 import 'server-only';
 
-export async function loadReviewQueue(): Promise<ReviewViewModel> {
+export async function loadReview(): Promise<ReviewViewModel> {
   const dto = await fetchReviewQueue(createServerApiClient());
   return reviewQueueDTOToViewModel(dto, getBundledQuestions());  // join はサーバー側のみ
 }
 
 // app/review/page.tsx（Server）— API-backed page は force-dynamic。再取得は router.refresh() に委譲
+export const dynamic = 'force-dynamic';
+
 export default async function ReviewPage() {
-  const viewModel = await loadReviewQueue();  // API queue + content join 済み VM
-  return <ReviewRunner viewModel={viewModel} />;
+  const viewModel = await loadReview();  // API queue + content join 済み VM
+  return <ReviewDisplay viewModel={viewModel} />;  // header・空 state・ReviewRunner の描画は Server component が持つ
 }
 
-// features/review/client/hooks/use-answer-submit.ts（Client）— VM は保持しない。mutation のみ担当
+// features/quiz/client/hooks/use-answer-submit.ts（Client）— Quiz / Review 共用の hook。VM は保持しない。mutation のみ担当
 'use client';
 import type { AnswerRequest, AnswerResponse } from '@tsl/shared';
+import { submitAnswer as postAnswer } from '../../api/quiz-api';
 
 export function useAnswerSubmit() {
   const client = useMemo(() => createBrowserApiClient(), []);
@@ -599,11 +602,9 @@ apps/web/src/
 │       │   │   └── use-answer-submit.ts # Browser client・mutation・通信 state
 │       │   └── components/
 │       │       └── quiz-interactive.tsx # 表示・表示操作 state
-│       ├── server/
-│       │   ├── components/         # Server Component が必要な場合だけ作る
-│       │   └── load-quiz.ts        # 初回取得・join・ViewModel 化
-│       ├── mapper.ts               # 環境非依存の純粋変換
-│       └── view-model.ts           # Server / Client 間の表示契約
+│       └── server/
+│           ├── components/         # Server Component が必要な場合だけ作る
+│           └── load-quiz.ts        # 初回取得・join・ViewModel 化
 ├── features/shared/
 │   └── quiz-question.ts            # content question -> quiz表示用データの小さい純粋変換
 └── lib/
@@ -614,8 +615,8 @@ apps/web/src/
 - **Content data / DTO は shared**（複数パッケージで共有、単一ソース）。
 - **ViewModel は `apps/web/src/features` 配下**（表示都合なので web 固有）。
 - **mapper は feature 単位で配置**。同じ DTO / content data を複数 feature で使う場合も、ViewModel 全体の mapper は各 feature に置く。重複した小さい純粋変換だけを `apps/web/src/features/shared` に逃がす。
-- **`apps/web/src/features/*/api` は endpoint アダプター**。呼び出し側から `ApiClient` を受け取り、`hc` の path・method・引数、共有 Zod による入出力検証、機能固有のエラーメッセージを薄く閉じ込める。`res.ok` チェック・`res.json()` は `apps/web/src/lib/api.ts` の共通関数に寄せる。client 生成・ViewModel 化・UI state はここに入れない。
-- **`apps/web/src/features/*/server` は Server 専用**。page / Server Component から呼ばれる loader が content data や API DTO を mapper に通して ViewModel を返す。feature 固有の Server Component が必要なら `server/components` に置く。配下のファイルには `import 'server-only'` を置く。
+- **`apps/web/src/features/*/api` は endpoint アダプター**。呼び出し側から `ApiClient` を受け取り、`hc` の path・method・引数、共有 Zod による入出力検証、機能固有のエラーメッセージを薄く閉じ込める。`res.ok` チェック・`res.json()` は `apps/web/src/lib/api.ts` の共通関数に寄せる。client 生成・ViewModel 化・UI state はここに入れない。ファイル名は `<feature>-api.ts` に統一する。
+- **`apps/web/src/features/*/server` は Server 専用**。page / Server Component から呼ばれる loader が content data や API DTO を mapper に通して ViewModel を返す。feature 固有の Server Component が必要なら `server/components` に置く。配下のファイルには `import 'server-only'` を置く。loader のファイル名は `load-<対象>.ts` とする。
 - **`apps/web/src/features/*/client/hooks` は Client 専用**。Browser API client を生成し、ユーザー操作後の mutation と、それに伴う `submitting`・`error`・API 由来の結果 state を扱う。Server data の再取得は行わない。初期 ViewModel は component が immutable な props として参照し、hook へ複製しない。
 - **`apps/web/src/features/*/client/components` は Client Component**。画面フェーズ・現在問題・`wrongOnly`・キーボード操作を保持し、hook が返す通信状態と結果を表示へ反映する。content loader・API client・DTO には直接触れない。
 - **`apps/web/src/features/shared` は小さい純粋変換だけ**。`contentQuestionToQuizQuestion` のように `/quiz` と `/review` の両方で同じ表示用 question 形へ変換する helper はここへ置く。ViewModel 全体・loader・hook は共有しない。
@@ -734,7 +735,17 @@ export function loadQuiz(lessonId: string): QuizViewModel {
 // app/quiz/[lesson]/page.tsx（Server）— page は loader を呼んで props 渡し
 export default function QuizPage({ params }: Props) {
   const viewModel = loadQuiz(params.lesson);
-  return <QuizInteractive viewModel={viewModel} />;
+  return (
+    <>
+      <QuizHeader viewModel={viewModel} />        {/* feature 固有の Server UI */}
+      <QuizInteractive                            {/* 表示操作 state を持つ Client */}
+        explanations={viewModel.explanations}
+        questions={viewModel.questions}
+        title={viewModel.title}
+        resultHomeHref={`/learn/${viewModel.domain}/${viewModel.topic}`}
+      />
+    </>
+  );
 }
 
 // features/quiz/client/components/quiz-interactive.tsx（Client）
