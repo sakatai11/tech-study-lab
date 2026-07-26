@@ -4,7 +4,8 @@ import { domainKeySchema } from '@tsl/shared'
 
 import { getLessonsByTopic, getTopicContent } from '@/lib/content'
 
-import { type TopicViewModel, topicContentToViewModel } from '../view-model'
+import { topicContentToViewModel } from '../mapper'
+import type { TopicViewModel } from '../view-model'
 
 export function loadTopic(domain: string, topic: string): TopicViewModel | undefined {
   const domainResult = domainKeySchema.safeParse(domain)

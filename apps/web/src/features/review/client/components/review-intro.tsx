@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge'
 
-import type { ReviewPreviewViewModel } from '../view-model'
+import type { ReviewPreviewViewModel } from '../../view-model'
 
 type ReviewIntroProps = {
   dueCount: number

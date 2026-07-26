@@ -1,6 +1,6 @@
 import { Card } from '@/components/ui/card'
 
-import type { QuizQuestionViewModel, SubmittedAnswer } from '../view-model'
+import type { QuizQuestionViewModel, SubmittedAnswer } from '../../view-model'
 
 type QuestionCardProps = {
   explanation: string
