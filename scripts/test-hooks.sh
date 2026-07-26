@@ -120,6 +120,7 @@ check_section_contract "cli review mode" "$cli_review_section" 'reviewMode: code
 check_section_contract "cli egress consent" "$cli_review_section" 'externalEgressApproved: true'
 check_section_contract "cli consent fallback" "$cli_review_section" 'external-egress-confirmation-required'
 check_section_contract "initial quality gate" "$initial_commit_section" 'test-fixer'
+check_absent_contract "phase 4 avoids redundant test-fixer definition wording" '`.ai/agents/test-fixer.md` の定義を使って' .ai/skills/issue-dev-orchestrate/SKILL.md
 check_section_contract "initial implementation commit" "$initial_commit_section" '初期実装を1コミットにする'
 check_section_contract "initial commit includes quality-gate fixes" "$initial_commit_section" 'フェーズ4の品質ゲート修正を含む'
 check_section_contract "initial commit excludes unrelated user changes" "$initial_commit_section" '無関係なユーザー変更は含めない'
@@ -135,6 +136,9 @@ check_section_contract "coderabbit failure is not approval" "$reviewed_head_sect
 check_section_contract "incremental review range" "$review_loop_section" '<previous-reviewed-head>...HEAD'
 check_section_contract "incremental cli committed review" "$review_loop_section" 'coderabbit review --agent --committed --base-commit <previous-reviewed-head>'
 check_section_contract "reviewed head scratchpad" "$review_loop_section" 'last-reviewed-head-<N>.txt'
+check_section_contract "review loop passes changed files to test fixer" "$review_loop_section" '当該周回の変更ファイル一覧'
+check_section_contract "review loop scopes test fixer brief" "$review_loop_section" '`test-fixer` 用ブリーフに明記する'
+check_section_contract "review loop commits only round files" "$review_loop_section" 'この一覧のファイルだけを明示して stage'
 check_section_contract "github app waits for latest head" "$review_loop_section" '最新HEADに対するAppレビューを最大10分待機'
 check_section_contract "github app leaves reviewed head unchanged when unavailable" "$review_loop_section" '`last-reviewed-head-<N>.txt` を更新せず'
 check_section_contract "github app verifies latest head" "$review_loop_section" '古いHEADのレビューだけで再レビュー済みと扱ってはならない'
