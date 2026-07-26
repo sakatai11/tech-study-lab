@@ -4,6 +4,8 @@
 
 本書は **一次ソース（Single Source of Truth）** であり、仕様駆動開発（Spec-Driven）の起点となる。実装判断に迷ったときは本書に従い、本書と実装が乖離した場合は本書を先に更新する。
 
+設計文書の一次ソースは本ファイル（`docs/design.md`）の Markdown のみとし、全文の HTML ミラーは持たない。HTML は実装時に参照しやすい形へ再構成した補助資料（[`docs/api-spec.html`](./api-spec.html)・[`docs/frontend-architecture.html`](./frontend-architecture.html)・[`docs/backend-architecture.html`](./backend-architecture.html)）に限る。
+
 ## 1. プロダクト方針
 
 | 項目 | 決定 |
@@ -258,8 +260,10 @@ apps/web/src/
 │   │   ├── mapper.ts         # 環境非依存の純粋変換
 │   │   └── view-model.ts     # Server / Client 間の表示契約
 │   ├── review/               # client / server / api / mapper / view-model
-│   └── analytics/
-├── components/ui/            # 汎用UI（Button / Card / Badge / ProgressBar / TermWin / Keycap 等）。デザイントークンを土台に Tailwind で実装（§8.7）
+│   ├── analytics/
+│   └── shared/                # feature 横断の小さい純粋変換のみ（例: quiz-question.ts）
+├── components/                # 全画面共通のレイアウト shell・テーマ切替（dashboard-shell.tsx / theme-toggle.tsx）
+│   └── ui/                    # 汎用UI（Button / Card / Badge / ProgressBar / TermWin / Keycap 等）。デザイントークンを土台に Tailwind で実装（§8.7）
 └── lib/                      # hc クライアントファクトリ / API response helper / content ローダー / env
 ```
 
@@ -281,6 +285,8 @@ apps/web/src/
 | `features/*/server` | Server loaderと必要なServer Component。初回データ取得、複数データの join、mapper 呼び出し、ViewModel の返却 | 同 feature の `api`・`mapper`・`view-model`、`lib/api`・`lib/content`、Server専用ライブラリ | `client` からの import、ブラウザ専用 API、Client state |
 | `features/*/mapper` | Content data / DTO から ViewModel への純粋変換 | 共有入力型、同 feature の `view-model`、`features/shared` の小さい純粋変換 | fetch、content loader、API client、React state、副作用 |
 | `features/*/api` | endpoint 固有の `hc` path・method・引数、共有 Zod による入出力検証、機能固有のエラーメッセージ | `ApiClient` 型・`requestJson`（`lib/api`）、共有 DTO / Zod | API client の生成、ViewModel 化、UI state、Server / Browser 固有 API |
+| `components`（root） | 全画面共通のレイアウト shell・テーマ切替 | `components/ui`・`lib/cn`・React | feature 内部層（`server`/`client`/`api`/`mapper`）・content・API への直接アクセス |
+| `features/shared` | feature 横断の小さい純粋変換のみ | 共有 DTO・Content data 型 | 共通 ViewModel・loader・hook の保持、fetch・副作用 |
 | `components/ui` | feature 非依存の汎用表示部品 | `lib/cn`、React、スタイル関連ライブラリ | `app`・`features`・content・API への依存 |
 | `lib` | API client 生成、HTTP response 処理、content index など横断インフラ | `packages/shared`、`@tsl/api`、外部ライブラリ | `app`・`features` への依存、画面都合の変換 |
 
@@ -326,6 +332,7 @@ apps/web/src/
   - MVP フローは「イントロ確認 → 1 問表示 → 選択 → 即時採点 → ロック → 解説表示 → 次問 → 結果」で線形・シンプルなため、`useState` で充分。複雑な状態遷移が出現（例：問題セット内での再検索・フィルタ等）したら、その時点で `useReducer` へ段階的にリファクタリング。
 - **リロードで進捗はリセット（許容）**。リロードすると `intro` フェーズに戻る。ただし「1 問解答＝1 `answer_log` POST」（7.2 で定義済みの原則）なので、解答そのものは即サーバーに残る。途中復帰（sessionStorage）やサーバー復元は将来拡張ポイントとして留保。
 - フロー：イントロ（概要／due プレビュー）→ 1 問表示 → 即時採点（正誤＋解説）→ 選択肢ロック → 末尾に結果サマリ → 出し分け動線（`/quiz`=次のレッスンへ／`/review`=ホームへ、両者「間違えた問題だけ」提供）。
+- 解答の反応時間（`responseTimeMs`）は Client Component が選択肢の表示開始時刻からの経過時間として計測し、`submitAnswer` の引数として Client hook へ渡す。Client hook は時刻を計測せず、受け取った値をそのまま API へ転送する。
 
 ### 8.6 `packages/shared` の Zod 利用パターン
 
@@ -458,25 +465,24 @@ export default function LessonPage({ params }: Props) {
 
 ```typescript
 // lib/api.ts（client factory と共通 response helper を同じファイルで管理）
-type JsonResponse<T> = Response & {
-  json(): Promise<T>;
-};
-
-export async function requestJson<T>(
-  request: () => Promise<JsonResponse<T>>,
+export async function requestJson(
+  request: () => Promise<Response>,
   errorMessage: string,
-): Promise<T> {
+): Promise<unknown> {
   const res = await request();
   if (!res.ok) throw new Error(errorMessage);
   return res.json();
 }
 
-// features/review/api/review-api.ts
-export async function fetchReviewQueue(client: ApiClient): Promise<ReviewQueueDTO> {
-  return requestJson(
+// features/review/api/review-api.ts — requestJson の戻り値を共有 Zod で parse してから返す
+import { type ReviewQueueResponse, reviewQueueResponseSchema } from '@tsl/shared';
+
+export async function fetchReviewQueue(client: ApiClient): Promise<ReviewQueueResponse> {
+  const response = await requestJson(
     () => client.review.queue.$get(),
     'Failed to fetch review queue',
   );
+  return reviewQueueResponseSchema.parse(response);
 }
 
 // features/review/server/load-review-queue.ts
@@ -495,21 +501,24 @@ export default async function ReviewPage() {
 
 // features/review/client/hooks/use-answer-submit.ts（Client）— VM は保持しない。mutation のみ担当
 'use client';
+import type { AnswerRequest, AnswerResponse } from '@tsl/shared';
+
 export function useAnswerSubmit() {
   const client = useMemo(() => createBrowserApiClient(), []);
-  const [results, setResults] = useState<Record<string, AnswerResult>>({});
+  const [results, setResults] = useState<Record<string, AnswerResponse>>({});
   const [error, setError] = useState<Error | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);  // 同一 tick の二重送信も同期的に防ぐ
 
-  const submitAnswer = useCallback(async (questionId: string, selectedIndex: number) => {
+  // responseTimeMs は Client Component が計測して input に含める（§8.5）。hook 側では計測しない
+  const submitAnswer = useCallback(async (input: AnswerRequest) => {
     if (submittingRef.current) return;
     submittingRef.current = true;
     setSubmitting(true);
     setError(null);
     try {
-      const result = await postAnswer(client, { questionId, selectedIndex });
-      setResults(prev => ({ ...prev, [questionId]: result }));
+      const result = await postAnswer(client, input);
+      setResults(prev => ({ ...prev, [input.questionId]: result }));
     } catch (e) {
       setError(e as Error);
     } finally {
@@ -634,11 +643,13 @@ export type LessonViewModel = {
 };
 
 // features/lesson/mapper.ts
-export function lessonContentToViewModel(content: LessonContent): LessonViewModel {
+import type { BundledLesson } from '@tsl/shared';
+
+export function lessonContentToViewModel(content: BundledLesson): LessonViewModel {
   return {
-    id: content.id,
+    id: content.lessonId,
     title: content.title,
-    markdownBody: content.markdownBody,
+    markdownBody: content.body,
     questions: content.questions.map(q => ({
       id: q.id,
       prompt: q.prompt,
@@ -690,7 +701,9 @@ export type QuizViewModel = {
 };
 
 // features/shared/quiz-question.ts
-export function contentQuestionToQuizQuestion(question: LessonContentQuestion) {
+import type { McqQuestion } from '@tsl/shared';
+
+export function contentQuestionToQuizQuestion(question: McqQuestion) {
   return {
     id: question.id,
     prompt: question.prompt,
@@ -699,7 +712,9 @@ export function contentQuestionToQuizQuestion(question: LessonContentQuestion) {
 }
 
 // features/quiz/mapper.ts — 入力はビルド時バンドルの content データ
-export function quizContentToViewModel(content: LessonContent): QuizViewModel {
+import type { BundledLesson } from '@tsl/shared';
+
+export function quizContentToViewModel(content: BundledLesson): QuizViewModel {
   return {
     questions: content.questions.map(contentQuestionToQuizQuestion),
     explanations: Object.fromEntries(
@@ -729,6 +744,7 @@ export function QuizInteractive({ viewModel }: Props) {
   const [phase, setPhase] = useState<'intro' | 'exercise' | 'result'>('intro');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [wrongOnlyQuestionIds, setWrongOnlyQuestionIds] = useState<string[]>();
+  const [questionStartedAt, setQuestionStartedAt] = useState(0);  // responseTimeMs の計測起点（§8.5）
 
   // mutation・通信 state・API 由来の結果は hook が持つ。
   const { submitAnswer, resetAnswers, results, submitting, error } = useAnswerSubmit();
@@ -738,6 +754,11 @@ export function QuizInteractive({ viewModel }: Props) {
     ? viewModel.questions.filter(q => wrongOnlyQuestionIds.includes(q.id))
     : viewModel.questions;
   const question = questions[currentIndex];
+
+  // 選択肢の表示開始時刻は Client Component が記録する（§8.5）。hook 側では計測しない。
+  useEffect(() => {
+    if (phase === 'exercise' && question) setQuestionStartedAt(Date.now());
+  }, [phase, question]);
 
   if (phase === 'intro') {
     return (
@@ -771,7 +792,11 @@ export function QuizInteractive({ viewModel }: Props) {
     <QuestionCard
       question={question}
       explanation={viewModel.explanations[question.id]}
-      onAnswer={selectedIndex => submitAnswer(question.id, selectedIndex)}
+      onAnswer={selectedIndex => submitAnswer({
+        questionId: question.id,
+        responseTimeMs: Math.max(0, Date.now() - (questionStartedAt || Date.now())),
+        selectedIndex,
+      })}
       result={results[question.id]}                 // 判定結果を受けて選択肢ロック・解説表示（§8.5）
       submitting={submitting}
       error={error}
@@ -792,14 +817,14 @@ export function QuizInteractive({ viewModel }: Props) {
 
 content frontmatter が変わった場合（例：lesson に新フィールド `difficulty: 'easy'|'medium'|'hard'` が追加）：
 
-1. `packages/shared/schema/content.ts` の LessonContent Zod スキーマを更新。
+1. `packages/shared/src/schema/content.ts` の `lessonFrontmatterSchema` を更新。
 2. `apps/web/src/features/lesson/view-model.ts` で ViewModel にフィールド追加（必要に応じて）。
 3. `apps/web/src/features/lesson/mapper.ts` で mapper の変換ロジックを更新。
 4. page コンポーネントはそのまま（ViewModel が contract を満たしていれば）。
 
 API DTO が変わった場合（例：review queue に `dueAt` が追加）：
 
-1. `packages/shared/schema/api.ts` の該当 DTO Zod スキーマを更新。
+1. `packages/shared/src/schema/api.ts` の該当 DTO Zod スキーマを更新。
 2. `apps/web/src/features/review/view-model.ts` で ViewModel にフィールド追加（必要に応じて）。
 3. `apps/web/src/features/review/mapper.ts` で API DTO + content data の join / 変換ロジックを更新。
 4. page / Client component はそのまま（ViewModel が contract を満たしていれば）。
@@ -907,22 +932,32 @@ Quiz と Review の表示再利用は、feature VM同士を継承・交差させ
 | --- | --- | --- |
 | **route**（`routes/`） | HTTP 契約。パス・メソッド・`zValidator` による入力検証・ステータスコード・レスポンス整形。リクエストスコープの Drizzle / deps を生成して service へ渡す composition root。ビジネスロジックを書かない | Hono / service / dal の deps factory / shared の API schema・DTO |
 | **service**（`services/`） | ユースケース。「採点 → 記録 → SRS 更新」のような業務手順の一連。必要な永続化操作を deps 型として自身で定義する。**Hono・D1・Drizzle の型に依存しない純 TS** | shared の純粋ドメインロジック・型（`sm2` 等）/ 自身が定義する deps 型 |
-| **dal**（`dal/`） | service が定義した deps 型の実装。Drizzle クエリの置き場。SQL 的関心事（where・upsert・batch）をここに閉じ込める | Drizzle / shared の db schema / service の deps 型（`import type` のみ） |
+| **dal**（`dal/`） | service が定義した deps 型の実装。Drizzle クエリの置き場。SQL 的関心事（where・upsert・batch）をここに閉じ込める | Drizzle / shared の db schema / service の deps 型（`import type` のみ）/ 自身が throw するドメインエラー（`services/errors` からの値 import） |
+
+dal は自身が throw するドメインエラー（例: `SrsConflictError`）に限り `services/errors` から値 import してよい。`import type` に限定されるのは service の deps 型（`AnswerDeps` 等）である。
 
 ソースコードの import 許可は次の通り：
 
 ```text
-routes   ──→ services                 # ユースケース呼び出し
-   └──────→ dal                       # deps factory の生成だけ
-dal      ──→ services                 # deps 型の import type だけ
+routes     ──→ services                 # ユースケース呼び出し
+   └────────→ dal                       # deps factory の生成だけ
+dal        ──→ services                 # deps 型の import type だけ
+dal        ──→ services/errors          # 値 import。自身が throw するドメインエラーに限る
+index.ts   ──→ routes                   # .route() での合成
+index.ts   ──→ middleware               # 全リクエストへの適用
+index.ts   ──→ services/errors          # onError でのドメインエラー → HTTP 写像
+middleware ──→ env 型・fixed-user（FIXED_USER_ID の値 import）。routes・services・dal は import しない
+content-sync（apps/api/src/content-sync.ts） ──→ gray-matter・packages/shared のみ。routes・services・dal・middleware は import しない
 
-routes   ──→ packages/shared/schema/api
-services ──→ packages/shared の純粋ドメインロジック・型
-dal      ──→ packages/shared/db/schema
+routes   ──→ @tsl/shared          # schema/api の Zod・DTO 型
+services ──→ @tsl/shared          # 純粋ドメインロジック・型
+dal      ──→ @tsl/shared          # db 名前空間の Drizzle schema（import { db as schema }）
 ```
 
+- HTTP へのエラー写像は `index.ts` の `onError` が下記 §10.6 の方針に従って担う（写像ロジックの所在は `index.ts` に一本化し、route・service には持たせない）。`SrsConflictError` は本書作成時点では `onError` で個別写像されておらず 500 に落ちるが、本節・§10.6 はこの振る舞いを変更する仕様ではない（新しい HTTP ステータスへの写像は別途検討する）。
+
 - service から `routes`・`dal`・Hono・D1・Drizzle を import しない。service は渡された deps だけを呼ぶ。
-- dal から `routes`・Hono を import しない。service への依存は deps 型の `import type` に限定する。
+- dal から `routes`・Hono を import しない。service への依存は deps 型の `import type` に限定し、値 import は自身が throw するドメインエラー（`services/errors`）に限る。
 - route から dal への依存はリクエストスコープの deps 構築に限定し、repository 関数を直接呼んでユースケースを実装しない。
 - `packages/shared` は一律に何でも参照してよい層とはせず、route は API schema・DTO、service は純粋ドメインロジック・型、dal は db schema を参照する。
 
@@ -952,15 +987,17 @@ apps/api/
 │   │   ├── answer-service.ts    # 採点 → 記録 → SRS 更新のユースケース
 │   │   ├── review-service.ts    # due 問題の収集・件数集計
 │   │   └── errors.ts            # ドメインエラー（QuestionNotFoundError 等）
-│   └── dal/
-│       ├── answer-repository.ts # AnswerDeps 実装（questions 照合・srs 取得・batch 書き込み）
-│       └── review-repository.ts # ReviewDeps 実装（due queue・due count）
+│   ├── dal/
+│   │   ├── answer-repository.ts # AnswerDeps 実装（questions 照合・srs 取得・batch 書き込み）
+│   │   └── review-repository.ts # ReviewDeps 実装（due queue・due count）
+│   └── content-sync.ts          # content → 同期ペイロード/SQL への純粋変換（gray-matter・shared のみに依存。§10.8）
 └── scripts/
-    └── sync-content.ts          # content/ → D1 seed/upsert（§10.8）
+    └── sync-content.ts          # `src/content-sync.ts` の純粋関数を呼ぶ Node CLI（fs 読み取り・wrangler 実行。§10.8）
 ```
 
 - 上記は Walking Skeleton 中核 3 エンドポイントの構成（§10.1）。§7.3 の後続エンドポイントは同じ route → service → deps（dal 実装）の処理パターンで追加する：`routes/domains.ts`・`routes/analytics.ts`・`routes/activity.ts`、対応する `services/*-service.ts` と `dal/*-repository.ts`、`index.ts` への `.route()` 追記。アナリティクスは集計クエリ主体（読み取りのみ）のため service 層は薄くなる見込み。
 - **dal はテーブル単位ではなくユースケース単位**で置く。「service が要求する deps 型」を 1 ファイルで実装する形にすると、service ⇔ dal の対応が 1:1 で追いやすく、テーブル単位 repository の細切れ合成（と、それを束ねる工数）を避けられる。テーブル単位の共有が必要になった時点で分割する。
+- **`src/content-sync.ts` は `gray-matter` と `packages/shared` のみに依存する純粋ロジック**（frontmatter パース・同期ペイロード生成・upsert SQL 生成）。`scripts/sync-content.ts` は Node の `fs` 読み取りと `wrangler d1 execute` 実行を担う CLI 部で、`content-sync.ts` の純粋関数を呼び出すだけに留める（routes・services・dal・middleware は import しない）。
 
 ### 10.3 リクエストの流れ（`POST /answers` を例に）
 
@@ -1197,7 +1234,7 @@ app.onError((err, c) => {
 
 ### 10.8 content → D1 同期スクリプト
 
-§4.2 の seed/upsert を `apps/api/scripts/sync-content.ts`（`pnpm --filter @tsl/api content:sync`）として実装する。
+§4.2 の seed/upsert を `apps/api/scripts/sync-content.ts`（`pnpm --filter @tsl/api content:sync`）として実装する。パース・ペイロード生成・SQL 生成の純粋ロジックは `apps/api/src/content-sync.ts` に切り出し（§10.2）、`scripts/sync-content.ts` はそれを呼び出す Node CLI 部（`fs` 読み取り・`wrangler d1 execute` 実行）に徹する。
 
 - **パース経路は §8.2 と共有**：`gray-matter` でパースし `packages/shared` の content Zod（`validatedMcqSchema` 含む）で検証する。フロントのビルド時バンドルと同じ検証を通った内容だけが D1 に入る。
 - 同期対象は `questions` テーブルの**最小フィールドのみ**（`question_id`, `answer_index`。§4.4）。本文・選択肢・解説は D1 に入れない。
