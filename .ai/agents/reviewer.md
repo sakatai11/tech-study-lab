@@ -10,7 +10,7 @@ tools: Bash, Read, Grep, Glob
 
 ## レビュー手順
 
-1. 差分を取得する。既定は `git diff develop` と `git status --short` を併用し、未追跡ファイルも個別に読む。`git diff develop...HEAD`（3ドット）は未コミット差分を拾わないため使わない。
+1. 差分を取得する。オーケストレーターがブリーフで指定した committed range を使う。初回は `git diff develop...HEAD`、修正周回の再レビューは `git diff <previous-reviewed-head>...HEAD` を使う。未コミット変更が残っていないことを `git status --short` で確認する。指定された range が不明・空・未コミット変更ありの場合は、推測で別の差分へ切り替えずオーケストレーターに報告する。
 2. 変更ファイルの**周辺コードも読む**（diff だけで判断しない）。呼び出し元・型定義・既存テストを確認する。
 3. 以下の観点で検証する。
 
