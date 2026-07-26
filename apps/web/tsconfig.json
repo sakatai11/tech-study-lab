@@ -9,7 +9,6 @@
     "noEmit": true,
     "declaration": false,
     "plugins": [{ "name": "next" }],
-    "baseUrl": ".",
     "paths": { "@/*": ["./src/*"] }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

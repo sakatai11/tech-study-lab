@@ -13,7 +13,7 @@
 
 const path = require('node:path')
 
-const webTsConfigPath = path.resolve(__dirname, 'apps/web/tsconfig.json')
+const resolveConfigPath = path.resolve(__dirname, '.dependency-cruiser.resolve.cjs')
 
 // dependency-cruiser の `to.path` はモジュール指定子ではなく `resolved`（解決済みパス）
 // にマッチさせる（実機検証で確認済み）。pnpm はネストした store
@@ -223,14 +223,16 @@ module.exports = {
 
     // apps/web の `@/*` alias（apps/web/tsconfig.json の paths）を解決する。
     // apps/api は相対 import のみで alias を持たないため影響しない。
-    // 絶対パスで渡す必要がある（相対パスだと TypeScript の
-    // parseJsonConfigFileContent が `extends` の解決に失敗する）。
-    // なお apps/web/tsconfig.json には `baseUrl` を明示している。
-    // dependency-cruiser 内部の tsconfig-paths は TS 4.1+ の「paths のみで
-    // baseUrl 省略可」を解釈できず、省略時は実行時 cwd へフォールバックして
-    // `@/*` を解決できないため（実機検証で確認済み）。
-    tsConfig: {
-      fileName: webTsConfigPath,
+    //
+    // tsConfig 経由にしない理由: dependency-cruiser 内部の tsconfig-paths は
+    // TypeScript 4.1+ の「`paths` のみ指定して `baseUrl` を省略できる」記法を
+    // 解釈できず、`baseUrl` 未指定時は実行時 cwd へフォールバックして `@/*` を
+    // 解決できない（実機検証で確認済み）。その回避のために
+    // apps/web/tsconfig.json へ `baseUrl` を足すと、`baseUrl` が
+    // TypeScript 6.0 で非推奨・7.0 で削除予定であるため将来壊れる。
+    // そこで tsconfig に依存せず resolver へ alias を直接渡している。
+    webpackConfig: {
+      fileName: resolveConfigPath,
     },
 
     // node_modules 配下には潜らない（npm パッケージ自体への import エッジは
@@ -252,6 +254,10 @@ module.exports = {
       // 既に再帰を止めているため、ここで node_modules を対象にする必要はない）。
       '^apps/[^/]+/dist(/|$)',
       '^packages/[^/]+/dist(/|$)',
+      // Next.js の自動生成物。`/// <reference types="next/image-types/global" />` を
+      // 含み、tsconfig を介さない resolver では解決できないため対象外にする
+      // （実装コードではないので依存境界の検証対象でもない）。
+      '^apps/web/next-env\\.d\\.ts$',
       // ビルド・同期スクリプト、lib/content 自身のテスト（docs/design.md §8.2）に加え、
       // apps/web・apps/api 双方の全テストコード（`*.test.ts(x)`・`*.integration.test.ts`）
       // を依存境界の検証対象外にする。テストは実装コードの依存方向を代表しないため
