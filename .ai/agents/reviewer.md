@@ -1,6 +1,6 @@
 ---
 name: reviewer
-description: 実装差分をレビューし、正確性・design.md 準拠・型安全・セキュリティの観点で重要度付きの指摘を返す読み取り専用エージェント。issue-dev-orchestrate のフェーズ4（レビュー）で使用する。issue 番号・実装方針の要約・対象ブランチ（または diff の取得方法）を渡して起動すること。
+description: 実装差分をレビューし、正確性・design.md 準拠・型安全・セキュリティの観点で重要度付きの指摘を返す読み取り専用エージェント。issue-dev-orchestrate のフェーズ5（レビュー）で使用する。issue 番号・実装方針の要約・対象ブランチ（または diff の取得方法）を渡して起動すること。
 tools: Bash, Read, Grep, Glob
 ---
 

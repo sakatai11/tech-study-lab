@@ -106,10 +106,10 @@ Issueで「使用する」が選ばれている、または以下のいずれか
 
 1. `.ai/agents/test-fixer.md` の定義を使って `test-fixer` エージェントを起動し、初期実装に対して3つの品質ゲート（typecheck / biome / test）を通す。
    - `pnpm biome check .` / `pnpm test` はリポジトリ全体を対象にする。変更ファイルにスコープを絞って直し、無関係な既存失敗は直さない。ユーザーの未コミット変更を動かす `git stash` は使わない。
-2. 品質ゲートが通過した場合だけ、**オーケストレーター**が初期実装を1コミットにする。`developer` と `test-fixer` の commit / push 禁止は維持する。フェーズ3で変更されたファイルだけを明示して stage し、コミットメッセージには `refs #<N>` を含める。
+2. 品質ゲートが通過した場合だけ、**オーケストレーター**が初期実装を1コミットにする。`developer` と `test-fixer` の commit / push 禁止は維持する。フェーズ3の実装とフェーズ4の品質ゲート修正を含む**今回作業の変更ファイル**だけを明示して stage し、無関係なユーザー変更は含めない。コミットメッセージには `refs #<N>` を含める。
    ```bash
    git diff --check
-   git add -- <フェーズ3で変更されたファイル>
+   git add -- <今回作業の変更ファイル>
    git commit -m "<type>: <summary> (refs #<N>)"
    ```
 3. `git status --short` が空であることを確認する。未コミット変更が残る場合や、品質ゲートが未収束の場合はレビューへ進まず停止して報告する。
@@ -136,7 +136,7 @@ Issueで「使用する」が選ばれている、または以下のいずれか
 
 取得できたすべてのレビュー結果を統合する。**同一 `ファイル:行` かつ指摘内容が実質的に同じ場合**に1件へ束ね（重要度は高い方を採用）、CodeRabbit 由来の出典タグ `[coderabbit]` は保持する。同じ行でも指摘内容が異なる場合は別指摘として両方残す。迷う場合は統合せず両方残す。**各レビューエージェントの指摘をオーケストレーターの判断で取捨選択しない**。
 
-選択したレビュー方式のレビューが正常完了した場合だけ、現在のHEADを `<scratchpad>/last-reviewed-head-<N>.txt` に保存する。CLI方式では `approve` / `request-changes`、GitHub App方式では初期コミットHEADに対するAppレビュー取得が正常完了の条件である。`external-egress-confirmation-required` / `auth-required` / `local-execution-required` / `rate-limited` / `error`、またはApp未取得では更新しない。
+選択したレビュー方式のレビューが正常完了した場合だけ、現在のHEADを `<scratchpad>/last-reviewed-head-<N>.txt` に保存する。CLI方式では CodeRabbit の `approve` / `request-changes` が通常の保存条件である。ただし CodeRabbit が `external-egress-confirmation-required` / `auth-required` / `local-execution-required` / `rate-limited` / `error` を返し、代替として起動した2件目の `reviewer` が `approve` / `request-changes` で正常完了した場合は、その fallback reviewer を修正周回用のレビュー境界として保存してよい。CodeRabbitの失敗自体をapproveとして扱ってはならず、その理由は報告する。GitHub App方式では初期コミットHEADに対するAppレビュー取得が正常完了の条件である。App未取得では更新しない。
 
 ## フェーズ6: 修正・品質ゲート・周回コミット・増分再レビュー
 
@@ -149,7 +149,7 @@ Issueで「使用する」が選ばれている、または以下のいずれか
    git diff <previous-reviewed-head>...HEAD
    git status --short
    ```
-5. フェーズ5を**この増分だけ**に絞って再実行する。reviewer の範囲は `<previous-reviewed-head>...HEAD`、CodeRabbit CLI は `coderabbit review --agent --committed --base-commit <previous-reviewed-head>` とする。CLI方式では、この現在のコミット範囲を再掲した**新しい**明示同意を実行直前に取得・記録してから起動する。初回または過去の同意記録を再利用してはならない。GitHub App方式では既存PRへ修正コミットをpushし、PRの最新HEADを取得して、そのHEADを対象とするApp reviewまたはthreadだけを再確認対象にする。古いHEADのレビューだけで再レビュー済みと扱ってはならない。
+5. フェーズ5を**この増分だけ**に絞って再実行する。reviewer の範囲は `<previous-reviewed-head>...HEAD`、CodeRabbit CLI は `coderabbit review --agent --committed --base-commit <previous-reviewed-head>` とする。CLI方式では、この現在のコミット範囲を再掲した**新しい**明示同意を実行直前に取得・記録してから起動する。初回または過去の同意記録を再利用してはならない。GitHub App方式では既存PRへ修正コミットをpushし、PRの最新HEADを取得して、その最新HEADに対するAppレビューを最大10分待機したうえで、PR review・review thread・通常コメントを確認する。App未導入、レビュー未到着、または取得不能なら、`last-reviewed-head-<N>.txt` を更新せずその事実をユーザーへ報告する。古いHEADのレビューだけで再レビュー済みと扱ってはならない。
 6. 再レビューが正常完了した場合だけ、`<scratchpad>/last-reviewed-head-<N>.txt` を現在のHEADへ更新する。最大2周で収束しなければ、残課題を整理してユーザーに報告し、指示を仰ぐ。
 
 ## フェーズ7: 完了

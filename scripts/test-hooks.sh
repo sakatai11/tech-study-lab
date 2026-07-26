@@ -99,6 +99,8 @@ check_agent_contract "sandbox auth visibility" 'Sandbox 内で `signed out` の�
 check_agent_contract "coderabbit reviewer runs in phase 5" 'issue-dev-orchestrate のフェーズ5でCLI方式が選ばれた時だけ' .ai/agents/coderabbit-reviewer.md
 legacy_coderabbit_phase=$(printf '%s%s' 'issue-dev-orchestrate のフェーズ' '4でCLI方式が選ばれた時だけ')
 check_absent_contract "legacy coderabbit reviewer phase 4" "$legacy_coderabbit_phase" .ai/agents/coderabbit-reviewer.md
+check_agent_contract "reviewer runs in phase 5" 'issue-dev-orchestrate のフェーズ5（レビュー）で使用する' .ai/agents/reviewer.md
+check_agent_contract "test fixer runs in phases 4 and 6" 'issue-dev-orchestrate のフェーズ4・6（品質ゲート）で使用する' .ai/agents/test-fixer.md
 check_agent_contract "escalated auth/network retry" '正規の権限昇格経路で再確認してください' .codex/agents/coderabbit-reviewer.toml
 check_agent_contract "communication is not authentication" '通信失敗を未認証と報告しない' .ai/runtime-compatibility.md
 check_agent_contract "auth-required after outside check" 'Sandbox 外でも未認証と確認された `auth-required`' .ai/skills/issue-dev-orchestrate/SKILL.md
@@ -106,6 +108,7 @@ review_mode_section=$(extract_section .ai/skills/issue-dev-orchestrate/SKILL.md 
 initial_commit_section=$(extract_section .ai/skills/issue-dev-orchestrate/SKILL.md '## フェーズ4: 品質ゲートと初期実装コミット' '## フェーズ5: 初回のコミット済み差分レビュー')
 cli_review_section=$(extract_section .ai/skills/issue-dev-orchestrate/SKILL.md '### CodeRabbit CLIを選んだ場合' '### GitHub Appを選んだ場合')
 github_app_review_section=$(extract_section .ai/skills/issue-dev-orchestrate/SKILL.md '### GitHub Appを選んだ場合' '### 結果の統合とレビュー済みHEADの記録')
+reviewed_head_section=$(extract_section .ai/skills/issue-dev-orchestrate/SKILL.md '### 結果の統合とレビュー済みHEADの記録' '## フェーズ6: 修正・品質ゲート・周回コミット・増分再レビュー')
 review_loop_section=$(extract_section .ai/skills/issue-dev-orchestrate/SKILL.md '## フェーズ6: 修正・品質ゲート・周回コミット・増分再レビュー' '## フェーズ7: 完了')
 completion_section=$(extract_section .ai/skills/issue-dev-orchestrate/SKILL.md '## フェーズ7: 完了' '## 中断・失敗時の原則')
 agent_egress_gate=$(awk '/^1\. \*\*方式と外部送信同意の確認\*\*/ { print; exit }' .ai/agents/coderabbit-reviewer.md)
@@ -118,14 +121,22 @@ check_section_contract "cli egress consent" "$cli_review_section" 'externalEgres
 check_section_contract "cli consent fallback" "$cli_review_section" 'external-egress-confirmation-required'
 check_section_contract "initial quality gate" "$initial_commit_section" 'test-fixer'
 check_section_contract "initial implementation commit" "$initial_commit_section" '初期実装を1コミットにする'
+check_section_contract "initial commit includes quality-gate fixes" "$initial_commit_section" 'フェーズ4の品質ゲート修正を含む'
+check_section_contract "initial commit excludes unrelated user changes" "$initial_commit_section" '無関係なユーザー変更は含めない'
+check_section_contract "initial commit stages all current-work changes" "$initial_commit_section" 'git add -- <今回作業の変更ファイル>'
 check_section_contract "initial commit requires clean tree" "$initial_commit_section" 'git status --short'
 check_section_contract "initial review range" "$cli_review_section" 'reviewRange: develop...HEAD'
 check_section_contract "initial cli committed review" "$cli_review_section" 'coderabbit review --agent --committed --base develop'
 check_section_contract "github app follows initial commit" "$github_app_review_section" '初期コミット後に'
 check_section_contract "github app reviews initial head" "$github_app_review_section" 'この初期コミットのHEAD'
+check_section_contract "fallback reviewer stores reviewed head" "$reviewed_head_section" '代替として起動した2件目の `reviewer`'
+check_section_contract "fallback reviewer normal result" "$reviewed_head_section" '`approve` / `request-changes` で正常完了した場合'
+check_section_contract "coderabbit failure is not approval" "$reviewed_head_section" 'CodeRabbitの失敗自体をapproveとして扱ってはならず'
 check_section_contract "incremental review range" "$review_loop_section" '<previous-reviewed-head>...HEAD'
 check_section_contract "incremental cli committed review" "$review_loop_section" 'coderabbit review --agent --committed --base-commit <previous-reviewed-head>'
 check_section_contract "reviewed head scratchpad" "$review_loop_section" 'last-reviewed-head-<N>.txt'
+check_section_contract "github app waits for latest head" "$review_loop_section" '最新HEADに対するAppレビューを最大10分待機'
+check_section_contract "github app leaves reviewed head unchanged when unavailable" "$review_loop_section" '`last-reviewed-head-<N>.txt` を更新せず'
 check_section_contract "github app verifies latest head" "$review_loop_section" '古いHEADのレビューだけで再レビュー済みと扱ってはならない'
 check_section_contract "completion avoids duplicate commit" "$completion_section" 'このフェーズで追加コミットは作らない'
 check_section_contract "agent mode and egress gate" "$agent_egress_gate" 'reviewMode: coderabbit-cli'
