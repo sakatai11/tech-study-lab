@@ -368,7 +368,6 @@
           を参照してください。
         </p>
         <nav class="nav" aria-label="関連ドキュメント">
-          <a href="design.html">設計文書 HTML</a>
           <a href="design.md">設計文書 Markdown</a>
           <a href="frontend-architecture.html">フロントエンドアーキテクチャ</a>
         </nav>
@@ -692,7 +691,10 @@ flowchart LR
             処理フローと import 方向を区別します。service は dal を import
             せず、「必要な関数の型（AnswerDeps）」を自分で宣言します。dal
             はその型だけを <code>import type</code> して実装し、route
-            がリクエストスコープで両者を接続します。
+            がリクエストスコープで両者を接続します。dal は例外として、自身が
+            throw するドメインエラー（<code>SrsConflictError</code> 等）に限り
+            <code>services/errors</code> から値 import してよいものとします
+            （design.md §10.1）。
           </p>
           <div class="diagram-toolbar" aria-label="依存方向の図操作">
             <button type="button" data-zoom-action="in">拡大</button>
@@ -708,15 +710,17 @@ flowchart LR
 
   routes["routes/answers.ts\nHTTP 契約"]:::route
   services["services/answer-service.ts\nAnswerDeps 型を宣言\nユースケースを実装"]:::service
+  errors["services/errors.ts\nQuestionNotFoundError・SrsConflictError"]:::service
   dal["dal/answer-repository.ts\ncreateAnswerDeps\nAnswerDeps を実装"]:::dal
-  apiSchema["@tsl/shared/schema/api\nAPI schema・DTO"]:::shared
+  apiSchema["@tsl/shared\nschema/api の Zod・DTO"]:::shared
   domainLogic["@tsl/shared\n純粋ドメインロジック・型"]:::shared
-  dbSchema["@tsl/shared/db/schema\nDrizzle schema"]:::shared
+  dbSchema["@tsl/shared\ndb 名前空間の Drizzle schema"]:::shared
   d1[("D1")]:::dal
 
   routes --&gt;|"submitAnswer を呼ぶ"| services
   routes --&gt;|"createAnswerDeps(db) で生成し渡す"| dal
   dal -.-&gt;|"型のみ import（実装対象の宣言）"| services
+  dal --&gt;|"値 import（自身が throw するドメインエラーに限る）"| errors
   dal --&gt;|"Drizzle クエリ"| d1
   routes --&gt;|"zValidator・DTO"| apiSchema
   services --&gt;|"純粋関数・型"| domainLogic
@@ -741,12 +745,13 @@ flowchart LR
   classDef dal fill:#ecfdf5,stroke:#86efac,color:#1f2328;
 
   content["content/\nMarkdown + frontmatter\n（一次ソース）"]:::shared
-  parse["scripts/sync-content.ts\ngray-matter + shared の Zod 検証\n（§8.2 のフロント側と同一経路）"]:::shared
-  sql["冪等な upsert SQL 生成\nquestion_id + answer_index のみ"]:::shared
-  wrangler["wrangler d1 execute\n--local / --remote"]:::dal
+  read["scripts/sync-content.ts\nfs 読み取り（CLI）"]:::shared
+  parse["src/content-sync.ts\ngray-matter + shared の Zod 検証\n（§8.2 のフロント側と同一経路）"]:::shared
+  sql["src/content-sync.ts\n冪等な upsert SQL 生成\nquestion_id + answer_index のみ"]:::shared
+  wrangler["scripts/sync-content.ts →\nwrangler d1 execute --local / --remote"]:::dal
   d1[("D1 questions\n採点照合用キャッシュ")]:::dal
 
-  content --> parse --> sql --> wrangler --> d1</pre>
+  content --> read --> parse --> sql --> wrangler --> d1</pre>
         </div>
       </section>
 
@@ -814,10 +819,24 @@ flowchart LR
               <td>業務判断（採点・SRS の計算式）、HTTP の関心事。</td>
             </tr>
             <tr>
+              <td><code>apps/api/src/content-sync.ts</code></td>
+              <td>
+                content → 同期ペイロード/upsert SQL への純粋変換（<code
+                  >gray-matter</code
+                >・<code>@tsl/shared</code> のみに依存）。単体テストあり。
+              </td>
+              <td>
+                Node の <code>fs</code> 読み取り、<code>wrangler</code>
+                実行などの副作用。
+              </td>
+            </tr>
+            <tr>
               <td><code>apps/api/scripts/sync-content.ts</code></td>
               <td>
-                content/ → D1 の seed/upsert。shared の Zod
-                で検証し、冪等な upsert を流す。
+                content/ → D1 の seed/upsert を実行する CLI 部。<code>fs</code>
+                での読み取りと <code>src/content-sync.ts</code>
+                の純粋関数呼び出し、<code>wrangler d1 execute</code>
+                の実行に徹する。
               </td>
               <td>教材本文・選択肢・解説の D1 書き込み。</td>
             </tr>
