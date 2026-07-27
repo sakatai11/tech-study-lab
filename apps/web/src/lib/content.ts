@@ -1,6 +1,6 @@
 import 'server-only'
 
-import type { BundledLesson, McqQuestion } from '@tsl/shared'
+import type { BundledLesson, BundledTopic, McqQuestion } from '@tsl/shared'
 
 import { bundledContent } from './generated-content'
 
@@ -30,4 +30,10 @@ export function getBundledQuestions(): ReadonlyMap<string, McqQuestion> {
 
 export function getQuestionById(questionId: string): McqQuestion | undefined {
   return questionsById.get(questionId)
+}
+
+/** Returns a topic index and its overview Markdown, or undefined when it is not bundled. */
+export function getTopicContent(domain: string, topic: string): BundledTopic | undefined {
+  const relativePath = `${domain}/${topic}/index.md`
+  return bundledContent.topics.find((candidate) => candidate.relativePath === relativePath)
 }

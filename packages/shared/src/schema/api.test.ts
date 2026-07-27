@@ -122,9 +122,18 @@ describe('answerResponseSchema', () => {
 })
 
 describe('reviewQueueResponseSchema', () => {
+  it('hasMore がないと失敗する', () => {
+    expect(
+      reviewQueueResponseSchema.safeParse({
+        items: [],
+      }).success,
+    ).toBe(false)
+  })
+
   it('items が空配列でも受け付ける', () => {
     expect(
       reviewQueueResponseSchema.safeParse({
+        hasMore: false,
         items: [],
       }).success,
     ).toBe(true)
@@ -133,6 +142,7 @@ describe('reviewQueueResponseSchema', () => {
   it('複数 items を受け付ける', () => {
     expect(
       reviewQueueResponseSchema.safeParse({
+        hasMore: false,
         items: [
           { questionId: 'q-1', dueAt: 1_700_000_000_000 },
           { questionId: 'q-2', dueAt: 1_700_000_100_000 },
@@ -144,6 +154,7 @@ describe('reviewQueueResponseSchema', () => {
   it('items が21件だと失敗する', () => {
     expect(
       reviewQueueResponseSchema.safeParse({
+        hasMore: false,
         items: Array.from({ length: 21 }, (_, i) => ({
           questionId: `q-${i}`,
           dueAt: 1_700_000_000_000 + i,
@@ -155,6 +166,7 @@ describe('reviewQueueResponseSchema', () => {
   it('dueAt が小数だと失敗する', () => {
     expect(
       reviewQueueResponseSchema.safeParse({
+        hasMore: false,
         items: [{ questionId: 'q-1', dueAt: 1.5 }],
       }).success,
     ).toBe(false)
@@ -163,6 +175,7 @@ describe('reviewQueueResponseSchema', () => {
   it('dueAt が負数だと失敗する', () => {
     expect(
       reviewQueueResponseSchema.safeParse({
+        hasMore: false,
         items: [{ questionId: 'q-1', dueAt: -1 }],
       }).success,
     ).toBe(false)
@@ -171,6 +184,7 @@ describe('reviewQueueResponseSchema', () => {
   it('questionId が空文字だと失敗する', () => {
     expect(
       reviewQueueResponseSchema.safeParse({
+        hasMore: false,
         items: [{ questionId: '', dueAt: 1_700_000_000_000 }],
       }).success,
     ).toBe(false)

@@ -8,10 +8,13 @@ function createDeps(): { deps: ReviewDeps; calls: Array<[string, number]> } {
     deps: {
       findDueQuestions: async (userId, now) => {
         calls.push([userId, now])
-        return [
-          { questionId: 'older', dueAt: 1 },
-          { questionId: 'now', dueAt: 2 },
-        ]
+        return {
+          hasMore: false,
+          items: [
+            { questionId: 'older', dueAt: 1 },
+            { questionId: 'now', dueAt: 2 },
+          ],
+        }
       },
       countDueQuestions: async (userId, now) => {
         calls.push([userId, now])
@@ -27,6 +30,7 @@ describe('review service', () => {
     const { deps, calls } = createDeps()
 
     await expect(getReviewQueue(deps, { userId: 'user-1', now: 2 })).resolves.toEqual({
+      hasMore: false,
       items: [
         { questionId: 'older', dueAt: 1 },
         { questionId: 'now', dueAt: 2 },

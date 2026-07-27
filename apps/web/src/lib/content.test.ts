@@ -5,6 +5,7 @@ import {
   getLessonContent,
   getLessonsByTopic,
   getQuestionById,
+  getTopicContent,
 } from './content'
 
 describe('content query API', () => {
@@ -31,5 +32,16 @@ describe('content query API', () => {
   it('returns undefined for unknown IDs', () => {
     expect(getLessonContent('missing-lesson')).toBeUndefined()
     expect(getQuestionById('missing-question')).toBeUndefined()
+  })
+
+  it('returns the topic index by domain and topic', () => {
+    const topic = getTopicContent('security', 'xss')
+
+    expect(topic?.title).toBe('XSS（クロスサイトスクリプティング）')
+    expect(topic?.body).toContain('XSS が起こる条件')
+  })
+
+  it('does not resolve content from another domain', () => {
+    expect(getTopicContent('frontend', 'xss')).toBeUndefined()
   })
 })

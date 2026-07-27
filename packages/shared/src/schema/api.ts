@@ -24,6 +24,7 @@ export const answerResponseSchema = z.object({
 export type AnswerResponse = z.infer<typeof answerResponseSchema>
 
 export const reviewQueueResponseSchema = z.object({
+  hasMore: z.boolean(),
   items: z
     .array(
       z.object({

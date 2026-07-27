@@ -43,8 +43,8 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Biome check
-        run: pnpm biome check .
+      - name: Lint (Biome + dependency boundaries)
+        run: pnpm lint
 
       - name: Test
         run: pnpm test

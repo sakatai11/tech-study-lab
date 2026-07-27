@@ -214,3 +214,77 @@
     }
   }
 }
+@layer components {
+  .markdown-body {
+    line-height: 1.8;
+  }
+
+  .markdown-body > :first-child {
+    margin-top: 0;
+  }
+
+  .markdown-body > :last-child {
+    margin-bottom: 0;
+  }
+
+  .markdown-body h2 {
+    margin: 2rem 0 0.75rem;
+    color: var(--ink);
+    font-size: 1.35rem;
+    font-weight: 800;
+    line-height: 1.35;
+  }
+
+  .markdown-body h3 {
+    margin: 1.5rem 0 0.5rem;
+    color: var(--ink);
+    font-size: 1.1rem;
+    font-weight: 800;
+    line-height: 1.4;
+  }
+
+  .markdown-body p {
+    margin: 0.9rem 0;
+  }
+
+  .markdown-body ul,
+  .markdown-body ol {
+    margin: 0.9rem 0;
+    padding-left: 1.5rem;
+  }
+
+  .markdown-body li + li {
+    margin-top: 0.4rem;
+  }
+
+  .markdown-body pre {
+    overflow-x: auto;
+    margin: 1.25rem 0;
+    border: 2px solid var(--border);
+    border-radius: 0.75rem;
+    background: #0b0f14;
+    padding: 1rem;
+    color: #e6edf3;
+    font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+    font-size: 0.875rem;
+    line-height: 1.7;
+  }
+
+  .markdown-body code {
+    border-radius: 0.25rem;
+    background: var(--well);
+    padding: 0.1rem 0.3rem;
+    font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+    font-size: 0.9em;
+  }
+
+  .markdown-body pre code {
+    background: transparent;
+    padding: 0;
+  }
+
+  .markdown-body strong {
+    color: var(--ink);
+    font-weight: 800;
+  }
+}
