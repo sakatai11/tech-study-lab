@@ -539,13 +539,36 @@
             （<code>answerIndex</code>）を含めない。
           </li>
           <li>
-            動的データを読むページ（<code>/</code>（due-count・統計）・<code>/domains</code>（習得率）・<code>/analytics</code>（各集計）・<code>/review</code>（queue））は
-            <code>dynamic = 'force-dynamic'</code>
-            を明記する。将来 Cache Components を有効化する場合は
-            <code>'use cache'</code>・<code>cacheLife</code>・Suspense
-            境界へ移行する。feature の API adapter にはキャッシュ方針を持ち込まない。
+            現在は <code>cacheComponents</code> を有効化しない。未有効の API-backed
+            page を実装する間は <code>dynamic = 'force-dynamic'</code> を明記する。
+            現行の <code>/review</code> は Server loader が初回 VM を待って props 渡しするため、
+            初回ローディング表示は出さない。将来の対象は <code>/</code> と
+            <code>/review</code> のみで、後者では静的シェルに <code>ReviewQueueFallback</code> を
+            表示してから、queue 完了後に非キャッシュの <code>ReviewRunner</code> をストリーミングする。
           </li>
         </ul>
+        <div class="note">
+          <strong>将来の Cache Components / PPR 方針</strong><br />
+          due 件数・ダッシュボード統計・review queue は API が <code>user_id</code> を
+          権威的に注入する一方、web の共有キャッシュキーには含まれません。したがって
+          <code>'use cache'</code>・<code>cacheLife</code>・<code>cacheTag</code>・
+          <code>revalidateTag</code> は使わず、Suspense による分離だけを行います。解答後は
+          <code>router.refresh()</code> で Server loader を再実行します。未実装の
+          <code>/domains</code> と <code>/analytics</code> も、実装時に同じ静的シェルと
+          非キャッシュ動的領域の分離を適用しますが、Cache Components 対象への追加は別途判断します。
+          <code>/learn/...</code> と <code>/quiz/...</code> は content 由来の SSG/RSC を維持し、
+          PPR の対象外です。
+        </div>
+        <div class="note">
+          <strong>有効化の前提条件</strong><br />
+          OpenNext #1130（<code>cacheComponents</code> 有効時の production-only
+          <code>SyntaxError</code>／クラッシュと Suspense 描画失敗）と #1225（Suspense streaming が
+          完了せず <code>Connection closed</code> になる問題）は未解決です。
+          両 issue の解決後も、採用対象バージョンで preview / production 相当の RSC flight、hydration、
+          Suspense streaming を検証できるまで production・preview では <code>cacheComponents</code> を
+          有効化しません。現行 CI は <code>next build</code> のみで、OpenNext preview のストリーミングを
+          検知しません。
+        </div>
         <div class="note">
           ディレクトリ名だけで実行場所は決まりません。<code
             >apps/web/src/features/*/server</code
@@ -714,9 +737,11 @@ flowchart LR
         <h3>復習ページ初回表示</h3>
         <div class="diagram">
           <p>
-            Server / RSC は1つの実行領域です。APIからは due queue
-            のIDとSRSメタだけを受け取り、本文・解説は content index へ join
-            します。
+            現行の <code>cacheComponents</code> 未有効時は Server loader が初回 VM を待つため、
+            初回ローディング表示は出ません。将来有効化した場合は、静的シェルと
+            <code>ReviewQueueFallback</code> を先に返し、Suspense 内の非キャッシュ Server Component が
+            API から due queue のIDとSRSメタを受け、本文・解説を content index へ join した後に
+            <code>ReviewRunner</code> をストリーミングします。
           </p>
           <div class="diagram-toolbar" aria-label="復習ページ初回表示の図操作">
             <button type="button" data-zoom-action="in">拡大</button>
@@ -731,8 +756,9 @@ flowchart LR
   classDef content fill:#f6f8fa,stroke:#d1d5db,color:#1f2328;
 
   subgraph server["Server / RSC"]
-    page["app/review/page.tsx\n初回取得の入口"]:::server
-    serverLoader["features/review/server\nloadReviewQueue"]:::server
+    page["app/review/page.tsx\n静的 shell + Suspense"]:::server
+    userContent["ReviewUserContent\n非キャッシュ・user 固有"]:::server
+    serverLoader["features/review/server\nloadReview"]:::server
     rpcWrapper["features/review/api\nfetchReviewQueue"]:::server
     contentIndex["apps/web/src/lib/content.ts\nquestion_idを本文・解説へjoin"]:::content
     mapper["features/review/mapper.ts\nReviewViewModel化"]:::server
@@ -746,7 +772,7 @@ flowchart LR
 
   runner["ReviewRunner\nviewModel props（state に複製しない）"]:::client
 
-  page -->|calls| serverLoader -->|uses wrapper| rpcWrapper -->|"hc $get（Service Binding）"| endpoint
+  page --&gt;|Suspense| userContent --&gt;|calls| serverLoader --&gt;|uses wrapper| rpcWrapper --&gt;|"hc $get（Service Binding）"| endpoint
   endpoint -->|query| service -->|returns| dto
   dto -->|join by question_id| contentIndex -->|map| mapper -->|props| runner</pre>
         </div>
@@ -1021,8 +1047,8 @@ export async function fetchReviewQueue(client: ApiClient): Promise&lt;ReviewQueu
 }</code></pre>
 
         <pre
-          data-code-title="apps/web/src/features/review/server/load-review-queue.ts"
-        ><code class="language-ts">// apps/web/src/features/review/server/load-review-queue.ts
+          data-code-title="apps/web/src/features/review/server/load-review.ts"
+        ><code class="language-ts">// apps/web/src/features/review/server/load-review.ts
 import 'server-only';
 
 import { createServerApiClient } from '@/lib/api';
@@ -1031,24 +1057,33 @@ import { fetchReviewQueue } from '../api/review-api';
 import { reviewQueueDTOToViewModel } from '../mapper';
 import type { ReviewViewModel } from '../view-model';
 
-export async function loadReviewQueue(): Promise&lt;ReviewViewModel&gt; {
+export async function loadReview(): Promise&lt;ReviewViewModel&gt; {
   const dto = await fetchReviewQueue(createServerApiClient());
   return reviewQueueDTOToViewModel(dto, getBundledQuestions()); // join はサーバー側のみ
 }</code></pre>
 
         <pre
           data-code-title="apps/web/src/app/review/page.tsx"
-        ><code class="language-tsx">// apps/web/src/app/review/page.tsx
+        ><code class="language-tsx">// apps/web/src/app/review/page.tsx — 将来の cacheComponents 有効化時の分離例
+import { Suspense } from 'react';
 import { ReviewRunner } from '@/features/review/client/components/review-runner';
-import { loadReviewQueue } from '@/features/review/server/load-review-queue';
+import { ReviewPageShell, ReviewQueueFallback } from '@/features/review/server/components';
+import { loadReview } from '@/features/review/server/load-review';
 
-// API-backed page は force-dynamic。再取得は router.refresh() に委譲
-export const dynamic = 'force-dynamic';
-
-export default async function ReviewPage() {
-  const viewModel = await loadReviewQueue(); // API queue + content join 済み VM
-
+async function ReviewUserContent() {
+  // cacheComponents 有効時のみ Suspense 内で実行する。user_id は API 側で注入され、web の共有キャッシュキーには存在しない。
+  const viewModel = await loadReview(); // 'use cache' は使わない
   return &lt;ReviewRunner viewModel={viewModel} /&gt;;
+}
+
+export default function ReviewPage() {
+  return (
+    &lt;ReviewPageShell&gt;
+      &lt;Suspense fallback={&lt;ReviewQueueFallback /&gt;}&gt;
+        &lt;ReviewUserContent /&gt;
+      &lt;/Suspense&gt;
+    &lt;/ReviewPageShell&gt;
+  );
 }</code></pre>
 
         <pre
