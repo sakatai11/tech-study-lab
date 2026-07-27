@@ -214,7 +214,7 @@ SM-2 の計算式（`packages/shared/src/srs/sm2.ts`）の周辺で、実装時�
 - **ID 設計**：`lessonId` / `questionId` は**グローバル一意**。学習導線は階層 URL（`/learn/...`）、演習・復習はフラット URL（`/quiz/[lesson]`・`/review`）。
 - **レイアウト（サイドバー / ボトムタブ）**：PC は左サイドバー（ロゴ＋テーマトグル＋ダッシュボード／教材／演習／復習（due件数バッジ）／アナリティクス／スキルツリー）、本文は右側 1 カラム。SP は上部アプリバー（ロゴ＋ストリーク表示＋テーマトグル）＋下部固定タブバー（**ホーム／教材／演習／復習（dueバッジ）／ツリーの5項目**）。「演習」「復習」ナビ項目は直前に扱っていたレッスン（未着手なら先頭レッスン）を対象とする簡易ヒューリスティックで遷移先を決定する（MVP は XSS 1本のため実質固定）。SP のタブバーはスペース都合で 5 項目に絞り、「アナリティクス（`/analytics`）」へはダッシュボードの「すべて表示」リンクから遷移する。「設定」は将来の公開機能（認証等、§1 スコープ外）向けで、MVP ではナビに置かない。
 - **ユーザー**：ログイン UI なし。API（Hono）側が固定 `user_id` を権威的に注入する。将来公開時は「固定値を返す関数」を「認証から `user_id` を引く関数」に差し替えるだけで、画面・API 契約は不変。
-- **将来の `cacheComponents` / PPR**：対象は `/` と `/review` のみとする。`/review` は現行の `cacheComponents` 未有効時には Server loader が初回 VM を待って props 渡しし、初回ローディング表示を出さない。将来 `cacheComponents` を有効化した場合は静的シェルを先に返し、`<Suspense fallback={<ReviewQueueFallback />}>` の内側でユーザー固有データを読む async Server Component をストリーミング分離する。due 件数・統計・review queue は API が `user_id` を権威的に注入し、web の共有キャッシュキーに `user_id` を含められないため、`'use cache'`・`cacheLife`・`cacheTag`・`revalidateTag` を使わない。共有キャッシュによるユーザー間データ混入を防ぐためであり、解答後の鮮度回復は既存方針どおり Client Component の `router.refresh()` で行う。`/domains`・`/analytics` は未実装であり、画面実装時に同じ静的シェル／非キャッシュ動的領域の分離を適用する予定だが、`cacheComponents` 対象への追加は別途判断する。
+- **将来の `cacheComponents` / PPR**：`cacheComponents` は NextConfig のアプリケーション全体に効く top-level switch である。PPR streaming の対象は `/` と `/review` のみとするが、この限定は `/learn`・`/quiz`・その他の App Router route を Cache Components の build ルールから除外するものではない。有効化前に、全 route をそれぞれ意図した SSG/RSC を維持したまま Cache Components 対応にする。`/review` は現行の `cacheComponents` 未有効時には Server loader が初回 VM を待って props 渡しし、初回ローディング表示を出さない。将来 `cacheComponents` を有効化した場合は静的シェルを先に返し、`<Suspense fallback={<ReviewQueueFallback />}>` の内側でユーザー固有データを読む async Server Component をストリーミング分離する。due 件数・統計・review queue は API が `user_id` を権威的に注入し、web の共有キャッシュキーに `user_id` を含められないため、`'use cache'`・`cacheLife`・`cacheTag`・`revalidateTag` を使わない。共有キャッシュによるユーザー間データ混入を防ぐためであり、解答後の鮮度回復は既存方針どおり Client Component の `router.refresh()` で行う。`/domains`・`/analytics` は未実装であり、画面実装時に同じ静的シェル／非キャッシュ動的領域の分離を適用する予定だが、`cacheComponents` 対象への追加は別途判断する。
 - **スタイリング**：Tailwind CSS ＋ Dev-Native Neo Flat × Terminal デザインシステム（ダークファースト）。詳細トークン・コンポーネント文法・ゲーミフィケーション表現の実装区分は §8.7。
 
 ### 7.3 画面構成から要請される API（参考）
@@ -1471,9 +1471,11 @@ content は「web のビルド時バンドル（§8.2）」と「D1 の `questio
 
 ### 12.8 `cacheComponents` 有効化の前提条件
 
-`@opennextjs/cloudflare` には未解決の upstream issue がある。
+`@opennextjs/cloudflare` には未解決の upstream issue がある。2026-07-28 時点で #1130・#1225 はともに OPEN である。
 
 - [#1130](https://github.com/opennextjs/opennextjs-cloudflare/issues/1130)：`cacheComponents` 有効時の production-only `SyntaxError`／クラッシュと Suspense 描画失敗。
 - [#1225](https://github.com/opennextjs/opennextjs-cloudflare/issues/1225)：Suspense streaming が完了せず `Connection closed` になる問題。
 
-このため、上記が解決され、採用対象バージョンで preview / production 相当の環境における RSC flight、hydration、`<Suspense>` streaming の検証がすべて成功するまで、production・preview では `cacheComponents` を有効化しない。現行 CI は `next build` のみであり、OpenNext preview のストリーミングを検知できない。この検証を追加するまで、ビルド成功だけを有効化の根拠にしてはならない。
+Issue #93 の一時検証では、`@opennextjs/cloudflare` 1.19.11 と Next 16.2.9 で Cache Components を有効化すると、コンパイルと型チェックは完了したが、`/learn/[domain]/[topic]/[lesson]` の prerender が `Uncached data was accessed outside of <Suspense>` で停止した。したがって `/review` の Partial route 出力、OpenNext build / preview、#1130・#1225 の runtime 症状の検証には到達しておらず、これらの upstream issue が再現したとは判定しない。比較した OpenNext 1.20.2 は Next の peer 範囲を `>=15.5.21 <16 || >=16.2.11` と宣言しており、現行 Next 16.2.9 は非対応である。さらに同比較はアプリケーションのコンパイル前に harness 限定の `EMFILE: too many open files, watch` で停止したため、製品の結果として扱わない。
+
+このため、#78 の phase 2 は、全 App Router route の build 互換性を確保し、対応する Next / OpenNext のバージョン組を準備するまで保留する。その後、採用対象バージョンで preview / production 相当の環境における RSC flight、hydration、`<Suspense>` streaming の preview / browser 検証を再実行する。現行 CI は `next build` のみであり、OpenNext preview のストリーミングを検知できない。この検証を追加するまで、ビルド成功だけを有効化の根拠にしてはならない。
