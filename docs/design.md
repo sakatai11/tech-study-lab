@@ -509,7 +509,7 @@ export async function loadReview(now?: number): Promise<ReviewViewModel> {
   await connection();
 
   const dto = await fetchReviewQueue(await createServerApiClient());
-  return reviewQueueDTOToViewModel(dto, getBundledQuestions(), now ?? Date.now());  // join はサーバー側のみ
+  return reviewQueueToViewModel(dto, getBundledQuestions(), now ?? Date.now());  // join はサーバー側のみ
 }
 
 // due バッジと本文が別々の <Suspense> 境界から同じ queue を読むため、リクエスト内で1回に畳む。
@@ -556,7 +556,9 @@ import type { AnswerRequest, AnswerResponse } from '@tsl/shared';
 import { submitAnswer as postAnswer } from '../../api/quiz-api';
 
 export function useAnswerSubmit() {
-  const client = useMemo(() => createBrowserApiClient(), []);
+  // 生成は初回送信まで遅らせる。render 時に作ると SSR・prerender でも評価され、
+  // ブラウザ専用の設定（NEXT_PUBLIC_API_BASE_URL）が無い経路で throw する。
+  const clientRef = useRef<ApiClient>(undefined);
   const [results, setResults] = useState<Record<string, AnswerResponse>>({});
   const [error, setError] = useState<Error | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -569,7 +571,8 @@ export function useAnswerSubmit() {
     setSubmitting(true);
     setError(null);
     try {
-      const result = await postAnswer(client, input);
+      clientRef.current ??= createBrowserApiClient();
+      const result = await postAnswer(clientRef.current, input);
       setResults(prev => ({ ...prev, [input.questionId]: result }));
     } catch (e) {
       setError(e as Error);
@@ -577,7 +580,7 @@ export function useAnswerSubmit() {
       submittingRef.current = false;
       setSubmitting(false);
     }
-  }, [client]);
+  }, []);
 
   const resetAnswers = useCallback(() => {
     setResults({});
