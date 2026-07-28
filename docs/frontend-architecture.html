@@ -539,35 +539,36 @@
             （<code>answerIndex</code>）を含めない。
           </li>
           <li>
-            現在は <code>cacheComponents</code> を有効化しない。未有効の API-backed
-            page を実装する間は <code>dynamic = 'force-dynamic'</code> を明記する。
-            現行の <code>/review</code> は Server loader が初回 VM を待って props 渡しするため、
-            初回ローディング表示は出さない。将来の対象は <code>/</code> と
-            <code>/review</code> のみで、後者では静的シェルに <code>ReviewQueueFallback</code> を
-            表示してから、queue 完了後に非キャッシュの <code>ReviewRunner</code> をストリーミングする。
+            <code>cacheComponents</code> は有効化済み。<code>dynamic</code> /
+            <code>dynamicParams</code> の route segment config は併用できないため置かない。
+            PPR streaming の対象は <code>/</code> と <code>/review</code> のみで、後者では
+            静的シェルに <code>ReviewQueueFallback</code> を表示してから、queue 完了後に
+            非キャッシュの <code>ReviewRunner</code> をストリーミングする。
           </li>
         </ul>
         <div class="note">
-          <strong>将来の Cache Components / PPR 方針</strong><br />
+          <strong>Cache Components / PPR 方針</strong><br />
           due 件数・ダッシュボード統計・review queue は API が <code>user_id</code> を
           権威的に注入する一方、web の共有キャッシュキーには含まれません。したがって
           <code>'use cache'</code>・<code>cacheLife</code>・<code>cacheTag</code>・
           <code>revalidateTag</code> は使わず、Suspense による分離だけを行います。解答後は
           <code>router.refresh()</code> で Server loader を再実行します。未実装の
           <code>/domains</code> と <code>/analytics</code> も、実装時に同じ静的シェルと
-          非キャッシュ動的領域の分離を適用しますが、Cache Components 対象への追加は別途判断します。
-          <code>/learn/...</code> と <code>/quiz/...</code> は content 由来の SSG/RSC を維持し、
-          PPR の対象外です。
+          非キャッシュ動的領域の分離を適用しますが、PPR streaming 対象への追加は別途判断します。
+          <code>/learn/...</code> と <code>/quiz/...</code> は content 由来の prerender を維持し、
+          PPR streaming の対象外です（<code>generateStaticParams</code> と
+          <code>'use cache'</code> で全件を build 時に生成します）。
         </div>
         <div class="note">
-          <strong>有効化の前提条件</strong><br />
-          OpenNext #1130（<code>cacheComponents</code> 有効時の production-only
-          <code>SyntaxError</code>／クラッシュと Suspense 描画失敗）と #1225（Suspense streaming が
-          完了せず <code>Connection closed</code> になる問題）は未解決です。
-          両 issue の解決後も、採用対象バージョンで preview / production 相当の RSC flight、hydration、
-          Suspense streaming を検証できるまで production・preview では <code>cacheComponents</code> を
-          有効化しません。現行 CI は <code>next build</code> のみで、OpenNext preview のストリーミングを
-          検知しません。
+          <strong>検証結果と残る制約</strong><br />
+          OpenNext <code>#1130</code>（production-only <code>SyntaxError</code>／Suspense 描画失敗）と
+          <code>#1225</code>（Suspense streaming が完了せず <code>Connection closed</code>）は
+          未 close ですが、issue #93 の検証では本リポジトリの構成で<strong>再現しませんでした</strong>。
+          <code>opennextjs-cloudflare preview</code> で静的シェル → streaming 差し替え、hydration、
+          解答後に動的領域が再実行されること（共有キャッシュに乗らないこと）を確認済みです。
+          ただし現行 CI は <code>next build</code> のみで OpenNext preview のストリーミングを検知しません。
+          PPR の描画・streaming に関わる変更と、OpenNext / Next の更新時は手動 preview で再確認します。
+          詳細は design.md §12.8 を参照してください。
         </div>
         <div class="note">
           ディレクトリ名だけで実行場所は決まりません。<code
@@ -737,9 +738,8 @@ flowchart LR
         <h3>復習ページ初回表示</h3>
         <div class="diagram">
           <p>
-            現行の <code>cacheComponents</code> 未有効時は Server loader が初回 VM を待つため、
-            初回ローディング表示は出ません。将来有効化した場合は、静的シェルと
-            <code>ReviewQueueFallback</code> を先に返し、Suspense 内の非キャッシュ Server Component が
+            静的シェルと <code>ReviewQueueFallback</code> を先に返し、
+            Suspense 内の非キャッシュ Server Component が
             API から due queue のIDとSRSメタを受け、本文・解説を content index へ join した後に
             <code>ReviewRunner</code> をストリーミングします。
           </p>
@@ -1064,14 +1064,14 @@ export async function loadReview(): Promise&lt;ReviewViewModel&gt; {
 
         <pre
           data-code-title="apps/web/src/app/review/page.tsx"
-        ><code class="language-tsx">// apps/web/src/app/review/page.tsx — 将来の cacheComponents 有効化時の分離例
+        ><code class="language-tsx">// apps/web/src/app/review/page.tsx — 静的シェルと動的領域の分離
 import { Suspense } from 'react';
 import { ReviewRunner } from '@/features/review/client/components/review-runner';
 import { ReviewPageShell, ReviewQueueFallback } from '@/features/review/server/components';
 import { loadReview } from '@/features/review/server/load-review';
 
 async function ReviewUserContent() {
-  // cacheComponents 有効時のみ Suspense 内で実行する。user_id は API 側で注入され、web の共有キャッシュキーには存在しない。
+  // Suspense 内でのみ実行する。user_id は API 側で注入され、web の共有キャッシュキーには存在しない。
   const viewModel = await loadReview(); // 'use cache' は使わない
   return &lt;ReviewRunner viewModel={viewModel} /&gt;;
 }

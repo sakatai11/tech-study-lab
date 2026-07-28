@@ -195,13 +195,13 @@ SM-2 の計算式（`packages/shared/src/srs/sm2.ts`）の周辺で、実装時�
 
 | ルート | 役割 | データ経路 | レンダリング／キャッシュ方針 | 主導線 |
 | --- | --- | --- | --- | --- |
-| `/` ダッシュボード | **今日の復習（due）が主役**。学習統計（正答率・学習時間・連続学習日数）・学習コントリビューション（草＝日次解答数ヒートマップ）・領域別習得状況・最近のアクティビティ・次のレッスン導線を併せ持つ | due 件数・統計値・草は API（Server loader → `hc`） | 将来の `cacheComponents` 対象。静的シェルと、due 件数・統計を読む非キャッシュのユーザー固有 async Server Component を `<Suspense>` で分離する（実装は未着手） | 「復習を始める」→ `/review`、「続きから」→ `/learn/...` |
-| `/domains` スキルツリー | カリキュラムを `devpath tree` 風の**ディレクトリツリー**で俯瞰する（§8.7）。レッスンごとに done ✓ / current ▶（進捗バー・START）/ locked 🔒 を表示し、クリアで次ノードが解放。コンテンツ未整備の領域はツリー下部に `content/<domain>/ [locked]` として表示し非活性 | 領域別集計は API（`GET /domains`） | 未実装。画面実装時は静的シェルと非キャッシュのユーザー固有領域を分離する。`cacheComponents` 対象への追加は別途判断する | done 行 → `/learn/[domain]/[topic]`、current 行 → 教材本文 |
-| `/learn/[domain]/[topic]` レッスン一覧 | トピック内のレッスン一覧（初期は XSS 1本） | ビルド時バンドル済み content（RSC） | content 由来の SSG/RSC を維持。PPR / `cacheComponents` の対象外 | 各レッスンへ |
-| `/learn/[domain]/[topic]/[lesson]` 教材本文 | Markdown 本文表示 | ビルド時バンドル済み content（RSC）・**API 不要** | content 由来の SSG/RSC を維持。PPR / `cacheComponents` の対象外 | 「問題を解く →」`/quiz/[lesson]` |
-| `/quiz/[lesson]` 演習 | イントロ（レッスン概要の確認）→ 全問を 1 問ずつ即時採点 → 結果サマリ、を 1 画面内のクライアント状態遷移（`intro → exercise → result`）で完結。演習ナビ・教材本文の両方から入れる | 問題＝content（RSC で初期化）/ 解答記録＝API | content 由来の SSG/RSC を維持。PPR / `cacheComponents` の対象外 | 完了 → 「次のレッスンへ」／「再挑戦」 |
-| `/review` 復習 | イントロ（本日の due キューを dueAt 昇順・滞留日数付きでプレビュー）→ due 問題をレッスン横断で 1 問ずつ即時採点 → 結果サマリ、を 1 画面内のクライアント状態遷移で完結 | queue＝API（`GET /review/queue`）/ 問題本文＝content / 記録＝API | 現行（`cacheComponents` 未有効）は Server loader が初回 VM を待って props 渡しし、初回ローディング表示は出さない。将来の `cacheComponents` 対象では静的シェルに `ReviewQueueFallback` を表示し、queue 完了後に非キャッシュの `ReviewRunner` をストリーミングする（実装は未着手） | 完了 → 「ホームへ」／「間違えた問題だけ再挑戦」 |
-| `/analytics` アナリティクス | 解答ログ・SRS状態を集計した学習分析ビュー（総解答数・正答率・平均反応時間・習得済み問題数・週次アクティビティ・SRS定着度分布・間違えやすい問題ランキング） | 集計値は API（§7.3） | 未実装。画面実装時は静的シェルと非キャッシュのユーザー固有領域を分離する。`cacheComponents` 対象への追加は別途判断する | — |
+| `/` ダッシュボード | **今日の復習（due）が主役**。学習統計（正答率・学習時間・連続学習日数）・学習コントリビューション（草＝日次解答数ヒートマップ）・領域別習得状況・最近のアクティビティ・次のレッスン導線を併せ持つ | due 件数・統計値・草は API（Server loader → `hc`） | PPR streaming 対象。静的シェルと、due 件数・統計を読む非キャッシュのユーザー固有 async Server Component を `<Suspense>` で分離する（API 未接続のため実装は未着手） | 「復習を始める」→ `/review`、「続きから」→ `/learn/...` |
+| `/domains` スキルツリー | カリキュラムを `devpath tree` 風の**ディレクトリツリー**で俯瞰する（§8.7）。レッスンごとに done ✓ / current ▶（進捗バー・START）/ locked 🔒 を表示し、クリアで次ノードが解放。コンテンツ未整備の領域はツリー下部に `content/<domain>/ [locked]` として表示し非活性 | 領域別集計は API（`GET /domains`） | 未実装。画面実装時は静的シェルと非キャッシュのユーザー固有領域を分離する。PPR streaming 対象への追加は別途判断する | done 行 → `/learn/[domain]/[topic]`、current 行 → 教材本文 |
+| `/learn/[domain]/[topic]` レッスン一覧 | トピック内のレッスン一覧（初期は XSS 1本） | ビルド時バンドル済み content（RSC） | `generateStaticParams` と `'use cache'` で全件を build 時に prerender。PPR streaming 対象外 | 各レッスンへ |
+| `/learn/[domain]/[topic]/[lesson]` 教材本文 | Markdown 本文表示 | ビルド時バンドル済み content（RSC）・**API 不要** | `generateStaticParams` と `'use cache'` で全件を build 時に prerender。PPR streaming 対象外 | 「問題を解く →」`/quiz/[lesson]` |
+| `/quiz/[lesson]` 演習 | イントロ（レッスン概要の確認）→ 全問を 1 問ずつ即時採点 → 結果サマリ、を 1 画面内のクライアント状態遷移（`intro → exercise → result`）で完結。演習ナビ・教材本文の両方から入れる | 問題＝content（RSC で初期化）/ 解答記録＝API | `generateStaticParams` と `'use cache'` で全件を build 時に prerender。PPR streaming 対象外 | 完了 → 「次のレッスンへ」／「再挑戦」 |
+| `/review` 復習 | イントロ（本日の due キューを dueAt 昇順・滞留日数付きでプレビュー）→ due 問題をレッスン横断で 1 問ずつ即時採点 → 結果サマリ、を 1 画面内のクライアント状態遷移で完結 | queue＝API（`GET /review/queue`）/ 問題本文＝content / 記録＝API | PPR streaming 対象（実装済み）。静的シェル `ReviewPageShell` に `ReviewQueueFallback` と due バッジ fallback を表示し、queue 完了後に非キャッシュの `ReviewUserContent` / `ReviewDueBadge` をストリーミングする | 完了 → 「ホームへ」／「間違えた問題だけ再挑戦」 |
+| `/analytics` アナリティクス | 解答ログ・SRS状態を集計した学習分析ビュー（総解答数・正答率・平均反応時間・習得済み問題数・週次アクティビティ・SRS定着度分布・間違えやすい問題ランキング） | 集計値は API（§7.3） | 未実装。画面実装時は静的シェルと非キャッシュのユーザー固有領域を分離する。PPR streaming 対象への追加は別途判断する | — |
 
 ### 7.2 横断する設計判断
 
@@ -214,7 +214,7 @@ SM-2 の計算式（`packages/shared/src/srs/sm2.ts`）の周辺で、実装時�
 - **ID 設計**：`lessonId` / `questionId` は**グローバル一意**。学習導線は階層 URL（`/learn/...`）、演習・復習はフラット URL（`/quiz/[lesson]`・`/review`）。
 - **レイアウト（サイドバー / ボトムタブ）**：PC は左サイドバー（ロゴ＋テーマトグル＋ダッシュボード／教材／演習／復習（due件数バッジ）／アナリティクス／スキルツリー）、本文は右側 1 カラム。SP は上部アプリバー（ロゴ＋ストリーク表示＋テーマトグル）＋下部固定タブバー（**ホーム／教材／演習／復習（dueバッジ）／ツリーの5項目**）。「演習」「復習」ナビ項目は直前に扱っていたレッスン（未着手なら先頭レッスン）を対象とする簡易ヒューリスティックで遷移先を決定する（MVP は XSS 1本のため実質固定）。SP のタブバーはスペース都合で 5 項目に絞り、「アナリティクス（`/analytics`）」へはダッシュボードの「すべて表示」リンクから遷移する。「設定」は将来の公開機能（認証等、§1 スコープ外）向けで、MVP ではナビに置かない。
 - **ユーザー**：ログイン UI なし。API（Hono）側が固定 `user_id` を権威的に注入する。将来公開時は「固定値を返す関数」を「認証から `user_id` を引く関数」に差し替えるだけで、画面・API 契約は不変。
-- **将来の `cacheComponents` / PPR**：対象は `/` と `/review` のみとする。`/review` は現行の `cacheComponents` 未有効時には Server loader が初回 VM を待って props 渡しし、初回ローディング表示を出さない。将来 `cacheComponents` を有効化した場合は静的シェルを先に返し、`<Suspense fallback={<ReviewQueueFallback />}>` の内側でユーザー固有データを読む async Server Component をストリーミング分離する。due 件数・統計・review queue は API が `user_id` を権威的に注入し、web の共有キャッシュキーに `user_id` を含められないため、`'use cache'`・`cacheLife`・`cacheTag`・`revalidateTag` を使わない。共有キャッシュによるユーザー間データ混入を防ぐためであり、解答後の鮮度回復は既存方針どおり Client Component の `router.refresh()` で行う。`/domains`・`/analytics` は未実装であり、画面実装時に同じ静的シェル／非キャッシュ動的領域の分離を適用する予定だが、`cacheComponents` 対象への追加は別途判断する。
+- **`cacheComponents` / PPR**：`cacheComponents` は NextConfig のアプリケーション全体に効く top-level switch であり、有効化済みである。**PPR streaming の対象は `/` と `/review` のみ**とするが、この限定は他の App Router route を Cache Components の build ルールから除外しない（§12.8）。`/review` は静的シェルを先に返し、`<Suspense fallback={<ReviewQueueFallback />}>` の内側でユーザー固有データを読む async Server Component をストリーミング分離する。due 件数・統計・review queue は API が `user_id` を権威的に注入し、web の共有キャッシュキーに `user_id` を含められないため、`'use cache'`・`cacheLife`・`cacheTag`・`revalidateTag` を使わない。共有キャッシュによるユーザー間データ混入を防ぐためであり、解答後の鮮度回復は既存方針どおり Client Component の `router.refresh()` で行う。`/domains`・`/analytics` は未実装であり、画面実装時に同じ静的シェル／非キャッシュ動的領域の分離を適用する予定だが、PPR streaming 対象への追加は別途判断する。
 - **スタイリング**：Tailwind CSS ＋ Dev-Native Neo Flat × Terminal デザインシステム（ダークファースト）。詳細トークン・コンポーネント文法・ゲーミフィケーション表現の実装区分は §8.7。
 
 ### 7.3 画面構成から要請される API（参考）
@@ -316,7 +316,7 @@ apps/web/src/
 - content 参照は `apps/web/src/lib/content.ts` に集約する。`getLessonContent(lessonId)`・`getLessonsByTopic(domain, topic)`・`getBundledQuestions()`・`getQuestionById(questionId)` を共通関数として用意し、初回表示の実行経路では `features/*/server` の Server loader だけが呼び出す。page は loader、mapper は引数で渡された Content data だけを参照し、`lib/content` を直接 import しない。ビルド・同期スクリプトと `lib/content` 自身のテストはこの制約の対象外とする。
 - `getBundledQuestions()` は `/review` の `question_id` 解決用に `questionId` index を返せる形にする。各 feature で frontmatter 配列を直接走査しない。
 - **同じパース経路を `content/` → D1 seed/upsert スクリプトでも再利用**し、フロント表示と D1 配信を単一ソースから導く（4.2 の責務分離を維持）。
-- `/learn/...` と `/quiz/...` は、将来 `cacheComponents` を有効化しても content 由来の SSG/RSC のままとし、PPR の対象にしない。
+- `/learn/...` と `/quiz/...` は content 由来の prerender を維持し、PPR streaming の対象にしない。Cache Components 下では動的セグメントを build 時に列挙する必要があるため、`generateStaticParams` で全 params を返し、page 本体に `'use cache'` を置く。route params は `lib/content` の `getLessonRouteParams()` / `getTopicRouteParams()` / `getQuizRouteParams()` を feature loader 経由で読み、page から `lib/content` を直接 import しない。
 
 ### 8.3 Server / Client コンポーネント境界
 
@@ -326,7 +326,7 @@ apps/web/src/
 - 実行場所はディレクトリ名ではなく import 境界で決まる。`apps/web/src/features/*/server` は `apps/web/src/app/**/page.tsx` など Server Component から import する限りサーバー側で実行される。誤用防止のため `import 'server-only'` を必須にする。
 - Server Actions は使わず、動的データは Hono API に一本化する。初回取得は Server loader、mutation は Client hook から `hc` で実行する。Server data の再取得は Client Component が `router.refresh()` で Server loader を再実行する（API 契約を `apps/api` に一本化し、RPC 型を素直に効かせる）。
   - **不採用の根拠**：変更系を Hono に一本化することで ①契約（`AppType`）と `user_id` 注入点（§7.2）を単一ソースに保てる、②Hono+Cloudflare の学習目的（§2）を素通りしない。Server Actions の利点（フォームのプログレッシブエンハンスメント等）は、即時採点の Client 主導 Quiz・変更系が `POST /answers` ほぼ一択の本アプリでは恩恵が小さい。重いフォームが必要になった時点で再検討する。
-- **キャッシュ方針**：現在は `cacheComponents` を有効化しない。Cache Components 未有効の API-backed page を実装する間は、`hc` 経由の fetch やカスタム fetch が静的解析で動的依存として扱われない場合に備え、ページ側で `export const dynamic = "force-dynamic"` を明記する。この現行構成の `/review` は Server loader が初回 VM を待って `ReviewRunner` へ props 渡しするため、初回ローディング表示を出さない。将来の `cacheComponents` 対象は `/` と `/review` のみであり、`/review` では静的シェルの内側に `<Suspense fallback={<ReviewQueueFallback />}>` を置き、fallback を表示してから、ユーザー固有データを読む非キャッシュの async Server Component と `ReviewRunner` をストリーミングする（§7.1・§9.2・§9.4）。due 件数・統計・review queue には `'use cache'`・`cacheLife`・`cacheTag`・`revalidateTag` を使わない。API 側で権威的に注入する `user_id` が web の共有キャッシュキーに含まれず、共有キャッシュでユーザー間データが混入し得るためである。feature の `api/` adapter にキャッシュ方針を持ち込まず、解答後・画面復帰時の鮮度回復は Client 側の `router.refresh()` で RSC を再実行して担う。`/domains`・`/analytics` は未実装であり、実装時に同じ分離を適用するが、`cacheComponents` の対象に含めるかは別途判断する。
+- **キャッシュ方針**：`cacheComponents` を有効化済みである。`export const dynamic` と `export const dynamicParams` は Cache Components と併用できないため、**page-level の route segment config を置かない**。ユーザー固有データを読む Server loader は先頭で `connection()` を呼び、リクエスト時実行であることを宣言する（Cloudflare context の解決と現在時刻の読み取りは prerender 中に行えない）。PPR streaming の対象は `/` と `/review` のみであり、`/review` では静的シェルの内側に `<Suspense fallback={<ReviewQueueFallback />}>` を置き、fallback を表示してから、ユーザー固有データを読む非キャッシュの async Server Component と `ReviewRunner` をストリーミングする（§7.1・§9.2・§9.4）。due 件数・統計・review queue には `'use cache'`・`cacheLife`・`cacheTag`・`revalidateTag` を使わない。API 側で権威的に注入する `user_id` が web の共有キャッシュキーに含まれず、共有キャッシュでユーザー間データが混入し得るためである。feature の `api/` adapter にキャッシュ方針を持ち込まず、解答後・画面復帰時の鮮度回復は Client 側の `router.refresh()` で RSC を再実行して担う。同一リクエスト内で複数の `<Suspense>` 境界が同じ queue を参照する場合は、React の `cache()`（リクエストスコープ）で loader を1回に畳む。これはユーザー横断の共有キャッシュではない。`/domains`・`/analytics` は未実装であり、実装時に同じ分離を適用するが、PPR streaming 対象に含めるかは別途判断する。
 ### 8.4 `hc` クライアントの取り回し
 
 - `apps/api` が `AppType` をエクスポート → `apps/web` は `hc<AppType>` で型安全クライアントを生成（既存 `apps/api/src/client.ts` のファクトリを利用。Service Binding の fetch を渡せるよう、ファクトリは `hc` の第2引数（`fetch` オプション等）を受け取れる形に拡張する）。
@@ -506,14 +506,14 @@ export async function loadReview(): Promise<ReviewViewModel> {
   return reviewQueueDTOToViewModel(dto, getBundledQuestions());  // join はサーバー側のみ
 }
 
-// app/review/page.tsx（Server）— 将来の cacheComponents 有効化時の分離例
+// app/review/page.tsx（Server）— 静的シェルと動的領域の分離
 import { Suspense } from 'react';
 import { ReviewRunner } from '@/features/review/client/components/review-runner';
 import { ReviewPageShell, ReviewQueueFallback } from '@/features/review/server/components';
 import { loadReview } from '@/features/review/server/load-review';
 
 async function ReviewUserContent() {
-  // cacheComponents 有効時のみ Suspense 内で実行する。API が user_id を権威的に注入するため、ここには 'use cache' を置かない。
+  // Suspense 内でのみ実行する。API が user_id を権威的に注入するため、ここには 'use cache' を置かない。
   const viewModel = await loadReview();
   return <ReviewRunner viewModel={viewModel} />;
 }
@@ -601,10 +601,10 @@ export function ReviewRunner({ viewModel }: Props) {
 }
 ```
 
-- **初回＝Server loader で VM 化し、page は feature component への props 渡しのみ**。`/quiz` は content のみ、`/review` は API queue + content join。現行の `cacheComponents` 未有効時の `/review` は Server loader が初回 VM を待って `ReviewRunner` に props 渡しするため、初回ローディング表示は出ない。将来 `cacheComponents` を有効化する `/review` は、静的 `ReviewPageShell` の内部に `<Suspense fallback={<ReviewQueueFallback />}>` で囲んだ `ReviewUserContent` を置き、fallback を表示してから queue 完了後に `ReviewRunner` をストリーミングする。後者はユーザー固有の queue を読むため非キャッシュとし、loader は両構成で同じ mapper を通すため、整形ロジックは一本のまま（§9.1 の原則）。
+- **初回＝Server loader で VM 化し、page は feature component への props 渡しのみ**。`/quiz` は content のみ、`/review` は API queue + content join。`/review` は静的 `ReviewPageShell` の内部に `<Suspense fallback={<ReviewQueueFallback />}>` で囲んだ `ReviewUserContent` を置き、fallback を表示してから queue 完了後に `ReviewRunner` をストリーミングする。後者はユーザー固有の queue を読むため非キャッシュとする（§9.1 の原則どおり整形ロジックは mapper 一本のまま）。
 - **VM はクライアント state に複製しない**。`ReviewRunner` は Review VM を Quiz 表示コンポーネントの props へ変換して渡す。`useAnswerSubmit` hook が解答結果（`results`）・`submitting`・送信エラーを保持し、Client Component は画面フェーズ・現在問題などの表示操作 state だけを保持する。due queue の再取得は `router.refresh()` による Server Component 再実行に一本化し、content との join を常にサーバー側に閉じ込める。
 - **RPC 呼び出しは `apps/web/src/features/*/api` の endpoint アダプター経由**。Server loader と Client hook は同じアダプターへ実行環境に合った `ApiClient` を渡す。HTTP レスポンス処理は `requestJson` に寄せ、feature 側では重複させない。
-- **初回ローディング表示の条件**：現行の `cacheComponents` 未有効時は初回 VM を Server loader で待つため不要である。将来 `cacheComponents` を有効化した `/review` では、静的シェルに `ReviewQueueFallback` を表示し、queue 完了後に `ReviewRunner` をストリーミングする。`router.refresh()` 中の待機表示が必要なら `loading.tsx` かローカルな `isRefreshing` フラグで扱う。
+- **初回ローディング表示の条件**：`/review` は静的シェルに `ReviewQueueFallback` と due バッジ fallback を表示し、queue 完了後に `ReviewRunner` をストリーミングする。`router.refresh()` 中の待機表示が必要なら `loading.tsx` かローカルな `isRefreshing` フラグで扱う。
 - **将来：**TanStack Query 等へ置き換える際、mapper・ViewModel 型・page は変わらず、hook（`useAnswerSubmit` 相当）内部だけ差し替わる（契約保証）。
 
 ### 9.3 DTO / ViewModel の分離と配置
@@ -851,9 +851,9 @@ export function QuizInteractive({ viewModel }: Props) {
 - `QuizInteractive` は全問を一括レンダリングせず、`currentIndex` で 1 問ずつ描画する（§8.5 のフローと整合）。`/review` の `ReviewRunner`（§9.2）も同じ `QuestionCard` を 1 問ずつ回す構成にする。
 - `/review` の初回は **Server loader で GET**（due queue）→ props 渡し（§9.2 参照）。
 
-#### 復習（将来の `cacheComponents` 対象）
+#### 復習（PPR streaming 対象）
 
-`/review` は、現行の `cacheComponents` 未有効時には Server loader が初回 VM を待って `ReviewRunner` に props 渡しし、初回ローディング表示を出さない。将来 `cacheComponents` を有効化する場合でも、queue 取得そのものをキャッシュしない。静的シェルに `<Suspense fallback={<ReviewQueueFallback />}>` の fallback を表示し、ユーザー固有の async Server Component が queue 完了後に `ReviewRunner` をストリーミングする。解答後は `router.refresh()` で最新 queue を Server loader から再取得する。`'use cache'`・`cacheLife`・`cacheTag`・`revalidateTag` は使わない。
+`/review` は queue 取得そのものをキャッシュしない。静的シェルに `<Suspense fallback={<ReviewQueueFallback />}>` の fallback を表示し、ユーザー固有の async Server Component が queue 完了後に `ReviewRunner` をストリーミングする。解答後は `router.refresh()` で最新 queue を Server loader から再取得する。`'use cache'`・`cacheLife`・`cacheTag`・`revalidateTag` は使わない。
 
 ```typescript
 // app/review/page.tsx
@@ -863,7 +863,7 @@ import { ReviewRunner } from '@/features/review/client/components/review-runner'
 import { loadReview } from '@/features/review/server/load-review';
 
 async function ReviewUserContent() {
-  // cacheComponents 有効時のみ Suspense 内で実行する。user_id は API 側で注入され、web の共有キャッシュキーには存在しない。
+  // Suspense 内でのみ実行する。user_id は API 側で注入され、web の共有キャッシュキーには存在しない。
   const viewModel = await loadReview();
   return <ReviewRunner viewModel={viewModel} />;
 }
@@ -913,7 +913,7 @@ export default function Error({ error }: { error: Error }) {
 
 #### Client（演習・復習系）
 
-現行の `cacheComponents` 未有効時は、初回データを Server loader で VM 化してから描画するため（§9.2・§9.4 参照）、**初回にローディング表示は出ない**。将来 `cacheComponents` を有効化した `/review` では、静的シェルに `ReviewQueueFallback` を表示し、queue 完了後に `ReviewRunner` をストリーミングする。Client 側で扱うのは以下の 2 つ：
+`/review` は静的シェルに `ReviewQueueFallback` を表示し、queue 完了後に `ReviewRunner` をストリーミングする（§9.2・§9.4 参照）。Client 側で扱うのは以下の 2 つ：
 
 - **初回データ形成の失敗**：content 未検出・検証失敗、または `/review` の初回 queue 取得失敗 → ルートの `error.tsx` で捕捉（Server 系と同じ経路）。
 - **mutation の失敗/待機**：hook が返す `error`・`submitting` を component で出し分ける。`router.refresh()` による再取得中の表示が必要なら、component の `isRefreshing` または route の `loading.tsx` で扱う。
@@ -1469,11 +1469,31 @@ content は「web のビルド時バンドル（§8.2）」と「D1 の `questio
 - **バックアップ**：教材・問題は Git にあるため、守る対象は D1 の動的データ（`answer_logs` / `srs_states` / `lesson_views`）のみ。当面は必要時に `wrangler d1 export` を手動実行し、マルチユーザー公開時に定期化（Cron 等）を検討する。
 - **観測**：Workers Logs（`console.error`。§10.6 の `onError` から出力）で足りるとする。構造化ログ・外部監視は公開時に再検討。
 
-### 12.8 `cacheComponents` 有効化の前提条件
+### 12.8 `cacheComponents` の適用条件と検証結果
 
-`@opennextjs/cloudflare` には未解決の upstream issue がある。
+`cacheComponents` は NextConfig のアプリケーション全体に効く top-level switch である。PPR streaming の対象を `/`・`/review` に限定しても、**全 App Router route が Cache Components の build ルールを満たす必要がある**。有効化にあたって実際に必要だった対応は次のとおり（issue #93 の技術スパイクで確認）。
 
-- [#1130](https://github.com/opennextjs/opennextjs-cloudflare/issues/1130)：`cacheComponents` 有効時の production-only `SyntaxError`／クラッシュと Suspense 描画失敗。
-- [#1225](https://github.com/opennextjs/opennextjs-cloudflare/issues/1225)：Suspense streaming が完了せず `Connection closed` になる問題。
+- `export const dynamic` / `export const dynamicParams` は併用不可。page-level の route segment config を置かない。
+- 動的セグメントを持つ content route（`/learn/...`・`/quiz/...`）は `generateStaticParams` で全 params を列挙し、page 本体に `'use cache'` を置く。両方が無いと `Uncached data was accessed outside of <Suspense>` で prerender が停止する。
+- 現在時刻（`Date.now()` / `new Date()`）は uncached data を読んだ後にしか参照できない。`loadReview` は既定引数での先行評価をやめ、queue 取得後に解決する。
+- `getCloudflareContext()` は prerender 中に解決できない。ユーザー固有 loader の先頭で `connection()` を呼び、リクエスト時実行を宣言する。
+- Client hook が render 時に API クライアントを生成すると prerender でも評価され、`NEXT_PUBLIC_API_BASE_URL` 不在で throw する。生成は初回送信まで遅延させる。
 
-このため、上記が解決され、採用対象バージョンで preview / production 相当の環境における RSC flight、hydration、`<Suspense>` streaming の検証がすべて成功するまで、production・preview では `cacheComponents` を有効化しない。現行 CI は `next build` のみであり、OpenNext preview のストリーミングを検知できない。この検証を追加するまで、ビルド成功だけを有効化の根拠にしてはならない。
+#### 検証結果（2026-07-28・issue #93）
+
+`@opennextjs/cloudflare` の以下の upstream issue は、**本リポジトリの構成では再現しなかった**。
+
+- `opennextjs/opennextjs-cloudflare#1130`：`cacheComponents` 有効時の production-only `SyntaxError`／クラッシュと Suspense 描画失敗。
+- `opennextjs/opennextjs-cloudflare#1225`：Suspense streaming が完了せず `Connection closed` になる問題。
+
+`opennextjs-cloudflare build` と `preview`（Service Binding 接続あり）で `/review` を検証し、次を確認した。
+
+- 静的シェルに fallback を含む HTML が返り、解決済みコンテンツが `<div hidden id="S:n">` として後続で届き、`$RC()` で差し替わる（PPR streaming が成立）。
+- ブラウザで hydration が完了し、console エラーなし。intro → 出題 → 採点 → 解説まで操作できる。
+- 解答して SRS 状態が更新された後に `/review` を再取得すると動的領域が `0 due` へ変わる。**動的領域はリクエストごとに再実行され、ユーザー固有データが共有キャッシュに乗らない。**
+- `next build` は API 未設定でも通り、build 時に API を呼ばない。
+- 検証したバージョン組は `next@16.2.9` + `@opennextjs/cloudflare@1.19.11`（採用）と `next@16.2.12` + `@opennextjs/cloudflare@1.20.2`（比較）。どちらも同じ PPR 構造を出力した。ブラウザ検証は採用側でのみ実施した。
+
+#### 残る制約
+
+現行 CI は `next build` のみであり、OpenNext preview のストリーミングを検知できない。**ビルド成功だけを回帰の根拠にしてはならない。** PPR の描画・streaming に関わる変更では、`opennextjs-cloudflare preview` での手動確認を併せて行う。上記 upstream issue は未 close のため、OpenNext / Next を更新した際は再確認する。
