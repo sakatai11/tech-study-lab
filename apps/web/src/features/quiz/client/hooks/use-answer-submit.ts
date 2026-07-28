@@ -1,48 +1,48 @@
 'use client'
 
 import type { AnswerRequest } from '@tsl/shared'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 
-import { createBrowserApiClient } from '@/lib/api'
+import { type ApiClient, createBrowserApiClient } from '@/lib/api'
 
 import { submitAnswer as postAnswer } from '../../api/quiz-api'
 import type { SubmittedAnswer } from '../../view-model'
 
 export function useAnswerSubmit() {
-  const client = useMemo(() => createBrowserApiClient(), [])
+  // クライアントの生成は最初の送信まで遅らせる。render 時に作ると SSR・prerender でも
+  // 評価され、ブラウザ専用の設定（NEXT_PUBLIC_API_BASE_URL）が無い経路で throw する。
+  const clientRef = useRef<ApiClient>(undefined)
   const [error, setError] = useState<string>()
   const [results, setResults] = useState<Record<string, SubmittedAnswer>>({})
   const [submitting, setSubmitting] = useState(false)
   const submittingRef = useRef(false)
 
-  const submitAnswer = useCallback(
-    async (input: AnswerRequest) => {
-      if (submittingRef.current) {
-        return
-      }
+  const submitAnswer = useCallback(async (input: AnswerRequest) => {
+    if (submittingRef.current) {
+      return
+    }
 
-      submittingRef.current = true
-      setSubmitting(true)
-      setError(undefined)
+    submittingRef.current = true
+    setSubmitting(true)
+    setError(undefined)
 
-      try {
-        const response = await postAnswer(client, input)
-        setResults((currentResults) => ({
-          ...currentResults,
-          [input.questionId]: {
-            ...response,
-            selectedIndex: input.selectedIndex,
-          },
-        }))
-      } catch (caughtError) {
-        setError(caughtError instanceof Error ? caughtError.message : '解答の送信に失敗しました。')
-      } finally {
-        submittingRef.current = false
-        setSubmitting(false)
-      }
-    },
-    [client],
-  )
+    try {
+      clientRef.current ??= createBrowserApiClient()
+      const response = await postAnswer(clientRef.current, input)
+      setResults((currentResults) => ({
+        ...currentResults,
+        [input.questionId]: {
+          ...response,
+          selectedIndex: input.selectedIndex,
+        },
+      }))
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : '解答の送信に失敗しました。')
+    } finally {
+      submittingRef.current = false
+      setSubmitting(false)
+    }
+  }, [])
 
   const resetAnswers = useCallback(() => {
     setError(undefined)

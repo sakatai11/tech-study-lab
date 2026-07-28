@@ -6,6 +6,8 @@ import type { NextConfig } from 'next'
 // package-lock.json を誤検知するのを防ぐ
 // path.resolve で正規化しないと Turbopack がパスを誤計算する
 const nextConfig: NextConfig = {
+  // Cache Components はアプリ全体に効く top-level switch（design.md 7.2）
+  cacheComponents: true,
   turbopack: {
     root: path.resolve(import.meta.dirname, '../..'),
   },
