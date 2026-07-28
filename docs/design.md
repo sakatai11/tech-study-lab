@@ -503,7 +503,8 @@ import 'server-only';
 import { connection } from 'next/server';
 import { cache } from 'react';
 
-export async function loadReview(now?: number): Promise<ReviewViewModel> {
+// export しない。畳み込み前の loader を外から選べると、取り違えても型で気づけない
+async function loadReview(now?: number): Promise<ReviewViewModel> {
   // Cache Components 下ではリクエスト時実行を宣言してからでないと、Cloudflare context の解決も
   // 現在時刻の読み取りもできない。Date.now() を既定引数で先に評価しないこと。
   await connection();
@@ -512,7 +513,8 @@ export async function loadReview(now?: number): Promise<ReviewViewModel> {
   return reviewQueueToViewModel(dto, getBundledQuestions(), now ?? Date.now());  // join はサーバー側のみ
 }
 
-// due バッジと本文が別々の <Suspense> 境界から同じ queue を読むため、リクエスト内で1回に畳む。
+// この feature の唯一の loader 入口。due バッジと本文が別々の <Suspense> 境界から
+// 同じ queue を読むため、リクエスト内で1回に畳む（畳まないと件数と中身が食い違いうる）。
 // React の cache() はリクエストスコープであり、user_id を含められない共有キャッシュではない。
 export const loadReviewOnce = cache((): Promise<ReviewViewModel> => loadReview());
 
