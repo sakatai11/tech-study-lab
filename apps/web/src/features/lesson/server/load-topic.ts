@@ -18,7 +18,7 @@ export function loadTopic(domain: string, topic: string): TopicViewModel | undef
   return topicContentToViewModel(topicContent, getLessonsByTopic(domain, topic), domainResult.data)
 }
 
-/** Route params for `generateStaticParams`. page から lib/content を直接読まないための委譲。 */
+/** `generateStaticParams` に渡す route params。page から lib/content を直接読まないための委譲。 */
 export function listTopicRouteParams() {
   return getTopicRouteParams()
 }

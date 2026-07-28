@@ -19,7 +19,7 @@ export function loadLesson(
   return lessonContentToViewModel(content)
 }
 
-/** Route params for `generateStaticParams`. page から lib/content を直接読まないための委譲。 */
+/** `generateStaticParams` に渡す route params。page から lib/content を直接読まないための委譲。 */
 export function listLessonRouteParams() {
   return getLessonRouteParams()
 }

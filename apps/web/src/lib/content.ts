@@ -11,19 +11,19 @@ const questionsById = new Map(
   bundledContent.questions.map((question) => [question.id, question] as const),
 )
 
-/** Returns Markdown and validated frontmatter for a lesson, or undefined when it is not bundled. */
+/** lesson の Markdown と検証済み frontmatter を返す。bundle されていなければ undefined。 */
 export function getLessonContent(lessonId: string): BundledLesson | undefined {
   return lessonsById.get(lessonId)
 }
 
-/** Returns a topic's lessons in their stable lessonId order. */
+/** topic 配下の lesson を、安定した lessonId 順で返す。 */
 export function getLessonsByTopic(domain: string, topic: string): BundledLesson[] {
   return bundledContent.lessons.filter(
     (lesson) => lesson.domain === domain && lesson.topic === topic,
   )
 }
 
-/** Returns the shared questionId index used by quiz and review loaders. */
+/** quiz と review の loader が共有する questionId index を返す。 */
 export function getBundledQuestions(): ReadonlyMap<string, McqQuestion> {
   return questionsById
 }
@@ -32,16 +32,16 @@ export function getQuestionById(questionId: string): McqQuestion | undefined {
   return questionsById.get(questionId)
 }
 
-/** Returns a topic index and its overview Markdown, or undefined when it is not bundled. */
+/** topic の index と概要 Markdown を返す。bundle されていなければ undefined。 */
 export function getTopicContent(domain: string, topic: string): BundledTopic | undefined {
   const relativePath = `${domain}/${topic}/index.md`
   return bundledContent.topics.find((candidate) => candidate.relativePath === relativePath)
 }
 
 /**
- * Route params for `generateStaticParams`. Cache Components requires every dynamic
- * segment to be enumerable at build time so the content routes stay fully prerendered
- * instead of falling back to a request-time shell (design.md 8.2).
+ * `generateStaticParams` に渡す route params。
+ * Cache Components では動的セグメントを build 時に列挙できないと、content 由来の route が
+ * prerender されずリクエスト時のシェルに落ちるため、全件を返す（design.md 8.2）。
  */
 export function getLessonRouteParams(): {
   domain: string
@@ -56,9 +56,9 @@ export function getLessonRouteParams(): {
 }
 
 /**
- * Route params for `/learn/[domain]/[topic]`.
- * Derived from the topic index files, not from lessons: a topic is bundled as soon as it has an
- * `index.md`, so deriving from lessons would drop topics whose lessons are not written yet.
+ * `/learn/[domain]/[topic]` の route params。
+ * lesson ではなく topic の index を一次データにする。topic は `index.md` があれば bundle される
+ * ため、lesson から導出すると lesson 未執筆の topic を取りこぼす。
  */
 export function topicRouteParamsFrom(
   topics: readonly BundledTopic[],
@@ -74,7 +74,7 @@ export function getTopicRouteParams(): { domain: string; topic: string }[] {
   return topicRouteParamsFrom(bundledContent.topics)
 }
 
-/** Route params for `/quiz/[lesson]`. */
+/** `/quiz/[lesson]` の route params。 */
 export function getQuizRouteParams(): { lesson: string }[] {
   return bundledContent.lessons.map((lesson) => ({ lesson: lesson.lessonId }))
 }

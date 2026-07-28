@@ -19,7 +19,7 @@ export function loadQuiz(lessonId: string): QuizViewModel | undefined {
   return quizContentToViewModel(content, nextLessonId)
 }
 
-/** Route params for `generateStaticParams`. page から lib/content を直接読まないための委譲。 */
+/** `generateStaticParams` に渡す route params。page から lib/content を直接読まないための委譲。 */
 export function listQuizRouteParams() {
   return getQuizRouteParams()
 }
