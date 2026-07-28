@@ -569,40 +569,27 @@ export function useAnswerSubmit() {
 'use client';
 export function ReviewRunner({ viewModel }: Props) {
   const router = useRouter();
-  const { results, error, submitting, submitAnswer, resetAnswers } = useAnswerSubmit();
-
-  const handleAllAnswered = () => {
-    resetAnswers();
-    router.refresh();  // Server loader を再実行し、次の due queue を VM ごと props で受け直す
-  };
-
-  if (error) {
-    return (
-      <ErrorDisplay
-        error={error}
-        retry={() => {
-          resetAnswers();
-          router.refresh();
-        }}
-      />
-    );
-  }
   return (
-    <QuizRenderer
-      viewModel={viewModel}       // props をそのまま描画に使う。state に複製しない
-      results={results}
-      submitting={submitting}
-      onAnswer={submitAnswer}
-      onAttemptStart={resetAnswers}
-      onWrongOnlyStart={resetAnswers}
-      onComplete={handleAllAnswered}
+    <QuizInteractive
+      key={viewModel.batchKey}
+      explanations={viewModel.explanations}
+      hasMore={viewModel.hasMore}
+      introContent={<ReviewIntro dueCount={viewModel.dueCount} previews={viewModel.previews} />}
+      introStartLabel="復習を開始 →"
+      onComplete={() => {
+        if (viewModel.hasMore) router.refresh();
+      }}
+      questions={viewModel.questions}
+      resultHomeHref={viewModel.resultHomeHref}
+      resultHomeLabel={viewModel.resultHomeLabel}
+      title={viewModel.title}
     />
   );
 }
 ```
 
 - **初回＝Server loader で VM 化し、page は feature component への props 渡しのみ**。`/quiz` は content のみ、`/review` は API queue + content join。現行の `cacheComponents` 未有効時の `/review` は Server loader が初回 VM を待って `ReviewRunner` に props 渡しするため、`ReviewQueueFallback` を描画しない。静的シェルと Suspense fallback を導入するのは、将来 `cacheComponents` を有効化する `/review` のみである。その将来構成では静的 `ReviewPageShell` の内部に `<Suspense fallback={<ReviewQueueFallback />}>` で囲んだ `ReviewUserContent` を置き、fallback を表示してから queue 完了後に `ReviewRunner` をストリーミングする。後者はユーザー固有の queue を読むため非キャッシュとし、loader は両構成で同じ mapper を通すため、整形ロジックは一本のまま（§9.1 の原則）。
-- **VM はクライアント state に複製しない**。`ReviewRunner` は Review VM を Quiz 表示コンポーネントの props へ変換して渡す。`useAnswerSubmit` hook が解答結果（`results`）・`submitting`・送信エラーを保持し、Client Component は画面フェーズ・現在問題などの表示操作 state だけを保持する。due queue の再取得は `router.refresh()` による Server Component 再実行に一本化し、content との join を常にサーバー側に閉じ込める。`router.refresh()` は Server Component が提供する Review VM を置き換える。`ReviewRunner` は `QuizInteractive` に `key={viewModel.batchKey}` を渡すため、`batchKey` が変わると React は `QuizInteractive` を再マウントし、`phase`・`currentIndex`・`wrongOnly` 選択・解答結果／エラーなどのバッチ固有の操作 state を新バッチの intro へリセットする。`batchKey` が変わらなければ interactive subtree は維持され、この key によって外側の Server shell や無関係な Client state は再マウントされない。
+- **VM はクライアント state に複製しない**。`ReviewRunner` は `useRouter()` のみを所有し、Review VM を `QuizInteractive` の props へ変換して渡す。`QuizInteractive` が `useAnswerSubmit`、解答結果（`results`）・`submitting`・送信エラー、`phase`・`currentIndex`・`wrongOnly` 選択などのバッチ固有の操作 state をまとめて所有する。due queue の再取得は `router.refresh()` による Server Component 再実行に一本化し、content との join を常にサーバー側に閉じ込める。`router.refresh()` は Server Component が提供する Review VM を置き換える。`ReviewRunner` は `QuizInteractive` に `key={viewModel.batchKey}` を渡すため、`batchKey` が変わると React は `QuizInteractive` を再マウントし、これらの状態を新バッチの intro へリセットする。`batchKey` が変わらなければ interactive subtree は維持され、この key によって外側の Server shell や無関係な Client state は再マウントされない。
 - **RPC 呼び出しは `apps/web/src/features/*/api` の endpoint アダプター経由**。Server loader と Client hook は同じアダプターへ実行環境に合った `ApiClient` を渡す。HTTP レスポンス処理は `requestJson` に寄せ、feature 側では重複させない。
 - **初回ローディング表示の条件**：現行の `cacheComponents` 未有効時は初回 VM を Server loader で待つため不要である。将来 `cacheComponents` を有効化した `/review` では、静的シェルに `ReviewQueueFallback` を表示し、queue 完了後に `ReviewRunner` をストリーミングする。`router.refresh()` 中の待機表示が必要なら `loading.tsx` かローカルな `isRefreshing` フラグで扱う。
 - **将来：**TanStack Query 等へ置き換える際、mapper・ViewModel 型・page は変わらず、hook（`useAnswerSubmit` 相当）内部だけ差し替わる（契約保証）。
@@ -923,22 +910,22 @@ export default function Error({ error }: { error: Error }) {
 'use client';
 export function ReviewRunner({ viewModel }: Props) {
   const router = useRouter();
-  const { results, error, submitAnswer, resetAnswers } = useAnswerSubmit();
-
-  // 初回は props で描画済み。ここで扱うのは解答送信エラーのみ
-  if (error) {
-    return (
-      <ErrorDisplay
-        error={error}
-        retry={() => {
-          resetAnswers();
-          router.refresh();
-        }}
-      />
-    );
-  }
-
-  return <QuizRenderer viewModel={viewModel} results={results} onAnswer={submitAnswer} />;  // 初回からスピナーなしで描画
+  return (
+    <QuizInteractive
+      key={viewModel.batchKey}
+      explanations={viewModel.explanations}
+      hasMore={viewModel.hasMore}
+      introContent={<ReviewIntro dueCount={viewModel.dueCount} previews={viewModel.previews} />}
+      introStartLabel="復習を開始 →"
+      onComplete={() => {
+        if (viewModel.hasMore) router.refresh();
+      }}
+      questions={viewModel.questions}
+      resultHomeHref={viewModel.resultHomeHref}
+      resultHomeLabel={viewModel.resultHomeLabel}
+      title={viewModel.title}
+    />
+  );
 }
 ```
 
