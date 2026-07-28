@@ -1066,19 +1066,26 @@ export async function loadReview(): Promise&lt;ReviewViewModel&gt; {
           data-code-title="apps/web/src/app/review/page.tsx"
         ><code class="language-tsx">// apps/web/src/app/review/page.tsx — 静的シェルと動的領域の分離
 import { Suspense } from 'react';
-import { ReviewRunner } from '@/features/review/client/components/review-runner';
-import { ReviewPageShell, ReviewQueueFallback } from '@/features/review/server/components';
-import { loadReview } from '@/features/review/server/load-review';
+import { ReviewDueBadge } from '@/features/review/server/components/review-due-badge';
+import { ReviewPageShell } from '@/features/review/server/components/review-page-shell';
+import {
+  ReviewDueBadgeFallback,
+  ReviewQueueFallback,
+} from '@/features/review/server/components/review-queue-fallback';
+import { ReviewUserContent } from '@/features/review/server/components/review-user-content';
 
-async function ReviewUserContent() {
-  // Suspense 内でのみ実行する。user_id は API 側で注入され、web の共有キャッシュキーには存在しない。
-  const viewModel = await loadReview(); // 'use cache' は使わない
-  return &lt;ReviewRunner viewModel={viewModel} /&gt;;
-}
-
+// route segment config（dynamic / dynamicParams）は Cache Components と併用不可。
+// ReviewUserContent と ReviewDueBadge は loadReviewOnce() 経由でユーザー固有 queue を読む
+// （React の cache() によるリクエストスコープの畳み込み。'use cache' は使わない）。
 export default function ReviewPage() {
   return (
-    &lt;ReviewPageShell&gt;
+    &lt;ReviewPageShell
+      dueBadge={
+        &lt;Suspense fallback={&lt;ReviewDueBadgeFallback /&gt;}&gt;
+          &lt;ReviewDueBadge /&gt;
+        &lt;/Suspense&gt;
+      }
+    &gt;
       &lt;Suspense fallback={&lt;ReviewQueueFallback /&gt;}&gt;
         &lt;ReviewUserContent /&gt;
       &lt;/Suspense&gt;

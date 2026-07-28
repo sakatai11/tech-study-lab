@@ -1,3 +1,4 @@
+import type { BundledTopic } from '@tsl/shared'
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -9,6 +10,7 @@ import {
   getQuizRouteParams,
   getTopicContent,
   getTopicRouteParams,
+  topicRouteParamsFrom,
 } from './content'
 
 describe('content query API', () => {
@@ -58,12 +60,41 @@ describe('route params for generateStaticParams', () => {
     })
   })
 
-  it('deduplicates topics that share several lessons', () => {
+  it('lists every bundled topic for /learn/[domain]/[topic]', () => {
     const params = getTopicRouteParams()
     const keys = params.map(({ domain, topic }) => `${domain}/${topic}`)
 
     expect(keys).toContain('security/xss')
     expect(new Set(keys).size).toBe(keys.length)
+    // 列挙した params がすべて実在する topic に解決できる（prerender が 404 を焼かない）
+    for (const { domain, topic } of params) {
+      expect(getTopicContent(domain, topic)).toBeDefined()
+    }
+  })
+
+  it('keeps a topic whose lessons are not written yet', () => {
+    // topic は index.md があれば bundle される。lesson から導出すると取りこぼす。
+    const topics: BundledTopic[] = [
+      {
+        topic: 'xss',
+        title: 'XSS',
+        order: 0,
+        relativePath: 'security/xss/index.md',
+        body: '',
+      },
+      {
+        topic: 'csrf',
+        title: 'CSRF',
+        order: 1,
+        relativePath: 'security/csrf/index.md',
+        body: '',
+      },
+    ]
+
+    expect(topicRouteParamsFrom(topics)).toEqual([
+      { domain: 'security', topic: 'xss' },
+      { domain: 'security', topic: 'csrf' },
+    ])
   })
 
   it('enumerates every bundled lesson for /quiz/[lesson]', () => {

@@ -55,15 +55,23 @@ export function getLessonRouteParams(): {
   }))
 }
 
-/** Route params for `/learn/[domain]/[topic]`, deduplicated across a topic's lessons. */
+/**
+ * Route params for `/learn/[domain]/[topic]`.
+ * Derived from the topic index files, not from lessons: a topic is bundled as soon as it has an
+ * `index.md`, so deriving from lessons would drop topics whose lessons are not written yet.
+ */
+export function topicRouteParamsFrom(
+  topics: readonly BundledTopic[],
+): { domain: string; topic: string }[] {
+  return topics.flatMap((entry) => {
+    const [domain] = entry.relativePath.split('/')
+
+    return domain ? [{ domain, topic: entry.topic }] : []
+  })
+}
+
 export function getTopicRouteParams(): { domain: string; topic: string }[] {
-  const seen = new Map<string, { domain: string; topic: string }>()
-
-  for (const { domain, topic } of bundledContent.lessons) {
-    seen.set(`${domain}/${topic}`, { domain, topic })
-  }
-
-  return [...seen.values()]
+  return topicRouteParamsFrom(bundledContent.topics)
 }
 
 /** Route params for `/quiz/[lesson]`. */

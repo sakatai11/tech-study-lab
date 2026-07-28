@@ -500,27 +500,49 @@ export async function fetchReviewQueue(client: ApiClient): Promise<ReviewQueueRe
 
 // features/review/server/load-review.ts
 import 'server-only';
+import { connection } from 'next/server';
+import { cache } from 'react';
 
-export async function loadReview(): Promise<ReviewViewModel> {
-  const dto = await fetchReviewQueue(createServerApiClient());
-  return reviewQueueDTOToViewModel(dto, getBundledQuestions());  // join はサーバー側のみ
+export async function loadReview(now?: number): Promise<ReviewViewModel> {
+  // Cache Components 下ではリクエスト時実行を宣言してからでないと、Cloudflare context の解決も
+  // 現在時刻の読み取りもできない。Date.now() を既定引数で先に評価しないこと。
+  await connection();
+
+  const dto = await fetchReviewQueue(await createServerApiClient());
+  return reviewQueueDTOToViewModel(dto, getBundledQuestions(), now ?? Date.now());  // join はサーバー側のみ
+}
+
+// due バッジと本文が別々の <Suspense> 境界から同じ queue を読むため、リクエスト内で1回に畳む。
+// React の cache() はリクエストスコープであり、user_id を含められない共有キャッシュではない。
+export const loadReviewOnce = cache((): Promise<ReviewViewModel> => loadReview());
+
+// features/review/server/components/review-user-content.tsx
+async function ReviewUserContent() {
+  // Suspense 内でのみ実行する。API が user_id を権威的に注入するため、ここには 'use cache' を置かない。
+  const viewModel = await loadReviewOnce();
+  return <ReviewRunner viewModel={viewModel} />;  // dueCount 0 のときは空キュー表示に分岐
 }
 
 // app/review/page.tsx（Server）— 静的シェルと動的領域の分離
 import { Suspense } from 'react';
-import { ReviewRunner } from '@/features/review/client/components/review-runner';
-import { ReviewPageShell, ReviewQueueFallback } from '@/features/review/server/components';
-import { loadReview } from '@/features/review/server/load-review';
+import { ReviewDueBadge } from '@/features/review/server/components/review-due-badge';
+import { ReviewPageShell } from '@/features/review/server/components/review-page-shell';
+import {
+  ReviewDueBadgeFallback,
+  ReviewQueueFallback,
+} from '@/features/review/server/components/review-queue-fallback';
+import { ReviewUserContent } from '@/features/review/server/components/review-user-content';
 
-async function ReviewUserContent() {
-  // Suspense 内でのみ実行する。API が user_id を権威的に注入するため、ここには 'use cache' を置かない。
-  const viewModel = await loadReview();
-  return <ReviewRunner viewModel={viewModel} />;
-}
-
+// route segment config（dynamic / dynamicParams）は Cache Components と併用不可
 export default function ReviewPage() {
   return (
-    <ReviewPageShell>
+    <ReviewPageShell
+      dueBadge={
+        <Suspense fallback={<ReviewDueBadgeFallback />}>
+          <ReviewDueBadge />
+        </Suspense>
+      }
+    >
       <Suspense fallback={<ReviewQueueFallback />}>
         <ReviewUserContent />
       </Suspense>
@@ -855,29 +877,13 @@ export function QuizInteractive({ viewModel }: Props) {
 
 `/review` は queue 取得そのものをキャッシュしない。静的シェルに `<Suspense fallback={<ReviewQueueFallback />}>` の fallback を表示し、ユーザー固有の async Server Component が queue 完了後に `ReviewRunner` をストリーミングする。解答後は `router.refresh()` で最新 queue を Server loader から再取得する。`'use cache'`・`cacheLife`・`cacheTag`・`revalidateTag` は使わない。
 
-```typescript
-// app/review/page.tsx
-import { Suspense } from 'react';
-import { ReviewPageShell, ReviewQueueFallback } from '@/features/review/server/components';
-import { ReviewRunner } from '@/features/review/client/components/review-runner';
-import { loadReview } from '@/features/review/server/load-review';
+構成の実コード例は §9.2 に一本化する（重複させると実装との同期漏れが起きるため）。要点は次の3つ。
 
-async function ReviewUserContent() {
-  // Suspense 内でのみ実行する。user_id は API 側で注入され、web の共有キャッシュキーには存在しない。
-  const viewModel = await loadReview();
-  return <ReviewRunner viewModel={viewModel} />;
-}
+- 静的シェル `ReviewPageShell` はユーザー固有データを受け取らない。due バッジは `dueBadge` slot に `<Suspense>` ごと渡す。
+- ユーザー固有データを読むのは `ReviewDueBadge` と `ReviewUserContent` だけで、どちらも `<Suspense>` の内側に置く。
+- 両者は `loadReviewOnce()`（React の `cache()` によるリクエストスコープの畳み込み）を通し、同一リクエストで queue を2回取得しない。
 
-export default function ReviewPage() {
-  return (
-    <ReviewPageShell>
-      <Suspense fallback={<ReviewQueueFallback />}>
-        <ReviewUserContent />
-      </Suspense>
-    </ReviewPageShell>
-  );
-}
-```
+`ReviewRunner` は `key={viewModel.batchKey}` で `QuizInteractive` を包む。`router.refresh()` で Server Component が新しい queue を返すと `batchKey` が変わり、React が interactive subtree を再マウントして解答結果・画面フェーズを次バッチの intro へリセットする。`batchKey` の導出は mapper の責務であり、回帰テストは `features/review/mapper.test.ts` に置く。
 
 ### 9.5 content / API 変更時の対応フロー
 
