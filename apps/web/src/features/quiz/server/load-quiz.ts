@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { getLessonContent, getLessonsByTopic } from '@/lib/content'
+import { getLessonContent, getLessonsByTopic, getQuizRouteParams } from '@/lib/content'
 
 import { quizContentToViewModel } from '../mapper'
 import type { QuizViewModel } from '../view-model'
@@ -17,4 +17,9 @@ export function loadQuiz(lessonId: string): QuizViewModel | undefined {
   const nextLessonId = currentIndex >= 0 ? lessons[currentIndex + 1]?.lessonId : undefined
 
   return quizContentToViewModel(content, nextLessonId)
+}
+
+/** Route params for `generateStaticParams`. page から lib/content を直接読まないための委譲。 */
+export function listQuizRouteParams() {
+  return getQuizRouteParams()
 }

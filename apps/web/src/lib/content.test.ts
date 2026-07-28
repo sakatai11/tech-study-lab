@@ -3,9 +3,12 @@ import { describe, expect, it } from 'vitest'
 import {
   getBundledQuestions,
   getLessonContent,
+  getLessonRouteParams,
   getLessonsByTopic,
   getQuestionById,
+  getQuizRouteParams,
   getTopicContent,
+  getTopicRouteParams,
 } from './content'
 
 describe('content query API', () => {
@@ -43,5 +46,33 @@ describe('content query API', () => {
 
   it('does not resolve content from another domain', () => {
     expect(getTopicContent('frontend', 'xss')).toBeUndefined()
+  })
+})
+
+describe('route params for generateStaticParams', () => {
+  it('enumerates every bundled lesson for /learn/[domain]/[topic]/[lesson]', () => {
+    expect(getLessonRouteParams()).toContainEqual({
+      domain: 'security',
+      topic: 'xss',
+      lesson: 'security-xss-01',
+    })
+  })
+
+  it('deduplicates topics that share several lessons', () => {
+    const params = getTopicRouteParams()
+    const keys = params.map(({ domain, topic }) => `${domain}/${topic}`)
+
+    expect(keys).toContain('security/xss')
+    expect(new Set(keys).size).toBe(keys.length)
+  })
+
+  it('enumerates every bundled lesson for /quiz/[lesson]', () => {
+    expect(getQuizRouteParams()).toContainEqual({ lesson: 'security-xss-01' })
+  })
+
+  it('keeps lesson and quiz params in sync', () => {
+    expect(getQuizRouteParams().map(({ lesson }) => lesson)).toEqual(
+      getLessonRouteParams().map(({ lesson }) => lesson),
+    )
   })
 })

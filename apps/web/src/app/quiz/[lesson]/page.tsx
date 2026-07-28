@@ -3,13 +3,21 @@ import { notFound } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard-shell'
 import { QuizInteractive } from '@/features/quiz/client/components/quiz-interactive'
 import { QuizHeader } from '@/features/quiz/server/components/quiz-header'
-import { loadQuiz } from '@/features/quiz/server/load-quiz'
+import { listQuizRouteParams, loadQuiz } from '@/features/quiz/server/load-quiz'
 
 type QuizPageProps = {
   params: Promise<{ lesson: string }>
 }
 
+// content 由来で API に依存しないため、Cache Components 有効時も全件を
+// ビルド時に prerender する（design.md 7.1・8.2）
+export function generateStaticParams() {
+  return listQuizRouteParams()
+}
+
 export default async function QuizPage({ params }: QuizPageProps) {
+  'use cache'
+
   const { lesson } = await params
   const viewModel = loadQuiz(lesson)
 
