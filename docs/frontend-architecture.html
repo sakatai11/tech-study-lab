@@ -1109,18 +1109,19 @@ export default function ReviewPage() {
         ><code class="language-ts">// apps/web/src/features/quiz/client/hooks/use-answer-submit.ts
 'use client';
 
+import type { AnswerRequest } from '@tsl/shared';
 import { useCallback, useRef, useState } from 'react';
 import { type ApiClient, createBrowserApiClient } from '@/lib/api';
 import { submitAnswer as postAnswer } from '../../api/quiz-api';
-import type { AnswerRequest, AnswerResponse } from '@tsl/shared';
+import type { SubmittedAnswer } from '../../view-model';
 
 // VM は保持しない。mutation と通信状態だけを扱う hook（Quiz / Review 共用）
 export function useAnswerSubmit() {
   // 生成は初回送信まで遅らせる。render 時に作ると SSR・prerender でも評価され、
   // ブラウザ専用の設定（NEXT_PUBLIC_API_BASE_URL）が無い経路で throw する。
   const clientRef = useRef&lt;ApiClient&gt;(undefined);
-  const [results, setResults] = useState&lt;Record&lt;string, AnswerResponse&gt;&gt;({});
-  const [error, setError] = useState&lt;Error | null&gt;(null);
+  const [error, setError] = useState&lt;string&gt;();  // 表示用の文言。Error は持ち回さない
+  const [results, setResults] = useState&lt;Record&lt;string, SubmittedAnswer&gt;&gt;({});
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
 
@@ -1129,13 +1130,18 @@ export function useAnswerSubmit() {
     if (submittingRef.current) return;
     submittingRef.current = true;
     setSubmitting(true);
-    setError(null);
+    setError(undefined);
     try {
       clientRef.current ??= createBrowserApiClient();
-      const result = await postAnswer(clientRef.current, input);
-      setResults((prev) =&gt; ({ ...prev, [input.questionId]: result }));
-    } catch (cause) {
-      setError(cause instanceof Error ? cause : new Error('Failed to submit answer'));
+      const response = await postAnswer(clientRef.current, input);
+      // API の採点結果に選択肢を足して SubmittedAnswer にする。選択肢のロックと
+      // 結果サマリが「どれを選んだか」を必要とするため。
+      setResults((prev) =&gt; ({
+        ...prev,
+        [input.questionId]: { ...response, selectedIndex: input.selectedIndex },
+      }));
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : '解答の送信に失敗しました。');
     } finally {
       submittingRef.current = false;
       setSubmitting(false);
@@ -1143,11 +1149,11 @@ export function useAnswerSubmit() {
   }, []);
 
   const resetAnswers = useCallback(() =&gt; {
+    setError(undefined);
     setResults({});
-    setError(null);
   }, []);
 
-  return { results, error, submitting, submitAnswer, resetAnswers };
+  return { error, resetAnswers, results, submitAnswer, submitting };
 }</code></pre>
 
         <pre

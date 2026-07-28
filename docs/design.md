@@ -552,15 +552,18 @@ export default function ReviewPage() {
 
 // features/quiz/client/hooks/use-answer-submit.ts（Client）— Quiz / Review 共用の hook。VM は保持しない。mutation のみ担当
 'use client';
-import type { AnswerRequest, AnswerResponse } from '@tsl/shared';
+import type { AnswerRequest } from '@tsl/shared';
+import { useCallback, useRef, useState } from 'react';
+import { type ApiClient, createBrowserApiClient } from '@/lib/api';
 import { submitAnswer as postAnswer } from '../../api/quiz-api';
+import type { SubmittedAnswer } from '../../view-model';
 
 export function useAnswerSubmit() {
   // 生成は初回送信まで遅らせる。render 時に作ると SSR・prerender でも評価され、
   // ブラウザ専用の設定（NEXT_PUBLIC_API_BASE_URL）が無い経路で throw する。
   const clientRef = useRef<ApiClient>(undefined);
-  const [results, setResults] = useState<Record<string, AnswerResponse>>({});
-  const [error, setError] = useState<Error | null>(null);
+  const [error, setError] = useState<string>();  // 表示用の文言。Error は持ち回さない
+  const [results, setResults] = useState<Record<string, SubmittedAnswer>>({});
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);  // 同一 tick の二重送信も同期的に防ぐ
 
@@ -569,13 +572,18 @@ export function useAnswerSubmit() {
     if (submittingRef.current) return;
     submittingRef.current = true;
     setSubmitting(true);
-    setError(null);
+    setError(undefined);
     try {
       clientRef.current ??= createBrowserApiClient();
-      const result = await postAnswer(clientRef.current, input);
-      setResults(prev => ({ ...prev, [input.questionId]: result }));
-    } catch (e) {
-      setError(e as Error);
+      const response = await postAnswer(clientRef.current, input);
+      // API の採点結果に選択肢を足して SubmittedAnswer にする。選択肢のロックと
+      // 結果サマリが「どれを選んだか」を必要とするため（§8.5・§9.4）。
+      setResults(prev => ({
+        ...prev,
+        [input.questionId]: { ...response, selectedIndex: input.selectedIndex },
+      }));
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : '解答の送信に失敗しました。');
     } finally {
       submittingRef.current = false;
       setSubmitting(false);
@@ -583,11 +591,11 @@ export function useAnswerSubmit() {
   }, []);
 
   const resetAnswers = useCallback(() => {
+    setError(undefined);
     setResults({});
-    setError(null);
   }, []);
 
-  return { results, error, submitting, submitAnswer, resetAnswers };
+  return { error, resetAnswers, results, submitAnswer, submitting };
 }
 
 // features/review/client/components/review-runner.tsx（Client）
