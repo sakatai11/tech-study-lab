@@ -8,8 +8,8 @@ export function ReviewQueueFallback() {
   return (
     <Card aria-busy="true" className="p-5 sm:p-7">
       <p className="m-0 font-mono text-xs font-bold text-ink-2">queue: loading...</p>
-      <div className="mt-4 h-7 w-2/3 animate-pulse rounded-lg bg-well" />
-      <div className="mt-3 h-5 w-1/2 animate-pulse rounded-lg bg-well" />
+      <div className="mt-4 h-7 w-2/3 rounded-lg bg-well motion-safe:animate-pulse" />
+      <div className="mt-3 h-5 w-1/2 rounded-lg bg-well motion-safe:animate-pulse" />
     </Card>
   )
 }
