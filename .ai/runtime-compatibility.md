@@ -44,7 +44,7 @@
 
 - 通常の実装・レビュー・調査・教材執筆・テスト修正には `gpt-5.6-terra` を使う。`developer` と `reviewer` は `high`、その他は `medium` の reasoning effort を使う。
 - `codex-reviewer` / `claude-reviewer` エージェント自身（レビュー結果の正規化と `docs/design.md` 該当章の照合を担当）には `gpt-5.6-luna` と `medium` reasoning effort を使う。
-- 難易度が高い実装またはセキュリティレビューに限り、該当TOMLの `model` を一時的に `gpt-5.6`、`model_reasoning_effort` を `high` に変更する。作業後は標準設定へ戻す。
+- 難易度が高い実装またはセキュリティレビューに限り、該当TOMLの `model` を一時的に `gpt-5.6-sol`、`model_reasoning_effort` を `high` に変更する。作業後は標準設定へ戻す。素の `gpt-5.6` は ChatGPT アカウント認証では使えないため指定しない。
 
 ## 別モデルCLIレビューのモデル方針
 
@@ -52,10 +52,12 @@
 
 | ホストランタイム | 使うエージェント | 実行コマンド | モデル指定 |
 |---|---|---|---|
-| Claude Code | `codex-reviewer` | `codex exec review --base <base>` | `-m gpt-5.6` |
+| Claude Code | `codex-reviewer` | `codex exec review --base <base> -c sandbox_mode="read-only"` | `-m gpt-5.6-sol` |
 | Codex（App / CLI） | `claude-reviewer` | `git diff <base>...HEAD \| claude -p ...` | `--model opus` |
 
 - モデルは必ず `-m` / `--model` で明示指定する。既定モデルに委ねてはならない。
+- **ChatGPT アカウントで認証した Codex CLI では、素の `gpt-5.6` は使えない**（`The 'gpt-5.6' model is not supported when using Codex with a ChatGPT account.` で 400 になる）。`gpt-5.6-sol` / `gpt-5.6-terra` / `gpt-5.6-luna` のバリアントを指定する。
+- `codex exec review` の既定 Sandbox は `workspace-write` である。レビューを読み取り専用に保つため `-c sandbox_mode="read-only"` を必ず付ける（`-s` / `--sandbox` は `review` サブコマンドでは使えない）。
 - どちらの経路でも、ホストの `reviewer` とは提供元が異なるモデルが差分を読むため、モデルの独立性は完全である。
 - レビュー観点の分担は `reviewer` が正確性優先、別モデルレビュアーが仕様準拠（`AGENTS.md`「レビュー規約」と `docs/design.md`）優先である。モデルを変えるだけでなくこの観点差でも補完させる。
 - サブエージェント機能がない環境では、オーケストレーター自身が該当エージェント定義を全文読み、同じ制約でCLIを実行する。

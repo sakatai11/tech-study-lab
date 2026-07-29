@@ -95,7 +95,14 @@ check_absent_contract() {
 }
 
 printf '%s\n' "Checking agent contract consistency..."
-check_agent_contract "sandbox auth visibility" 'Sandbox 内で `signed out` の場合' .ai/agents/codex-reviewer.md
+# 未認証の文言は CLI ごとに異なる（codex は `Not logged in` + 終了コード1）。
+# 文言の一致ではなく「認証済みと確認できたか」で判定する契約を固定する。
+check_agent_contract "sandbox auth visibility" 'Sandbox 内で未認証と判定された場合は、同じ `codex login status` だけを正規の承認・権限昇格経路で再実行する' .ai/agents/codex-reviewer.md
+check_agent_contract "codex auth not literal match" '未認証の判定を特定の文言の一致に依存しない' .ai/agents/codex-reviewer.md
+check_agent_contract "claude auth not literal match" '未認証の判定を特定の文言の一致に依存しない' .ai/agents/claude-reviewer.md
+check_agent_contract "codex auth exit code counts" '終了コードが非ゼロ、または出力が認証済みを示さない場合は、すべて未認証として扱う' .ai/agents/codex-reviewer.md
+legacy_signed_out=$(printf '%s%s' 'Sandbox 内で `signed ' 'out` の場合')
+check_absent_contract "legacy coderabbit signed-out wording" "$legacy_signed_out" .ai/agents/codex-reviewer.md
 check_agent_contract "codex reviewer runs in phase 5" 'issue-dev-orchestrate のフェーズ5でCLI方式が選ばれ、かつホストランタイムが Claude Code の時だけ' .ai/agents/codex-reviewer.md
 check_agent_contract "claude reviewer runs in phase 5" 'issue-dev-orchestrate のフェーズ5でCLI方式が選ばれ、かつホストランタイムが Codex の時だけ' .ai/agents/claude-reviewer.md
 legacy_codex_phase=$(printf '%s%s' 'issue-dev-orchestrate のフェーズ' '4でCLI方式が選ばれた時だけ')
@@ -104,6 +111,13 @@ check_agent_contract "reviewer runs in phase 5" 'issue-dev-orchestrate のフェ
 check_agent_contract "test fixer runs in phases 4 and 6" 'issue-dev-orchestrate のフェーズ4・6（品質ゲート）で使用する' .ai/agents/test-fixer.md
 check_agent_contract "escalated auth/network retry" '正規の権限昇格経路で再確認してください' .codex/agents/codex-reviewer.toml
 check_agent_contract "claude reviewer escalated retry" '正規の権限昇格経路で再確認してください' .codex/agents/claude-reviewer.toml
+# TOML が参照する節名が runtime-compatibility.md に実在することを固定する（節名変更時の参照切れ防止）。
+model_policy_section='別モデルCLIレビューのモデル方針'
+check_agent_contract "model policy section exists" "## $model_policy_section" .ai/runtime-compatibility.md
+check_agent_contract "codex toml points at live section" "$model_policy_section" .codex/agents/codex-reviewer.toml
+check_agent_contract "claude toml points at live section" "$model_policy_section" .codex/agents/claude-reviewer.toml
+check_agent_contract "codex toml pins model variant" '`-m gpt-5.6-sol`' .codex/agents/codex-reviewer.toml
+check_agent_contract "codex toml pins read-only sandbox" 'sandbox_mode="read-only"' .codex/agents/codex-reviewer.toml
 check_agent_contract "communication is not authentication" '通信失敗を未認証と報告しない' .ai/runtime-compatibility.md
 check_agent_contract "auth-required after outside check" '`auth-required`（Sandbox 外でも未認証と確認された状態）' .ai/skills/issue-dev-orchestrate/SKILL.md
 review_mode_section=$(extract_section .ai/skills/issue-dev-orchestrate/SKILL.md '4. **レビュー方式を選択する**' '## エージェント起動の共通ルール')
@@ -119,6 +133,10 @@ claude_agent_egress_gate=$(awk '/^1\. \*\*方式と外部送信同意の確認\*
 check_section_contract "review mode selection" "$review_mode_section" '別モデルCLI（推奨）'
 check_section_contract "cli selection records mode" "$review_mode_section" 'reviewMode: cross-model-cli'
 check_section_contract "cli selection records agent" "$review_mode_section" 'reviewerAgent: <codex-reviewer|claude-reviewer>'
+# 両CLIともリポジトリ読み取り権限を持つ。同意は差分だけを対象にしてはならない。
+check_section_contract "consent covers more than the diff" "$review_mode_section" '送信対象はコミット済み差分だけではない'
+check_section_contract "consent covers repository reads" "$review_mode_section" '差分に現れないファイルも送信されうる'
+check_section_contract "consent covers brief context" "$review_mode_section" 'ブリーフに含める実装方針の要約・受け入れ条件・issue の内容'
 check_section_contract "cli selection maps host to agent" "$review_mode_section" '| Claude Code | `codex-reviewer` |'
 check_section_contract "cli selection maps codex host" "$review_mode_section" '| Codex（App / CLI） | `claude-reviewer` |'
 check_section_contract "cli selection re-consents per destination" "$review_mode_section" '送信先が変われば同意も取り直す'
@@ -174,10 +192,14 @@ check_agent_contract "reviewer defers design mapping to AGENTS.md" '`AGENTS.md`�
 check_agent_contract "review guidelines own the design mapping" '### レビュー規約' AGENTS.md
 check_agent_contract "review guidelines scope design chapters" '1500行を超えるため全文は読まない' AGENTS.md
 # --base と PROMPT は codex CLI 上で排他。併用するコマンドを契約として固定しない。
-check_agent_contract "codex review command" 'codex exec review --base <base> -m <model>' .ai/agents/codex-reviewer.md
+check_agent_contract "codex review command" 'codex exec review --base <base> -m <model> -c sandbox_mode="read-only"' .ai/agents/codex-reviewer.md
+check_agent_contract "codex review enforces read-only sandbox" '`-c sandbox_mode="read-only"` を必ず付ける' .ai/agents/codex-reviewer.md
 check_agent_contract "claude review command" 'git diff <base>...HEAD | claude -p "<レビュー指示>" --model <model>' .ai/agents/claude-reviewer.md
 check_agent_contract "cross-model review model is explicit" 'モデルは必ず `-m` / `--model` で明示指定する' .ai/runtime-compatibility.md
-check_agent_contract "codex nested review model" '`-m gpt-5.6`' .ai/runtime-compatibility.md
+# ChatGPT アカウント認証では素の gpt-5.6 が 400 になるため、バリアント指定を固定する。
+check_agent_contract "codex nested review model" '`-m gpt-5.6-sol`' .ai/runtime-compatibility.md
+check_agent_contract "plain gpt-5.6 is rejected" '素の `gpt-5.6` は使えない' .ai/runtime-compatibility.md
+check_agent_contract "codex review sandbox default documented" '既定 Sandbox は `workspace-write`' .ai/runtime-compatibility.md
 check_agent_contract "claude nested review model" '`--model opus`' .ai/runtime-compatibility.md
 check_agent_contract "host to reviewer mapping" '| Claude Code | `codex-reviewer` |' .ai/runtime-compatibility.md
 check_agent_contract "codex host uses claude reviewer" '| Codex（App / CLI） | `claude-reviewer` |' .ai/runtime-compatibility.md

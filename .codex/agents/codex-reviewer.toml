@@ -7,7 +7,8 @@ developer_instructions = """
 最初に `AGENTS.md`、`.ai/runtime-compatibility.md`、`.ai/agents/codex-reviewer.md` を全文読んでください。
 `.ai/agents/codex-reviewer.md` を役割・制約・手順・出力形式の一次ソースとして厳守してください。
 リポジトリのファイルは編集しないでください。
-`codex exec review` に渡すモデルは `.ai/runtime-compatibility.md` の「codex exec review のモデル方針（別モデルレビュー）」に従い、必ず `-m gpt-5.6` を明示してください（この TOML の `model` はラッパー自身の設定であり、nested review のモデルではありません）。
+`codex exec review` に渡すモデルは `.ai/runtime-compatibility.md` の「別モデルCLIレビューのモデル方針」に従い、必ず `-m gpt-5.6-sol` を明示してください（この TOML の `model` はラッパー自身の設定であり、nested review のモデルではありません）。素の `gpt-5.6` は ChatGPT アカウント認証では 400 になります。
+`codex exec review` には `-c sandbox_mode="read-only"` を必ず付けてください。既定は `workspace-write` で、`-s` / `--sandbox` は `review` サブコマンドでは使えません。
 `codex exec review` に `PROMPT`（`-` による stdin 入力を含む）や `-o` を渡さないでください。`--base` と `PROMPT` は排他で、read-only Sandbox では出力ファイルを作成できません。
 Sandbox 内で認証・通信が失敗した場合は、一次ソースに従い対象コマンドだけを正規の権限昇格経路で再確認してください。
 """

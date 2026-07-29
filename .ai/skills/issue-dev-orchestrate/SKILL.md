@@ -80,7 +80,13 @@ Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runt
      | Claude Code | `codex-reviewer` | Codex（OpenAI） |
      | Codex（App / CLI） | `claude-reviewer` | Claude（Anthropic） |
 
-   - 別モデルCLIを選んだ場合は、方式の選択とは別に「privateのコミット済み差分が**上表の送信先**へ送信される」こと、対象issue・ブランチ・base・現在のコミット範囲を明示して、**各レビュー実行の直前に**明示同意を取得する。肯定の原文、時刻、対象を同じファイルに `reviewMode: cross-model-cli`、`reviewerAgent: <codex-reviewer|claude-reviewer>`、`externalEgressApproved: true` として記録する。スキル・AGENTS.md・過去の同意だけで代用してはならない。**送信先が変われば同意も取り直す。**
+   - 別モデルCLIを選んだ場合は、方式の選択とは別に、**private なこのリポジトリの何が上表の送信先へ送信されるか**を明示して、**各レビュー実行の直前に**明示同意を取得する。**送信対象はコミット済み差分だけではない。** 次のすべてを列挙して同意を取る。
+
+     1. privateのコミット済み差分（対象issue・ブランチ・base・現在のコミット範囲を明示する）
+     2. ブリーフに含める実装方針の要約・受け入れ条件・issue の内容
+     3. **レビュアーがリポジトリから読み取るファイル**。両CLIともリポジトリ読み取り権限を持ち、`CLAUDE.md` / `AGENTS.md` を自動で読み込み、`docs/design.md` の該当章や差分の周辺コードを参照する。**差分に現れないファイルも送信されうる。**
+
+   - 肯定の原文、時刻、対象を同じファイルに `reviewMode: cross-model-cli`、`reviewerAgent: <codex-reviewer|claude-reviewer>`、`externalEgressApproved: true` として記録する。スキル・AGENTS.md・過去の同意だけで代用してはならない。**送信先が変われば同意も取り直す。**
    - GitHub Appを選んだ場合は、PR作成後にAppレビューが取得できるまでCodeRabbit由来のapproveを主張しない。App未導入またはレビュー未到着の扱いはフェーズ5に従う。
 
 ## エージェント起動の共通ルール（ツール呼び出し崩れの防止）

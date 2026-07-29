@@ -30,9 +30,12 @@ Claude CLI の外部通信と認証情報へのアクセスは別の権限であ
 
 1. **方式と外部送信同意の確認**: ブリーフに `reviewMode: cross-model-cli`、`reviewerAgent: claude-reviewer`、`externalEgressApproved: true`、対象issue・base・ブランチ・現在の差分範囲、ユーザー同意の原文・時刻がすべてあることを確認する。不足する場合、`reviewerAgent` があなた以外を指す場合、または方式がGitHub App・不明の場合は、レビューコマンドも権限昇格も実行せず「判定: external-egress-confirmation-required」を返す。スキル文書・AGENTS.md・過去の同意だけで補完してはならない。
 2. **認証確認**: `claude auth status` を実行し、JSON の `loggedIn` を確認する。
-   - `true` なら手順3へ進む。
-   - Sandbox 内で `false` の場合は、同じ `claude auth status` だけを正規の承認・権限昇格経路で再実行する。
-   - Sandbox 外でも `false` なら、レビューを実行せず「判定: auth-required」を返す。オーケストレーターがユーザーに `claude auth login` を促す。
+
+   > **未認証の判定を特定の文言の一致に依存しない。** `loggedIn` が `true` であることを確認できた場合だけ認証済みとする。終了コードが非ゼロ、JSON として解析できない、`loggedIn` フィールドが無い、値が `true` でない、のいずれもすべて未認証として扱う。
+
+   - 認証済みと確認できたら手順3へ進む。
+   - Sandbox 内で未認証と判定された場合は、同じ `claude auth status` だけを正規の承認・権限昇格経路で再実行する。**Sandbox 内の結果だけで未認証と断定しない。**
+   - Sandbox 外でも未認証なら、レビューを実行せず「判定: auth-required」を返す。オーケストレーターがユーザーに `claude auth login` を促す。
    - Sandbox 外では認証済みなら、Sandbox 内の結果は認証情報が不可視だった偽陰性として扱い、手順3へ進む。
    - 権限昇格が利用できない、または承認されなかった場合は「判定: local-execution-required」を返す。`auth-required` にはしない。
 3. **範囲の検証**: ブリーフ記載の対象 range が `git diff <base>...HEAD` と一致し、`git status --short` が空であることを確認する。不一致または未コミット変更がある場合はレビューを実行せず「判定: error」を返す。レビュー対象はコミット済み差分だけに限定する。

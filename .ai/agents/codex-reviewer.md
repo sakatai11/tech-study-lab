@@ -36,20 +36,26 @@ Claude Code ホストでは、ホストの `reviewer` は Claude、`codex exec r
 ## 実行手順
 
 1. **方式と外部送信同意の確認**: ブリーフに `reviewMode: cross-model-cli`、`reviewerAgent: codex-reviewer`、`externalEgressApproved: true`、対象issue・base・ブランチ・現在の差分範囲、ユーザー同意の原文・時刻がすべてあることを確認する。不足する場合、`reviewerAgent` があなた以外を指す場合、または方式がGitHub App・不明の場合は、レビューコマンドも権限昇格も実行せず「判定: external-egress-confirmation-required」を返す。スキル文書・AGENTS.md・過去の同意だけで補完してはならない。
-2. **認証確認**: `codex login status` を実行する。
-   - 認証済みなら手順3へ進む。
-   - Sandbox 内で `signed out` の場合は、同じ `codex login status` だけを正規の承認・権限昇格経路で再実行する。
+2. **認証確認**: `codex login status` を実行する。認証済みの場合は `Logged in using ...` を出力して終了コード0を返す。
+
+   > **未認証の判定を特定の文言の一致に依存しない。** 未認証時の出力は `Not logged in` であり、終了コードは1になる（CodeRabbit CLI の `signed out` とは異なる）。将来 CLI が文言を変えても壊れないよう、**「認証済みと確認できたか」だけで判断する**。終了コードが非ゼロ、または出力が認証済みを示さない場合は、すべて未認証として扱う。
+
+   - 認証済みと確認できたら手順3へ進む。
+   - Sandbox 内で未認証と判定された場合は、同じ `codex login status` だけを正規の承認・権限昇格経路で再実行する。**Sandbox 内の結果だけで未認証と断定しない。**
    - Sandbox 外でも未認証なら、レビューを実行せず「判定: auth-required」を返す。オーケストレーターがユーザーに `codex login` を促す。
    - Sandbox 外では認証済みなら、Sandbox 内の結果は認証情報が不可視だった偽陰性として扱い、手順3へ進む。
    - 権限昇格が利用できない、または承認されなかった場合は「判定: local-execution-required」を返す。`auth-required` にはしない。
 3. **範囲の検証**: ブリーフ記載の対象 range が `git diff <base>...HEAD` と一致し、`git status --short` が空であることを確認する。不一致または未コミット変更がある場合はレビューを実行せず「判定: error」を返す。レビュー対象はコミット済み差分だけに限定する。
+
+   > **この確認を省略してはならない。** `codex exec review --base <base>` は内部で working tree を含む差分（`git diff <base>` 相当）を取るため、CodeRabbit CLI の `--committed` に相当するフラグがない。**作業ツリーがクリーンであることだけが、コミット済み差分だけをレビューする唯一の保証**である。未コミット変更があるまま実行すると、レビュー境界の記録が実際のレビュー対象とずれる。
 4. **レビュー実行**: モデルを明示指定する。モデルは `.ai/runtime-compatibility.md`「別モデルCLIレビューのモデル方針」に従う。
    ```bash
-   codex exec review --base <base> -m <model>
+   codex exec review --base <base> -m <model> -c sandbox_mode="read-only"
    ```
    - `<base>` はブランチ名またはコミットSHA。初回レビューは `develop`、修正周回の再レビューはオーケストレーターが指定する `<previous-reviewed-head>` を使う。
+   - **`-c sandbox_mode="read-only"` を必ず付ける。** `codex exec review` の既定 Sandbox は `workspace-write` であり、指定しないとレビュアーがリポジトリを書き換えられる状態で動く。`codex exec` の `-s` / `--sandbox` は **`review` サブコマンドでは使えない**ため、config override で指定する。
    - **`PROMPT`（カスタム指示・`-` による stdin 入力を含む）を渡さない。** `--base` と排他であり、併用すると引数エラーで失敗する。レビュー観点は `AGENTS.md`「レビュー規約」経由で渡る。
-   - **`-o` / 出力ファイルを使わない。** あなたは読み取り専用 Sandbox で動作するため、結果は標準出力から読む。同じ理由で一時ファイルの作成もしない。
+   - **`-o` / 出力ファイルを使わない。** 結果は標準出力から読む。同じ理由で一時ファイルの作成もしない。
    - `--uncommitted` は使わない。コミット済み差分だけをレビュー対象とする。
    - `--base` が指定した ref を解決できない場合は、`--base` を推測で別の値に置き換えず「判定: error」として、解決できなかった ref を報告する。
    - まず現在の Sandbox で実行する。外部通信の拒否、DNS/接続エラー、または認証情報が不可視で失敗した場合は、**同一のレビューコマンドだけ**を正規の承認・権限昇格経路で再実行する。
