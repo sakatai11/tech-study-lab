@@ -15,9 +15,9 @@
 - すべてのハーネスで、認証済みの `gh` CLI を使って PR・Issue・レビュー・コメント・レビュー スレッドを取得／作成／更新／解決できる。開始時に `gh auth status` を確認し、失敗した場合は認証を復旧するまでGitHub操作を行わない。
 - Codex AppでGitHubコネクタが接続済みの場合は、同等のGitHub操作にコネクタを使ってよい。コネクタは `gh` の必須代替ではない。
 - ローカル変更の `git fetch` / `git push` / コミットはコネクタの対象外であり、ローカル Git の認証・権限に従う。
-- Sandbox 内の認証確認と外部通信は別々に診断する。`gh auth status` または `coderabbit auth status` が Sandbox 内で未認証を返した場合、ユーザーに再ログインを求める前に、同じ状態確認コマンドだけを正規の承認・権限昇格経路で再実行する。Sandbox 外で認証済みなら、OS keyring または認証キャッシュが不可視だったものとして扱う。
+- Sandbox 内の認証確認と外部通信は別々に診断する。`gh auth status`、`codex login status`、`claude auth status` のいずれかが Sandbox 内で未認証を返した場合、ユーザーに再ログインを求める前に、同じ状態確認コマンドだけを正規の承認・権限昇格経路で再実行する。Sandbox 外で認証済みなら、OS keyring または認証キャッシュが不可視だったものとして扱う。
 - 認証済みでも API/DNS/接続エラーが出る場合は、対象の読み取りコマンドだけを正規の承認・権限昇格経路で再実行するか、Codex App の接続済みコネクタを使う。通信失敗を未認証と報告しない。
-- GitHubコネクタの認証と `gh` / CodeRabbit CLI の認証は共有されない。特にCodeRabbit CLIはGitHubコネクタで代替できないため、CLI自身の認証状態を上記の二段階で確認する。
+- GitHubコネクタの認証と `gh` / 別モデルレビュー用CLI（Codex CLI・Claude CLI）の認証は共有されない。これらのCLIはGitHubコネクタで代替できないため、CLI自身の認証状態を上記の二段階で確認する。
 
 ## サブエージェントの起動
 
@@ -43,5 +43,19 @@
 ## Codexサブエージェントのモデル方針
 
 - 通常の実装・レビュー・調査・教材執筆・テスト修正には `gpt-5.6-terra` を使う。`developer` と `reviewer` は `high`、その他は `medium` の reasoning effort を使う。
-- CodeRabbitの実行結果の正規化には `gpt-5.6-luna` と `low` reasoning effort を使う。
+- `codex-reviewer` / `claude-reviewer` エージェント自身（レビュー結果の正規化と `docs/design.md` 該当章の照合を担当）には `gpt-5.6-luna` と `medium` reasoning effort を使う。
 - 難易度が高い実装またはセキュリティレビューに限り、該当TOMLの `model` を一時的に `gpt-5.6`、`model_reasoning_effort` を `high` に変更する。作業後は標準設定へ戻す。
+
+## 別モデルCLIレビューのモデル方針
+
+コミット済み差分の独立レビューは、**ホストランタイムとは別のモデルのCLI**で実行する。使用するエージェントはホストで決まる。ホストと同じ提供元のCLIを別モデルレビュアーとして使ってはならない（「独立した第二の目」が成立しなくなる）。
+
+| ホストランタイム | 使うエージェント | 実行コマンド | モデル指定 |
+|---|---|---|---|
+| Claude Code | `codex-reviewer` | `codex exec review --base <base>` | `-m gpt-5.6` |
+| Codex（App / CLI） | `claude-reviewer` | `git diff <base>...HEAD \| claude -p ...` | `--model opus` |
+
+- モデルは必ず `-m` / `--model` で明示指定する。既定モデルに委ねてはならない。
+- どちらの経路でも、ホストの `reviewer` とは提供元が異なるモデルが差分を読むため、モデルの独立性は完全である。
+- レビュー観点の分担は `reviewer` が正確性優先、別モデルレビュアーが仕様準拠（`AGENTS.md`「レビュー規約」と `docs/design.md`）優先である。モデルを変えるだけでなくこの観点差でも補完させる。
+- サブエージェント機能がない環境では、オーケストレーター自身が該当エージェント定義を全文読み、同じ制約でCLIを実行する。

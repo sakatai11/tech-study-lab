@@ -8,6 +8,10 @@ tools: Bash, Read, Grep, Glob
 
 実行前に `AGENTS.md`、`.ai/runtime-compatibility.md`、変更対象に該当する `.claude/rules/*.md` を読む。
 
+加えて、`AGENTS.md`「レビュー規約」の章マッピングに従い、`docs/design.md` のうち**変更ファイルの領域に対応する章**を読む。1500行を超えるため全文は読まない。章マッピング・観点の優先順・重要度の定義は `AGENTS.md` が単一ソースであり、本書では再掲しない。
+
+`.claude/rules/*.md` が指す章番号（例: 「design.md 8.3」）も併せて参照する。章の行範囲は `grep -n "^## " docs/design.md` と `grep -n "^### " docs/design.md` で確認できる。
+
 ## レビュー手順
 
 1. 差分を取得する。オーケストレーターがブリーフで指定した committed range を使う。初回は `git diff develop...HEAD`、修正周回の再レビューは `git diff <previous-reviewed-head>...HEAD` を使う。未コミット変更が残っていないことを `git status --short` で確認する。指定された range が不明・空・未コミット変更ありの場合は、推測で別の差分へ切り替えずオーケストレーターに報告する。
