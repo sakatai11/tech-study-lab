@@ -40,10 +40,12 @@
 - `.claude/skills/` と `.agents/skills/` のリンク先は必ず `.ai/skills/` にそろえ、リンク切れを監査する。
 - `.codex/agents/*.toml` の `name` と対応する `.ai/agents/<name>.md` が一致することを監査する。
 
-## Codexサブエージェントのモデル方針
+## Codexサブエージェント本体のモデル方針
+
+`.codex/agents/*.toml` に登録するエージェント**自身**のモデル設定。別モデルCLIレビューで nested に呼ぶモデル（次節）とは別物である。
 
 - 通常の実装・レビュー・調査・教材執筆・テスト修正には `gpt-5.6-terra` を使う。`developer` と `reviewer` は `high`、その他は `medium` の reasoning effort を使う。
-- `codex-reviewer` / `claude-reviewer` エージェント自身（レビュー結果の正規化と `docs/design.md` 該当章の照合を担当）には `gpt-5.6-luna` と `medium` reasoning effort を使う。
+- `codex-reviewer` / `claude-reviewer` エージェント自身（レビュー結果の正規化と `docs/design.md` 該当章の照合を担当）には `gpt-5.6-luna` と `high` reasoning effort を使う。照合には仕様の読み取りと判断が必要なため、正規化だけの作業より高い推論を割り当てる。
 - 難易度が高い実装またはセキュリティレビューに限り、該当TOMLの `model` を一時的に `gpt-5.6-sol`、`model_reasoning_effort` を `high` に変更する。作業後は標準設定へ戻す。素の `gpt-5.6` は ChatGPT アカウント認証では使えないため指定しない。
 
 ## 別モデルCLIレビューのモデル方針

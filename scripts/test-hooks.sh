@@ -95,56 +95,138 @@ check_absent_contract() {
 }
 
 printf '%s\n' "Checking agent contract consistency..."
-# 未認証の文言は CLI ごとに異なる（codex は `Not logged in` + 終了コード1）。
-# 文言の一致ではなく「認証済みと確認できたか」で判定する契約を固定する。
-check_agent_contract "sandbox auth visibility" 'Sandbox 内で未認証と判定された場合は、同じ `codex login status` だけを正規の承認・権限昇格経路で再実行する' .ai/agents/codex-reviewer.md
-check_agent_contract "codex auth not literal match" '未認証の判定を特定の文言の一致に依存しない' .ai/agents/codex-reviewer.md
-check_agent_contract "claude auth not literal match" '未認証の判定を特定の文言の一致に依存しない' .ai/agents/claude-reviewer.md
-check_agent_contract "codex auth exit code counts" '終了コードが非ゼロ、または出力が認証済みを示さない場合は、すべて未認証として扱う' .ai/agents/codex-reviewer.md
+
+# ---- レビュー規約は .ai/review-guidelines.md が単一ソース。他文書での再掲を禁止する ----
+check_agent_contract "guidelines own the design mapping" '## 読む章（design.md 章マッピング）' .ai/review-guidelines.md
+check_agent_contract "guidelines scope design chapters" '1500行を超えるため全文は読まない' .ai/review-guidelines.md
+check_agent_contract "guidelines define severities" '## 重要度' .ai/review-guidelines.md
+check_agent_contract "guidelines define accuracy profile" '### `accuracy-first`（正確性優先）' .ai/review-guidelines.md
+check_agent_contract "guidelines define spec profile" '### `spec-compliance-first`（仕様準拠優先）' .ai/review-guidelines.md
+check_agent_contract "agents md points at guidelines" '.ai/review-guidelines.md' AGENTS.md
+check_agent_contract "agents md forbids restating" '**本書を含む他の文書で再掲しない。**' AGENTS.md
+# 章マッピング表を AGENTS.md へ書き戻すと単一ソースが崩れる。
+check_absent_contract "agents md does not restate mapping" '| `apps/web/**` |' AGENTS.md
+check_absent_contract "reviewer does not restate mapping" '| `apps/web/**` |' .ai/agents/reviewer.md
+check_absent_contract "common does not restate mapping" '| `apps/web/**` |' .ai/agents/cross-model-reviewer-common.md
+
+# ---- 役割別プロファイルの割り当て ----
+check_agent_contract "reviewer defaults to accuracy profile" '**既定は `accuracy-first`（正確性優先）**' .ai/agents/reviewer.md
+check_agent_contract "reviewer defers guidelines" '`.ai/review-guidelines.md` が単一ソース' .ai/agents/reviewer.md
+check_agent_contract "common uses spec profile" '`spec-compliance-first`' .ai/agents/cross-model-reviewer-common.md
+
+# ---- 別モデルレビュアー共通定義 ----
+check_agent_contract "common is shared source" '`codex-reviewer` と `claude-reviewer` が共有する' .ai/agents/cross-model-reviewer-common.md
+check_agent_contract "codex reads common first" '`.ai/agents/cross-model-reviewer-common.md` を全文読んでください' .ai/agents/codex-reviewer.md
+check_agent_contract "claude reads common first" '`.ai/agents/cross-model-reviewer-common.md` を全文読んでください' .ai/agents/claude-reviewer.md
+check_agent_contract "codex reviewer host guard" '**Codex ホストで使ってはならない**' .ai/agents/codex-reviewer.md
+check_agent_contract "claude reviewer host guard" '**Claude Code ホストで使ってはならない**' .ai/agents/claude-reviewer.md
+check_agent_contract "common rejects same vendor host" 'wrong-host-agent' .ai/agents/cross-model-reviewer-common.md
+check_agent_contract "codex egress destination" '`egressDestination` は `openai` である' .ai/agents/codex-reviewer.md
+check_agent_contract "claude egress destination" '`egressDestination` は `anthropic` である' .ai/agents/claude-reviewer.md
+
+# ---- 外部送信同意は送信先と実際の送信内容に束縛する ----
+check_agent_contract "consent binds destination" 'egressDestination' .ai/agents/cross-model-reviewer-common.md
+check_agent_contract "consent requires scope" 'approvedScope' .ai/agents/cross-model-reviewer-common.md
+check_agent_contract "consent scope diff" 'committed-diff' .ai/agents/cross-model-reviewer-common.md
+check_agent_contract "consent scope brief" 'brief-context' .ai/agents/cross-model-reviewer-common.md
+check_agent_contract "consent scope repo reads" 'repository-reads' .ai/agents/cross-model-reviewer-common.md
+check_agent_contract "consent rejects diff-only" '**差分だけの同意で実行してはならない。**' .ai/agents/cross-model-reviewer-common.md
+check_agent_contract "consent blocks command and escalation" 'レビューコマンドも権限昇格も実行せず' .ai/agents/cross-model-reviewer-common.md
+check_agent_contract "consent returns explicit status" 'external-egress-confirmation-required' .ai/agents/cross-model-reviewer-common.md
+
+# ---- 三点差分の固定（実効base = merge-base） ----
+check_agent_contract "common computes effective base" 'git merge-base <base> HEAD' .ai/agents/cross-model-reviewer-common.md
+check_agent_contract "common explains two-dot risk" '二点差分になる' .ai/agents/cross-model-reviewer-common.md
+check_agent_contract "common records both bases" '論理base（ブランチ名）と実効base（SHA）の**両方**' .ai/agents/cross-model-reviewer-common.md
+check_agent_contract "codex passes effective base" 'codex exec review --base <effective-base> -m <model> -c sandbox_mode="read-only"' .ai/agents/codex-reviewer.md
+check_agent_contract "claude passes effective base" 'git diff <effective-base>...HEAD | claude -p' .ai/agents/claude-reviewer.md
+legacy_logical_base=$(printf '%s%s' 'codex exec review --base <base> ' '-m <model>')
+check_absent_contract "codex no longer passes logical base" "$legacy_logical_base" .ai/agents/codex-reviewer.md
+
+# ---- CLI 固有フラグ ----
+check_agent_contract "codex review enforces read-only sandbox" '`-c sandbox_mode="read-only"` を必ず付ける' .ai/agents/codex-reviewer.md
+check_agent_contract "codex reviewer rejects prompt argument" '`PROMPT`（カスタム指示・`-` による stdin 入力を含む）を渡さない' .ai/agents/codex-reviewer.md
+check_agent_contract "codex reviewer avoids output file" '`-o` / 出力ファイルを使わない' .ai/agents/codex-reviewer.md
+check_agent_contract "claude reviewer restricts tools" '`--allowedTools` と `--disallowedTools` を必ず両方指定する' .ai/agents/claude-reviewer.md
+check_agent_contract "common avoids temp files" '**一時ファイルも作らない**' .ai/agents/cross-model-reviewer-common.md
+check_agent_contract "common keeps committed-only scope" 'レビュー対象はコミット済み差分だけに限定する' .ai/agents/cross-model-reviewer-common.md
+
+# ---- 認証判定は文言一致に依存しない ----
+check_agent_contract "auth not literal match" '**未認証の判定を特定の文言の一致に依存しない。**' .ai/agents/cross-model-reviewer-common.md
+check_agent_contract "auth exit code counts" '終了コードが非ゼロ、または出力が認証済みを示さない場合は、すべて未認証として扱う' .ai/agents/cross-model-reviewer-common.md
 legacy_signed_out=$(printf '%s%s' 'Sandbox 内で `signed ' 'out` の場合')
-check_absent_contract "legacy coderabbit signed-out wording" "$legacy_signed_out" .ai/agents/codex-reviewer.md
-check_agent_contract "codex reviewer runs in phase 5" 'issue-dev-orchestrate のフェーズ5でCLI方式が選ばれ、かつホストランタイムが Claude Code の時だけ' .ai/agents/codex-reviewer.md
-check_agent_contract "claude reviewer runs in phase 5" 'issue-dev-orchestrate のフェーズ5でCLI方式が選ばれ、かつホストランタイムが Codex の時だけ' .ai/agents/claude-reviewer.md
-legacy_codex_phase=$(printf '%s%s' 'issue-dev-orchestrate のフェーズ' '4でCLI方式が選ばれた時だけ')
-check_absent_contract "legacy codex reviewer phase 4" "$legacy_codex_phase" .ai/agents/codex-reviewer.md
-check_agent_contract "reviewer runs in phase 5" 'issue-dev-orchestrate のフェーズ5（レビュー）で使用する' .ai/agents/reviewer.md
-check_agent_contract "test fixer runs in phases 4 and 6" 'issue-dev-orchestrate のフェーズ4・6（品質ゲート）で使用する' .ai/agents/test-fixer.md
-check_agent_contract "escalated auth/network retry" '正規の権限昇格経路で再確認してください' .codex/agents/codex-reviewer.toml
-check_agent_contract "claude reviewer escalated retry" '正規の権限昇格経路で再確認してください' .codex/agents/claude-reviewer.toml
-# TOML が参照する節名が runtime-compatibility.md に実在することを固定する（節名変更時の参照切れ防止）。
+check_absent_contract "legacy coderabbit signed-out wording" "$legacy_signed_out" .ai/agents/cross-model-reviewer-common.md
+check_agent_contract "communication is not authentication" '通信失敗を未認証と報告しない' .ai/runtime-compatibility.md
+
+# ---- モデル方針（本体 / nested を別節に分ける） ----
 model_policy_section='別モデルCLIレビューのモデル方針'
 check_agent_contract "model policy section exists" "## $model_policy_section" .ai/runtime-compatibility.md
+check_agent_contract "agent-self policy is separate" '## Codexサブエージェント本体のモデル方針' .ai/runtime-compatibility.md
 check_agent_contract "codex toml points at live section" "$model_policy_section" .codex/agents/codex-reviewer.toml
 check_agent_contract "claude toml points at live section" "$model_policy_section" .codex/agents/claude-reviewer.toml
+check_agent_contract "cross-model review model is explicit" 'モデルは必ず `-m` / `--model` で明示指定する' .ai/runtime-compatibility.md
+check_agent_contract "codex nested review model" '`-m gpt-5.6-sol`' .ai/runtime-compatibility.md
+check_agent_contract "plain gpt-5.6 is rejected" '素の `gpt-5.6` は使えない' .ai/runtime-compatibility.md
+check_agent_contract "codex review sandbox default documented" '既定 Sandbox は `workspace-write`' .ai/runtime-compatibility.md
+check_agent_contract "claude nested review model" '`--model opus`' .ai/runtime-compatibility.md
+check_agent_contract "host to reviewer mapping" '| Claude Code | `codex-reviewer` |' .ai/runtime-compatibility.md
+check_agent_contract "codex host uses claude reviewer" '| Codex（App / CLI） | `claude-reviewer` |' .ai/runtime-compatibility.md
 check_agent_contract "codex toml pins model variant" '`-m gpt-5.6-sol`' .codex/agents/codex-reviewer.toml
 check_agent_contract "codex toml pins read-only sandbox" 'sandbox_mode="read-only"' .codex/agents/codex-reviewer.toml
-check_agent_contract "communication is not authentication" '通信失敗を未認証と報告しない' .ai/runtime-compatibility.md
+check_agent_contract "codex toml effort" 'model_reasoning_effort = "high"' .codex/agents/codex-reviewer.toml
+check_agent_contract "claude toml effort" 'model_reasoning_effort = "high"' .codex/agents/claude-reviewer.toml
+check_agent_contract "escalated auth/network retry" '正規の権限昇格経路で再確認してください' .codex/agents/codex-reviewer.toml
+check_agent_contract "claude reviewer escalated retry" '正規の権限昇格経路で再確認してください' .codex/agents/claude-reviewer.toml
+check_agent_contract "codex toml reads common" '.ai/agents/cross-model-reviewer-common.md' .codex/agents/codex-reviewer.toml
+check_agent_contract "claude toml reads common" '.ai/agents/cross-model-reviewer-common.md' .codex/agents/claude-reviewer.toml
+
+# ---- エージェント起動フェーズ ----
+check_agent_contract "codex reviewer runs in phase 5" 'ホストランタイムが Claude Code の時だけ' .ai/agents/codex-reviewer.md
+check_agent_contract "claude reviewer runs in phase 5" 'ホストランタイムが Codex の時だけ' .ai/agents/claude-reviewer.md
+check_agent_contract "reviewer runs in phase 5" 'issue-dev-orchestrate のフェーズ5（レビュー）で使用する' .ai/agents/reviewer.md
+check_agent_contract "test fixer runs in phases 4 and 6" 'issue-dev-orchestrate のフェーズ4・6（品質ゲート）で使用する' .ai/agents/test-fixer.md
 check_agent_contract "auth-required after outside check" '`auth-required`（Sandbox 外でも未認証と確認された状態）' .ai/skills/issue-dev-orchestrate/SKILL.md
-review_mode_section=$(extract_section .ai/skills/issue-dev-orchestrate/SKILL.md '4. **レビュー方式を選択する**' '## エージェント起動の共通ルール')
+
+# ---- SKILL.md: レビュー方式は選択制ではない ----
+reviewer_decision_section=$(extract_section .ai/skills/issue-dev-orchestrate/SKILL.md '4. **別モデルレビュアーを決定する**' '## エージェント起動の共通ルール')
 initial_commit_section=$(extract_section .ai/skills/issue-dev-orchestrate/SKILL.md '## フェーズ4: 品質ゲートと初期実装コミット' '## フェーズ5: 初回のコミット済み差分レビュー')
-cli_review_section=$(extract_section .ai/skills/issue-dev-orchestrate/SKILL.md '### 別モデルCLIを選んだ場合' '### GitHub Appを選んだ場合')
-github_app_review_section=$(extract_section .ai/skills/issue-dev-orchestrate/SKILL.md '### GitHub Appを選んだ場合' '### 結果の統合')
+egress_consent_section=$(extract_section .ai/skills/issue-dev-orchestrate/SKILL.md '### 外部送信の明示同意（レビュー実行の直前）' '### レビューの実行')
+cli_review_section=$(extract_section .ai/skills/issue-dev-orchestrate/SKILL.md '### レビューの実行' '### CodeRabbit App（補助・任意）')
+coderabbit_section=$(extract_section .ai/skills/issue-dev-orchestrate/SKILL.md '### CodeRabbit App（補助・任意）' '### 結果の統合')
 reviewed_head_section=$(extract_section .ai/skills/issue-dev-orchestrate/SKILL.md '### レビュー境界の記録' '## フェーズ6: 修正・品質ゲート・周回コミット・増分再レビュー')
 review_loop_section=$(extract_section .ai/skills/issue-dev-orchestrate/SKILL.md '## フェーズ6: 修正・品質ゲート・周回コミット・増分再レビュー' '## フェーズ7: 完了')
 completion_section=$(extract_section .ai/skills/issue-dev-orchestrate/SKILL.md '## フェーズ7: 完了' '## 中断・失敗時の原則')
-agent_egress_gate=$(awk '/^1\. \*\*方式と外部送信同意の確認\*\*/ { print; exit }' .ai/agents/codex-reviewer.md)
-claude_agent_egress_gate=$(awk '/^1\. \*\*方式と外部送信同意の確認\*\*/ { print; exit }' .ai/agents/claude-reviewer.md)
 
-check_section_contract "review mode selection" "$review_mode_section" '別モデルCLI（推奨）'
-check_section_contract "cli selection records mode" "$review_mode_section" 'reviewMode: cross-model-cli'
-check_section_contract "cli selection records agent" "$review_mode_section" 'reviewerAgent: <codex-reviewer|claude-reviewer>'
-# 両CLIともリポジトリ読み取り権限を持つ。同意は差分だけを対象にしてはならない。
-check_section_contract "consent covers more than the diff" "$review_mode_section" '送信対象はコミット済み差分だけではない'
-check_section_contract "consent covers repository reads" "$review_mode_section" '差分に現れないファイルも送信されうる'
-check_section_contract "consent covers brief context" "$review_mode_section" 'ブリーフに含める実装方針の要約・受け入れ条件・issue の内容'
-check_section_contract "cli selection maps host to agent" "$review_mode_section" '| Claude Code | `codex-reviewer` |'
-check_section_contract "cli selection maps codex host" "$review_mode_section" '| Codex（App / CLI） | `claude-reviewer` |'
-check_section_contract "cli selection re-consents per destination" "$review_mode_section" '送信先が変われば同意も取り直す'
-check_section_contract "cli selection sends committed diff" "$review_mode_section" 'privateのコミット済み差分'
+check_section_contract "reviewer choice is not optional" "$reviewer_decision_section" 'レビュー方式は選択制ではない'
+check_section_contract "host decides reviewer" "$reviewer_decision_section" '現在のホストランタイム（＝メインエージェントのモデル）を確認し'
+check_section_contract "maps claude host" "$reviewer_decision_section" '| Claude Code | `codex-reviewer` |'
+check_section_contract "maps codex host" "$reviewer_decision_section" '| Codex（App / CLI） | `claude-reviewer` |'
+check_section_contract "rejects same vendor reviewer" "$reviewer_decision_section" 'ホストと同じ提供元のCLIをレビュアーにしてはならない'
+check_section_contract "consent deferred to phase 5" "$reviewer_decision_section" 'フェーズ5の各レビュー実行の直前に'
+# 方式選択の選択肢が復活していないことを固定する。
+legacy_mode_choice=$(printf '%s%s' '別モデルCLI（推' '奨）')
+check_absent_contract "no review mode selection" "$legacy_mode_choice" .ai/skills/issue-dev-orchestrate/SKILL.md
+
+check_section_contract "consent covers more than the diff" "$egress_consent_section" '送信対象はコミット済み差分だけではない'
+check_section_contract "consent covers repository reads" "$egress_consent_section" '差分に現れないファイルも送信されうる'
+check_section_contract "consent lists scope keys" "$egress_consent_section" 'approvedScope'
+check_section_contract "consent records destination" "$egress_consent_section" 'egressDestination'
+check_section_contract "consent re-taken per destination" "$egress_consent_section" '送信先が変われば同意も取り直す'
+
 check_section_contract "cli review mode" "$cli_review_section" 'reviewMode: cross-model-cli'
-check_section_contract "cli review rejects same-vendor agent" "$cli_review_section" 'ホストと同じ提供元のCLIを別モデルレビュアーとして起動しない'
-check_section_contract "cli egress consent" "$cli_review_section" 'externalEgressApproved: true'
+check_section_contract "cli assigns distinct profiles" "$cli_review_section" '**レビュープロファイルを割り当てる。**'
+check_section_contract "reviewer gets accuracy profile" "$cli_review_section" '`accuracy-first`（正確性優先）'
+check_section_contract "cross-model gets spec profile" "$cli_review_section" '`spec-compliance-first`（仕様準拠優先）'
+check_section_contract "initial review range" "$cli_review_section" 'reviewRange: develop...HEAD'
+check_section_contract "cli review delegates to common" "$cli_review_section" '`.ai/agents/cross-model-reviewer-common.md`'
+check_section_contract "cli failure is not approval" "$cli_review_section" '別モデルレビュアーの指摘ゼロや実行失敗をapproveとして扱わない'
 check_section_contract "cli consent fallback" "$cli_review_section" 'external-egress-confirmation-required'
+
+# CodeRabbit App は補助であり、緑のチェックをレビュー済みの根拠にしない。
+check_section_contract "coderabbit is auxiliary" "$coderabbit_section" '有効なレビュー経路ではなく補助である'
+check_section_contract "coderabbit skipped on develop" "$coderabbit_section" '自動レビューは走らない'
+check_section_contract "coderabbit green is not reviewed" "$coderabbit_section" 'チェックの緑をレビュー済みの根拠にしてはならない'
+
 check_section_contract "initial quality gate" "$initial_commit_section" 'test-fixer'
 check_absent_contract "phase 4 avoids redundant test-fixer definition wording" '`.ai/agents/test-fixer.md` の定義を使って' .ai/skills/issue-dev-orchestrate/SKILL.md
 check_section_contract "initial implementation commit" "$initial_commit_section" '初期実装を1コミットにする'
@@ -152,66 +234,32 @@ check_section_contract "initial commit includes quality-gate fixes" "$initial_co
 check_section_contract "initial commit excludes unrelated user changes" "$initial_commit_section" '無関係なユーザー変更は含めない'
 check_section_contract "initial commit stages all current-work changes" "$initial_commit_section" 'git add -- <今回作業の変更ファイル>'
 check_section_contract "initial commit requires clean tree" "$initial_commit_section" 'git status --short'
-check_section_contract "initial review range" "$cli_review_section" 'reviewRange: develop...HEAD'
-check_section_contract "cli review delegates command to agent" "$cli_review_section" '`.ai/agents/<エージェント名>.md` が単一ソース'
-check_section_contract "cli failure is not approval" "$cli_review_section" '別モデルレビュアーの指摘ゼロや実行失敗をapproveとして扱わない'
-check_section_contract "github app follows initial commit" "$github_app_review_section" '初期コミット後に'
-check_section_contract "github app reviews initial head" "$github_app_review_section" 'この初期コミットのHEAD'
-check_section_contract "github app splits reviewer roles" "$github_app_review_section" '`docs/design.md` 準拠と受け入れ条件の充足'
+
 check_section_contract "fallback reviewer stores reviewed head" "$reviewed_head_section" '代替として起動した2件目の `reviewer`'
 check_section_contract "fallback reviewer normal result" "$reviewed_head_section" '`approve` / `request-changes` で正常完了した場合'
 check_section_contract "cross-model failure is not approval" "$reviewed_head_section" '別モデルレビュアーの失敗自体を approve として扱ってはならず'
 check_section_contract "reviewed head updates only after real review" "$reviewed_head_section" '有効なレビュー経路の実レビューが `approve` / `request-changes` で正常完了したときだけ'
+check_section_contract "coderabbit alone is not a route" "$reviewed_head_section" '単独では有効なレビュー経路にならない'
+
 check_section_contract "incremental review range" "$review_loop_section" '<previous-reviewed-head>...HEAD'
-check_section_contract "incremental cli base" "$review_loop_section" '別モデルレビュアーには `<previous-reviewed-head>` を base として渡し'
+check_section_contract "incremental cli base" "$review_loop_section" '別モデルレビュアーには論理base として `<previous-reviewed-head>` を渡し'
 check_section_contract "incremental cli keeps same agent" "$review_loop_section" '初回と同じエージェント（`reviewerAgent`）を使う'
+check_section_contract "incremental re-consents full scope" "$review_loop_section" '`approvedScope` の3種すべてを再掲する'
 check_section_contract "reviewed head scratchpad" "$review_loop_section" 'last-reviewed-head-<N>.txt'
 check_section_contract "review loop passes changed files to test fixer" "$review_loop_section" '当該周回の変更ファイル一覧'
 check_section_contract "review loop scopes test fixer brief" "$review_loop_section" '`test-fixer` 用ブリーフに明記する'
 check_section_contract "review loop commits only round files" "$review_loop_section" 'この一覧のファイルだけを明示して stage'
-check_section_contract "github app waits for latest head" "$review_loop_section" '最新HEADに対するAppレビューを待機'
 check_section_contract "review loop reuses reviewed head rule" "$review_loop_section" 'レビュー境界の更新条件はフェーズ5「レビュー境界の記録」と同じ'
-check_section_contract "github app verifies latest head" "$review_loop_section" '古いHEADのレビューだけで再レビュー済みと扱ってはならない'
+check_section_contract "app review must match latest head" "$review_loop_section" '古いHEADのレビューを再レビュー済みとして扱ってはならない'
+check_section_contract "cli review never skipped" "$review_loop_section" '別モデルCLIによる再レビューは省略しない'
 check_section_contract "completion avoids duplicate commit" "$completion_section" 'このフェーズで追加コミットは作らない'
-check_section_contract "agent mode and egress gate" "$agent_egress_gate" 'reviewMode: cross-model-cli'
-check_section_contract "agent identifies itself" "$agent_egress_gate" 'reviewerAgent: codex-reviewer'
-check_section_contract "agent rejects other agent assignment" "$agent_egress_gate" '`reviewerAgent` があなた以外を指す場合'
-check_section_contract "agent requires egress consent" "$agent_egress_gate" 'externalEgressApproved: true'
-check_section_contract "agent rejects github app mode" "$agent_egress_gate" '方式がGitHub App・不明の場合'
-check_section_contract "agent blocks command and escalation" "$agent_egress_gate" 'レビューコマンドも権限昇格も実行せず'
-check_section_contract "agent returns explicit consent status" "$agent_egress_gate" 'external-egress-confirmation-required'
-check_section_contract "claude agent mode and egress gate" "$claude_agent_egress_gate" 'reviewMode: cross-model-cli'
-check_section_contract "claude agent identifies itself" "$claude_agent_egress_gate" 'reviewerAgent: claude-reviewer'
-check_section_contract "claude agent rejects other agent assignment" "$claude_agent_egress_gate" '`reviewerAgent` があなた以外を指す場合'
-check_section_contract "claude agent requires egress consent" "$claude_agent_egress_gate" 'externalEgressApproved: true'
-check_section_contract "claude agent blocks command and escalation" "$claude_agent_egress_gate" 'レビューコマンドも権限昇格も実行せず'
-check_section_contract "claude agent returns explicit consent status" "$claude_agent_egress_gate" 'external-egress-confirmation-required'
+
 check_agent_contract "reviewer initial committed range" '初回は `git diff develop...HEAD`' .ai/agents/reviewer.md
 check_agent_contract "reviewer incremental committed range" '`git diff <previous-reviewed-head>...HEAD`' .ai/agents/reviewer.md
-check_agent_contract "reviewer defers design mapping to AGENTS.md" '`AGENTS.md`「レビュー規約」の章マッピングに従い' .ai/agents/reviewer.md
-check_agent_contract "review guidelines own the design mapping" '### レビュー規約' AGENTS.md
-check_agent_contract "review guidelines scope design chapters" '1500行を超えるため全文は読まない' AGENTS.md
-# --base と PROMPT は codex CLI 上で排他。併用するコマンドを契約として固定しない。
-check_agent_contract "codex review command" 'codex exec review --base <base> -m <model> -c sandbox_mode="read-only"' .ai/agents/codex-reviewer.md
-check_agent_contract "codex review enforces read-only sandbox" '`-c sandbox_mode="read-only"` を必ず付ける' .ai/agents/codex-reviewer.md
-check_agent_contract "claude review command" 'git diff <base>...HEAD | claude -p "<レビュー指示>" --model <model>' .ai/agents/claude-reviewer.md
-check_agent_contract "cross-model review model is explicit" 'モデルは必ず `-m` / `--model` で明示指定する' .ai/runtime-compatibility.md
-# ChatGPT アカウント認証では素の gpt-5.6 が 400 になるため、バリアント指定を固定する。
-check_agent_contract "codex nested review model" '`-m gpt-5.6-sol`' .ai/runtime-compatibility.md
-check_agent_contract "plain gpt-5.6 is rejected" '素の `gpt-5.6` は使えない' .ai/runtime-compatibility.md
-check_agent_contract "codex review sandbox default documented" '既定 Sandbox は `workspace-write`' .ai/runtime-compatibility.md
-check_agent_contract "claude nested review model" '`--model opus`' .ai/runtime-compatibility.md
-check_agent_contract "host to reviewer mapping" '| Claude Code | `codex-reviewer` |' .ai/runtime-compatibility.md
-check_agent_contract "codex host uses claude reviewer" '| Codex（App / CLI） | `claude-reviewer` |' .ai/runtime-compatibility.md
-check_agent_contract "codex reviewer rejects prompt argument" '`PROMPT`（カスタム指示・`-` による stdin 入力を含む）を渡さない' .ai/agents/codex-reviewer.md
-check_agent_contract "codex reviewer avoids output file" '`-o` / 出力ファイルを使わない' .ai/agents/codex-reviewer.md
-check_agent_contract "claude reviewer restricts tools" '`--allowedTools` と `--disallowedTools` を必ず両方指定する' .ai/agents/claude-reviewer.md
-check_agent_contract "claude reviewer avoids output file" '出力ファイルを使わない' .ai/agents/claude-reviewer.md
-check_agent_contract "codex reviewer keeps committed-only scope" 'レビュー対象はコミット済み差分だけに限定する' .ai/agents/codex-reviewer.md
-check_agent_contract "claude reviewer keeps committed-only scope" 'レビュー対象はコミット済み差分だけに限定する' .ai/agents/claude-reviewer.md
-legacy_prompt_pipe=$(printf '%s%s' '-m <model> -o <出力ファイル> - < ' '<レビュー指示ファイル>')
-check_absent_contract "legacy conflicting base+prompt command" "$legacy_prompt_pipe" .ai/agents/codex-reviewer.md
+
+# ---- 危険フラグ ----
 check_absent_contract "sandbox bypass flag is not used" '--dangerously-bypass-approvals-and-sandbox' .ai/skills/issue-dev-orchestrate/SKILL.md
 claude_permission_bypass=$(printf '%s%s' '--dangerously-skip-' 'permissions')
 check_absent_contract "claude permission bypass not in orchestration" "$claude_permission_bypass" .ai/skills/issue-dev-orchestrate/SKILL.md
+
 printf '%s\n' "Agent contract checks passed!"
