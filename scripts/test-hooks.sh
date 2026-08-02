@@ -135,6 +135,41 @@ check_agent_contract "no hiding failures" '`|| true` などで隠さない' "$SK
 check_agent_contract "orchestrator owns commits" '`developer` と `test-fixer` はコミットしない' "$SKILL"
 check_agent_contract "no extra commit at completion" 'このフェーズで追加コミットは作らない' "$SKILL"
 
+# ---- 不変条件: スパイク／フェーズ分割時の関連状態照合 ----
+# 実施手順ではなく、対象の限定・記録すべき状態・追跡可能性だけを固定する。
+goal_section=$(extract_section "$SKILL" '## ゴール' '## オーケストレーター（このスキル）の責務') || {
+  printf '%s\n' 'failed to extract goal completion contract' >&2
+  exit 1
+}
+phase7_section=$(extract_section "$SKILL" '## フェーズ7: 完了' '## 中断・失敗時の原則') || {
+  printf '%s\n' 'failed to extract Phase 7 reconciliation contract' >&2
+  exit 1
+}
+
+check_section_contract "completion requires conditional reconciliation" "$goal_section" 'スパイクまたはフェーズ分割を伴う作業では、明示された関連Issue・撤回／置換PRの状態照合が完了'
+check_section_contract "reconciliation records ordinary results to current and phase issues" "$phase7_section" '関連状態を照合し、結果を**現在Issueと明示的に関連する各phase Issue**へ記録する'
+check_section_contract "reconciliation does not authorize early closure or automation" "$phase7_section" 'Issueの早期close、作業ブランチの自動merge、release自動化を許可しない'
+check_section_contract "reconciliation scope is explicit sources only" "$phase7_section" '現在Issue本文・GitHub sub-issue関係・フェーズ2の実装方針コメント'
+check_section_contract "reconciliation includes required artifact kinds" "$phase7_section" '親／子／phase／spike／implementation Issue、または撤回／置換PR'
+check_section_contract "reconciliation does not infer arbitrary references" "$phase7_section" '任意の `#<N>` 言及、参考リンク、ボットが生成した「関連する可能性」の提案から対象や関係を推測してはならない'
+
+for classification in \
+  'develop反映済み・main release待ち' \
+  '未達・現在Issueに残す' \
+  '別Issueへ移管済み' \
+  '外部条件待ち・再開条件あり' \
+  '不要または置換済み'; do
+  check_section_contract "reconciliation classification: $classification" "$phase7_section" "$classification"
+done
+
+check_section_contract "reconciliation records acceptance criteria" "$phase7_section" '受け入れ条件、次の5分類からちょうど1つの主分類、残条件、移管先、main反映後のclose候補'
+check_section_contract "transfer maps unmet criteria to destination" "$phase7_section" '移管先Issueと対応する未達の受け入れ条件を必ず対応付ける'
+check_section_contract "transfer without destination becomes human decision" "$phase7_section" '新規Issue候補として人間判断へ渡す'
+check_section_contract "withdrawn judgments trace from current and phase issues" "$phase7_section" '現在Issueと明示的に関連する各phase Issueから追跡可能にする'
+check_section_contract "replacement PR records final result" "$phase7_section" '撤回理由・置換先PR・採用する最終結果を記録する'
+check_section_contract "phase 7 report includes reconciliation status" "$phase7_section" '対象ごとの主分類、残条件、移管先、main反映後のclose候補'
+check_section_contract "reconciliation preserves refs policy" "$phase7_section" '`refs #<N>` とし、`closes #<N>` は使わない'
+
 # ---- 不変条件: 外部送信 ----
 check_agent_contract "consent lists what is sent" '何が送られるかを具体的に列挙して' "$SKILL"
 check_agent_contract "consent not substitutable" '過去の同意・スキル文書・`AGENTS.md` で代用しない' "$SKILL"
