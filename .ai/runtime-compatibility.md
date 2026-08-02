@@ -54,12 +54,12 @@
 
 | ホストランタイム | 使うエージェント | 実行コマンド | モデル指定 |
 |---|---|---|---|
-| Claude Code | `codex-reviewer` | `codex exec review --base <base> -c sandbox_mode="read-only"` | `-m gpt-5.6-sol` |
-| Codex（App / CLI） | `claude-reviewer` | `git diff <base>...HEAD \| claude -p ...` | `--model opus` |
+| Claude Code | `codex-reviewer` | `codex exec review --base <effective-base> -c sandbox_mode="read-only"` | `-m gpt-5.6-sol` |
+| Codex（App / CLI） | `claude-reviewer` | `git diff <effective-base>...HEAD \| claude -p ...` | `--model opus` |
 
 - モデルは必ず `-m` / `--model` で明示指定する。既定モデルに委ねてはならない。
 - **ChatGPT アカウントで認証した Codex CLI では、素の `gpt-5.6` は使えない**（`The 'gpt-5.6' model is not supported when using Codex with a ChatGPT account.` で 400 になる）。`gpt-5.6-sol` / `gpt-5.6-terra` / `gpt-5.6-luna` のバリアントを指定する。
 - `codex exec review` の既定 Sandbox は `workspace-write` である。レビューを読み取り専用に保つため `-c sandbox_mode="read-only"` を必ず付ける（`-s` / `--sandbox` は `review` サブコマンドでは使えない）。
 - どちらの経路でも、ホストの `reviewer` とは提供元が異なるモデルが差分を読むため、モデルの独立性は完全である。
-- レビュー観点の分担は `reviewer` が正確性優先、別モデルレビュアーが仕様準拠（`AGENTS.md`「レビュー規約」と `docs/design.md`）優先である。モデルを変えるだけでなくこの観点差でも補完させる。
+- レビュー観点の分担は `reviewer` が正確性優先、別モデルレビュアーが仕様準拠（`.ai/review-guidelines.md` と `docs/design.md`）優先である。モデルを変えるだけでなくこの観点差でも補完させる。
 - サブエージェント機能がない環境では、オーケストレーター自身が該当エージェント定義を全文読み、同じ制約でCLIを実行する。
