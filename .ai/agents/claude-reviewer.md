@@ -32,9 +32,9 @@ DNS・接続・Sandbox・認証情報不可視による失敗は、共通定義�
 claude auth status
 ```
 
-JSON を出力する。`loggedIn` が `true` であることを確認できた場合だけ認証済みとする。終了コードが非ゼロ、JSON として解析できない、`loggedIn` フィールドが無い、値が `true` でない、のいずれもすべて未認証として扱う。
+JSON を出力する。`loggedIn` が `true` ならレビュー実行へ進む。終了コードが非ゼロ、JSON として解析できない、`loggedIn` フィールドが無い、値が `true` でない場合も、preflight だけで `auth-required` と確定せず、レビュー実行コマンドを試行してランタイム応答を最終判定の根拠にする。
 
-未認証が確定した場合、ユーザーに促すコマンドは `claude auth login`。
+実行済みランタイム応答が expired/revoked OAuth 401 と明確に確認できた場合に限り、ユーザーに促すコマンドは `claude auth login`。レビューコマンド自体を実行できない場合は、共通定義の `local-execution-required` または `error` の規則に従う。
 
 ## レビュー実行コマンド（共通定義の手順4）
 
