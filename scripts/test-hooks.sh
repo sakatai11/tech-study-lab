@@ -111,7 +111,15 @@ check_agent_contract "skill has invariants section" '## 不変条件' "$SKILL"
 check_agent_contract "invariants are non-negotiable" 'という理由での逸脱も認めない' "$SKILL"
 
 # ---- 不変条件: レビューの成立（最重要） ----
-check_agent_contract "failure is never approval" 'レビューの失敗・未取得・指摘ゼロを approve として扱わない' "$SKILL"
+check_agent_contract "failure is never approval" 'レビューが正常完了しなかった状態（失敗・未取得）を approve として扱わない' "$SKILL"
+# 「指摘ゼロ」を一律に禁じると、正常完了した zero-finding レビューまでブロックし、
+# 共通定義の approve 規則と矛盾する。禁止と正当な approve の区別が明記されていること。
+check_agent_contract "zero findings can be a valid approve" 'must-fix / should-fix が0件なら、それは正当な `approve` である' "$SKILL"
+check_agent_contract "common defines approve rule" 'must-fix / should-fix が0件（nit のみ、または指摘ゼロ）' "$COMMON"
+legacy_zero_finding_ban=$(printf '%s%s' 'レビューの失敗・未取得・指摘ゼロ' 'を approve として扱わない')
+check_absent_contract "no blanket ban on zero findings" "$legacy_zero_finding_ban" "$SKILL"
+# フォールバックの2件目 reviewer は既定が accuracy-first のため、明示しないと観点が揃う。
+check_agent_contract "fallback reviewer gets spec profile" '`reviewProfile: spec-compliance-first` をブリーフで明示する' "$SKILL"
 check_agent_contract "green check is not review" 'ステータスチェックが緑でも、レビュー済みの根拠にしない' "$SKILL"
 check_agent_contract "no guessing review range" 'レビュー範囲を推測で決めない' "$SKILL"
 check_agent_contract "no cherry-picking findings" 'オーケストレーターの判断で取捨選択しない' "$SKILL"
