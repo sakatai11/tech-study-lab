@@ -137,12 +137,16 @@ check_agent_contract "no extra commit at completion" 'このフェーズで追�
 
 # ---- 不変条件: スパイク／フェーズ分割時の関連状態照合 ----
 # 実施手順ではなく、対象の限定・記録すべき状態・追跡可能性だけを固定する。
+goal_section=$(extract_section "$SKILL" '## ゴール' '## オーケストレーター（このスキル）の責務') || {
+  printf '%s\n' 'failed to extract goal completion contract' >&2
+  exit 1
+}
 phase7_section=$(extract_section "$SKILL" '## フェーズ7: 完了' '## 中断・失敗時の原則') || {
   printf '%s\n' 'failed to extract Phase 7 reconciliation contract' >&2
   exit 1
 }
 
-check_agent_contract "completion requires conditional reconciliation" 'スパイクまたはフェーズ分割を伴う作業では、明示された関連Issue・撤回／置換PRの状態照合が完了' "$SKILL"
+check_section_contract "completion requires conditional reconciliation" "$goal_section" 'スパイクまたはフェーズ分割を伴う作業では、明示された関連Issue・撤回／置換PRの状態照合が完了'
 check_section_contract "reconciliation records ordinary results to current and phase issues" "$phase7_section" '関連状態を照合し、結果を**現在Issueと明示的に関連する各phase Issue**へ記録する'
 check_section_contract "reconciliation does not authorize early closure or automation" "$phase7_section" 'Issueの早期close、作業ブランチの自動merge、release自動化を許可しない'
 check_section_contract "reconciliation scope is explicit sources only" "$phase7_section" '現在Issue本文・GitHub sub-issue関係・フェーズ2の実装方針コメント'
