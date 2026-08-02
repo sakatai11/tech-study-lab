@@ -80,6 +80,12 @@ service を中心にテストファーストで進める。
 
 共通して、テストを仕様の一次ソースにはしない。優先順位は **`docs/design.md` → 共有 Zod 契約 → テスト → 実装**とする。詳細はフロントエンドが `docs/design.md` §9.8、バックエンドが §10.9 を参照する。Claude Code では `.claude/rules/testing.md` も適用する。
 
+### レビュー規約
+
+コードレビューの規約は [`.ai/review-guidelines.md`](./.ai/review-guidelines.md) を単一ソースとする。`docs/design.md` の章マッピング（変更ファイルの領域 → 読む章）、レビュー観点、役割別のレビュープロファイル（`accuracy-first` / `spec-compliance-first`）、重要度（must-fix / should-fix / nit）の定義はすべてそこにある。**本書を含む他の文書で再掲しない。**
+
+レビューを行うときは、担当するプロファイルを1つ選び、そのプロファイルの優先順に従う。複数のレビュアーを並列に走らせる場合は、異なるプロファイルを割り当てて補完させる。
+
 ### 作業の進め方
 
 - 大きな変更の前に `docs/design.md` を確認し、必要なら先に更新する。

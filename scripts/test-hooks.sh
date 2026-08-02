@@ -95,64 +95,124 @@ check_absent_contract() {
 }
 
 printf '%s\n' "Checking agent contract consistency..."
-check_agent_contract "sandbox auth visibility" 'Sandbox 内で `signed out` の場合' .ai/agents/coderabbit-reviewer.md
-check_agent_contract "coderabbit reviewer runs in phase 5" 'issue-dev-orchestrate のフェーズ5でCLI方式が選ばれた時だけ' .ai/agents/coderabbit-reviewer.md
-legacy_coderabbit_phase=$(printf '%s%s' 'issue-dev-orchestrate のフェーズ' '4でCLI方式が選ばれた時だけ')
-check_absent_contract "legacy coderabbit reviewer phase 4" "$legacy_coderabbit_phase" .ai/agents/coderabbit-reviewer.md
+
+# 方針: 手順の逐語表現は固定しない。より良い言い回しへの改善を阻害するため。
+# ここで守るのは「破られると危険な不変条件」と「単一ソースが二重定義に戻っていないこと」だけ。
+
+SKILL=.ai/skills/issue-dev-orchestrate/SKILL.md
+COMMON=.ai/agents/cross-model-reviewer-common.md
+GUIDE=.ai/review-guidelines.md
+RUNTIME=.ai/runtime-compatibility.md
+
+# ---- スキルが手順書化していないこと ----
+check_agent_contract "skill declares it is not a procedure" '**本書は手順書ではない。**' "$SKILL"
+check_agent_contract "skill invites better approaches" 'より良い進め方を思いついたら' "$SKILL"
+check_agent_contract "skill has invariants section" '## 不変条件' "$SKILL"
+check_agent_contract "invariants are non-negotiable" 'という理由での逸脱も認めない' "$SKILL"
+
+# ---- 不変条件: レビューの成立（最重要） ----
+check_agent_contract "failure is never approval" 'レビューが正常完了しなかった状態（失敗・未取得）を approve として扱わない' "$SKILL"
+# 「指摘ゼロ」を一律に禁じると、正常完了した zero-finding レビューまでブロックし、
+# 共通定義の approve 規則と矛盾する。禁止と正当な approve の区別が明記されていること。
+check_agent_contract "zero findings can be a valid approve" 'must-fix / should-fix が0件なら、それは正当な `approve` である' "$SKILL"
+check_agent_contract "common defines approve rule" 'must-fix / should-fix が0件（nit のみ、または指摘ゼロ）' "$COMMON"
+legacy_zero_finding_ban=$(printf '%s%s' 'レビューの失敗・未取得・指摘ゼロ' 'を approve として扱わない')
+check_absent_contract "no blanket ban on zero findings" "$legacy_zero_finding_ban" "$SKILL"
+# フォールバックの2件目 reviewer は既定が accuracy-first のため、明示しないと観点が揃う。
+check_agent_contract "fallback reviewer gets spec profile" '`reviewProfile: spec-compliance-first` をブリーフで明示する' "$SKILL"
+check_agent_contract "green check is not review" 'ステータスチェックが緑でも、レビュー済みの根拠にしない' "$SKILL"
+check_agent_contract "no guessing review range" 'レビュー範囲を推測で決めない' "$SKILL"
+check_agent_contract "no cherry-picking findings" 'オーケストレーターの判断で取捨選択しない' "$SKILL"
+check_agent_contract "reviewed head only after real review" '有効なレビュー経路の実レビューが正常完了したときだけ' "$SKILL"
+check_agent_contract "profiles must differ" 'レビュープロファイルを必ず分ける' "$SKILL"
+
+# ---- 不変条件: ブランチとコミット ----
+check_agent_contract "no work on main" '`main` では作業せず' "$SKILL"
+check_agent_contract "no merge" '`gh pr merge` は `AGENTS.md` で禁止' "$SKILL"
+check_agent_contract "no closes keyword" '`closes #<N>` は使わない' "$SKILL"
+check_agent_contract "refs required" 'refs #<N>' "$SKILL"
+check_agent_contract "no hiding failures" '`|| true` などで隠さない' "$SKILL"
+check_agent_contract "orchestrator owns commits" '`developer` と `test-fixer` はコミットしない' "$SKILL"
+check_agent_contract "no extra commit at completion" 'このフェーズで追加コミットは作らない' "$SKILL"
+
+# ---- 不変条件: 外部送信 ----
+check_agent_contract "consent lists what is sent" '何が送られるかを具体的に列挙して' "$SKILL"
+check_agent_contract "consent not substitutable" '過去の同意・スキル文書・`AGENTS.md` で代用しない' "$SKILL"
+check_agent_contract "consent covers more than diff" '送信対象はコミット済み差分だけではない' "$SKILL"
+check_agent_contract "consent scope diff" 'committed-diff' "$SKILL"
+check_agent_contract "consent scope brief" 'brief-context' "$SKILL"
+check_agent_contract "consent scope repo reads" 'repository-reads' "$SKILL"
+check_agent_contract "re-consent per destination" '送信先が変われば同意も取り直す' "$SKILL"
+check_agent_contract "incremental re-consent" '新しい明示同意を実行直前に取り直す' "$SKILL"
+check_agent_contract "no same-vendor reviewer" 'ホストランタイムと同じ提供元のCLIをレビュアーにしない' "$SKILL"
+check_agent_contract "no bypass flags" '迂回フラグ' "$SKILL"
+
+# 危険フラグそのものが復活していないこと
+check_absent_contract "sandbox bypass flag absent" '--dangerously-bypass-approvals-and-sandbox' "$SKILL"
+claude_permission_bypass=$(printf '%s%s' '--dangerously-skip-' 'permissions')
+check_absent_contract "claude permission bypass absent" "$claude_permission_bypass" "$SKILL"
+
+# ---- 単一ソース: レビュー規約 ----
+check_agent_contract "guidelines own the design mapping" '## 読む章（design.md 章マッピング）' "$GUIDE"
+check_agent_contract "guidelines define accuracy profile" '`accuracy-first`（正確性優先）' "$GUIDE"
+check_agent_contract "guidelines define spec profile" '`spec-compliance-first`（仕様準拠優先）' "$GUIDE"
+check_agent_contract "guidelines define severities" '## 重要度' "$GUIDE"
+check_agent_contract "agents md points at guidelines" '.ai/review-guidelines.md' AGENTS.md
+# 章マッピング表が単一ソース以外へ再掲されていないこと
+for f in AGENTS.md .ai/agents/reviewer.md "$COMMON" "$SKILL"; do
+  check_absent_contract "design mapping not restated ($f)" '| `apps/web/**` |' "$f"
+done
+
+# ---- 単一ソース: 別モデルレビュアー共通定義 ----
+check_agent_contract "common is shared source" '`codex-reviewer` と `claude-reviewer` が共有する' "$COMMON"
+check_agent_contract "codex reads common" "$COMMON" .ai/agents/codex-reviewer.md
+check_agent_contract "claude reads common" "$COMMON" .ai/agents/claude-reviewer.md
+check_agent_contract "codex toml reads common" "$COMMON" .codex/agents/codex-reviewer.toml
+check_agent_contract "claude toml reads common" "$COMMON" .codex/agents/claude-reviewer.toml
+check_agent_contract "reviewer defers to guidelines" '`.ai/review-guidelines.md` が単一ソース' .ai/agents/reviewer.md
+check_agent_contract "reviewer default profile" '`accuracy-first`（正確性優先）' .ai/agents/reviewer.md
+check_agent_contract "common uses spec profile" '`spec-compliance-first`' "$COMMON"
+
+# ---- 不変条件: レビュアー側の安全則 ----
+check_agent_contract "common rejects diff-only consent" '差分だけの同意で実行してはならない' "$COMMON"
+check_agent_contract "common verifies scope" 'approvedScope' "$COMMON"
+check_agent_contract "common verifies destination" 'egressDestination' "$COMMON"
+check_agent_contract "common rejects wrong host" 'wrong-host-agent' "$COMMON"
+check_agent_contract "common never approves on failure" '「指摘ゼロ＝approve」と誤って報告してはならない' "$COMMON"
+check_agent_contract "common auth not literal match" '未認証の判定を特定の文言の一致に依存しない' "$COMMON"
+check_agent_contract "common committed only" 'レビュー対象はコミット済み差分だけに限定する' "$COMMON"
+check_agent_contract "common no temp files" '一時ファイルも作らない' "$COMMON"
+check_agent_contract "common three-dot base" 'git merge-base <base> HEAD' "$COMMON"
+check_agent_contract "common records both bases" '論理base（ブランチ名）と実効base（SHA）' "$COMMON"
+check_agent_contract "codex passes effective base" '<effective-base>' .ai/agents/codex-reviewer.md
+check_agent_contract "claude passes effective base" '<effective-base>' .ai/agents/claude-reviewer.md
+check_agent_contract "codex read-only sandbox" 'sandbox_mode="read-only"' .ai/agents/codex-reviewer.md
+check_agent_contract "codex rejects prompt arg" '`PROMPT`（カスタム指示・`-` による stdin 入力を含む）を渡さない' .ai/agents/codex-reviewer.md
+check_agent_contract "claude restricts tools" '`--allowedTools` と `--disallowedTools` を必ず両方指定する' .ai/agents/claude-reviewer.md
+check_agent_contract "codex host guard" '**Codex ホストで使ってはならない**' .ai/agents/codex-reviewer.md
+check_agent_contract "claude host guard" '**Claude Code ホストで使ってはならない**' .ai/agents/claude-reviewer.md
+
+# ---- モデル方針（実地検証で確定した事実） ----
+check_agent_contract "model policy section exists" '## 別モデルCLIレビューのモデル方針' "$RUNTIME"
+check_agent_contract "agent-self policy is separate" '## Codexサブエージェント本体のモデル方針' "$RUNTIME"
+check_agent_contract "model must be explicit" 'モデルは必ず `-m` / `--model` で明示指定する' "$RUNTIME"
+check_agent_contract "plain gpt-5.6 rejected" '素の `gpt-5.6` は使えない' "$RUNTIME"
+check_agent_contract "codex sandbox default documented" '既定 Sandbox は `workspace-write`' "$RUNTIME"
+check_agent_contract "codex nested model" '`-m gpt-5.6-sol`' "$RUNTIME"
+check_agent_contract "claude nested model" '`--model opus`' "$RUNTIME"
+check_agent_contract "host to reviewer mapping" '| Claude Code | `codex-reviewer` |' "$RUNTIME"
+check_agent_contract "codex host uses claude reviewer" '| Codex（App / CLI） | `claude-reviewer` |' "$RUNTIME"
+check_agent_contract "codex toml pins variant" '`-m gpt-5.6-sol`' .codex/agents/codex-reviewer.toml
+check_agent_contract "codex toml pins sandbox" 'sandbox_mode="read-only"' .codex/agents/codex-reviewer.toml
+check_agent_contract "codex toml effort" 'model_reasoning_effort = "high"' .codex/agents/codex-reviewer.toml
+check_agent_contract "claude toml effort" 'model_reasoning_effort = "high"' .codex/agents/claude-reviewer.toml
+check_agent_contract "communication is not authentication" '通信失敗を未認証と報告しない' "$RUNTIME"
+
+# ---- エージェント起動フェーズの整合 ----
+check_agent_contract "codex reviewer host scope" 'ホストランタイムが Claude Code の時だけ' .ai/agents/codex-reviewer.md
+check_agent_contract "claude reviewer host scope" 'ホストランタイムが Codex の時だけ' .ai/agents/claude-reviewer.md
 check_agent_contract "reviewer runs in phase 5" 'issue-dev-orchestrate のフェーズ5（レビュー）で使用する' .ai/agents/reviewer.md
 check_agent_contract "test fixer runs in phases 4 and 6" 'issue-dev-orchestrate のフェーズ4・6（品質ゲート）で使用する' .ai/agents/test-fixer.md
-check_agent_contract "escalated auth/network retry" '正規の権限昇格経路で再確認してください' .codex/agents/coderabbit-reviewer.toml
-check_agent_contract "communication is not authentication" '通信失敗を未認証と報告しない' .ai/runtime-compatibility.md
-check_agent_contract "auth-required after outside check" 'Sandbox 外でも未認証と確認された `auth-required`' .ai/skills/issue-dev-orchestrate/SKILL.md
-review_mode_section=$(extract_section .ai/skills/issue-dev-orchestrate/SKILL.md '5. **レビュー方式を選択する**' '## エージェント起動の共通ルール')
-initial_commit_section=$(extract_section .ai/skills/issue-dev-orchestrate/SKILL.md '## フェーズ4: 品質ゲートと初期実装コミット' '## フェーズ5: 初回のコミット済み差分レビュー')
-cli_review_section=$(extract_section .ai/skills/issue-dev-orchestrate/SKILL.md '### CodeRabbit CLIを選んだ場合' '### GitHub Appを選んだ場合')
-github_app_review_section=$(extract_section .ai/skills/issue-dev-orchestrate/SKILL.md '### GitHub Appを選んだ場合' '### 結果の統合とレビュー済みHEADの記録')
-reviewed_head_section=$(extract_section .ai/skills/issue-dev-orchestrate/SKILL.md '### 結果の統合とレビュー済みHEADの記録' '## フェーズ6: 修正・品質ゲート・周回コミット・増分再レビュー')
-review_loop_section=$(extract_section .ai/skills/issue-dev-orchestrate/SKILL.md '## フェーズ6: 修正・品質ゲート・周回コミット・増分再レビュー' '## フェーズ7: 完了')
-completion_section=$(extract_section .ai/skills/issue-dev-orchestrate/SKILL.md '## フェーズ7: 完了' '## 中断・失敗時の原則')
-agent_egress_gate=$(awk '/^1\. \*\*方式と外部送信同意の確認\*\*/ { print; exit }' .ai/agents/coderabbit-reviewer.md)
+check_agent_contract "reviewer committed range" '`git diff <previous-reviewed-head>...HEAD`' .ai/agents/reviewer.md
 
-check_section_contract "review mode selection" "$review_mode_section" 'GitHub App（推奨）'
-check_section_contract "cli selection records mode" "$review_mode_section" 'reviewMode: coderabbit-cli'
-check_section_contract "cli selection sends committed diff" "$review_mode_section" 'privateのコミット済み差分'
-check_section_contract "cli review mode" "$cli_review_section" 'reviewMode: coderabbit-cli'
-check_section_contract "cli egress consent" "$cli_review_section" 'externalEgressApproved: true'
-check_section_contract "cli consent fallback" "$cli_review_section" 'external-egress-confirmation-required'
-check_section_contract "initial quality gate" "$initial_commit_section" 'test-fixer'
-check_absent_contract "phase 4 avoids redundant test-fixer definition wording" '`.ai/agents/test-fixer.md` の定義を使って' .ai/skills/issue-dev-orchestrate/SKILL.md
-check_section_contract "initial implementation commit" "$initial_commit_section" '初期実装を1コミットにする'
-check_section_contract "initial commit includes quality-gate fixes" "$initial_commit_section" 'フェーズ4の品質ゲート修正を含む'
-check_section_contract "initial commit excludes unrelated user changes" "$initial_commit_section" '無関係なユーザー変更は含めない'
-check_section_contract "initial commit stages all current-work changes" "$initial_commit_section" 'git add -- <今回作業の変更ファイル>'
-check_section_contract "initial commit requires clean tree" "$initial_commit_section" 'git status --short'
-check_section_contract "initial review range" "$cli_review_section" 'reviewRange: develop...HEAD'
-check_section_contract "initial cli committed review" "$cli_review_section" 'coderabbit review --agent --committed --base develop'
-check_section_contract "github app follows initial commit" "$github_app_review_section" '初期コミット後に'
-check_section_contract "github app reviews initial head" "$github_app_review_section" 'この初期コミットのHEAD'
-check_section_contract "fallback reviewer stores reviewed head" "$reviewed_head_section" '代替として起動した2件目の `reviewer`'
-check_section_contract "fallback reviewer normal result" "$reviewed_head_section" '`approve` / `request-changes` で正常完了した場合'
-check_section_contract "coderabbit failure is not approval" "$reviewed_head_section" 'CodeRabbitの失敗自体をapproveとして扱ってはならず'
-check_section_contract "incremental review range" "$review_loop_section" '<previous-reviewed-head>...HEAD'
-check_section_contract "incremental cli committed review" "$review_loop_section" 'coderabbit review --agent --committed --base-commit <previous-reviewed-head>'
-check_section_contract "reviewed head scratchpad" "$review_loop_section" 'last-reviewed-head-<N>.txt'
-check_section_contract "review loop passes changed files to test fixer" "$review_loop_section" '当該周回の変更ファイル一覧'
-check_section_contract "review loop scopes test fixer brief" "$review_loop_section" '`test-fixer` 用ブリーフに明記する'
-check_section_contract "review loop commits only round files" "$review_loop_section" 'この一覧のファイルだけを明示して stage'
-check_section_contract "github app waits for latest head" "$review_loop_section" '最新HEADに対するAppレビューを最大10分待機'
-check_section_contract "github app leaves reviewed head unchanged when unavailable" "$review_loop_section" '`last-reviewed-head-<N>.txt` を更新せず'
-check_section_contract "github app verifies latest head" "$review_loop_section" '古いHEADのレビューだけで再レビュー済みと扱ってはならない'
-check_section_contract "completion avoids duplicate commit" "$completion_section" 'このフェーズで追加コミットは作らない'
-check_section_contract "agent mode and egress gate" "$agent_egress_gate" 'reviewMode: coderabbit-cli'
-check_section_contract "agent requires egress consent" "$agent_egress_gate" 'externalEgressApproved: true'
-check_section_contract "agent rejects github app mode" "$agent_egress_gate" '方式がGitHub App・不明の場合'
-check_section_contract "agent blocks command and escalation" "$agent_egress_gate" 'レビューコマンドも権限昇格も実行せず'
-check_section_contract "agent returns explicit consent status" "$agent_egress_gate" 'external-egress-confirmation-required'
-check_agent_contract "reviewer initial committed range" '初回は `git diff develop...HEAD`' .ai/agents/reviewer.md
-check_agent_contract "reviewer incremental committed range" '`git diff <previous-reviewed-head>...HEAD`' .ai/agents/reviewer.md
-check_agent_contract "coderabbit initial committed command" 'coderabbit review --agent --committed --base develop' .ai/agents/coderabbit-reviewer.md
-check_agent_contract "coderabbit incremental committed command" 'coderabbit review --agent --committed --base-commit <previous-reviewed-head>' .ai/agents/coderabbit-reviewer.md
-legacy_uncommitted_flag=$(printf '%s%s' '-t un' 'committed')
-check_absent_contract "legacy uncommitted CodeRabbit flag" "$legacy_uncommitted_flag" .ai/agents/coderabbit-reviewer.md
-check_absent_contract "legacy uncommitted CodeRabbit flag in orchestration" "$legacy_uncommitted_flag" .ai/skills/issue-dev-orchestrate/SKILL.md
 printf '%s\n' "Agent contract checks passed!"
