@@ -16,6 +16,16 @@ tools: Bash, Read
 
 `egressDestination` は `anthropic` である。
 
+## Claude CLI 固有の認証・実行時失敗分類
+
+Codex サブエージェントは Claude CLI の実行と結果の正規化を担うラッパーであり、独立したモデルによるレビューは `claude -p --model opus` が実行する。Claude CLI はホストに安全に保存された Claude の認証情報を自動的に利用する。資格情報・トークン・認証キャッシュを読み取り、コピーし、またはブリーフ・コマンド・ログに埋め込んではならない。
+
+`claude auth status` は preflight に限る。`loggedIn: true` は API リクエストの成功を保証しないため、実際の `claude -p` の正常完了だけを認証と通信が成功した最終的な証拠として扱う。
+
+実際に実行した `claude -p` のランタイム応答に HTTP `401` と、OAuth 認証情報が expired または revoked である意味が明確に含まれる場合だけ、「判定: auth-required」とし `claude auth login` を案内する。文脈が曖昧な一般的な `401` は `auth-required` にせず、機密情報をマスクしたメタ情報付きの「判定: error」とする。
+
+DNS・接続・Sandbox・認証情報不可視による失敗は、共通定義に従って同一コマンドを Sandbox 外で確認する対象である。その必要な確認を実行できない、または承認されなかった場合だけ「判定: local-execution-required」とする。これらの失敗を `auth-required` として扱わない。
+
 ## 認証確認コマンド（共通定義の手順2）
 
 ```bash
@@ -34,6 +44,7 @@ JSON を出力する。`loggedIn` が `true` であることを確認できた�
 git diff <effective-base>...HEAD | claude -p "<レビュー指示>" --model <model> --allowedTools "Read Grep Glob" --disallowedTools "Edit Write NotebookEdit Bash" --output-format text
 ```
 
+- private なコミット済み差分をこのコマンドへ渡す前に、共通定義の手順1にある3種すべての外部送信同意を確認する。不足時はレビューコマンドを実行しない。
 - **レビュー範囲は標準入力に渡す差分そのもので確定する。** 実効base を使うことで `<base>...HEAD` と等価な三点差分になり、base側が先へ進んでいてもその変更は混入しない。
 - **`--allowedTools` と `--disallowedTools` を必ず両方指定する。** 編集系ツールを与えるとレビュアーがリポジトリを変更しうる。
 - **`--dangerously-skip-permissions` / `--allow-dangerously-skip-permissions` を使わない。** 権限チェックの迂回は読み取り専用の保証を壊す。

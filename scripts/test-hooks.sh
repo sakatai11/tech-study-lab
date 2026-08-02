@@ -179,6 +179,9 @@ check_agent_contract "common verifies scope" 'approvedScope' "$COMMON"
 check_agent_contract "common verifies destination" 'egressDestination' "$COMMON"
 check_agent_contract "common rejects wrong host" 'wrong-host-agent' "$COMMON"
 check_agent_contract "common never approves on failure" '「指摘ゼロ＝approve」と誤って報告してはならない' "$COMMON"
+check_agent_contract "common delegates recognized CLI auth failures" '各 CLI のエージェント定義で認識された認証失敗' "$COMMON"
+check_agent_contract "common requires actual execution before CLI auth classification" '**実際のレビューコマンドが実行された後**' "$COMMON"
+check_agent_contract "common keeps consent before CLI auth classification" 'この分類のためにレビューコマンドを実行してはならない' "$COMMON"
 check_agent_contract "common auth not literal match" '未認証の判定を特定の文言の一致に依存しない' "$COMMON"
 check_agent_contract "common committed only" 'レビュー対象はコミット済み差分だけに限定する' "$COMMON"
 check_agent_contract "common no temp files" '一時ファイルも作らない' "$COMMON"
@@ -191,6 +194,18 @@ check_agent_contract "codex rejects prompt arg" '`PROMPT`（カスタム指示�
 check_agent_contract "claude restricts tools" '`--allowedTools` と `--disallowedTools` を必ず両方指定する' .ai/agents/claude-reviewer.md
 check_agent_contract "codex host guard" '**Codex ホストで使ってはならない**' .ai/agents/codex-reviewer.md
 check_agent_contract "claude host guard" '**Claude Code ホストで使ってはならない**' .ai/agents/claude-reviewer.md
+check_agent_contract "claude reviewer is execution and normalization wrapper" 'Claude CLI の実行と結果の正規化を担うラッパー' .ai/agents/claude-reviewer.md
+check_agent_contract "claude reviewer uses independent opus command" '`claude -p --model opus`' .ai/agents/claude-reviewer.md
+check_agent_contract "claude uses host-stored credentials automatically" '認証情報を自動的に利用する' .ai/agents/claude-reviewer.md
+check_agent_contract "claude uses host-stored credentials without exposing them" '資格情報・トークン・認証キャッシュを読み取り、コピーし、またはブリーフ・コマンド・ログに埋め込んではならない' .ai/agents/claude-reviewer.md
+check_agent_contract "claude auth status is preflight only" '`claude auth status` は preflight に限る' .ai/agents/claude-reviewer.md
+check_agent_contract "claude execution proves authentication and communication" '実際の `claude -p` の正常完了だけを認証と通信が成功した最終的な証拠として扱う' .ai/agents/claude-reviewer.md
+check_agent_contract "claude recognized expired or revoked OAuth maps to auth required" 'HTTP `401` と、OAuth 認証情報が expired または revoked である意味が明確に含まれる場合だけ、「判定: auth-required」' .ai/agents/claude-reviewer.md
+check_agent_contract "claude auth remediation is explicit" '`claude auth login` を案内する' .ai/agents/claude-reviewer.md
+check_agent_contract "claude ambiguous 401 remains error" '文脈が曖昧な一般的な `401` は `auth-required` にせず' .ai/agents/claude-reviewer.md
+check_agent_contract "claude local execution requires unavailable outside sandbox confirmation" 'その必要な確認を実行できない、または承認されなかった場合だけ「判定: local-execution-required」' .ai/agents/claude-reviewer.md
+check_agent_contract "claude does not send private diff before consent" '不足時はレビューコマンドを実行しない' .ai/agents/claude-reviewer.md
+check_absent_contract "common does not duplicate Claude OAuth classification" 'OAuth 認証情報が expired または revoked' "$COMMON"
 
 # ---- モデル方針（実地検証で確定した事実） ----
 check_agent_contract "model policy section exists" '## 別モデルCLIレビューのモデル方針' "$RUNTIME"
