@@ -1,14 +1,17 @@
+import Link from 'next/link'
 import type { CSSProperties } from 'react'
+import { Suspense } from 'react'
 
 import { DashboardShell } from '@/components/dashboard-shell'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { ProgressBar } from '@/components/ui/progress-bar'
 import { TermCrumb } from '@/components/ui/term-crumb'
+import { DashboardDueCard } from '@/features/dashboard/server/components/dashboard-due-card'
+import { DashboardDueCardFallback } from '@/features/dashboard/server/components/dashboard-due-card-fallback'
+import { loadDashboardStatic } from '@/features/dashboard/server/load-dashboard'
 
 const stats = [
-  { label: '今日の復習 due', value: '3', unit: '問', icon: '↻', tone: 'blue' },
   { label: '正答率 · 直近7日', value: '78', unit: '%', icon: '✓', tone: 'green' },
   { label: '基盤コンポーネント', value: '4', unit: '種', icon: '⌘', tone: 'purple' },
   { label: '連続学習ストリーク', value: '12', unit: '日', icon: '↗', tone: 'orange' },
@@ -41,6 +44,8 @@ function revealStyle(index: number): CSSProperties {
 }
 
 export default function Home() {
+  const { continueHref } = loadDashboardStatic()
+
   return (
     <DashboardShell>
       <div className="flex flex-col gap-5">
@@ -54,16 +59,21 @@ export default function Home() {
               開発者のための学習ワークベンチ
             </h1>
             <p className="mb-0 mt-2 max-w-2xl text-pretty text-mute">
-              Dev-Native Neo Flat × Terminal
-              の基盤を示す静的ダッシュボードです。実データ接続は次の縦切りで追加します。
+              今日の復習を片付けてから、新しい教材へ進みましょう。
             </p>
           </div>
-          <Button disabled title="復習機能は準備中です" variant="green">
-            復習は準備中
-          </Button>
+          <Link
+            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-green px-4 py-2.5 font-bold text-white shadow-[0_4px_0_var(--green-shade)] transition-transform hover:brightness-110 active:translate-y-1 active:shadow-none"
+            href="/review"
+          >
+            復習を始める
+          </Link>
         </section>
 
         <section aria-label="学習サマリー" className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          <Suspense fallback={<DashboardDueCardFallback />}>
+            <DashboardDueCard />
+          </Suspense>
           {stats.map((stat, index) => (
             <Card className="reveal p-4" key={stat.label} style={revealStyle(index + 1)}>
               <span
@@ -186,9 +196,12 @@ export default function Home() {
                 この画面は、将来の機能を載せるための静的な基盤です。
               </p>
             </div>
-            <Button disabled title="教材機能は準備中です" variant="green">
-              教材は準備中
-            </Button>
+            <Link
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-green px-4 py-2.5 font-bold text-white shadow-[0_4px_0_var(--green-shade)] transition-transform hover:brightness-110 active:translate-y-1 active:shadow-none"
+              href={continueHref}
+            >
+              続きから
+            </Link>
           </div>
         </Card>
       </div>

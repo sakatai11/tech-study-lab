@@ -4,10 +4,11 @@ import { ThemeToggle } from '@/components/theme-toggle'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { ProgressBar } from '@/components/ui/progress-bar'
+import { DueCountBadge } from '@/features/dashboard/client/components/due-count-badge'
 
 type NavigationItem = {
   desktopLabel: string
-  dueCount?: number
+  hasDueBadge?: boolean
   mobileLabel?: string
   symbol: string
 }
@@ -16,7 +17,7 @@ const desktopNavigation: NavigationItem[] = [
   { desktopLabel: 'ダッシュボード', mobileLabel: 'ホーム', symbol: '▦' },
   { desktopLabel: '教材', mobileLabel: '教材', symbol: '▤' },
   { desktopLabel: '演習', mobileLabel: '演習', symbol: '✎' },
-  { desktopLabel: '復習', dueCount: 3, mobileLabel: '復習', symbol: '↻' },
+  { desktopLabel: '復習', hasDueBadge: true, mobileLabel: '復習', symbol: '↻' },
   { desktopLabel: 'アナリティクス', symbol: '▥' },
   { desktopLabel: 'スキルツリー', mobileLabel: 'ツリー', symbol: '⌘' },
 ]
@@ -67,12 +68,8 @@ function DesktopNavigation() {
                   {item.symbol}
                 </span>
                 {item.desktopLabel}
-                {item.dueCount ? (
-                  <span className="ml-auto grid size-5 place-items-center rounded-full bg-red font-mono text-[10px] font-bold tabular-nums text-white">
-                    <span className="sr-only">期限の復習が</span>
-                    {item.dueCount}
-                    <span className="sr-only">件</span>
-                  </span>
+                {item.hasDueBadge ? (
+                  <DueCountBadge className="ml-auto grid size-5 place-items-center rounded-full bg-red font-mono text-[10px] font-bold tabular-nums text-white" />
                 ) : null}
                 {!isCurrent ? <span className="ml-auto font-mono text-[10px]">準備中</span> : null}
               </button>
@@ -129,12 +126,8 @@ function MobileNavigation() {
               {item.symbol}
             </span>
             <span className="text-[11px]">{item.mobileLabel}</span>
-            {item.dueCount ? (
-              <span className="absolute right-2 top-0 grid size-4 place-items-center rounded-full bg-red font-mono text-[9px] font-bold tabular-nums text-white">
-                <span className="sr-only">期限の復習が</span>
-                {item.dueCount}
-                <span className="sr-only">件</span>
-              </span>
+            {item.hasDueBadge ? (
+              <DueCountBadge className="absolute right-2 top-0 grid size-4 place-items-center rounded-full bg-red font-mono text-[9px] font-bold tabular-nums text-white" />
             ) : null}
           </button>
         )
