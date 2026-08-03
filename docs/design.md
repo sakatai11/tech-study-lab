@@ -261,7 +261,7 @@ apps/web/src/
 ├── features/                 # 機能単位。実行環境は各 feature の client / server で分離
 │   ├── dashboard/
 │   ├── domains/
-│   ├── lesson/                # server / mapper / view-model（client なし。教材表示は RSC のみ）
+│   ├── lesson/                # server / mapper / view-model / api / client（教材本文は RSC、閲覧記録の最小 recorder のみ Client）
 │   ├── quiz/                 # 下記の feature 標準構成に従う
 │   │   ├── client/
 │   │   │   ├── components/  # Client Components。表示と表示操作 state
