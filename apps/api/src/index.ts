@@ -6,6 +6,7 @@ import type { AppEnv } from './env'
 import { userContext } from './middleware/user-context'
 import { answersRoute } from './routes/answers'
 import { dashboardRoute } from './routes/dashboard'
+import { lessonViewsRoute } from './routes/lesson-views'
 import { reviewRoute } from './routes/review'
 import { QuestionNotFoundError } from './services/errors'
 
@@ -47,6 +48,7 @@ app.onError(apiErrorHandler)
 const routes = app
   .get('/health', (c) => c.json({ status: 'ok' as const }))
   .route('/answers', answersRoute)
+  .route('/lesson-views', lessonViewsRoute)
   .route('/review', reviewRoute)
   .route('/dashboard', dashboardRoute)
 

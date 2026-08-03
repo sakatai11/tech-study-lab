@@ -136,6 +136,7 @@
           <a href="#rules">共通規約</a>
           <h2>Walking Skeleton</h2>
           <a href="#answers">POST /answers</a>
+          <a href="#lesson-views">POST /lesson-views</a>
           <a href="#review-queue">GET /review/queue</a>
           <a href="#due-count">GET /dashboard/due-count</a>
           <h2>後続API</h2>
@@ -160,7 +161,7 @@
         <section id="how-to-read" aria-labelledby="how-to-read-title">
           <h2 id="how-to-read-title">最初に読むなら、この3点</h2>
           <div class="quickstart">
-            <div><strong>1. 状態を見る</strong><p><code>scheduled</code> は実装時に守る契約、<code>planned</code> はDTOが未確定です。</p></div>
+            <div><strong>1. 状態を見る</strong><p><code>implemented</code> はrouteと共有Zodスキーマの実装済み、<code>planned</code> はDTOが未確定です。</p></div>
             <div><strong>2. 成功だけでなくエラーを見る</strong><p>入力不備、対象なし、内部エラーを先に把握すると、画面側の分岐を設計しやすくなります。</p></div>
             <div><strong>3. Zodを正とする</strong><p>実装済みの契約は <code>packages/shared/src/schema/api.ts</code> をAPIとフロントで共有します。</p></div>
           </div>
@@ -172,16 +173,16 @@
             <article class="rule"><h3>パスと形式</h3><p>現時点ではAPIバージョンのプレフィックスはありません。リクエストとレスポンスはJSONで、本文のない <code>GET</code> にJSON bodyは送りません。</p></article>
             <article class="rule"><h3>ユーザーコンテキスト</h3><p>API middleware が固定の <code>user_id</code> を権威的に注入します。クライアントは <code>user_id</code> / <code>userId</code> を送らず、レスポンスにも含めません。</p></article>
             <article class="rule"><h3>エラー形式</h3><p>routeのエラーは原則 <code>{ error: { code, message } }</code>。ただし、入力検証の400は現時点で <code>zValidator</code> の既定形式です。</p></article>
-            <article class="rule"><h3>実装状態</h3><p><code>scheduled</code> は予定契約で、routeの実装済みを意味しません。<code>planned</code> はレスポンスDTOとZodスキーマが未確定です。</p></article>
+            <article class="rule"><h3>実装状態</h3><p><code>implemented</code> はrouteと共有Zodスキーマが実装済みです。<code>planned</code> はレスポンスDTOとZodスキーマが未確定です。</p></article>
           </div>
         </section>
 
         <section aria-labelledby="core-title">
           <h2 id="core-title">Walking Skeleton の中核API</h2>
-          <p class="legend"><span class="status">scheduled · Zod実装済み</span><span>route実装は <a href="https://github.com/sakatai11/tech-study-lab/issues/20">#20</a> で予定しています。</span></p>
+          <p class="legend"><span class="status">implemented · route / Zod実装済み</span><span>4 endpoint は共有Zodスキーマ、Hono route、D1 integration testまで実装済みです。</span></p>
           <div class="endpoint-list">
             <article class="endpoint" id="answers">
-              <header><span class="method">POST</span><h3><code>/answers</code></h3><span class="status">scheduled</span></header>
+              <header><span class="method">POST</span><h3><code>/answers</code></h3><span class="status">implemented</span></header>
               <p>1問の解答をサーバーで採点・記録し、SRS状態を更新します。演習・復習・誤答のみ再挑戦で契約は共通です。</p>
               <table class="contract"><tbody>
                 <tr><th>リクエスト</th><td>JSON。<code>answerRequestSchema</code>: <code>questionId</code> は1文字以上、<code>selectedIndex</code> は0〜5の整数、<code>responseTimeMs</code> は任意の0以上の整数。</td></tr>
@@ -192,8 +193,20 @@
               <p class="detail"><strong>なぜAPIで採点するか:</strong> クライアントに正解を持たせず、APIが <code>questions</code> の正解と照合するためです。</p>
             </article>
 
+            <article class="endpoint" id="lesson-views">
+              <header><span class="method">POST</span><h3><code>/lesson-views</code></h3><span class="status">implemented</span></header>
+              <p>教材本文を表示したことを、アナリティクス用の最小ログとして記録します。教材本文そのものはcontent由来の静的RSCであり、このAPIから取得しません。</p>
+              <table class="contract"><tbody>
+                <tr><th>リクエスト</th><td>JSON。strict な <code>lessonViewRequestSchema</code>: <code>lessonId</code> は1文字以上の文字列。<code>userId</code> を含む未知のフィールドは拒否します。</td></tr>
+                <tr><th>成功</th><td><span class="http">201 Created</span>。<code>lessonViewResponseSchema</code>: <code>{ recorded: true }</code>。</td></tr>
+                <tr><th>エラー</th><td><span class="http">400</span> 入力不備。<span class="http">500</span> <code>INTERNAL</code>。</td></tr>
+                <tr><th>Zod</th><td>実装済み: <code>lessonViewRequestSchema</code> / <code>lessonViewResponseSchema</code></td></tr>
+              </tbody></table>
+              <p class="detail"><strong>ユーザーコンテキスト:</strong> <code>userId</code> はmiddlewareが注入します。重複排除、配送保証、lessonの存在確認は行いません。Web側はmount後にfire-and-forgetで送信し、失敗をUIへ表示しません。</p>
+            </article>
+
             <article class="endpoint" id="review-queue">
-              <header><span class="method">GET</span><h3><code>/review/queue</code></h3><span class="status">scheduled</span></header>
+              <header><span class="method">GET</span><h3><code>/review/queue</code></h3><span class="status">implemented</span></header>
               <p>復習対象の問題IDとSRSメタデータを返します。本文・選択肢・解説はフロントエンドがcontentから解決します。</p>
               <table class="contract"><tbody>
                 <tr><th>リクエスト</th><td>body・query parameterなし。</td></tr>
@@ -204,7 +217,7 @@
             </article>
 
             <article class="endpoint" id="due-count">
-              <header><span class="method">GET</span><h3><code>/dashboard/due-count</code></h3><span class="status">scheduled</span></header>
+              <header><span class="method">GET</span><h3><code>/dashboard/due-count</code></h3><span class="status">implemented</span></header>
               <p>ダッシュボードに表示する、今すぐ復習できる問題数を返します。</p>
               <table class="contract"><tbody>
                 <tr><th>リクエスト</th><td>body・query parameterなし。</td></tr>

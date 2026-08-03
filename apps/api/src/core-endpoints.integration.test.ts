@@ -53,7 +53,46 @@ describe('core API endpoints', () => {
       env.DB.prepare('DELETE FROM answer_logs'),
       env.DB.prepare('DELETE FROM srs_states'),
       env.DB.prepare('DELETE FROM questions'),
+      env.DB.prepare('DELETE FROM lesson_views'),
     ])
+  })
+
+  it('records a lesson view for the middleware user', async () => {
+    const response = await SELF.fetch('https://api.test/lesson-views', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ lessonId: 'security-xss-01' }),
+    })
+
+    expect(response.status).toBe(201)
+    await expect(response.json()).resolves.toEqual({ recorded: true })
+    await expect(
+      env.DB.prepare('SELECT user_id, lesson_id, viewed_at FROM lesson_views').all(),
+    ).resolves.toMatchObject({
+      results: [
+        {
+          user_id: FIXED_USER_ID,
+          lesson_id: 'security-xss-01',
+          viewed_at: expect.any(Number),
+        },
+      ],
+    })
+  })
+
+  it('rejects a client-provided userId without recording a lesson view', async () => {
+    const response = await SELF.fetch('https://api.test/lesson-views', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        lessonId: 'security-xss-01',
+        userId: 'untrusted-user',
+      }),
+    })
+
+    expect(response.status).toBe(400)
+    await expect(env.DB.prepare('SELECT * FROM lesson_views').all()).resolves.toMatchObject({
+      results: [],
+    })
   })
 
   it('grades an answer and atomically records its log and next SRS state for the fixed user', async () => {

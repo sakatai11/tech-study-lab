@@ -224,6 +224,7 @@ SM-2 の計算式（`packages/shared/src/srs/sm2.ts`）の周辺で、実装時�
 HTTP 入出力、Zod スキーマの実装状況、後続エンドポイントの planned 状態は [API 契約カタログ](./api-spec.html) を参照する。本節は画面から要請される API の高水準な一次仕様として維持する。
 
 - `POST /answers` — 1 問解答の記録 → SRS 更新。リクエスト `{ questionId, selectedIndex, responseTimeMs? }`、レスポンス `{ isCorrect, correctIndex }`。正誤判定は API が D1 の `questions`（4.4）を照合して行う権威側（7.2）
+- `POST /lesson-views` — 教材の閲覧を記録。strict なリクエスト `{ lessonId }` を受け、middleware が注入した `userId` のみを使用して `lesson_views` へ記録し、`201 { recorded: true }` を返す。クライアントは `userId` を送らない。重複排除、配送保証、lesson の存在確認はこの最小ログでは行わない。
 - `GET /review/queue` — due 問題の `question_id` ＋ SRS メタと、次バッチの有無 `hasMore` を返す（本文はフロントがビルド時データから解決）。APIが`dueAt`昇順・最大20件を保証する（§4.5）
 - `GET /dashboard/due-count` — ダッシュボードの due 件数
 - `GET /domains` — 4 領域それぞれの習得率（習得済み問題数 / 全問題数）・トピック数・レッスン数を返す（`/domains`・ダッシュボードの領域別カードで共用）
@@ -465,7 +466,7 @@ export default function LessonPage({ params }: Props) {
 }
 ```
 
-- loader はビルド時バンドル済み content を取得し、mapper を噛ませて ViewModel を page へ返す。page はその ViewModel を feature component へ渡す。教材本文ページは API を呼ばない。
+- loader はビルド時バンドル済み content を取得し、mapper を噛ませて ViewModel を page へ返す。page はその ViewModel を feature component へ渡す。教材本文データは静的 RSC であり API を呼ばない。閲覧記録だけは `LessonDisplay` に合成する小さな Client Component が mount 後に `POST /lesson-views` を fire-and-forget で送信し、失敗を UI へ波及させない。
 - page は loader を呼ぶだけに留める。`params` の取り出し、`metadata`、`notFound()` など App Router 固有の関心事は page 側に残し、feature のデータ形成や ViewModel 化は `features/*/server` に置く。
 - エラーは throw → `error.tsx`・`Suspense` で処理。
 
@@ -667,6 +668,15 @@ apps/web/src/
 │       └── server/
 │           ├── components/         # Server Component が必要な場合だけ作る
 │           └── load-quiz.ts        # 初回取得・join・ViewModel 化
+│   └── lesson/
+│       ├── api/
+│       │   └── lesson-api.ts        # POST /lesson-views の endpoint adapter
+│       ├── client/
+│       │   └── components/
+│       │       └── lesson-view-recorder.tsx # mount 後の fire-and-forget 記録
+│       └── server/
+│           └── components/
+│               └── lesson-display.tsx # 静的本文 + recorder leaf の合成
 ├── features/shared/
 │   └── quiz-question.ts            # content question -> quiz表示用データの小さい純粋変換
 └── lib/
@@ -735,6 +745,7 @@ import 'server-only';
 export function LessonDisplay({ viewModel }: { viewModel: LessonViewModel }) {
   return (
     <article className="prose">
+      <LessonViewRecorder lessonId={viewModel.id} />
       <h1>{viewModel.title}</h1>
       <ReactMarkdown>{viewModel.markdownBody}</ReactMarkdown>
     </article>
@@ -976,6 +987,8 @@ apps/web/src/features/
 └── shared/
     └── quiz-question.ts        # 小さい純粋変換のみ
 ```
+
+`LessonViewRecorder` は `'use client'` の最小 leaf とし、mount 後に Browser API client を遅延生成して `POST /lesson-views` を送信する。本文データを取得・保持せず、通信失敗は無視するため教材の表示やエラー境界に影響しない。
 
 ViewModel・mapper は feature ごとに独立させ、同じ DTO の使い方が feature ごとに異なることを認める。`apps/web/src/features/shared` は共通 ViewModel を持つ場所ではなく、`contentQuestionToQuizQuestion` のような小さい純粋変換だけを置く場所とする。
 

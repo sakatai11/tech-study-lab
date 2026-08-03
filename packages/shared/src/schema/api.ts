@@ -23,6 +23,18 @@ export const answerResponseSchema = z.object({
 })
 export type AnswerResponse = z.infer<typeof answerResponseSchema>
 
+export const lessonViewRequestSchema = z
+  .object({
+    lessonId: z.string().min(1),
+  })
+  .strict()
+export type LessonViewRequest = z.infer<typeof lessonViewRequestSchema>
+
+export const lessonViewResponseSchema = z.object({
+  recorded: z.literal(true),
+})
+export type LessonViewResponse = z.infer<typeof lessonViewResponseSchema>
+
 export const reviewQueueResponseSchema = z.object({
   hasMore: z.boolean(),
   items: z
