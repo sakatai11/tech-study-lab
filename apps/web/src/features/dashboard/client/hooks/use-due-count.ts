@@ -2,15 +2,15 @@
 
 import { useEffect, useState } from 'react'
 
+import type { DueCountResponse } from '@tsl/shared'
+
 import { createBrowserApiClient } from '@/lib/api'
 
 import { fetchDueCount } from '../../api/dashboard-api'
-import { dueCountToViewModel } from '../../mapper'
-import type { DashboardDueViewModel } from '../../view-model'
 
 type DueCountSubscriptionOptions = {
-  loadDueCount: () => Promise<DashboardDueViewModel>
-  onValue: (viewModel: DashboardDueViewModel | null) => void
+  loadDueCount: () => Promise<DueCountResponse>
+  onValue: (response: DueCountResponse | null) => void
 }
 
 /**
@@ -24,9 +24,9 @@ export function subscribeToDueCount({
   let isActive = true
 
   void loadDueCount()
-    .then((viewModel) => {
+    .then((response) => {
       if (isActive) {
-        onValue(viewModel)
+        onValue(response)
       }
     })
     .catch(() => {
@@ -40,19 +40,18 @@ export function subscribeToDueCount({
   }
 }
 
-async function loadBrowserDueCount(): Promise<DashboardDueViewModel> {
-  const response = await fetchDueCount(createBrowserApiClient())
-  return dueCountToViewModel(response)
+async function loadBrowserDueCount(): Promise<DueCountResponse> {
+  return fetchDueCount(createBrowserApiClient())
 }
 
 /** 静的ページの navigation badge 用。mount 後にだけ API を取得する。 */
-export function useDueCount(): DashboardDueViewModel | null {
-  const [viewModel, setViewModel] = useState<DashboardDueViewModel | null>(null)
+export function useDueCount(): DueCountResponse | null {
+  const [response, setResponse] = useState<DueCountResponse | null>(null)
 
   useEffect(
-    () => subscribeToDueCount({ loadDueCount: loadBrowserDueCount, onValue: setViewModel }),
+    () => subscribeToDueCount({ loadDueCount: loadBrowserDueCount, onValue: setResponse }),
     [],
   )
 
-  return viewModel
+  return response
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import type { DashboardDueViewModel } from '../../view-model'
+import type { DueCountResponse } from '@tsl/shared'
+
 import { subscribeToDueCount } from './use-due-count'
 
 function createDeferred<T>() {
@@ -29,13 +30,13 @@ async function flushPromises() {
 describe('subscribeToDueCount', () => {
   it('publishes the loaded view model', async () => {
     const onValue = vi.fn()
-    const viewModel: DashboardDueViewModel = { dueCount: 3 }
+    const response: DueCountResponse = { dueCount: 3 }
 
-    subscribeToDueCount({ loadDueCount: () => Promise.resolve(viewModel), onValue })
+    subscribeToDueCount({ loadDueCount: () => Promise.resolve(response), onValue })
     await flushPromises()
 
     expect(onValue).toHaveBeenCalledTimes(1)
-    expect(onValue).toHaveBeenCalledWith(viewModel)
+    expect(onValue).toHaveBeenCalledWith(response)
   })
 
   it('publishes null when loading fails so the badge remains hidden', async () => {
@@ -52,7 +53,7 @@ describe('subscribeToDueCount', () => {
   })
 
   it('does not publish after cleanup', async () => {
-    const deferred = createDeferred<DashboardDueViewModel>()
+    const deferred = createDeferred<DueCountResponse>()
     const onValue = vi.fn()
     const unsubscribe = subscribeToDueCount({ loadDueCount: () => deferred.promise, onValue })
 
