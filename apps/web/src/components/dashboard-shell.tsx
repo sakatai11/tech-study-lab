@@ -4,7 +4,6 @@ import { ThemeToggle } from '@/components/theme-toggle'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { ProgressBar } from '@/components/ui/progress-bar'
-import { DueCountBadge } from '@/features/dashboard/client/components/due-count-badge'
 
 type NavigationItem = {
   desktopLabel: string
@@ -40,7 +39,7 @@ function Brand({ compact = false }: { compact?: boolean }) {
   )
 }
 
-function DesktopNavigation() {
+function DesktopNavigation({ reviewBadge }: { reviewBadge?: ReactNode }) {
   return (
     <aside className="sticky top-5 hidden w-60 shrink-0 self-start lg:block">
       <Card className="flex max-h-[calc(100dvh-2.5rem)] min-h-[36rem] flex-col p-4">
@@ -68,9 +67,7 @@ function DesktopNavigation() {
                   {item.symbol}
                 </span>
                 {item.desktopLabel}
-                {item.hasDueBadge ? (
-                  <DueCountBadge className="ml-auto grid size-5 place-items-center rounded-full bg-red font-mono text-[10px] font-bold tabular-nums text-white" />
-                ) : null}
+                {item.hasDueBadge ? reviewBadge : null}
                 {!isCurrent ? <span className="ml-auto font-mono text-[10px]">準備中</span> : null}
               </button>
             )
@@ -101,7 +98,7 @@ function MobileHeader() {
   )
 }
 
-function MobileNavigation() {
+function MobileNavigation({ reviewBadge }: { reviewBadge?: ReactNode }) {
   return (
     <nav
       aria-label="モバイルナビゲーション"
@@ -126,9 +123,7 @@ function MobileNavigation() {
               {item.symbol}
             </span>
             <span className="text-[11px]">{item.mobileLabel}</span>
-            {item.hasDueBadge ? (
-              <DueCountBadge className="absolute right-2 top-0 grid size-4 place-items-center rounded-full bg-red font-mono text-[9px] font-bold tabular-nums text-white" />
-            ) : null}
+            {item.hasDueBadge ? reviewBadge : null}
           </button>
         )
       })}
@@ -136,15 +131,23 @@ function MobileNavigation() {
   )
 }
 
-export function DashboardShell({ children }: { children: ReactNode }) {
+export function DashboardShell({
+  children,
+  desktopReviewBadge,
+  mobileReviewBadge,
+}: {
+  children: ReactNode
+  desktopReviewBadge?: ReactNode
+  mobileReviewBadge?: ReactNode
+}) {
   return (
     <div className="min-h-dvh bg-bg">
       <MobileHeader />
       <div className="mx-auto flex max-w-7xl gap-5 px-4 pb-28 pt-4 lg:px-5 lg:pb-5 lg:pt-5">
-        <DesktopNavigation />
+        <DesktopNavigation reviewBadge={desktopReviewBadge} />
         <main className="min-w-0 flex-1">{children}</main>
       </div>
-      <MobileNavigation />
+      <MobileNavigation reviewBadge={mobileReviewBadge} />
     </div>
   )
 }

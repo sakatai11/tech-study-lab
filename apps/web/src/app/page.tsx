@@ -2,7 +2,6 @@ import Link from 'next/link'
 import type { CSSProperties } from 'react'
 import { Suspense } from 'react'
 
-import { DashboardShell } from '@/components/dashboard-shell'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { ProgressBar } from '@/components/ui/progress-bar'
@@ -10,6 +9,7 @@ import { TermCrumb } from '@/components/ui/term-crumb'
 import { DashboardDueCard } from '@/features/dashboard/server/components/dashboard-due-card'
 import { DashboardDueCardFallback } from '@/features/dashboard/server/components/dashboard-due-card-fallback'
 import { loadDashboardStatic } from '@/features/dashboard/server/load-dashboard'
+import { AppShell } from './_components/app-shell'
 
 const stats = [
   { label: '正答率 · 直近7日', value: '78', unit: '%', icon: '✓', tone: 'green' },
@@ -47,7 +47,7 @@ export default function Home() {
   const { continueHref } = loadDashboardStatic()
 
   return (
-    <DashboardShell>
+    <AppShell>
       <div className="flex flex-col gap-5">
         <section
           className="reveal flex flex-wrap items-start justify-between gap-4 px-1 pt-1"
@@ -205,6 +205,6 @@ export default function Home() {
           </div>
         </Card>
       </div>
-    </DashboardShell>
+    </AppShell>
   )
 }

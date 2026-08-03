@@ -12,7 +12,7 @@ const reviewLinkClassName =
 /** Suspense 内で due 件数だけを取得する、ダッシュボードのユーザー固有カード。 */
 export async function DashboardDueCard() {
   try {
-    const dueCount = await loadDashboardDueCount()
+    const viewModel = await loadDashboardDueCount()
 
     return (
       <Card className="reveal border-blue p-5 sm:p-6">
@@ -24,7 +24,7 @@ export async function DashboardDueCard() {
           期限を迎えた問題を、忘れる前にもう一度解きましょう。
         </p>
         <p className="mb-0 mt-5 font-mono text-3xl font-black tabular-nums text-ink">
-          {dueCount}
+          {viewModel.dueCount}
           <span className="ml-1 text-sm text-mute">問 due</span>
         </p>
         <Link className={reviewLinkClassName} href="/review">
