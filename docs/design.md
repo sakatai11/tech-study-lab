@@ -198,7 +198,7 @@ SM-2 の計算式（`packages/shared/src/srs/sm2.ts`）の周辺で、実装時�
 | `/` ダッシュボード | **今日の復習（due）が主役**。学習統計（正答率・学習時間・連続学習日数）・学習コントリビューション（草＝日次解答数ヒートマップ）・領域別習得状況・最近のアクティビティ・次のレッスン導線を併せ持つ | due 件数・統計値・草は API（Server loader → `hc`） | PPR streaming 対象。静的シェルと、due 件数・統計を読む非キャッシュのユーザー固有 async Server Component を `<Suspense>` で分離する（API 未接続のため実装は未着手） | 「復習を始める」→ `/review`、「続きから」→ `/learn/...` |
 | `/domains` スキルツリー | カリキュラムを `devpath tree` 風の**ディレクトリツリー**で俯瞰する（§8.7）。レッスンごとに done ✓ / current ▶（進捗バー・START）/ locked 🔒 を表示し、クリアで次ノードが解放。コンテンツ未整備の領域はツリー下部に `content/<domain>/ [locked]` として表示し非活性 | 領域別集計は API（`GET /domains`） | 未実装。画面実装時は静的シェルと非キャッシュのユーザー固有領域を分離する。PPR streaming 対象への追加は別途判断する | done 行 → `/learn/[domain]/[topic]`、current 行 → 教材本文 |
 | `/learn/[domain]/[topic]` レッスン一覧 | トピック内のレッスン一覧（初期は XSS 1本） | ビルド時バンドル済み content（RSC） | `generateStaticParams` と `'use cache'` で全件を build 時に prerender。PPR streaming 対象外 | 各レッスンへ |
-| `/learn/[domain]/[topic]/[lesson]` 教材本文 | Markdown 本文表示 | ビルド時バンドル済み content（RSC）・**API 不要** | `generateStaticParams` と `'use cache'` で全件を build 時に prerender。PPR streaming 対象外 | 「問題を解く →」`/quiz/[lesson]` |
+| `/learn/[domain]/[topic]/[lesson]` 教材本文 | Markdown 本文表示 | ビルド時バンドル済み content（RSC。本文の初期取得・描画にはAPI不要）・閲覧記録のみAPI（最小Client recorder） | `generateStaticParams` と `'use cache'` で全件を build 時に prerender。PPR streaming 対象外 | 「問題を解く →」`/quiz/[lesson]` |
 | `/quiz/[lesson]` 演習 | イントロ（レッスン概要の確認）→ 全問を 1 問ずつ即時採点 → 結果サマリ、を 1 画面内のクライアント状態遷移（`intro → exercise → result`）で完結。演習ナビ・教材本文の両方から入れる | 問題＝content（RSC で初期化）/ 解答記録＝API | `generateStaticParams` と `'use cache'` で全件を build 時に prerender。PPR streaming 対象外 | 完了 → 「次のレッスンへ」／「再挑戦」 |
 | `/review` 復習 | イントロ（本日の due キューを dueAt 昇順・滞留日数付きでプレビュー）→ due 問題をレッスン横断で 1 問ずつ即時採点 → 結果サマリ、を 1 画面内のクライアント状態遷移で完結 | queue＝API（`GET /review/queue`）/ 問題本文＝content / 記録＝API | PPR streaming 対象（実装済み）。静的シェル `ReviewPageShell` に `ReviewQueueFallback` と due バッジ fallback を表示し、queue 完了後に非キャッシュの `ReviewUserContent` / `ReviewDueBadge` をストリーミングする | 完了 → 「ホームへ」／「間違えた問題だけ再挑戦」 |
 | `/analytics` アナリティクス | 解答ログ・SRS状態を集計した学習分析ビュー（総解答数・正答率・平均反応時間・習得済み問題数・週次アクティビティ・SRS定着度分布・間違えやすい問題ランキング） | 集計値は API（§7.3） | 未実装。画面実装時は静的シェルと非キャッシュのユーザー固有領域を分離する。PPR streaming 対象への追加は別途判断する | — |
@@ -321,7 +321,7 @@ apps/web/src/
 
 ### 8.3 Server / Client コンポーネント境界
 
-- **教材・集計系（`/`・`/learn/...`・`/domains`・`/analytics`）= RSC**。ビルド時バンドル済みデータを読む。ダッシュボードの due 件数・統計値、`/domains` の習得率、`/analytics` の各集計のような初回表示に必要な集計値は Server loader から `hc` で読む。教材本文ページは **API 不要**。
+- **教材・集計系（`/`・`/learn/...`・`/domains`・`/analytics`）= RSC**。ビルド時バンドル済みデータを読む。ダッシュボードの due 件数・統計値、`/domains` の習得率、`/analytics` の各集計のような初回表示に必要な集計値は Server loader から `hc` で読む。教材本文ページは、本文の初期取得・描画には **API 不要**であり、閲覧記録だけは最小Client recorderからAPIを呼ぶ。
 - **演習系（Quiz / Review）= Client Component**。イントロ・演習・結果の画面フェーズと現在問題を持ち、Client hook が返す採点結果・通信状態を表示へ反映するため。初回データは Server loader（`/quiz` は content、`/review` は due queue）で ViewModel 化し props で渡す（§9.2）。
 - **レイアウト / ヘッダー = Server**。
 - 実行場所はディレクトリ名ではなく import 境界で決まる。`apps/web/src/features/*/server` は `apps/web/src/app/**/page.tsx` など Server Component から import する限りサーバー側で実行される。誤用防止のため `import 'server-only'` を必須にする。
