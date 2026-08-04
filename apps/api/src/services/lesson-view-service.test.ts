@@ -15,7 +15,7 @@ function createDeps(overrides: Partial<LessonViewDeps> = {}) {
 }
 
 describe('recordLessonView', () => {
-  it('records the middleware user and timestamp for the requested lesson', async () => {
+  it('ミドルウェアで確定したユーザーと指定時刻で教材閲覧を記録する', async () => {
     const { deps, recorded } = createDeps()
 
     await expect(

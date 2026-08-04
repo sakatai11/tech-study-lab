@@ -57,7 +57,7 @@ describe('core API endpoints', () => {
     ])
   })
 
-  it('records a lesson view for the middleware user', async () => {
+  it('ミドルウェアで確定したユーザーの教材閲覧を記録する', async () => {
     const response = await SELF.fetch('https://api.test/lesson-views', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -79,7 +79,7 @@ describe('core API endpoints', () => {
     })
   })
 
-  it('rejects a client-provided userId without recording a lesson view', async () => {
+  it('クライアント指定の userId を拒否し教材閲覧を記録しない', async () => {
     const response = await SELF.fetch('https://api.test/lesson-views', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
