@@ -11,7 +11,7 @@ import { AppShell } from '../_components/app-shell'
 
 export default function ReviewPage() {
   return (
-    <AppShell>
+    <AppShell currentNavigation="review">
       <ReviewPageShell
         dueBadge={
           <Suspense fallback={<ReviewDueBadgeFallback />}>

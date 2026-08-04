@@ -26,7 +26,7 @@ export default async function QuizPage({ params }: QuizPageProps) {
   }
 
   return (
-    <AppShell>
+    <AppShell currentNavigation="quiz">
       <div className="flex flex-col gap-5">
         <QuizHeader viewModel={viewModel} />
         <QuizInteractive

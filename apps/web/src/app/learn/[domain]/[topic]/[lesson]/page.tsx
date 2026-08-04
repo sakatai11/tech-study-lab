@@ -25,7 +25,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
   }
 
   return (
-    <AppShell>
+    <AppShell currentNavigation="learn">
       <LessonDisplay viewModel={viewModel} />
     </AppShell>
   )

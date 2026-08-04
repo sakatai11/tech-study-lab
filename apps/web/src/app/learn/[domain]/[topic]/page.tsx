@@ -25,7 +25,7 @@ export default async function TopicPage({ params }: TopicPageProps) {
   }
 
   return (
-    <AppShell>
+    <AppShell currentNavigation="learn">
       <TopicDisplay viewModel={viewModel} />
     </AppShell>
   )

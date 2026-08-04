@@ -47,7 +47,7 @@ export default function Home() {
   const { continueHref } = loadDashboardStatic()
 
   return (
-    <AppShell>
+    <AppShell currentNavigation="dashboard">
       <div className="flex flex-col gap-5">
         <section
           className="reveal flex flex-wrap items-start justify-between gap-4 px-1 pt-1"

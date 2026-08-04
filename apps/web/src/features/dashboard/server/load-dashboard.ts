@@ -12,11 +12,14 @@ import type { DashboardDueViewModel, DashboardStaticViewModel } from '../view-mo
 /** 静的シェルの「続きから」導線を、現在 bundle されている先頭レッスンへ解決する。 */
 export function loadDashboardStatic(): DashboardStaticViewModel {
   const [firstLesson] = getLessonRouteParams()
+  const learnHref = firstLesson
+    ? `/learn/${firstLesson.domain}/${firstLesson.topic}/${firstLesson.lesson}`
+    : undefined
 
   return {
-    continueHref: firstLesson
-      ? `/learn/${firstLesson.domain}/${firstLesson.topic}/${firstLesson.lesson}`
-      : '/',
+    continueHref: learnHref ?? '/',
+    learnHref,
+    quizHref: firstLesson ? `/quiz/${firstLesson.lesson}` : undefined,
   }
 }
 
