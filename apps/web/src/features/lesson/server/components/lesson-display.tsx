@@ -7,11 +7,13 @@ import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { TermCrumb } from '@/components/ui/term-crumb'
 
+import { LessonViewRecorder } from '../../client/components/lesson-view-recorder'
 import type { LessonViewModel } from '../../view-model'
 
 export function LessonDisplay({ viewModel }: { viewModel: LessonViewModel }) {
   return (
     <article className="flex flex-col gap-5">
+      <LessonViewRecorder lessonId={viewModel.id} />
       <header className="px-1 pt-1">
         <TermCrumb
           command={`cat content/${viewModel.domain}/${viewModel.topic}/${viewModel.id}.md`}
