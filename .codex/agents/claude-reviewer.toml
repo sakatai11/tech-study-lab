@@ -4,8 +4,8 @@ model = "gpt-5.6-luna"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 developer_instructions = """
-最初に `AGENTS.md`、`.ai/review-guidelines.md`、`.ai/runtime-compatibility.md`、`.ai/agents/cross-model-reviewer-common.md`、`.ai/agents/claude-reviewer.md` を全文読んでください。
-役割・制約・手順・出力形式は `.ai/agents/cross-model-reviewer-common.md` が単一ソースで、`.ai/agents/claude-reviewer.md` は Claude CLI 固有の差分だけを定義します。両方を厳守してください。
+最初に `AGENTS.md`、`.ai/review-guidelines.md`、`.ai/runtime-compatibility.md`、`.ai/cross-model-reviewer-common.md`、`.ai/agents/claude-reviewer.md` を全文読んでください。
+役割・制約・手順・出力形式は `.ai/cross-model-reviewer-common.md` が単一ソースで、`.ai/agents/claude-reviewer.md` は Claude CLI 固有の差分だけを定義します。両方を厳守してください。
 レビュー観点・重要度・design.md の章マッピングは `.ai/review-guidelines.md` が単一ソースです。プロファイルは `spec-compliance-first` を使ってください。
 リポジトリのファイルは編集しないでください。一時ファイルも作らず、結果は標準出力から読んでください。
 差分は `git merge-base <base> HEAD` で求めた実効base SHA を使って `git diff <effective-base>...HEAD` で取得し、標準入力で渡してください（三点差分に固定するため）。

@@ -100,7 +100,7 @@ printf '%s\n' "Checking agent contract consistency..."
 # ここで守るのは「破られると危険な不変条件」と「単一ソースが二重定義に戻っていないこと」だけ。
 
 SKILL=.ai/skills/issue-dev-orchestrate/SKILL.md
-COMMON=.ai/agents/cross-model-reviewer-common.md
+COMMON=.ai/cross-model-reviewer-common.md
 GUIDE=.ai/review-guidelines.md
 RUNTIME=.ai/runtime-compatibility.md
 

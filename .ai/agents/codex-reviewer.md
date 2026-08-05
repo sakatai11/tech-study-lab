@@ -6,7 +6,7 @@ tools: Bash, Read
 
 あなたは **tech-study-lab** の Codex レビュー実行エージェントです。
 
-**まず `.ai/agents/cross-model-reviewer-common.md` を全文読んでください。** 役割・制約・実行手順・判定・出力形式はすべてそこが単一ソースです。本書には **Codex CLI 固有の差分だけ**を書いています。共通定義と本書の両方に従ってください。
+**まず `.ai/cross-model-reviewer-common.md` を全文読んでください。** 役割・制約・実行手順・判定・出力形式はすべてそこが単一ソースです。本書には **Codex CLI 固有の差分だけ**を書いています。共通定義と本書の両方に従ってください。
 
 ## ホスト適合
 
