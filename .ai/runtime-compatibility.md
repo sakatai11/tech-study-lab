@@ -15,9 +15,14 @@
 - すべてのハーネスで、認証済みの `gh` CLI を使って PR・Issue・レビュー・コメント・レビュー スレッドを取得／作成／更新／解決できる。開始時に `gh auth status` を確認し、失敗した場合は認証を復旧するまでGitHub操作を行わない。
 - Codex AppでGitHubコネクタが接続済みの場合は、同等のGitHub操作にコネクタを使ってよい。コネクタは `gh` の必須代替ではない。
 - ローカル変更の `git fetch` / `git push` / コミットはコネクタの対象外であり、ローカル Git の認証・権限に従う。
-- Sandbox 内の認証確認と外部通信は別々に診断する。`gh auth status`、`codex login status`、`claude auth status` のいずれかが Sandbox 内で未認証を返した場合、ユーザーに再ログインを求める前に、同じ状態確認コマンドだけを正規の承認・権限昇格経路で再実行する。Sandbox 外で認証済みなら、OS keyring または認証キャッシュが不可視だったものとして扱う。
+- Sandbox 内の認証確認と外部通信は別々に診断する。`gh auth status`、`codex login status`、`.ai/scripts/run-claude-review.sh auth status` のいずれかが Sandbox 内で未認証を返した場合、ユーザーに再ログインを求める前に、同じ状態確認コマンドだけを正規の承認・権限昇格経路で再実行する。Sandbox 外で認証済みなら、OS keyring または認証キャッシュが不可視だったものとして扱う。
 - 認証済みでも API/DNS/接続エラーが出る場合は、対象の読み取りコマンドだけを正規の承認・権限昇格経路で再実行するか、Codex App の接続済みコネクタを使う。通信失敗を未認証と報告しない。
 - GitHubコネクタの認証と `gh` / 別モデルレビュー用CLI（Codex CLI・Claude CLI）の認証は共有されない。これらのCLIはGitHubコネクタで代替できないため、CLI自身の認証状態を上記の二段階で確認する。
+
+## Claude CLI レビューの認証情報
+
+- Claude CLI で認証確認またはレビューを実行する場合は、`claude` を直接起動せず、`.ai/scripts/run-claude-review.sh` を使う。この wrapper は同じプロセスで `.ai/scripts/load-secrets.sh` を source し、macOS Keychain の `AI_CLAUDE_CODE_OAUTH_TOKEN` / `claude` から取得した値を `CLAUDE_CODE_OAUTH_TOKEN` として環境経由で Claude CLI にだけ引き継ぐ。
+- トークンをコマンド引数、標準入力、ログ、ブリーフ、リポジトリ内ファイルへコピーしない。
 
 ## サブエージェントの起動
 
@@ -55,7 +60,7 @@
 | ホストランタイム | 使うエージェント | 実行コマンド | モデル指定 |
 |---|---|---|---|
 | Claude Code | `codex-reviewer` | `codex exec review --base <effective-base> -c sandbox_mode="read-only"` | `-m gpt-5.6-sol` |
-| Codex（App / CLI） | `claude-reviewer` | `git diff <effective-base>...HEAD \| claude -p ...` | `--model opus` |
+| Codex（App / CLI） | `claude-reviewer` | `git diff <effective-base>...HEAD \| .ai/scripts/run-claude-review.sh -p ...` | `--model opus` |
 
 - モデルは必ず `-m` / `--model` で明示指定する。既定モデルに委ねてはならない。
 - **ChatGPT アカウントで認証した Codex CLI では、素の `gpt-5.6` は使えない**（`The 'gpt-5.6' model is not supported when using Codex with a ChatGPT account.` で 400 になる）。`gpt-5.6-sol` / `gpt-5.6-terra` / `gpt-5.6-luna` のバリアントを指定する。
