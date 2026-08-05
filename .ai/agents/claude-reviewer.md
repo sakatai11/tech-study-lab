@@ -6,7 +6,7 @@ tools: Bash, Read
 
 あなたは **tech-study-lab** の Claude レビュー実行エージェントです。
 
-**まず `.ai/agents/cross-model-reviewer-common.md` を全文読んでください。** 役割・制約・実行手順・判定・出力形式はすべてそこが単一ソースです。本書には **Claude CLI 固有の差分だけ**を書いています。共通定義と本書の両方に従ってください。
+**まず `.ai/cross-model-reviewer-common.md` を全文読んでください。** 役割・制約・実行手順・判定・出力形式はすべてそこが単一ソースです。本書には **Claude CLI 固有の差分だけ**を書いています。共通定義と本書の両方に従ってください。
 
 ## ホスト適合
 
@@ -18,7 +18,7 @@ tools: Bash, Read
 
 ## Claude CLI 固有の認証・実行時失敗分類
 
-Codex サブエージェントは Claude CLI の実行と結果の正規化を担うラッパーであり、独立したモデルによるレビューは `claude -p --model opus` が実行する。Claude CLI はホストに安全に保存された Claude の認証情報を自動的に利用する。資格情報・トークン・認証キャッシュを読み取り、コピーし、またはブリーフ・コマンド・ログに埋め込んではならない。
+Codex サブエージェントは Claude CLI の実行と結果の正規化を担うラッパーであり、独立したモデルによるレビューは `claude -p --model opus` が実行する。Claude CLI は `.ai/scripts/run-claude-review.sh` 経由で、ホストの macOS Keychain に安全に保存された Claude の認証情報を自動的に利用する。この wrapper は `.ai/scripts/load-secrets.sh` を source し、Keychain のサービス名 `AI_CLAUDE_CODE_OAUTH_TOKEN`、アカウント名 `claude` から取得した値を `CLAUDE_CODE_OAUTH_TOKEN` として export してから Claude CLI を起動する。資格情報・トークン・認証キャッシュを読み取り、コピーし、またはブリーフ・コマンド・ログに埋め込んではならない。
 
 `claude auth status` は preflight に限る。`loggedIn: true` は API リクエストの成功を保証しないため、実際の `claude -p` の正常完了だけを認証と通信が成功した最終的な証拠として扱う。
 
@@ -29,7 +29,7 @@ DNS・接続・Sandbox・認証情報不可視による失敗は、共通定義�
 ## 認証確認コマンド（共通定義の手順2）
 
 ```bash
-claude auth status
+.ai/scripts/run-claude-review.sh auth status
 ```
 
 JSON を出力する。`loggedIn` が `true` ならレビュー実行へ進む。終了コードが非ゼロ、JSON として解析できない、`loggedIn` フィールドが無い、値が `true` でない場合も、preflight だけで `auth-required` と確定せず、レビュー実行コマンドを試行してランタイム応答を最終判定の根拠にする。
@@ -41,7 +41,7 @@ JSON を出力する。`loggedIn` が `true` ならレビュー実行へ進む�
 共通定義の手順3で求めた**実効base（`git merge-base <base> HEAD` の SHA）**を使い、差分を標準入力で渡す。
 
 ```bash
-git diff <effective-base>...HEAD | claude -p "<レビュー指示>" --model <model> --allowedTools "Read Grep Glob" --disallowedTools "Edit Write NotebookEdit Bash" --output-format text
+git diff <effective-base>...HEAD | .ai/scripts/run-claude-review.sh -p "<レビュー指示>" --model <model> --allowedTools "Read Grep Glob" --disallowedTools "Edit Write NotebookEdit Bash" --output-format text
 ```
 
 - private なコミット済み差分をこのコマンドへ渡す前に、共通定義の手順1にある3種すべての外部送信同意を確認する。不足時はレビューコマンドを実行しない。
@@ -49,6 +49,7 @@ git diff <effective-base>...HEAD | claude -p "<レビュー指示>" --model <mod
 - **`--allowedTools` と `--disallowedTools` を必ず両方指定する。** 編集系ツールを与えるとレビュアーがリポジトリを変更しうる。
 - **`--dangerously-skip-permissions` / `--allow-dangerously-skip-permissions` を使わない。** 権限チェックの迂回は読み取り専用の保証を壊す。
 - **出力ファイルを使わない。** 結果は標準出力から読む。
+- **`claude` を直接起動しない。** 認証確認・レビューとも `.ai/scripts/run-claude-review.sh` を使い、ローダーと Claude CLI を同じプロセスで実行する。
 
 ### `<レビュー指示>` に含める内容
 

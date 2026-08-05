@@ -100,7 +100,7 @@ printf '%s\n' "Checking agent contract consistency..."
 # ここで守るのは「破られると危険な不変条件」と「単一ソースが二重定義に戻っていないこと」だけ。
 
 SKILL=.ai/skills/issue-dev-orchestrate/SKILL.md
-COMMON=.ai/agents/cross-model-reviewer-common.md
+COMMON=.ai/cross-model-reviewer-common.md
 GUIDE=.ai/review-guidelines.md
 RUNTIME=.ai/runtime-compatibility.md
 
@@ -242,6 +242,11 @@ check_agent_contract "claude auth remediation is explicit" '`claude auth login` 
 check_agent_contract "claude ambiguous 401 remains error" '文脈が曖昧な一般的な `401` は `auth-required` にせず' .ai/agents/claude-reviewer.md
 check_agent_contract "claude local execution requires unavailable outside sandbox confirmation" 'その必要な確認を実行できない、または承認されなかった場合だけ「判定: local-execution-required」' .ai/agents/claude-reviewer.md
 check_agent_contract "claude does not send private diff before consent" '不足時はレビューコマンドを実行しない' .ai/agents/claude-reviewer.md
+check_agent_contract "claude auth uses Keychain wrapper" '.ai/scripts/run-claude-review.sh auth status' .ai/agents/claude-reviewer.md
+check_agent_contract "claude review uses Keychain wrapper" 'git diff <effective-base>...HEAD | .ai/scripts/run-claude-review.sh -p' .ai/agents/claude-reviewer.md
+check_agent_contract "Claude review wrapper loads Keychain secret" '. "$script_dir/load-secrets.sh"' .ai/scripts/run-claude-review.sh
+check_agent_contract "Claude review wrapper forwards arguments without interpolation" 'exec claude "$@"' .ai/scripts/run-claude-review.sh
+check_agent_contract "runtime requires Claude review wrapper" '`.ai/scripts/run-claude-review.sh` を使う' "$RUNTIME"
 check_absent_contract "common does not duplicate Claude OAuth classification" 'OAuth 認証情報が expired または revoked' "$COMMON"
 check_absent_contract "common does not classify preflight as auth required" 'Sandbox 外でも未認証なら、レビューを実行せず「判定: auth-required」を返す' "$COMMON"
 

@@ -18,7 +18,8 @@
     "dev:api": "pnpm --filter @tsl/api dev",
     "content:sync": "pnpm --filter @tsl/api content:sync",
     "sync:agents": "node scripts/sync-agent-config.mjs",
-    "test:hooks": "sh scripts/test-hooks.sh"
+    "test:hooks": "sh scripts/test-hooks.sh",
+    "test:secrets": "sh .ai/scripts/test-load-secrets.sh"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
