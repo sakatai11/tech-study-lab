@@ -1,9 +1,9 @@
 import { notFound } from 'next/navigation'
 
-import { DashboardShell } from '@/components/dashboard-shell'
 import { QuizInteractive } from '@/features/quiz/client/components/quiz-interactive'
 import { QuizHeader } from '@/features/quiz/server/components/quiz-header'
 import { listQuizRouteParams, loadQuiz } from '@/features/quiz/server/load-quiz'
+import { AppShell } from '../../_components/app-shell'
 
 type QuizPageProps = {
   params: Promise<{ lesson: string }>
@@ -26,7 +26,7 @@ export default async function QuizPage({ params }: QuizPageProps) {
   }
 
   return (
-    <DashboardShell>
+    <AppShell currentNavigation="quiz">
       <div className="flex flex-col gap-5">
         <QuizHeader viewModel={viewModel} />
         <QuizInteractive
@@ -38,6 +38,6 @@ export default async function QuizPage({ params }: QuizPageProps) {
           title={viewModel.title}
         />
       </div>
-    </DashboardShell>
+    </AppShell>
   )
 }

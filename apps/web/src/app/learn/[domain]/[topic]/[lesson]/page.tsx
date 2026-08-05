@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation'
 
-import { DashboardShell } from '@/components/dashboard-shell'
 import { LessonDisplay } from '@/features/lesson/server/components/lesson-display'
 import { listLessonRouteParams, loadLesson } from '@/features/lesson/server/load-lesson'
+import { AppShell } from '../../../../_components/app-shell'
 
 type LessonPageProps = {
   params: Promise<{ domain: string; topic: string; lesson: string }>
@@ -25,8 +25,8 @@ export default async function LessonPage({ params }: LessonPageProps) {
   }
 
   return (
-    <DashboardShell>
+    <AppShell currentNavigation="learn">
       <LessonDisplay viewModel={viewModel} />
-    </DashboardShell>
+    </AppShell>
   )
 }

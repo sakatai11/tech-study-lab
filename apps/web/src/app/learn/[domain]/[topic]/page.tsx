@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation'
 
-import { DashboardShell } from '@/components/dashboard-shell'
 import { TopicDisplay } from '@/features/lesson/server/components/topic-display'
 import { listTopicRouteParams, loadTopic } from '@/features/lesson/server/load-topic'
+import { AppShell } from '../../../_components/app-shell'
 
 type TopicPageProps = {
   params: Promise<{ domain: string; topic: string }>
@@ -25,8 +25,8 @@ export default async function TopicPage({ params }: TopicPageProps) {
   }
 
   return (
-    <DashboardShell>
+    <AppShell currentNavigation="learn">
       <TopicDisplay viewModel={viewModel} />
-    </DashboardShell>
+    </AppShell>
   )
 }
