@@ -1,7 +1,10 @@
 import type { ReactNode } from 'react'
 
 import { DashboardShell, type NavigationSection } from '@/components/dashboard-shell'
-import { DueCountBadge } from '@/features/dashboard/client/components/due-count-badge'
+import {
+  DueCountBadge,
+  DueCountProvider,
+} from '@/features/dashboard/client/components/due-count-badge'
 import { loadDashboardStatic } from '@/features/dashboard/server/load-dashboard'
 
 type AppShellProps = {
@@ -17,22 +20,24 @@ export function AppShell({ children, currentNavigation }: AppShellProps) {
   const { learnHref, quizHref } = loadDashboardStatic()
 
   return (
-    <DashboardShell
-      currentNavigation={currentNavigation}
-      desktopReviewBadge={
-        <DueCountBadge className="ml-auto grid size-5 place-items-center rounded-full bg-red font-mono text-[10px] font-bold tabular-nums text-white" />
-      }
-      mobileReviewBadge={
-        <DueCountBadge className="absolute right-2 top-0 grid size-4 place-items-center rounded-full bg-red font-mono text-[9px] font-bold tabular-nums text-white" />
-      }
-      navigationHrefs={{
-        dashboard: '/',
-        learn: learnHref,
-        quiz: quizHref,
-        review: '/review',
-      }}
-    >
-      {children}
-    </DashboardShell>
+    <DueCountProvider>
+      <DashboardShell
+        currentNavigation={currentNavigation}
+        desktopReviewBadge={
+          <DueCountBadge className="ml-auto grid size-5 place-items-center rounded-full bg-red font-mono text-[10px] font-bold tabular-nums text-white" />
+        }
+        mobileReviewBadge={
+          <DueCountBadge className="absolute right-2 top-0 grid size-4 place-items-center rounded-full bg-red font-mono text-[9px] font-bold tabular-nums text-white" />
+        }
+        navigationHrefs={{
+          dashboard: '/',
+          learn: learnHref,
+          quiz: quizHref,
+          review: '/review',
+        }}
+      >
+        {children}
+      </DashboardShell>
+    </DueCountProvider>
   )
 }
