@@ -104,6 +104,15 @@ COMMON=.ai/cross-model-reviewer-common.md
 GUIDE=.ai/review-guidelines.md
 RUNTIME=.ai/runtime-compatibility.md
 
+for file in \
+  "$SKILL" \
+  .ai/skills/issue-new/SKILL.md \
+  .github/ISSUE_TEMPLATE/feature-spec.yml \
+  .github/ISSUE_TEMPLATE/task.yml; do
+  check_absent_contract "unused background agent CLI option stays removed" 'バックグラウンドAIエージェントCLI' "$file"
+  check_absent_contract "unused background agent CLI field stays removed" 'background-agent-cli' "$file"
+done
+
 # ---- スキルが手順書化していないこと ----
 check_agent_contract "skill declares it is not a procedure" '**本書は手順書ではない。**' "$SKILL"
 check_agent_contract "skill invites better approaches" 'より良い進め方を思いついたら' "$SKILL"
