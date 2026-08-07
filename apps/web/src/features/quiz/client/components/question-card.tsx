@@ -22,8 +22,8 @@ export function QuestionCard({
   submitting,
 }: QuestionCardProps) {
   const resultClassName = result?.isCorrect
-    ? 'mt-5 rounded-xl border-2 border-green bg-green-bg p-4 text-green'
-    : 'mt-5 rounded-xl border-2 border-red bg-red-bg p-4 text-red'
+    ? 'mt-5 block rounded-xl border-2 border-green bg-green-bg p-4 text-green'
+    : 'mt-5 block rounded-xl border-2 border-red bg-red-bg p-4 text-red'
 
   return (
     <Card className="p-5 sm:p-7">
