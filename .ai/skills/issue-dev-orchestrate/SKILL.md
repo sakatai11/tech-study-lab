@@ -158,7 +158,8 @@ Issueで「使用する」が選ばれている、または次のいずれかを
 - **レビュープロファイルを必ず分ける**（定義は `.ai/review-guidelines.md`）。`reviewer` に `accuracy-first`、別モデルレビュアーに `spec-compliance-first`。同じ優先順で読ませると同じ見落とし方をする。
 - ブリーフには、**レビュアーが同意の網羅性とレビュー範囲の正しさを自力で検証できるだけの情報**を渡す。必須キーの定義は共通定義にある。
 - 別モデルレビュアーが `wrong-host-agent` を返した場合は**レビュー未取得fallbackへ進めない**。フェーズ0の表と現在のホストランタイムを再照合し、正しい別モデルレビュアーを選び直して実行する。この再実行を2件目の `reviewer` による代替レビューとして数えない。
-- 正しく選択した別モデルレビュアー（`wrong-host-agent` 後に再選択した場合を含む）が `approve` / `request-changes` 以外を返した場合に限り、**レビュー未取得**として扱う。理由を報告し、2件目の `reviewer` を代替として起動する。このとき **`reviewProfile: spec-compliance-first` をブリーフで明示する**（`reviewer` の既定は `accuracy-first` であり、指定しないと1件目と同じ観点になって仕様準拠が誰にもカバーされない）。あわせて境界条件・保守性・テスト十分性も重点確認させる。
+- 別モデルレビュアーが `external-egress-confirmation-required` を返した場合は**レビュー未取得fallbackへ進めない**。同意記録に不足している同意項目を具体的に報告し、送信先と `committed-diff` / `brief-context` / `repository-reads` のうち不足した対象を列挙して、今回のレビューに必要な外部送信の明示同意を取得・記録するまで、別モデルレビュアーの再実行も2件目の `reviewer` の起動も行わない。同意の取得・記録後に同じ正しい別モデルレビュアーを再実行し、その実行結果を次の分岐で扱う。
+- 正しく選択され、外部送信同意も充足した別モデルレビュアー（`wrong-host-agent` または `external-egress-confirmation-required` 後に再実行した場合を含む）が `approve` / `request-changes` 以外を返した場合に限り、**レビュー未取得**として扱う。理由を報告し、2件目の `reviewer` を代替として起動する。このとき **`reviewProfile: spec-compliance-first` をブリーフで明示する**（`reviewer` の既定は `accuracy-first` であり、指定しないと1件目と同じ観点になって仕様準拠が誰にもカバーされない）。あわせて境界条件・保守性・テスト十分性も重点確認させる。
   - `auth-required`（Sandbox 外でも未認証と確認された状態）のときだけ、fallbackの前にユーザーへログインを促し、同じエージェントを再起動してよい。それ以外の判定でCLIを再試行しない。
 
 ### CodeRabbit App（補助・任意）
