@@ -104,6 +104,15 @@ COMMON=.ai/cross-model-reviewer-common.md
 GUIDE=.ai/review-guidelines.md
 RUNTIME=.ai/runtime-compatibility.md
 
+for file in \
+  "$SKILL" \
+  .ai/skills/issue-new/SKILL.md \
+  .github/ISSUE_TEMPLATE/feature-spec.yml \
+  .github/ISSUE_TEMPLATE/task.yml; do
+  check_absent_contract "unused background agent CLI option stays removed" 'バックグラウンドAIエージェントCLI' "$file"
+  check_absent_contract "unused background agent CLI field stays removed" 'background-agent-cli' "$file"
+done
+
 # ---- スキルが手順書化していないこと ----
 check_agent_contract "skill declares it is not a procedure" '**本書は手順書ではない。**' "$SKILL"
 check_agent_contract "skill invites better approaches" 'より良い進め方を思いついたら' "$SKILL"
@@ -182,6 +191,10 @@ check_agent_contract "consent scope brief" 'brief-context' "$SKILL"
 check_agent_contract "consent scope repo reads" 'repository-reads' "$SKILL"
 check_agent_contract "re-consent per destination" '送信先が変われば同意も取り直す' "$SKILL"
 check_agent_contract "incremental re-consent" '新しい明示同意を実行直前に取り直す' "$SKILL"
+check_agent_contract "private automatic App review requires pre-PR consent" 'private リポジトリで CodeRabbit App の自動レビューが有効、または無効と確認できない場合は、PRを作成する前に' "$SKILL"
+check_agent_contract "automatic App consent records destination" '`egressDestination: coderabbit`' "$SKILL"
+check_agent_contract "unapproved automatic App review is not integrated" '明示同意なしに取得された自動Appレビューを統合しない' "$SKILL"
+check_agent_contract "manual App review keeps separate approval" '単発起動が必要なら `@coderabbitai review` をPRにコメントする直前に、投稿について別途ユーザー承認を得る' "$SKILL"
 check_agent_contract "no same-vendor reviewer" 'ホストランタイムと同じ提供元のCLIをレビュアーにしない' "$SKILL"
 check_agent_contract "no bypass flags" '迂回フラグ' "$SKILL"
 
