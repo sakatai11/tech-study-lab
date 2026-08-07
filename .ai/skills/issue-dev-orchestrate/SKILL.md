@@ -164,7 +164,10 @@ Issueで「使用する」が選ばれている、または次のいずれかを
 
 ### CodeRabbit App（補助・任意）
 
-PR作成後にAppレビューが得られた場合は追加の指摘として統合に含める。ただし**補助であり、有効なレビュー経路ではない**。Appレビューの有無にかかわらず別モデルCLIレビューを省略しない。単発起動が必要なら `@coderabbitai review` をPRにコメントする（外部への投稿にあたるため事前にユーザー承認を得る）。
+- private リポジトリで CodeRabbit App の自動レビューが有効、または無効と確認できない場合は、PRを作成する前に、送信先が CodeRabbit であることと `committed-diff` / `brief-context` / `repository-reads` を列挙して明示同意を取得する。同意の原文・時刻・対象と `reviewMode: coderabbit-app` / `egressDestination: coderabbit` / `externalEgressApproved: true` / `approvedScope` を `<scratchpad>/review-mode-<N>.md` に記録する。別モデルCLIの送信先に対する同意で代用しない。
+- 上記条件で同意を取得・記録できない場合は、自動レビューが無効と確認できるまでPRを作成しない。外部状態の変更などにより明示同意なしに取得された自動Appレビューを統合しない。
+- PR作成後に同意済みのAppレビューが得られた場合は追加の指摘として統合に含める。ただし**補助であり、有効なレビュー経路ではない**。Appレビューの有無にかかわらず別モデルCLIレビューを省略しない。
+- 単発起動が必要なら `@coderabbitai review` をPRにコメントする直前に、投稿について別途ユーザー承認を得る。自動レビューの外部送信同意を、GitHub上への投稿承認として代用しない。
 
 ### 結果の統合
 
