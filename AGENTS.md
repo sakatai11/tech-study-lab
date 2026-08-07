@@ -80,12 +80,19 @@ service を中心にテストファーストで進める。
 
 共通して、テストを仕様の一次ソースにはしない。優先順位は **`docs/design.md` → 共有 Zod 契約 → テスト → 実装**とする。詳細はフロントエンドが `docs/design.md` §9.8、バックエンドが §10.9 を参照する。Claude Code では `.claude/rules/testing.md` も適用する。
 
+### レビュー規約
+
+コードレビューの規約は [`.ai/review-guidelines.md`](./.ai/review-guidelines.md) を単一ソースとする。`docs/design.md` の章マッピング（変更ファイルの領域 → 読む章）、レビュー観点、役割別のレビュープロファイル（`accuracy-first` / `spec-compliance-first`）、重要度（must-fix / should-fix / nit）の定義はすべてそこにある。**本書を含む他の文書で再掲しない。**
+
+レビューを行うときは、担当するプロファイルを1つ選び、そのプロファイルの優先順に従う。複数のレビュアーを並列に走らせる場合は、異なるプロファイルを割り当てて補完させる。
+
 ### 作業の進め方
 
 - 大きな変更の前に `docs/design.md` を確認し、必要なら先に更新する。
 - 既存のパターン（命名・ディレクトリ・コードスタイル）に合わせる。Biome の設定に従う。
 - 新機能は「Walking Skeleton と同じ縦切りパターン」で追加する（教材→出題→解答記録→SRS）。
 - 機能実装は issue 駆動で進める（仕様を GitHub issue に登録してから実装に着手する）。
+- 外部 GitHub issue / PR を情報として記載し、相手側のタイムラインに cross-reference を作りたくない場合は、完全 URL と `owner/repo#123` 形式を使わない。バッククォートで囲んでも cross-reference は抑止されないため、`owner / repo の issue 123` のように区切って記載する。同一リポジトリの意図的な参照は従来どおり `#123` を使う。
 
 ### ブランチ戦略（Git Flow 型）
 

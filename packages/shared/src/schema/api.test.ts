@@ -3,6 +3,8 @@ import {
   answerRequestSchema,
   answerResponseSchema,
   dueCountResponseSchema,
+  lessonViewRequestSchema,
+  lessonViewResponseSchema,
   reviewQueueResponseSchema,
 } from './api'
 
@@ -118,6 +120,35 @@ describe('answerResponseSchema', () => {
         correctIndex: 6,
       }).success,
     ).toBe(false)
+  })
+})
+
+describe('lessonViewRequestSchema', () => {
+  it('lessonId を受け付ける', () => {
+    expect(lessonViewRequestSchema.safeParse({ lessonId: 'security-xss-01' }).success).toBe(true)
+  })
+
+  it('空の lessonId を拒否する', () => {
+    expect(lessonViewRequestSchema.safeParse({ lessonId: '' }).success).toBe(false)
+  })
+
+  it('クライアント送信の userId を拒否する', () => {
+    expect(
+      lessonViewRequestSchema.safeParse({
+        lessonId: 'security-xss-01',
+        userId: 'untrusted-user',
+      }).success,
+    ).toBe(false)
+  })
+})
+
+describe('lessonViewResponseSchema', () => {
+  it('recorded true を受け付ける', () => {
+    expect(lessonViewResponseSchema.safeParse({ recorded: true }).success).toBe(true)
+  })
+
+  it('recorded false を拒否する', () => {
+    expect(lessonViewResponseSchema.safeParse({ recorded: false }).success).toBe(false)
   })
 })
 

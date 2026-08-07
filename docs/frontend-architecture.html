@@ -539,13 +539,37 @@
             （<code>answerIndex</code>）を含めない。
           </li>
           <li>
-            動的データを読むページ（<code>/</code>（due-count・統計）・<code>/domains</code>（習得率）・<code>/analytics</code>（各集計）・<code>/review</code>（queue））は
-            <code>dynamic = 'force-dynamic'</code>
-            を明記する。将来 Cache Components を有効化する場合は
-            <code>'use cache'</code>・<code>cacheLife</code>・Suspense
-            境界へ移行する。feature の API adapter にはキャッシュ方針を持ち込まない。
+            <code>cacheComponents</code> は有効化済み。<code>dynamic</code> /
+            <code>dynamicParams</code> の route segment config は併用できないため置かない。
+            PPR streaming の対象は <code>/</code> と <code>/review</code> のみで、後者では
+            静的シェルに <code>ReviewQueueFallback</code> を表示してから、queue 完了後に
+            非キャッシュの <code>ReviewRunner</code> をストリーミングする。
           </li>
         </ul>
+        <div class="note">
+          <strong>Cache Components / PPR 方針</strong><br />
+          due 件数・ダッシュボード統計・review queue は API が <code>user_id</code> を
+          権威的に注入する一方、web の共有キャッシュキーには含まれません。したがって
+          <code>'use cache'</code>・<code>cacheLife</code>・<code>cacheTag</code>・
+          <code>revalidateTag</code> は使わず、Suspense による分離だけを行います。解答後は
+          <code>router.refresh()</code> で Server loader を再実行します。未実装の
+          <code>/domains</code> と <code>/analytics</code> も、実装時に同じ静的シェルと
+          非キャッシュ動的領域の分離を適用しますが、PPR streaming 対象への追加は別途判断します。
+          <code>/learn/...</code> と <code>/quiz/...</code> は content 由来の prerender を維持し、
+          PPR streaming の対象外です（<code>generateStaticParams</code> と
+          <code>'use cache'</code> で全件を build 時に生成します）。
+        </div>
+        <div class="note">
+          <strong>検証結果と残る制約</strong><br />
+          OpenNext <code>#1130</code>（production-only <code>SyntaxError</code>／Suspense 描画失敗）と
+          <code>#1225</code>（Suspense streaming が完了せず <code>Connection closed</code>）は
+          未 close ですが、issue #93 の検証では本リポジトリの構成で<strong>再現しませんでした</strong>。
+          <code>opennextjs-cloudflare preview</code> で静的シェル → streaming 差し替え、hydration、
+          解答後に動的領域が再実行されること（共有キャッシュに乗らないこと）を確認済みです。
+          ただし現行 CI は <code>next build</code> のみで OpenNext preview のストリーミングを検知しません。
+          PPR の描画・streaming に関わる変更と、OpenNext / Next の更新時は手動 preview で再確認します。
+          詳細は design.md §12.8 を参照してください。
+        </div>
         <div class="note">
           ディレクトリ名だけで実行場所は決まりません。<code
             >apps/web/src/features/*/server</code
@@ -714,9 +738,10 @@ flowchart LR
         <h3>復習ページ初回表示</h3>
         <div class="diagram">
           <p>
-            Server / RSC は1つの実行領域です。APIからは due queue
-            のIDとSRSメタだけを受け取り、本文・解説は content index へ join
-            します。
+            静的シェルと <code>ReviewQueueFallback</code> を先に返し、
+            Suspense 内の非キャッシュ Server Component が
+            API から due queue のIDとSRSメタを受け、本文・解説を content index へ join した後に
+            <code>ReviewRunner</code> をストリーミングします。
           </p>
           <div class="diagram-toolbar" aria-label="復習ページ初回表示の図操作">
             <button type="button" data-zoom-action="in">拡大</button>
@@ -731,8 +756,9 @@ flowchart LR
   classDef content fill:#f6f8fa,stroke:#d1d5db,color:#1f2328;
 
   subgraph server["Server / RSC"]
-    page["app/review/page.tsx\n初回取得の入口"]:::server
-    serverLoader["features/review/server\nloadReviewQueue"]:::server
+    page["app/review/page.tsx\n静的 shell + Suspense"]:::server
+    userContent["ReviewUserContent\n非キャッシュ・user 固有"]:::server
+    serverLoader["features/review/server\nloadReview"]:::server
     rpcWrapper["features/review/api\nfetchReviewQueue"]:::server
     contentIndex["apps/web/src/lib/content.ts\nquestion_idを本文・解説へjoin"]:::content
     mapper["features/review/mapper.ts\nReviewViewModel化"]:::server
@@ -746,7 +772,7 @@ flowchart LR
 
   runner["ReviewRunner\nviewModel props（state に複製しない）"]:::client
 
-  page -->|calls| serverLoader -->|uses wrapper| rpcWrapper -->|"hc $get（Service Binding）"| endpoint
+  page --&gt;|Suspense| userContent --&gt;|calls| serverLoader --&gt;|uses wrapper| rpcWrapper --&gt;|"hc $get（Service Binding）"| endpoint
   endpoint -->|query| service -->|returns| dto
   dto -->|join by question_id| contentIndex -->|map| mapper -->|props| runner</pre>
         </div>
@@ -1021,51 +1047,83 @@ export async function fetchReviewQueue(client: ApiClient): Promise&lt;ReviewQueu
 }</code></pre>
 
         <pre
-          data-code-title="apps/web/src/features/review/server/load-review-queue.ts"
-        ><code class="language-ts">// apps/web/src/features/review/server/load-review-queue.ts
+          data-code-title="apps/web/src/features/review/server/load-review.ts"
+        ><code class="language-ts">// apps/web/src/features/review/server/load-review.ts
 import 'server-only';
+
+import { connection } from 'next/server';
+import { cache } from 'react';
 
 import { createServerApiClient } from '@/lib/api';
 import { getBundledQuestions } from '@/lib/content';
 import { fetchReviewQueue } from '../api/review-api';
-import { reviewQueueDTOToViewModel } from '../mapper';
+import { reviewQueueToViewModel } from '../mapper';
 import type { ReviewViewModel } from '../view-model';
 
-export async function loadReviewQueue(): Promise&lt;ReviewViewModel&gt; {
-  const dto = await fetchReviewQueue(createServerApiClient());
-  return reviewQueueDTOToViewModel(dto, getBundledQuestions()); // join はサーバー側のみ
-}</code></pre>
+// export しない。畳み込み前の loader を外から選べると、取り違えても型で気づけない
+async function loadReview(now?: number): Promise&lt;ReviewViewModel&gt; {
+  // Cache Components 下ではリクエスト時実行を宣言してからでないと、Cloudflare context の
+  // 解決も現在時刻の読み取りもできない。Date.now() を既定引数で先に評価しないこと。
+  await connection();
+
+  const dto = await fetchReviewQueue(await createServerApiClient());
+  return reviewQueueToViewModel(dto, getBundledQuestions(), now ?? Date.now()); // join はサーバー側のみ
+}
+
+// この feature の唯一の loader 入口。due バッジと本文が別々の &lt;Suspense&gt; 境界から
+// 同じ queue を読むため、リクエスト内で1回に畳む（畳まないと件数と中身が食い違いうる）。
+// React の cache() はリクエストスコープであり、user_id を含められない共有キャッシュではない。
+export const loadReviewOnce = cache((): Promise&lt;ReviewViewModel&gt; =&gt; loadReview());</code></pre>
 
         <pre
           data-code-title="apps/web/src/app/review/page.tsx"
-        ><code class="language-tsx">// apps/web/src/app/review/page.tsx
-import { ReviewRunner } from '@/features/review/client/components/review-runner';
-import { loadReviewQueue } from '@/features/review/server/load-review-queue';
+        ><code class="language-tsx">// apps/web/src/app/review/page.tsx — 静的シェルと動的領域の分離
+import { Suspense } from 'react';
+import { ReviewDueBadge } from '@/features/review/server/components/review-due-badge';
+import { ReviewPageShell } from '@/features/review/server/components/review-page-shell';
+import {
+  ReviewDueBadgeFallback,
+  ReviewQueueFallback,
+} from '@/features/review/server/components/review-queue-fallback';
+import { ReviewUserContent } from '@/features/review/server/components/review-user-content';
 
-// API-backed page は force-dynamic。再取得は router.refresh() に委譲
-export const dynamic = 'force-dynamic';
-
-export default async function ReviewPage() {
-  const viewModel = await loadReviewQueue(); // API queue + content join 済み VM
-
-  return &lt;ReviewRunner viewModel={viewModel} /&gt;;
+// route segment config（dynamic / dynamicParams）は Cache Components と併用不可。
+// ReviewUserContent と ReviewDueBadge は loadReviewOnce() 経由でユーザー固有 queue を読む
+// （React の cache() によるリクエストスコープの畳み込み。'use cache' は使わない）。
+export default function ReviewPage() {
+  return (
+    &lt;ReviewPageShell
+      dueBadge={
+        &lt;Suspense fallback={&lt;ReviewDueBadgeFallback /&gt;}&gt;
+          &lt;ReviewDueBadge /&gt;
+        &lt;/Suspense&gt;
+      }
+    &gt;
+      &lt;Suspense fallback={&lt;ReviewQueueFallback /&gt;}&gt;
+        &lt;ReviewUserContent /&gt;
+      &lt;/Suspense&gt;
+    &lt;/ReviewPageShell&gt;
+  );
 }</code></pre>
 
         <pre
-          data-code-title="apps/web/src/features/review/client/hooks/use-answer-submit.ts"
-        ><code class="language-ts">// apps/web/src/features/review/client/hooks/use-answer-submit.ts
+          data-code-title="apps/web/src/features/quiz/client/hooks/use-answer-submit.ts"
+        ><code class="language-ts">// apps/web/src/features/quiz/client/hooks/use-answer-submit.ts
 'use client';
 
-import { useCallback, useMemo, useRef, useState } from 'react';
-import { createBrowserApiClient } from '@/lib/api';
-import { postAnswer } from '../../api/review-api';
-import type { AnswerRequest, AnswerResponse } from '@tsl/shared';
+import type { AnswerRequest } from '@tsl/shared';
+import { useCallback, useRef, useState } from 'react';
+import { type ApiClient, createBrowserApiClient } from '@/lib/api';
+import { submitAnswer as postAnswer } from '../../api/quiz-api';
+import type { SubmittedAnswer } from '../../view-model';
 
-// VM は保持しない。mutation と通信状態だけを扱う hook
+// VM は保持しない。mutation と通信状態だけを扱う hook（Quiz / Review 共用）
 export function useAnswerSubmit() {
-  const client = useMemo(() =&gt; createBrowserApiClient(), []);
-  const [results, setResults] = useState&lt;Record&lt;string, AnswerResponse&gt;&gt;({});
-  const [error, setError] = useState&lt;Error | null&gt;(null);
+  // 生成は初回送信まで遅らせる。render 時に作ると SSR・prerender でも評価され、
+  // ブラウザ専用の設定（NEXT_PUBLIC_API_BASE_URL）が無い経路で throw する。
+  const clientRef = useRef&lt;ApiClient&gt;(undefined);
+  const [error, setError] = useState&lt;string&gt;();  // 表示用の文言。Error は持ち回さない
+  const [results, setResults] = useState&lt;Record&lt;string, SubmittedAnswer&gt;&gt;({});
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
 
@@ -1074,24 +1132,30 @@ export function useAnswerSubmit() {
     if (submittingRef.current) return;
     submittingRef.current = true;
     setSubmitting(true);
-    setError(null);
+    setError(undefined);
     try {
-      const result = await postAnswer(client, input);
-      setResults((prev) =&gt; ({ ...prev, [input.questionId]: result }));
-    } catch (cause) {
-      setError(cause instanceof Error ? cause : new Error('Failed to submit answer'));
+      clientRef.current ??= createBrowserApiClient();
+      const response = await postAnswer(clientRef.current, input);
+      // API の採点結果に選択肢を足して SubmittedAnswer にする。選択肢のロックと
+      // 結果サマリが「どれを選んだか」を必要とするため。
+      setResults((prev) =&gt; ({
+        ...prev,
+        [input.questionId]: { ...response, selectedIndex: input.selectedIndex },
+      }));
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : '解答の送信に失敗しました。');
     } finally {
       submittingRef.current = false;
       setSubmitting(false);
     }
-  }, [client]);
-
-  const resetAnswers = useCallback(() =&gt; {
-    setResults({});
-    setError(null);
   }, []);
 
-  return { results, error, submitting, submitAnswer, resetAnswers };
+  const resetAnswers = useCallback(() =&gt; {
+    setError(undefined);
+    setResults({});
+  }, []);
+
+  return { error, resetAnswers, results, submitAnswer, submitting };
 }</code></pre>
 
         <pre
@@ -1150,7 +1214,7 @@ export function ReviewRunner({ viewModel }: Props) {
         ><code class="language-tsx">// apps/web/src/app/review/page.tsx
 // 避ける: page が API DTO、content join、sort、ViewModel 形状を知っている。
 export default async function ReviewPage() {
-  const client = createServerApiClient();
+  const client = await createServerApiClient();
   const res = await client.review.queue.$get();
   const dto = await res.json();
   const questions = getBundledQuestions();
@@ -1233,24 +1297,39 @@ flowchart LR
         <pre
           data-code-title="apps/web/src/lib/api.ts"
         ><code class="language-ts">// apps/web/src/lib/api.ts
-import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { createClient } from '@tsl/api/client';
 
-// Server loader 用: 本番は Service Binding、dev は URL にフォールバック
-export function createServerApiClient() {
-  const { env } = getCloudflareContext();
-  if (env.API) {
-    // ホスト名はダミー（Service Binding はパスのみ使用）
-    return createClient('https://api.internal', {
-      fetch: env.API.fetch.bind(env.API),
-    });
+// Server loader 用: 本番は Service Binding 必須、ローカルのみ URL へフォールバック
+export async function createServerApiClient(): Promise&lt;ApiClient&gt; {
+  const isLocalRuntime = process.env.NODE_ENV !== 'production';
+
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const { env } = await getCloudflareContext({ async: true });
+    if (env.API) {
+      // ホスト名はダミー（Service Binding はパスのみ使用）
+      return createClient('https://api.internal', {
+        fetch: env.API.fetch.bind(env.API),
+      });
+    }
+    if (!isLocalRuntime) throw new Error('Cloudflare API service binding (API) is not configured.');
+  } catch (error) {
+    if (!isLocalRuntime) throw error; // 本番は fail-fast
   }
-  return createClient(env.API_BASE_URL); // next dev + wrangler dev 並走時
+
+  return createClient(process.env.API_BASE_URL ?? 'http://localhost:8787');
 }
 
-// Client hook 用: env から解決した公開 baseURL
-export function createBrowserApiClient() {
-  return createClient(process.env.NEXT_PUBLIC_API_BASE_URL);
+// Client hook 用: env から解決した公開 baseURL。生成は初回送信まで遅らせる
+// （render 時に呼ぶと prerender でも評価され、未設定時に throw する）。
+export function createBrowserApiClient(): ApiClient {
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+  if (!apiBaseUrl &amp;&amp; process.env.NODE_ENV === 'production') {
+    throw new Error('NEXT_PUBLIC_API_BASE_URL is required in production');
+  }
+
+  return createClient(apiBaseUrl ?? 'http://localhost:8787');
 }</code></pre>
         <div class="note">
           web 側の wrangler 設定に

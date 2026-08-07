@@ -83,3 +83,38 @@ describe('reviewQueueToViewModel', () => {
     )
   })
 })
+
+describe('reviewQueueToViewModel: batchKey', () => {
+  // batchKey は ReviewRunner が QuizInteractive に渡す key であり、値が変われば
+  // React が interactive subtree を再マウントして解答結果と画面フェーズをリセットする。
+  // router.refresh() 後の状態リセットはこの契約に依存する（design.md 9.2）。
+  const build = (items: ReviewQueueResponse['items']) =>
+    reviewQueueToViewModel({ hasMore: false, items }, questions, 0)
+
+  it('keeps the same key for an unchanged queue', () => {
+    const items = [{ questionId: firstQuestion.id, dueAt: 100 }]
+
+    expect(build(items).batchKey).toBe(build(items).batchKey)
+  })
+
+  it('changes the key when the next batch has different questions', () => {
+    expect(build([{ questionId: firstQuestion.id, dueAt: 100 }]).batchKey).not.toBe(
+      build([{ questionId: secondQuestion.id, dueAt: 100 }]).batchKey,
+    )
+  })
+
+  it('changes the key when the same question comes back with a new dueAt', () => {
+    expect(build([{ questionId: firstQuestion.id, dueAt: 100 }]).batchKey).not.toBe(
+      build([{ questionId: firstQuestion.id, dueAt: 200 }]).batchKey,
+    )
+  })
+
+  it('ignores questions that are no longer bundled, so they cannot change the key', () => {
+    expect(
+      build([
+        { questionId: firstQuestion.id, dueAt: 100 },
+        { questionId: 'deleted-question', dueAt: 999 },
+      ]).batchKey,
+    ).toBe(build([{ questionId: firstQuestion.id, dueAt: 100 }]).batchKey)
+  })
+})
