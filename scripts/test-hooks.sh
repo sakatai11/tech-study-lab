@@ -120,6 +120,9 @@ legacy_zero_finding_ban=$(printf '%s%s' 'レビューの失敗・未取得・指
 check_absent_contract "no blanket ban on zero findings" "$legacy_zero_finding_ban" "$SKILL"
 # フォールバックの2件目 reviewer は既定が accuracy-first のため、明示しないと観点が揃う。
 check_agent_contract "fallback reviewer gets spec profile" '`reviewProfile: spec-compliance-first` をブリーフで明示する' "$SKILL"
+check_agent_contract "consent-blocked result does not enter fallback" '`external-egress-confirmation-required` を返した場合は**レビュー未取得fallbackへ進めない**' "$SKILL"
+check_agent_contract "consent-blocked result reports missing scope" '同意記録に不足している同意項目を具体的に報告し' "$SKILL"
+check_agent_contract "consent-blocked result requires fresh confirmation" '必要な外部送信の明示同意を取得・記録するまで、別モデルレビュアーの再実行も2件目の `reviewer` の起動も行わない' "$SKILL"
 check_agent_contract "green check is not review" 'ステータスチェックが緑でも、レビュー済みの根拠にしない' "$SKILL"
 check_agent_contract "no guessing review range" 'レビュー範囲を推測で決めない' "$SKILL"
 check_agent_contract "no cherry-picking findings" 'オーケストレーターの判断で取捨選択しない' "$SKILL"
@@ -224,9 +227,11 @@ check_agent_contract "common no temp files" '一時ファイルも作らない' 
 check_agent_contract "common three-dot base" 'git merge-base <base> HEAD' "$COMMON"
 check_agent_contract "common records both bases" '論理base（ブランチ名）と実効base（SHA）' "$COMMON"
 check_agent_contract "codex passes effective base" '<effective-base>' .ai/agents/codex-reviewer.md
+check_agent_contract "codex brief read pins UTF-8" 'read_text(encoding="utf-8")' .ai/agents/codex-reviewer.md
+check_agent_contract "codex stops on brief decode failure" 'UTF-8 デコードに失敗した場合はレビューを実行せず' .ai/agents/codex-reviewer.md
 check_agent_contract "claude passes effective base" '<effective-base>' .ai/agents/claude-reviewer.md
 check_agent_contract "codex read-only sandbox" 'sandbox_mode="read-only"' .ai/agents/codex-reviewer.md
-check_agent_contract "codex rejects prompt arg" '`PROMPT`（カスタム指示・`-` による stdin 入力を含む）を渡さない' .ai/agents/codex-reviewer.md
+check_agent_contract "codex rejects prompt arg" '位置引数の `PROMPT`（`-` による stdin 入力を含む）は渡さない' .ai/agents/codex-reviewer.md
 check_agent_contract "claude restricts tools" '`--allowedTools` と `--disallowedTools` を必ず両方指定する' .ai/agents/claude-reviewer.md
 check_agent_contract "codex host guard" '**Codex ホストで使ってはならない**' .ai/agents/codex-reviewer.md
 check_agent_contract "claude host guard" '**Claude Code ホストで使ってはならない**' .ai/agents/claude-reviewer.md
