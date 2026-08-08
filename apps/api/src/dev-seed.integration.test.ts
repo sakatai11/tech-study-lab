@@ -1,6 +1,8 @@
 import { applyD1Migrations, env } from 'cloudflare:test'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
+import { DAY_MS, initialSrs, reviewSrs } from '@tsl/shared'
+
 import initialMigration from '../drizzle/migrations/0000_flowery_quasar.sql?raw'
 import srsVersionMigration from '../drizzle/migrations/0001_add_srs_version.sql?raw'
 
@@ -8,6 +10,13 @@ import { createDevSeedSql } from './dev-seed'
 import { FIXED_USER_ID } from './fixed-user'
 
 const SEEDED_AT = 1_700_000_000_000
+const INCORRECT_ANSWERED_AT = SEEDED_AT - 4 * DAY_MS
+const CORRECT_ANSWERED_AT = INCORRECT_ANSWERED_AT + DAY_MS + 1
+const EXPECTED_SRS = reviewSrs(
+  reviewSrs(initialSrs(), false, INCORRECT_ANSWERED_AT),
+  true,
+  CORRECT_ANSWERED_AT,
+)
 
 function migrationQueries(sql: string): string[] {
   return sql
@@ -64,13 +73,13 @@ describe('local dynamic D1 development seed', () => {
         {
           question_id: 'security-xss-01-q1',
           is_correct: 1,
-          answered_at: 1_699_740_800_001,
+          answered_at: CORRECT_ANSWERED_AT,
           response_time_ms: 1200,
         },
         {
           question_id: 'security-xss-01-q1',
           is_correct: 0,
-          answered_at: 1_699_654_400_000,
+          answered_at: INCORRECT_ANSWERED_AT,
           response_time_ms: null,
         },
       ],
@@ -87,11 +96,11 @@ describe('local dynamic D1 development seed', () => {
       results: [
         {
           question_id: 'security-xss-01-q1',
-          ease: 2300,
-          interval_days: 1,
-          due_at: 1_699_827_200_001,
-          reps: 1,
-          lapses: 1,
+          ease: EXPECTED_SRS.ease,
+          interval_days: EXPECTED_SRS.intervalDays,
+          due_at: EXPECTED_SRS.dueAt,
+          reps: EXPECTED_SRS.reps,
+          lapses: EXPECTED_SRS.lapses,
           version: 2,
         },
       ],
