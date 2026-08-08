@@ -543,8 +543,7 @@
             <code>dynamicParams</code> の route segment config は併用できないため置かない。
             PPR streaming の対象は <code>/</code> と <code>/review</code> のみで、後者では
             静的シェルに <code>ReviewQueueFallback</code> を表示してから、queue 完了後に
-            非キャッシュの <code>ReviewUserContent</code> が整合性エラー・空キュー・
-            <code>ReviewRunner</code> を分岐してストリーミングする。
+            非キャッシュの <code>ReviewRunner</code> をストリーミングする。
           </li>
         </ul>
         <div class="note">
@@ -741,9 +740,8 @@ flowchart LR
           <p>
             静的シェルと <code>ReviewQueueFallback</code> を先に返し、
             Suspense 内の非キャッシュ Server Component が
-            API から due queue のIDとSRSメタを受け、本文・解説を content index へ join した後、
-            <code>ReviewUserContent</code> が表示可能件数と後続 batch の有無で整合性エラー・
-            空キュー・<code>ReviewRunner</code> を分岐します。
+            API から due queue のIDとSRSメタを受け、本文・解説を content index へ join した後に
+            <code>ReviewRunner</code> をストリーミングします。
           </p>
           <div class="diagram-toolbar" aria-label="復習ページ初回表示の図操作">
             <button type="button" data-zoom-action="in">拡大</button>
@@ -772,23 +770,11 @@ flowchart LR
     dto["ReviewQueueResponse\nserializable response"]:::api
   end
 
-  branch{"join後の dueCount / hasMore"}:::server
-  empty["通常の空キュー\ndueCount=0 &amp;&amp; !hasMore"]:::server
-  integrity["整合性エラー\ndueCount=0 &amp;&amp; hasMore"]:::server
-  runner["ReviewRunner\ndueCount&gt;0、viewModel props（state に複製しない）"]:::client
+  runner["ReviewRunner\nviewModel props（state に複製しない）"]:::client
 
   page --&gt;|Suspense| userContent --&gt;|calls| serverLoader --&gt;|uses wrapper| rpcWrapper --&gt;|"hc $get（Service Binding）"| endpoint
   endpoint -->|query| service -->|returns| dto
-  dto -->|join by question_id| contentIndex -->|map| mapper --> branch
-  branch -->|0 &amp;&amp; !hasMore| empty
-  branch -->|0 &amp;&amp; hasMore| integrity
-  branch -->|dueCount&gt;0| runner</pre>
-        <p>
-          <code>ReviewViewModel.dueCount</code> は content と join できた表示可能件数です。一方、
-          ダッシュボードの due 件数は永続化された due-state の生件数なので、解決不能な content ID
-          が残る場合は大きくなり得ます。表示可能件数が 0 で後続 batch がある組み合わせは、
-          完了ではなく route の error 境界へ渡すデータ整合性エラーとして扱います。
-        </p>
+  dto -->|join by question_id| contentIndex -->|map| mapper -->|props| runner</pre>
         </div>
 
         <h3>クライアント更新処理</h3>

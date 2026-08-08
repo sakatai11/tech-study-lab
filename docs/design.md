@@ -227,7 +227,7 @@ HTTP 入出力、Zod スキーマの実装状況、後続エンドポイント�
 - `POST /answers` — 1 問解答の記録 → SRS 更新。リクエスト `{ questionId, selectedIndex, responseTimeMs? }`、レスポンス `{ isCorrect, correctIndex }`。正誤判定は API が D1 の `questions`（4.4）を照合して行う権威側（7.2）
 - `POST /lesson-views` — 教材の閲覧を記録。strict なリクエスト `{ lessonId }` を受け、middleware が注入した `userId` のみを使用して `lesson_views` へ記録し、`201 { recorded: true }` を返す。クライアントは `userId` を送らない。重複排除、配送保証、lesson の存在確認はこの最小ログでは行わない。
 - `GET /review/queue` — due 問題の `question_id` ＋ SRS メタと、次バッチの有無 `hasMore` を返す（本文はフロントがビルド時データから解決）。APIが`dueAt`昇順・最大20件を保証する（§4.5）
-- `GET /dashboard/due-count` — ダッシュボードの raw persisted due-state 件数（content join 前の SRS 状態を数えるため、解決不能な content ID がある場合は Review の表示可能件数より多くなり得る）
+- `GET /dashboard/due-count` — ダッシュボードの due 件数
 - `GET /domains` — 4 領域それぞれの習得率（習得済み問題数 / 全問題数）・トピック数・レッスン数を返す（`/domains`・ダッシュボードの領域別カードで共用）
 - `GET /analytics/summary` — 総解答数・正答率・平均反応時間・習得済み問題数（SRS interval ≥ 21日）・連続学習日数・今週の学習時間（§4.4 の `lesson_views`・`answer_logs.response_time_ms` から集計）
 - `GET /analytics/weekly` — 直近7日の解答数推移（曜日ごとの件数）
@@ -328,7 +328,7 @@ apps/web/src/
 - 実行場所はディレクトリ名ではなく import 境界で決まる。`apps/web/src/features/*/server` は `apps/web/src/app/**/page.tsx` など Server Component から import する限りサーバー側で実行される。誤用防止のため `import 'server-only'` を必須にする。
 - Server Actions は使わず、動的データは Hono API に一本化する。初回取得は Server loader、mutation は Client hook から `hc` で実行する。Server data の再取得は Client Component が `router.refresh()` で Server loader を再実行する（API 契約を `apps/api` に一本化し、RPC 型を素直に効かせる）。
   - **不採用の根拠**：変更系を Hono に一本化することで ①契約（`AppType`）と `user_id` 注入点（§7.2）を単一ソースに保てる、②Hono+Cloudflare の学習目的（§2）を素通りしない。Server Actions の利点（フォームのプログレッシブエンハンスメント等）は、即時採点の Client 主導 Quiz・変更系が `POST /answers` ほぼ一択の本アプリでは恩恵が小さい。重いフォームが必要になった時点で再検討する。
-- **キャッシュ方針**：`cacheComponents` を有効化済みである。`export const dynamic` と `export const dynamicParams` は Cache Components と併用できないため、**page-level の route segment config を置かない**。ユーザー固有データを読む Server loader は先頭で `connection()` を呼び、リクエスト時実行であることを宣言する（Cloudflare context の解決と現在時刻の読み取りは prerender 中に行えない）。PPR streaming の対象は `/` と `/review` のみであり、`/review` では静的シェルの内側に `<Suspense fallback={<ReviewQueueFallback />}>` を置く。fallback の後、ユーザー固有データを読む非キャッシュの `ReviewUserContent` が join 後の ViewModel に応じて、整合性エラー・通常の空キュー・`ReviewRunner` のいずれかをストリーミングする（§7.1・§9.2・§9.4）。due 件数・統計・review queue には `'use cache'`・`cacheLife`・`cacheTag`・`revalidateTag` を使わない。API 側で権威的に注入する `user_id` が web の共有キャッシュキーに含まれず、共有キャッシュでユーザー間データが混入し得るためである。feature の `api/` adapter にキャッシュ方針を持ち込まず、解答後・画面復帰時の鮮度回復は Client 側の `router.refresh()` で RSC を再実行して担う。同一リクエスト内で複数の `<Suspense>` 境界が同じ queue を参照する場合は、React の `cache()`（リクエストスコープ）で loader を1回に畳む。これはユーザー横断の共有キャッシュではない。`/domains`・`/analytics` は未実装であり、実装時に同じ分離を適用するが、PPR streaming 対象に含めるかは別途判断する。
+- **キャッシュ方針**：`cacheComponents` を有効化済みである。`export const dynamic` と `export const dynamicParams` は Cache Components と併用できないため、**page-level の route segment config を置かない**。ユーザー固有データを読む Server loader は先頭で `connection()` を呼び、リクエスト時実行であることを宣言する（Cloudflare context の解決と現在時刻の読み取りは prerender 中に行えない）。PPR streaming の対象は `/` と `/review` のみであり、`/review` では静的シェルの内側に `<Suspense fallback={<ReviewQueueFallback />}>` を置き、fallback を表示してから、ユーザー固有データを読む非キャッシュの async Server Component と `ReviewRunner` をストリーミングする（§7.1・§9.2・§9.4）。due 件数・統計・review queue には `'use cache'`・`cacheLife`・`cacheTag`・`revalidateTag` を使わない。API 側で権威的に注入する `user_id` が web の共有キャッシュキーに含まれず、共有キャッシュでユーザー間データが混入し得るためである。feature の `api/` adapter にキャッシュ方針を持ち込まず、解答後・画面復帰時の鮮度回復は Client 側の `router.refresh()` で RSC を再実行して担う。同一リクエスト内で複数の `<Suspense>` 境界が同じ queue を参照する場合は、React の `cache()`（リクエストスコープ）で loader を1回に畳む。これはユーザー横断の共有キャッシュではない。`/domains`・`/analytics` は未実装であり、実装時に同じ分離を適用するが、PPR streaming 対象に含めるかは別途判断する。
 ### 8.4 `hc` クライアントの取り回し
 
 - `apps/api` が `AppType` をエクスポート → `apps/web` は `hc<AppType>` で型安全クライアントを生成（既存 `apps/api/src/client.ts` のファクトリを利用。Service Binding の fetch を渡せるよう、ファクトリは `hc` の第2引数（`fetch` オプション等）を受け取れる形に拡張する）。
@@ -345,7 +345,6 @@ apps/web/src/
 
 - **クライアント state のみ**（`useState` と専用 hook で feature 内に閉じる）。MVP として最小化する。Client Component は画面フェーズ（`intro → exercise → result`）・現在の問題インデックス・`wrongOnly`・キーボード操作を保持し、`useAnswerSubmit` hook は mutation・`submitting`・送信エラー・API から返った解答結果を保持する（§7.2）。初期 ViewModel は immutable な props として参照し、Client state に複製しない。
   - MVP フローは「イントロ確認 → 1 問表示 → 選択 → 即時採点 → ロック → 解説表示 → 次問 → 結果」で線形・シンプルなため、`useState` で充分。複雑な状態遷移が出現（例：問題セット内での再検索・フィルタ等）したら、その時点で `useReducer` へ段階的にリファクタリング。
-- **Review の空キューと整合性**：Server Component の `ReviewUserContent` は、mapper が bundled content と join できない個別 `question_id` を除外した後の `ReviewViewModel.dueCount` で分岐する。`dueCount === 0 && !hasMore` だけを通常の空キューとして表示し、`dueCount === 0 && hasMore` は表示可能な問題がないのに後続 batch があるデータ整合性エラーとして throw し、route の `error.tsx` へ渡す。`dueCount > 0` では `ReviewRunner` を描画する。content 全体の未検出・検証失敗や queue 取得失敗も §9.6 の `error.tsx` 経路で扱う。
 - **リロードで進捗はリセット（許容）**。リロードすると `intro` フェーズに戻る。ただし「1 問解答＝1 `answer_log` POST」（7.2 で定義済みの原則）なので、解答そのものは即サーバーに残る。途中復帰（sessionStorage）やサーバー復元は将来拡張ポイントとして留保。
 - フロー：イントロ（概要／due プレビュー）→ 1 問表示 → 即時採点（正誤＋解説）→ 選択肢ロック → 末尾に結果サマリ → 出し分け動線（`/quiz`=次のレッスンへ／`/review`=ホームへ、両者「間違えた問題だけ」提供）。
 - 解答の反応時間（`responseTimeMs`）は Client Component が選択肢の表示開始時刻からの経過時間として計測し、`submitAnswer` の引数として Client hook へ渡す。Client hook は時刻を計測せず、受け取った値をそのまま API へ転送する。
@@ -477,7 +476,7 @@ export default function LessonPage({ params }: Props) {
 `/quiz/[lesson]`・`/review` などインタラクションを持つページ。**初回データは Server loader で ViewModel 化し、page はその VM を feature component へ props で渡すだけに留める。Client Component は props の VM をそのまま描画に使い、画面フェーズ・現在問題・`wrongOnly`・キーボード操作を state として持つ。Client hook は mutation・`submitting`・送信エラー・API 由来の解答結果を持つ**（＝初回レンダリング時にスピナーを出さない。VM 自体を state に複製しない）。
 
 - `/quiz`：content から問題・解説を解決し、API GET はしない。Client hook は `POST /answers` と、その通信状態・API 由来の解答結果だけを担当する。VM は content のみで再取得不要であり、Client Component は props の ViewModel をそのまま参照する。
-  - `/review`：Server loader で `GET /review/queue` を呼び、返却された `question_id` を content の問題本文・解説へ join して VM 化する。**join は Server loader 内でのみ行い、contentローダーや全教材データをClient bundleへimportしない**。bundled content で解決できない個別 `question_id` は mapper が除外し、`ReviewViewModel.dueCount` は join 後の表示可能な件数とする。一方、ダッシュボードの due 件数は raw persisted due-state 件数であり、解決不能な ID が残る場合は表示可能件数より多い。この不一致はデータ整合性の問題であり、表示可能件数が 0 かつ `hasMore` の場合は通常の完了として扱わずエラーにする。Clientへ渡すVMには表示に必要な問題文・選択肢・解説だけを含め、`answerIndex`は含めない。解答完了後に次の due を引き直す場面では、Client から API を再度叩いて join し直すのではなく `router.refresh()` で Server Component を再実行し、Server loader が新しい VM を props として渡し直す（§8.3 のキャッシュ方針）。
+  - `/review`：Server loader で `GET /review/queue` を呼び、返却された `question_id` を content の問題本文・解説へ join して VM 化する。**join は Server loader 内でのみ行い、contentローダーや全教材データをClient bundleへimportしない**。Clientへ渡すVMには表示に必要な問題文・選択肢・解説だけを含め、`answerIndex`は含めない。解答完了後に次の due を引き直す場面では、Client から API を再度叩いて join し直すのではなく `router.refresh()` で Server Component を再実行し、Server loader が新しい VM を props として渡し直す（§8.3 のキャッシュ方針）。
 
 ```typescript
 // lib/api.ts（client factory と共通 response helper を同じファイルで管理）
@@ -525,22 +524,7 @@ export const loadReviewOnce = cache((): Promise<ReviewViewModel> => loadReview()
 async function ReviewUserContent() {
   // Suspense 内でのみ実行する。API が user_id を権威的に注入するため、ここには 'use cache' を置かない。
   const viewModel = await loadReviewOnce();
-
-  // dueCount は API queue の生件数ではなく、mapper が bundled content と join できた問題数。
-  if (viewModel.dueCount === 0) {
-    if (viewModel.hasMore) {
-      throw new Error('復習キューの整合性を確認できませんでした。');
-    }
-
-    return (
-      <Card>
-        <p>今日は復習済みです</p>
-        <Link href="/">ホームへ</Link>
-      </Card>
-    );
-  }
-
-  return <ReviewRunner viewModel={viewModel} />;
+  return <ReviewRunner viewModel={viewModel} />;  // dueCount 0 のときは空キュー表示に分岐
 }
 
 // app/review/page.tsx（Server）— 静的シェルと動的領域の分離
@@ -665,10 +649,10 @@ export function ReviewRunner({ viewModel }: Props) {
 }
 ```
 
-- **初回＝Server loader で VM 化し、page は feature component への props 渡しのみ**。`/quiz` は content のみ、`/review` は API queue + content join。`/review` は静的 `ReviewPageShell` の内部に `<Suspense fallback={<ReviewQueueFallback />}>` で囲んだ `ReviewUserContent` を置く。queue 完了後、join 後の `ReviewViewModel.dueCount === 0 && !hasMore` なら空キュー表示を、`dueCount === 0 && hasMore` なら整合性エラーを、`dueCount > 0` なら `ReviewRunner` をストリーミングする。後者はユーザー固有の queue を読むため非キャッシュとする（§9.1 の原則どおり整形ロジックは mapper 一本のまま）。
+- **初回＝Server loader で VM 化し、page は feature component への props 渡しのみ**。`/quiz` は content のみ、`/review` は API queue + content join。`/review` は静的 `ReviewPageShell` の内部に `<Suspense fallback={<ReviewQueueFallback />}>` で囲んだ `ReviewUserContent` を置き、fallback を表示してから queue 完了後に `ReviewRunner` をストリーミングする。後者はユーザー固有の queue を読むため非キャッシュとする（§9.1 の原則どおり整形ロジックは mapper 一本のまま）。
 - **VM はクライアント state に複製しない**。`ReviewRunner` は Review VM を Quiz 表示コンポーネントの props へ変換して渡す。`useAnswerSubmit` hook が解答結果（`results`）・`submitting`・送信エラーを保持し、Client Component は画面フェーズ・現在問題などの表示操作 state だけを保持する。due queue の再取得は `router.refresh()` による Server Component 再実行に一本化し、content との join を常にサーバー側に閉じ込める。
 - **RPC 呼び出しは `apps/web/src/features/*/api` の endpoint アダプター経由**。Server loader と Client hook は同じアダプターへ実行環境に合った `ApiClient` を渡す。HTTP レスポンス処理は `requestJson` に寄せ、feature 側では重複させない。
-- **初回ローディング表示の条件**：`/review` は静的シェルに `ReviewQueueFallback` と due バッジ fallback を表示し、queue 完了後は `ReviewUserContent` が join 後の `ReviewViewModel` に応じて整合性エラー・通常の空キュー表示・`ReviewRunner` をストリーミングする。`router.refresh()` 中の待機表示が必要なら `loading.tsx` かローカルな `isRefreshing` フラグで扱う。
+- **初回ローディング表示の条件**：`/review` は静的シェルに `ReviewQueueFallback` と due バッジ fallback を表示し、queue 完了後に `ReviewRunner` をストリーミングする。`router.refresh()` 中の待機表示が必要なら `loading.tsx` かローカルな `isRefreshing` フラグで扱う。
 - **将来：**TanStack Query 等へ置き換える際、mapper・ViewModel 型・page は変わらず、hook（`useAnswerSubmit` 相当）内部だけ差し替わる（契約保証）。
 
 ### 9.3 DTO / ViewModel の分離と配置
@@ -842,6 +826,7 @@ export default function QuizPage({ params }: Props) {
       <QuizInteractive                            {/* 表示操作 state を持つ Client */}
         explanations={viewModel.explanations}
         questions={viewModel.questions}
+        resultHomeLabel="レッスン一覧へ"
         title={viewModel.title}
         resultHomeHref={`/learn/${viewModel.domain}/${viewModel.topic}`}
       />
@@ -851,7 +836,13 @@ export default function QuizPage({ params }: Props) {
 
 // features/quiz/client/components/quiz-interactive.tsx（Client）
 'use client';
-export function QuizInteractive({ viewModel }: Props) {
+export function QuizInteractive({
+  explanations,
+  questions,
+  resultHomeHref,
+  resultHomeLabel,
+  title,
+}: QuizInteractiveProps) {
   // 表示操作 state は component が持つ。
   const [phase, setPhase] = useState<'intro' | 'exercise' | 'result'>('intro');
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -862,10 +853,10 @@ export function QuizInteractive({ viewModel }: Props) {
   const { submitAnswer, resetAnswers, results, submitting, error } = useAnswerSubmit();
 
   // ViewModel は immutable な props として参照し、state に複製しない。
-  const questions = wrongOnlyQuestionIds
-    ? viewModel.questions.filter(q => wrongOnlyQuestionIds.includes(q.id))
-    : viewModel.questions;
-  const question = questions[currentIndex];
+  const activeQuestions = wrongOnlyQuestionIds
+    ? questions.filter(q => wrongOnlyQuestionIds.includes(q.id))
+    : questions;
+  const question = activeQuestions[currentIndex];
 
   // 選択肢の表示開始時刻は Client Component が記録する（§8.5）。hook 側では計測しない。
   useEffect(() => {
@@ -884,7 +875,8 @@ export function QuizInteractive({ viewModel }: Props) {
   if (phase === 'intro') {
     return (
       <QuizIntro
-        viewModel={viewModel}
+        title={title}
+        questionCount={activeQuestions.length}
         onStart={() => {
           resetAnswers();
           setPhase('exercise');
@@ -895,7 +887,7 @@ export function QuizInteractive({ viewModel }: Props) {
   if (phase === 'result' || !question) {
     return (
       <QuizSummary
-        questions={questions}
+        questions={activeQuestions}
         results={results}
         onWrongOnly={questionIds => {
           resetAnswers();
@@ -907,12 +899,12 @@ export function QuizInteractive({ viewModel }: Props) {
     );
   }
 
-  const isLast = currentIndex === questions.length - 1;
+  const isLast = currentIndex === activeQuestions.length - 1;
 
   return (
     <QuestionCard
       question={question}
-      explanation={viewModel.explanations[question.id]}
+      explanation={explanations[question.id]}
       onAnswer={selectedIndex => submitAnswer({
         questionId: question.id,
         responseTimeMs: Math.max(0, Date.now() - (questionStartedAt || Date.now())),
@@ -936,7 +928,7 @@ export function QuizInteractive({ viewModel }: Props) {
 
 #### 復習（PPR streaming 対象）
 
-`/review` は queue 取得そのものをキャッシュしない。静的シェルに `<Suspense fallback={<ReviewQueueFallback />}>` の fallback を表示し、ユーザー固有の async Server Component `ReviewUserContent` が queue 完了後の join 済み `ReviewViewModel` を分岐する。`dueCount === 0 && !hasMore` は空キュー表示、`dueCount === 0 && hasMore` はデータ整合性エラー、`dueCount > 0` は `ReviewRunner` をストリーミングする。解答後は `router.refresh()` で最新 queue を Server loader から再取得する。`'use cache'`・`cacheLife`・`cacheTag`・`revalidateTag` は使わない。
+`/review` は queue 取得そのものをキャッシュしない。静的シェルに `<Suspense fallback={<ReviewQueueFallback />}>` の fallback を表示し、ユーザー固有の async Server Component が queue 完了後に `ReviewRunner` をストリーミングする。解答後は `router.refresh()` で最新 queue を Server loader から再取得する。`'use cache'`・`cacheLife`・`cacheTag`・`revalidateTag` は使わない。
 
 構成の実コード例は §9.2 に一本化する（重複させると実装との同期漏れが起きるため）。要点は次の3つ。
 
@@ -980,9 +972,9 @@ export default function Error({ error }: { error: Error }) {
 
 #### Client（演習・復習系）
 
-`/review` は静的シェルに `ReviewQueueFallback` を表示し、queue 完了後は `ReviewUserContent` が join 後の `ReviewViewModel` に応じて通常の空キュー表示、整合性エラー、または `ReviewRunner` を返す（§9.2・§9.4 参照）。Client 側で扱うのは以下の 2 つ：
+`/review` は静的シェルに `ReviewQueueFallback` を表示し、queue 完了後に `ReviewRunner` をストリーミングする（§9.2・§9.4 参照）。Client 側で扱うのは以下の 2 つ：
 
-- **初回データ形成の失敗**：content 全体の未検出・検証失敗、または `/review` の初回 queue 取得失敗 → ルートの `error.tsx` で捕捉（Server 系と同じ経路）。個別の queue `question_id` が bundled content で解決できない場合は mapper が除外する。除外後に `ReviewViewModel.dueCount === 0 && hasMore` なら、後続 batch があるのに表示可能な問題がないデータ整合性エラーとして同じ `error.tsx` 経路で捕捉する。`dueCount === 0 && !hasMore` だけが通常の空キューである。
+- **初回データ形成の失敗**：content 未検出・検証失敗、または `/review` の初回 queue 取得失敗 → ルートの `error.tsx` で捕捉（Server 系と同じ経路）。
 - **mutation の失敗/待機**：hook が返す `error`・`submitting` を component で出し分ける。`router.refresh()` による再取得中の表示が必要なら、component の `isRefreshing` または route の `loading.tsx` で扱う。
 
 ```typescript

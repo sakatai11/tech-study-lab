@@ -9,17 +9,13 @@ import { loadReviewOnce } from '../load-review'
 
 /**
  * ユーザー固有の due queue を読む非キャッシュの async Server Component。
- * <Suspense> の内側に置き、queue 完了後に空キュー・整合性エラー・ReviewRunner を分岐する
+ * <Suspense> の内側に置き、queue 完了後に ReviewRunner をストリーミングする
  * （design.md 9.2）。
  */
 export async function ReviewUserContent() {
   const viewModel = await loadReviewOnce()
 
   if (viewModel.dueCount === 0) {
-    if (viewModel.hasMore) {
-      throw new Error('復習キューの整合性を確認できませんでした。')
-    }
-
     return (
       <Card className="p-5 sm:p-7">
         <p className="m-0 font-mono text-xs font-bold text-green">queue: empty</p>
