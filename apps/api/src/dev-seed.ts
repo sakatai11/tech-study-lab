@@ -3,6 +3,13 @@ import { DAY_MS, initialSrs, reviewSrs } from '@tsl/shared'
 import type { ContentSyncPayload } from './content-sync'
 import { FIXED_USER_ID } from './fixed-user'
 
+type SeededAnswer = {
+  idSuffix: string
+  isCorrect: boolean
+  answeredAt: number
+  responseTimeMs: number | null
+}
+
 function sqlString(value: string): string {
   return `'${value.replaceAll("'", "''")}'`
 }
@@ -40,10 +47,26 @@ export function createDevSeedSql(payload: ContentSyncPayload, seededAt: number):
   }
 
   const incorrectAnsweredAt = seededAt - 4 * DAY_MS
-  const correctAnsweredAt = incorrectAnsweredAt + DAY_MS + 1
-  const stateAfterIncorrect = reviewSrs(initialSrs(), false, incorrectAnsweredAt)
-  const finalSrs = reviewSrs(stateAfterIncorrect, true, correctAnsweredAt)
-  const finalVersion = 2
+  const seededAnswers: readonly [SeededAnswer, SeededAnswer] = [
+    {
+      idSuffix: 'incorrect',
+      isCorrect: false,
+      answeredAt: incorrectAnsweredAt,
+      responseTimeMs: null,
+    },
+    {
+      idSuffix: 'correct',
+      isCorrect: true,
+      answeredAt: incorrectAnsweredAt + DAY_MS + 1,
+      responseTimeMs: 1200,
+    },
+  ]
+  const [firstSeededAnswer, ...remainingSeededAnswers] = seededAnswers
+  const finalSrs = remainingSeededAnswers.reduce(
+    (state, answer) => reviewSrs(state, answer.isCorrect, answer.answeredAt),
+    reviewSrs(initialSrs(), firstSeededAnswer.isCorrect, firstSeededAnswer.answeredAt),
+  )
+  const finalVersion = seededAnswers.length
   const questionIds = payload.questions
     .map((question) => question.questionId)
     .sort((left, right) => left.localeCompare(right, 'en'))
@@ -55,22 +78,16 @@ export function createDevSeedSql(payload: ContentSyncPayload, seededAt: number):
     `INSERT INTO users (id, created_at) VALUES (${userId}, ${seededAt}) ON CONFLICT(id) DO NOTHING`,
     ...questionIds.flatMap((questionId) => [
       `INSERT INTO srs_states (user_id, question_id, ease, interval_days, due_at, reps, lapses, version) VALUES (${userId}, ${sqlString(questionId)}, ${finalSrs.ease}, ${finalSrs.intervalDays}, ${finalSrs.dueAt}, ${finalSrs.reps}, ${finalSrs.lapses}, ${finalVersion}) ON CONFLICT(user_id, question_id) DO UPDATE SET ease = excluded.ease, interval_days = excluded.interval_days, due_at = excluded.due_at, reps = excluded.reps, lapses = excluded.lapses, version = excluded.version`,
-      answerLogSql({
-        id: `${payload.userId}:dev-seed:${questionId}:incorrect`,
-        userId: payload.userId,
-        questionId,
-        isCorrect: false,
-        answeredAt: incorrectAnsweredAt,
-        responseTimeMs: null,
-      }),
-      answerLogSql({
-        id: `${payload.userId}:dev-seed:${questionId}:correct`,
-        userId: payload.userId,
-        questionId,
-        isCorrect: true,
-        answeredAt: correctAnsweredAt,
-        responseTimeMs: 1200,
-      }),
+      ...seededAnswers.map((answer) =>
+        answerLogSql({
+          id: `${payload.userId}:dev-seed:${questionId}:${answer.idSuffix}`,
+          userId: payload.userId,
+          questionId,
+          isCorrect: answer.isCorrect,
+          answeredAt: answer.answeredAt,
+          responseTimeMs: answer.responseTimeMs,
+        }),
+      ),
     ]),
   ]
 

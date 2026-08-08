@@ -95,6 +95,13 @@ describe('local dynamic D1 development seed', () => {
       ],
     })
     await expect(
+      env.DB.prepare(
+        'SELECT COUNT(*) AS due_count FROM srs_states WHERE user_id = ? AND due_at <= ?',
+      )
+        .bind(FIXED_USER_ID, 1_700_000_000_000)
+        .all(),
+    ).resolves.toMatchObject({ results: [{ due_count: 1 }] })
+    await expect(
       env.DB.prepare('SELECT id, user_id FROM answer_logs WHERE user_id = ?')
         .bind('other-user')
         .all(),

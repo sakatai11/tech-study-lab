@@ -39,6 +39,7 @@ describe('createDevSeedSql', () => {
       lapses: 1,
       dueAt: 1_699_827_200_001,
     })
+    expect(EXPECTED_SRS.dueAt).toBeLessThanOrEqual(SEEDED_AT)
     expect(sql).toContain(
       "INSERT INTO srs_states (user_id, question_id, ease, interval_days, due_at, reps, lapses, version) VALUES ('user-local-001', 'security-xss-01-q1', 2300, 1, 1699827200001, 1, 1, 2)",
     )
