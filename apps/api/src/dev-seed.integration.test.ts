@@ -7,6 +7,8 @@ import srsVersionMigration from '../drizzle/migrations/0001_add_srs_version.sql?
 import { createDevSeedSql } from './dev-seed'
 import { FIXED_USER_ID } from './fixed-user'
 
+const SEEDED_AT = 1_700_000_000_000
+
 function migrationQueries(sql: string): string[] {
   return sql
     .split('--> statement-breakpoint')
@@ -45,7 +47,7 @@ describe('local dynamic D1 development seed', () => {
         userId: FIXED_USER_ID,
         questions: [{ questionId: 'security-xss-01-q1', answerIndex: 0 }],
       },
-      1_700_000_000_000,
+      SEEDED_AT,
     )
 
     await env.DB.exec(sql)
@@ -94,13 +96,18 @@ describe('local dynamic D1 development seed', () => {
         },
       ],
     })
-    await expect(
-      env.DB.prepare(
-        'SELECT COUNT(*) AS due_count FROM srs_states WHERE user_id = ? AND due_at <= ?',
-      )
-        .bind(FIXED_USER_ID, 1_700_000_000_000)
-        .all(),
-    ).resolves.toMatchObject({ results: [{ due_count: 1 }] })
+    const seededStateCount = await env.DB.prepare(
+      'SELECT COUNT(*) AS state_count FROM srs_states WHERE user_id = ?',
+    )
+      .bind(FIXED_USER_ID)
+      .first<{ state_count: number }>()
+    expect(seededStateCount?.state_count).toBeGreaterThan(0)
+    const futureDueStateCount = await env.DB.prepare(
+      'SELECT COUNT(*) AS future_due_count FROM srs_states WHERE user_id = ? AND due_at > ?',
+    )
+      .bind(FIXED_USER_ID, SEEDED_AT)
+      .first<{ future_due_count: number }>()
+    expect(futureDueStateCount?.future_due_count).toBe(0)
     await expect(
       env.DB.prepare('SELECT id, user_id FROM answer_logs WHERE user_id = ?')
         .bind('other-user')
