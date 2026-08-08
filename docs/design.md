@@ -345,7 +345,7 @@ apps/web/src/
 
 - **クライアント state のみ**（`useState` と専用 hook で feature 内に閉じる）。MVP として最小化する。Client Component は画面フェーズ（`intro → exercise → result`）・現在の問題インデックス・`wrongOnly`・キーボード操作を保持し、`useAnswerSubmit` hook は mutation・`submitting`・送信エラー・API から返った解答結果を保持する（§7.2）。初期 ViewModel は immutable な props として参照し、Client state に複製しない。
   - MVP フローは「イントロ確認 → 1 問表示 → 選択 → 即時採点 → ロック → 解説表示 → 次問 → 結果」で線形・シンプルなため、`useState` で充分。複雑な状態遷移が出現（例：問題セット内での再検索・フィルタ等）したら、その時点で `useReducer` へ段階的にリファクタリング。
-- **Review の空キュー**：通常の `dueCount === 0` は Server Component の `ReviewUserContent` が空キュー表示へ分岐し、`ReviewRunner` / `QuizInteractive` を描画する前に処理する。
+- **Review の空キュー**：Server Component の `ReviewUserContent` は、mapper が bundled content と join できない個別 `question_id` を除外した後の `ReviewViewModel.dueCount === 0` で空キュー表示へ分岐し、`ReviewRunner` / `QuizInteractive` を描画する前に処理する。これは削除済み content に対応する通常の除外であり、content 全体の未検出・検証失敗や queue 取得失敗は §9.6 の `error.tsx` 経路で扱う。
 - **リロードで進捗はリセット（許容）**。リロードすると `intro` フェーズに戻る。ただし「1 問解答＝1 `answer_log` POST」（7.2 で定義済みの原則）なので、解答そのものは即サーバーに残る。途中復帰（sessionStorage）やサーバー復元は将来拡張ポイントとして留保。
 - フロー：イントロ（概要／due プレビュー）→ 1 問表示 → 即時採点（正誤＋解説）→ 選択肢ロック → 末尾に結果サマリ → 出し分け動線（`/quiz`=次のレッスンへ／`/review`=ホームへ、両者「間違えた問題だけ」提供）。
 - 解答の反応時間（`responseTimeMs`）は Client Component が選択肢の表示開始時刻からの経過時間として計測し、`submitAnswer` の引数として Client hook へ渡す。Client hook は時刻を計測せず、受け取った値をそのまま API へ転送する。
@@ -477,7 +477,7 @@ export default function LessonPage({ params }: Props) {
 `/quiz/[lesson]`・`/review` などインタラクションを持つページ。**初回データは Server loader で ViewModel 化し、page はその VM を feature component へ props で渡すだけに留める。Client Component は props の VM をそのまま描画に使い、画面フェーズ・現在問題・`wrongOnly`・キーボード操作を state として持つ。Client hook は mutation・`submitting`・送信エラー・API 由来の解答結果を持つ**（＝初回レンダリング時にスピナーを出さない。VM 自体を state に複製しない）。
 
 - `/quiz`：content から問題・解説を解決し、API GET はしない。Client hook は `POST /answers` と、その通信状態・API 由来の解答結果だけを担当する。VM は content のみで再取得不要であり、Client Component は props の ViewModel をそのまま参照する。
-  - `/review`：Server loader で `GET /review/queue` を呼び、返却された `question_id` を content の問題本文・解説へ join して VM 化する。**join は Server loader 内でのみ行い、contentローダーや全教材データをClient bundleへimportしない**。Clientへ渡すVMには表示に必要な問題文・選択肢・解説だけを含め、`answerIndex`は含めない。解答完了後に次の due を引き直す場面では、Client から API を再度叩いて join し直すのではなく `router.refresh()` で Server Component を再実行し、Server loader が新しい VM を props として渡し直す（§8.3 のキャッシュ方針）。
+  - `/review`：Server loader で `GET /review/queue` を呼び、返却された `question_id` を content の問題本文・解説へ join して VM 化する。**join は Server loader 内でのみ行い、contentローダーや全教材データをClient bundleへimportしない**。bundled content で解決できない個別 `question_id` は mapper が除外し、`ReviewViewModel.dueCount` は join 後の表示可能な件数とする。Clientへ渡すVMには表示に必要な問題文・選択肢・解説だけを含め、`answerIndex`は含めない。解答完了後に次の due を引き直す場面では、Client から API を再度叩いて join し直すのではなく `router.refresh()` で Server Component を再実行し、Server loader が新しい VM を props として渡し直す（§8.3 のキャッシュ方針）。
 
 ```typescript
 // lib/api.ts（client factory と共通 response helper を同じファイルで管理）
@@ -525,7 +525,18 @@ export const loadReviewOnce = cache((): Promise<ReviewViewModel> => loadReview()
 async function ReviewUserContent() {
   // Suspense 内でのみ実行する。API が user_id を権威的に注入するため、ここには 'use cache' を置かない。
   const viewModel = await loadReviewOnce();
-  return <ReviewRunner viewModel={viewModel} />;  // dueCount 0 のときは空キュー表示に分岐
+
+  // dueCount は API queue の生件数ではなく、mapper が bundled content と join できた問題数。
+  if (viewModel.dueCount === 0) {
+    return (
+      <Card>
+        <p>今日は復習済みです</p>
+        <Link href="/">ホームへ</Link>
+      </Card>
+    );
+  }
+
+  return <ReviewRunner viewModel={viewModel} />;
 }
 
 // app/review/page.tsx（Server）— 静的シェルと動的領域の分離
@@ -650,10 +661,10 @@ export function ReviewRunner({ viewModel }: Props) {
 }
 ```
 
-- **初回＝Server loader で VM 化し、page は feature component への props 渡しのみ**。`/quiz` は content のみ、`/review` は API queue + content join。`/review` は静的 `ReviewPageShell` の内部に `<Suspense fallback={<ReviewQueueFallback />}>` で囲んだ `ReviewUserContent` を置き、fallback を表示してから queue 完了後に `ReviewRunner` をストリーミングする。後者はユーザー固有の queue を読むため非キャッシュとする（§9.1 の原則どおり整形ロジックは mapper 一本のまま）。
+- **初回＝Server loader で VM 化し、page は feature component への props 渡しのみ**。`/quiz` は content のみ、`/review` は API queue + content join。`/review` は静的 `ReviewPageShell` の内部に `<Suspense fallback={<ReviewQueueFallback />}>` で囲んだ `ReviewUserContent` を置く。queue 完了後、join 後の `ReviewViewModel.dueCount` が 0 なら空キュー表示を、1 以上なら `ReviewRunner` をストリーミングする。後者はユーザー固有の queue を読むため非キャッシュとする（§9.1 の原則どおり整形ロジックは mapper 一本のまま）。
 - **VM はクライアント state に複製しない**。`ReviewRunner` は Review VM を Quiz 表示コンポーネントの props へ変換して渡す。`useAnswerSubmit` hook が解答結果（`results`）・`submitting`・送信エラーを保持し、Client Component は画面フェーズ・現在問題などの表示操作 state だけを保持する。due queue の再取得は `router.refresh()` による Server Component 再実行に一本化し、content との join を常にサーバー側に閉じ込める。
 - **RPC 呼び出しは `apps/web/src/features/*/api` の endpoint アダプター経由**。Server loader と Client hook は同じアダプターへ実行環境に合った `ApiClient` を渡す。HTTP レスポンス処理は `requestJson` に寄せ、feature 側では重複させない。
-- **初回ローディング表示の条件**：`/review` は静的シェルに `ReviewQueueFallback` と due バッジ fallback を表示し、queue 完了後に `ReviewRunner` をストリーミングする。`router.refresh()` 中の待機表示が必要なら `loading.tsx` かローカルな `isRefreshing` フラグで扱う。
+- **初回ローディング表示の条件**：`/review` は静的シェルに `ReviewQueueFallback` と due バッジ fallback を表示し、queue 完了後は `ReviewUserContent` が join 後の `ReviewViewModel.dueCount` に応じて空キュー表示または `ReviewRunner` をストリーミングする。`router.refresh()` 中の待機表示が必要なら `loading.tsx` かローカルな `isRefreshing` フラグで扱う。
 - **将来：**TanStack Query 等へ置き換える際、mapper・ViewModel 型・page は変わらず、hook（`useAnswerSubmit` 相当）内部だけ差し替わる（契約保証）。
 
 ### 9.3 DTO / ViewModel の分離と配置
@@ -857,6 +868,15 @@ export function QuizInteractive({ viewModel }: Props) {
     if (phase === 'exercise' && question) setQuestionStartedAt(Date.now());
   }, [phase, question]);
 
+  if (viewModel.questions.length === 0) {
+    return (
+      <Card>
+        <p>出題できる問題がありません</p>
+        <Link href={viewModel.resultHomeHref}>{viewModel.resultHomeLabel}</Link>
+      </Card>
+    );
+  }
+
   if (phase === 'intro') {
     return (
       <QuizIntro
@@ -912,7 +932,7 @@ export function QuizInteractive({ viewModel }: Props) {
 
 #### 復習（PPR streaming 対象）
 
-`/review` は queue 取得そのものをキャッシュしない。静的シェルに `<Suspense fallback={<ReviewQueueFallback />}>` の fallback を表示し、ユーザー固有の async Server Component が queue 完了後に `ReviewRunner` をストリーミングする。解答後は `router.refresh()` で最新 queue を Server loader から再取得する。`'use cache'`・`cacheLife`・`cacheTag`・`revalidateTag` は使わない。
+`/review` は queue 取得そのものをキャッシュしない。静的シェルに `<Suspense fallback={<ReviewQueueFallback />}>` の fallback を表示し、ユーザー固有の async Server Component が queue 完了後に、join 後の `ReviewViewModel.dueCount` が 0 なら空キュー表示を、1 以上なら `ReviewRunner` をストリーミングする。解答後は `router.refresh()` で最新 queue を Server loader から再取得する。`'use cache'`・`cacheLife`・`cacheTag`・`revalidateTag` は使わない。
 
 構成の実コード例は §9.2 に一本化する（重複させると実装との同期漏れが起きるため）。要点は次の3つ。
 
@@ -956,9 +976,9 @@ export default function Error({ error }: { error: Error }) {
 
 #### Client（演習・復習系）
 
-`/review` は静的シェルに `ReviewQueueFallback` を表示し、queue 完了後に `ReviewRunner` をストリーミングする（§9.2・§9.4 参照）。Client 側で扱うのは以下の 2 つ：
+`/review` は静的シェルに `ReviewQueueFallback` を表示し、queue 完了後は `ReviewUserContent` が join 後の `ReviewViewModel.dueCount` に応じて空キュー表示または `ReviewRunner` を返す（§9.2・§9.4 参照）。Client 側で扱うのは以下の 2 つ：
 
-- **初回データ形成の失敗**：content 未検出・検証失敗、または `/review` の初回 queue 取得失敗 → ルートの `error.tsx` で捕捉（Server 系と同じ経路）。
+- **初回データ形成の失敗**：content 全体の未検出・検証失敗、または `/review` の初回 queue 取得失敗 → ルートの `error.tsx` で捕捉（Server 系と同じ経路）。個別の queue `question_id` が bundled content で解決できない場合は mapper が除外し、join 後の `ReviewViewModel.dueCount` に基づく通常の空キュー判定へ渡す。
 - **mutation の失敗/待機**：hook が返す `error`・`submitting` を component で出し分ける。`router.refresh()` による再取得中の表示が必要なら、component の `isRefreshing` または route の `loading.tsx` で扱う。
 
 ```typescript
