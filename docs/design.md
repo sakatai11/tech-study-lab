@@ -209,6 +209,7 @@ SM-2 の計算式（`packages/shared/src/srs/sm2.ts`）の周辺で、実装時�
 - **演習フロー**：1 問ずつ表示 → 即時に正誤＋解説 → 確定で選択肢をロック → 末尾に結果サマリ。**1 問解答＝1 `answer_log` POST**（SRS は問題粒度で更新）。
 - **正誤判定の権威はAPI（サーバー）**：Quiz/Review の `QuizViewModel` は選択肢と解説のみを持ち、正解（`answerIndex`）を含めない。クライアントは選んだ `selectedIndex` を `POST /answers` に送り、API が D1 の `questions`（4.4）と照合して `is_correct` を判定・記録し、結果（`isCorrect` / `correctIndex`）を返す。将来公開後もクライアントバンドルに正解を露出しない。
 - **Quiz 表示コンポーネント**：問題・解説・intro 内容・結果導線を表示 props で受け取り、画面フェーズと問題送りを管理する再利用可能な Client Component として設計する。`/quiz`（レッスン全問）・`/review`（due 問題）・「間違えた問題だけ」（`wrongOnly`）では、Server loader / mapper が組み立てる ViewModel と表示 props の供給元だけを差し替える。解答 mutation と通信 state は共通の Client hook が担当する。
+- **問題なしの扱い**：`QuizInteractive` は `questions` が空の場合に「出題できる問題がありません」を明示表示し、開始 CTA は表示しない。設定済みの戻り先（`resultHomeHref` / `resultHomeLabel`）は維持する。
 - **結果サマリの動線（出し分け）**：`/quiz` は学習の前進が目的 → 「次のレッスンへ」。`/review` は due 消化が目的 → 「ホームへ」（残があれば継続）。両者で「間違えた問題だけ復習」を提供。
 - **イントロ・演習・結果の状態遷移（URL は変えない）**：演習・復習とも 1 ルート内で `intro → exercise → result` のクライアント状態遷移を持つ（別 URL に切らない。モックの実装モデルに一致）。`intro` は開始前の確認（対象レッスンの概要／due 件数・滞留日数のプレビュー）に専念し、`exercise` は 1 問ずつ即時採点、`result` はスコア・問題ごとの正誤一覧・出し分けアクションを表示する。初回データ（問題・解説、`/review` は due queue）は Server loader で ViewModel 化して props で渡し、状態遷移そのものは Client Component が持つ（§8.5・§9.4 の `QuizInteractive` と同じ設計）。結果表示は `/quiz` と `/review` で共通コンポーネントとして再利用する。
 - **ID 設計**：`lessonId` / `questionId` は**グローバル一意**。学習導線は階層 URL（`/learn/...`）、演習・復習はフラット URL（`/quiz/[lesson]`・`/review`）。
@@ -344,6 +345,7 @@ apps/web/src/
 
 - **クライアント state のみ**（`useState` と専用 hook で feature 内に閉じる）。MVP として最小化する。Client Component は画面フェーズ（`intro → exercise → result`）・現在の問題インデックス・`wrongOnly`・キーボード操作を保持し、`useAnswerSubmit` hook は mutation・`submitting`・送信エラー・API から返った解答結果を保持する（§7.2）。初期 ViewModel は immutable な props として参照し、Client state に複製しない。
   - MVP フローは「イントロ確認 → 1 問表示 → 選択 → 即時採点 → ロック → 解説表示 → 次問 → 結果」で線形・シンプルなため、`useState` で充分。複雑な状態遷移が出現（例：問題セット内での再検索・フィルタ等）したら、その時点で `useReducer` へ段階的にリファクタリング。
+- **Review の空キュー**：通常の `dueCount === 0` は Server Component の `ReviewUserContent` が空キュー表示へ分岐し、`ReviewRunner` / `QuizInteractive` を描画する前に処理する。
 - **リロードで進捗はリセット（許容）**。リロードすると `intro` フェーズに戻る。ただし「1 問解答＝1 `answer_log` POST」（7.2 で定義済みの原則）なので、解答そのものは即サーバーに残る。途中復帰（sessionStorage）やサーバー復元は将来拡張ポイントとして留保。
 - フロー：イントロ（概要／due プレビュー）→ 1 問表示 → 即時採点（正誤＋解説）→ 選択肢ロック → 末尾に結果サマリ → 出し分け動線（`/quiz`=次のレッスンへ／`/review`=ホームへ、両者「間違えた問題だけ」提供）。
 - 解答の反応時間（`responseTimeMs`）は Client Component が選択肢の表示開始時刻からの経過時間として計測し、`submitAnswer` の引数として Client hook へ渡す。Client hook は時刻を計測せず、受け取った値をそのまま API へ転送する。
