@@ -62,13 +62,13 @@ describe('local dynamic D1 development seed', () => {
         {
           question_id: 'security-xss-01-q1',
           is_correct: 1,
-          answered_at: 1_699_913_599_999,
+          answered_at: 1_699_740_800_001,
           response_time_ms: 1200,
         },
         {
           question_id: 'security-xss-01-q1',
           is_correct: 0,
-          answered_at: 1_699_913_599_998,
+          answered_at: 1_699_654_400_000,
           response_time_ms: null,
         },
       ],
@@ -76,11 +76,23 @@ describe('local dynamic D1 development seed', () => {
       meta: expect.any(Object),
     })
     await expect(
-      env.DB.prepare('SELECT question_id, due_at FROM srs_states WHERE user_id = ?')
+      env.DB.prepare(
+        'SELECT question_id, ease, interval_days, due_at, reps, lapses, version FROM srs_states WHERE user_id = ?',
+      )
         .bind(FIXED_USER_ID)
         .all(),
     ).resolves.toMatchObject({
-      results: [{ question_id: 'security-xss-01-q1', due_at: 1_699_913_600_000 }],
+      results: [
+        {
+          question_id: 'security-xss-01-q1',
+          ease: 2300,
+          interval_days: 1,
+          due_at: 1_699_827_200_001,
+          reps: 1,
+          lapses: 1,
+          version: 2,
+        },
+      ],
     })
     await expect(
       env.DB.prepare('SELECT id, user_id FROM answer_logs WHERE user_id = ?')

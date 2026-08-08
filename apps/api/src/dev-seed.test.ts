@@ -1,12 +1,21 @@
 import { describe, expect, it } from 'vitest'
 
+import { DAY_MS, initialSrs, reviewSrs } from '@tsl/shared'
+
 import { createDevSeedSql, createLocalDevSeedD1ExecuteArgs } from './dev-seed'
 import { FIXED_USER_ID } from './fixed-user'
 
 const SEEDED_AT = 1_700_000_000_000
+const INCORRECT_ANSWERED_AT = SEEDED_AT - 4 * DAY_MS
+const CORRECT_ANSWERED_AT = INCORRECT_ANSWERED_AT + DAY_MS + 1
+const EXPECTED_SRS = reviewSrs(
+  reviewSrs(initialSrs(), false, INCORRECT_ANSWERED_AT),
+  true,
+  CORRECT_ANSWERED_AT,
+)
 
 describe('createDevSeedSql', () => {
-  it('replaces only the fixed user dynamic data and creates a state due one day in the past', () => {
+  it('replaces only the fixed user dynamic data with the state after its seeded answer sequence', () => {
     const sql = createDevSeedSql(
       {
         userId: FIXED_USER_ID,
@@ -23,11 +32,18 @@ describe('createDevSeedSql', () => {
     expect(sql).not.toContain('DELETE FROM users')
     expect(sql).not.toContain('DELETE FROM questions')
     expect(sql).not.toContain('other-user')
+    expect(EXPECTED_SRS).toEqual({
+      ease: 2300,
+      intervalDays: 1,
+      reps: 1,
+      lapses: 1,
+      dueAt: 1_699_827_200_001,
+    })
     expect(sql).toContain(
-      "INSERT INTO srs_states (user_id, question_id, ease, interval_days, due_at, reps, lapses, version) VALUES ('user-local-001', 'security-xss-01-q1', 2500, 0, 1699913600000, 0, 0, 0)",
+      "INSERT INTO srs_states (user_id, question_id, ease, interval_days, due_at, reps, lapses, version) VALUES ('user-local-001', 'security-xss-01-q1', 2300, 1, 1699827200001, 1, 1, 2)",
     )
     expect(sql).toContain(
-      "INSERT INTO srs_states (user_id, question_id, ease, interval_days, due_at, reps, lapses, version) VALUES ('user-local-001', 'security-xss-01-q2', 2500, 0, 1699913600000, 0, 0, 0)",
+      "INSERT INTO srs_states (user_id, question_id, ease, interval_days, due_at, reps, lapses, version) VALUES ('user-local-001', 'security-xss-01-q2', 2300, 1, 1699827200001, 1, 1, 2)",
     )
   })
 
@@ -41,10 +57,10 @@ describe('createDevSeedSql', () => {
     )
 
     expect(sql).toContain(
-      "INSERT INTO answer_logs (id, user_id, question_id, is_correct, answered_at, response_time_ms) VALUES ('user-local-001:dev-seed:security-xss-01-q1:incorrect', 'user-local-001', 'security-xss-01-q1', 0, 1699913599998, NULL)",
+      "INSERT INTO answer_logs (id, user_id, question_id, is_correct, answered_at, response_time_ms) VALUES ('user-local-001:dev-seed:security-xss-01-q1:incorrect', 'user-local-001', 'security-xss-01-q1', 0, 1699654400000, NULL)",
     )
     expect(sql).toContain(
-      "INSERT INTO answer_logs (id, user_id, question_id, is_correct, answered_at, response_time_ms) VALUES ('user-local-001:dev-seed:security-xss-01-q1:correct', 'user-local-001', 'security-xss-01-q1', 1, 1699913599999, 1200)",
+      "INSERT INTO answer_logs (id, user_id, question_id, is_correct, answered_at, response_time_ms) VALUES ('user-local-001:dev-seed:security-xss-01-q1:correct', 'user-local-001', 'security-xss-01-q1', 1, 1699740800001, 1200)",
     )
     expect(sql).toContain('ON CONFLICT(id) DO UPDATE SET')
   })

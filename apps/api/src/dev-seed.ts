@@ -1,4 +1,4 @@
-import { DAY_MS, initialSrs } from '@tsl/shared'
+import { DAY_MS, initialSrs, reviewSrs } from '@tsl/shared'
 
 import type { ContentSyncPayload } from './content-sync'
 import { FIXED_USER_ID } from './fixed-user'
@@ -39,25 +39,28 @@ export function createDevSeedSql(payload: ContentSyncPayload, seededAt: number):
     throw new Error('dev seed is limited to the fixed user')
   }
 
-  const initialState = initialSrs()
+  const incorrectAnsweredAt = seededAt - 4 * DAY_MS
+  const correctAnsweredAt = incorrectAnsweredAt + DAY_MS + 1
+  const stateAfterIncorrect = reviewSrs(initialSrs(), false, incorrectAnsweredAt)
+  const finalSrs = reviewSrs(stateAfterIncorrect, true, correctAnsweredAt)
+  const finalVersion = 2
   const questionIds = payload.questions
     .map((question) => question.questionId)
     .sort((left, right) => left.localeCompare(right, 'en'))
   const userId = sqlString(payload.userId)
-  const dueAt = seededAt - DAY_MS
 
   const statements = [
     `DELETE FROM answer_logs WHERE user_id = ${userId}`,
     `DELETE FROM srs_states WHERE user_id = ${userId}`,
     `INSERT INTO users (id, created_at) VALUES (${userId}, ${seededAt}) ON CONFLICT(id) DO NOTHING`,
     ...questionIds.flatMap((questionId) => [
-      `INSERT INTO srs_states (user_id, question_id, ease, interval_days, due_at, reps, lapses, version) VALUES (${userId}, ${sqlString(questionId)}, ${initialState.ease}, ${initialState.intervalDays}, ${dueAt}, ${initialState.reps}, ${initialState.lapses}, 0) ON CONFLICT(user_id, question_id) DO UPDATE SET ease = excluded.ease, interval_days = excluded.interval_days, due_at = excluded.due_at, reps = excluded.reps, lapses = excluded.lapses, version = excluded.version`,
+      `INSERT INTO srs_states (user_id, question_id, ease, interval_days, due_at, reps, lapses, version) VALUES (${userId}, ${sqlString(questionId)}, ${finalSrs.ease}, ${finalSrs.intervalDays}, ${finalSrs.dueAt}, ${finalSrs.reps}, ${finalSrs.lapses}, ${finalVersion}) ON CONFLICT(user_id, question_id) DO UPDATE SET ease = excluded.ease, interval_days = excluded.interval_days, due_at = excluded.due_at, reps = excluded.reps, lapses = excluded.lapses, version = excluded.version`,
       answerLogSql({
         id: `${payload.userId}:dev-seed:${questionId}:incorrect`,
         userId: payload.userId,
         questionId,
         isCorrect: false,
-        answeredAt: dueAt - 2,
+        answeredAt: incorrectAnsweredAt,
         responseTimeMs: null,
       }),
       answerLogSql({
@@ -65,7 +68,7 @@ export function createDevSeedSql(payload: ContentSyncPayload, seededAt: number):
         userId: payload.userId,
         questionId,
         isCorrect: true,
-        answeredAt: dueAt - 1,
+        answeredAt: correctAnsweredAt,
         responseTimeMs: 1200,
       }),
     ]),
