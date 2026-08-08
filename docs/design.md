@@ -569,10 +569,12 @@ export function useAnswerSubmit() {
   const [results, setResults] = useState<Record<string, SubmittedAnswer>>({});
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);  // 同一 tick の二重送信も同期的に防ぐ
+  const generationRef = useRef(0);  // reset 後に古い非同期応答を無効化する
 
   // responseTimeMs は Client Component が計測して input に含める（§8.5）。hook 側では計測しない
   const submitAnswer = useCallback(async (input: AnswerRequest) => {
     if (submittingRef.current) return;
+    const generation = generationRef.current;
     submittingRef.current = true;
     setSubmitting(true);
     setError(undefined);
@@ -581,21 +583,30 @@ export function useAnswerSubmit() {
       const response = await postAnswer(clientRef.current, input);
       // API の採点結果に選択肢を足して SubmittedAnswer にする。選択肢のロックと
       // 結果サマリが「どれを選んだか」を必要とするため（§8.5・§9.4）。
-      setResults(prev => ({
-        ...prev,
-        [input.questionId]: { ...response, selectedIndex: input.selectedIndex },
-      }));
+      if (generation === generationRef.current) {
+        setResults(prev => ({
+          ...prev,
+          [input.questionId]: { ...response, selectedIndex: input.selectedIndex },
+        }));
+      }
     } catch (caughtError) {
-      setError(caughtError instanceof Error ? caughtError.message : '解答の送信に失敗しました。');
+      if (generation === generationRef.current) {
+        setError(caughtError instanceof Error ? caughtError.message : '解答の送信に失敗しました。');
+      }
     } finally {
-      submittingRef.current = false;
-      setSubmitting(false);
+      if (generation === generationRef.current) {
+        submittingRef.current = false;
+        setSubmitting(false);
+      }
     }
   }, []);
 
   const resetAnswers = useCallback(() => {
+    generationRef.current += 1;
+    submittingRef.current = false;
     setError(undefined);
     setResults({});
+    setSubmitting(false);
   }, []);
 
   return { error, resetAnswers, results, submitAnswer, submitting };

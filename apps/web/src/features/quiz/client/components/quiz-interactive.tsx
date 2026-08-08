@@ -46,24 +46,6 @@ export function QuizInteractive({
   const [wrongOnlyQuestionIds, setWrongOnlyQuestionIds] = useState<string[]>()
   const { error, resetAnswers, results, submitAnswer, submitting } = useAnswerSubmit()
 
-  if (questions.length === 0) {
-    return (
-      <Card className="p-5 sm:p-7">
-        <p className="m-0 font-mono text-xs font-bold uppercase tracking-[0.18em] text-blue">
-          quiz / empty
-        </p>
-        <h1 className="mb-0 mt-3 text-2xl font-black text-ink sm:text-3xl">{title}</h1>
-        <p className="mb-0 mt-5 leading-7 text-ink-2">この演習には問題がありません。</p>
-        <Link
-          className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl border-2 border-border bg-surface px-4 py-2.5 font-bold text-ink-2 shadow-[0_4px_0_var(--border)] transition-transform hover:border-border-hi hover:text-ink active:translate-y-1 active:shadow-none"
-          href={resultHomeHref}
-        >
-          {resultHomeLabel}
-        </Link>
-      </Card>
-    )
-  }
-
   const activeQuestions = wrongOnlyQuestionIds
     ? questions.filter((currentQuestion) => wrongOnlyQuestionIds.includes(currentQuestion.id))
     : questions
@@ -128,6 +110,24 @@ export function QuizInteractive({
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [phase, question, result, submitting, handleAnswer])
+
+  if (questions.length === 0) {
+    return (
+      <Card className="p-5 sm:p-7">
+        <p className="m-0 font-mono text-xs font-bold uppercase tracking-[0.18em] text-blue">
+          quiz / empty
+        </p>
+        <h1 className="mb-0 mt-3 text-2xl font-black text-ink sm:text-3xl">{title}</h1>
+        <p className="mb-0 mt-5 leading-7 text-ink-2">出題できる問題がありません</p>
+        <Link
+          className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl border-2 border-border bg-surface px-4 py-2.5 font-bold text-ink-2 shadow-[0_4px_0_var(--border)] transition-transform hover:border-border-hi hover:text-ink active:translate-y-1 active:shadow-none"
+          href={resultHomeHref}
+        >
+          {resultHomeLabel}
+        </Link>
+      </Card>
+    )
+  }
 
   if (phase === 'intro') {
     return (
