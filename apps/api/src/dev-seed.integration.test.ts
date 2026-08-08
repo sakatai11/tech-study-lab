@@ -1,0 +1,98 @@
+import { applyD1Migrations, env } from 'cloudflare:test'
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
+
+import initialMigration from '../drizzle/migrations/0000_flowery_quasar.sql?raw'
+import srsVersionMigration from '../drizzle/migrations/0001_add_srs_version.sql?raw'
+
+import { createDevSeedSql } from './dev-seed'
+import { FIXED_USER_ID } from './fixed-user'
+
+function migrationQueries(sql: string): string[] {
+  return sql
+    .split('--> statement-breakpoint')
+    .map((query) => query.trim())
+    .filter((query) => query.length > 0)
+}
+
+describe('local dynamic D1 development seed', () => {
+  beforeAll(async () => {
+    await applyD1Migrations(env.DB, [
+      { name: '0000_flowery_quasar.sql', queries: migrationQueries(initialMigration) },
+      { name: '0001_add_srs_version.sql', queries: migrationQueries(srsVersionMigration) },
+    ])
+  })
+
+  beforeEach(async () => {
+    await env.DB.batch([
+      env.DB.prepare('DELETE FROM answer_logs'),
+      env.DB.prepare('DELETE FROM srs_states'),
+      env.DB.prepare('DELETE FROM users'),
+    ])
+  })
+
+  it('can be applied twice without growing fixed-user data or deleting another user', async () => {
+    await env.DB.batch([
+      env.DB.prepare(
+        'INSERT INTO answer_logs (id, user_id, question_id, is_correct, answered_at) VALUES (?, ?, ?, ?, ?)',
+      ).bind('other-log', 'other-user', 'other-question', 1, 1),
+      env.DB.prepare(
+        'INSERT INTO srs_states (user_id, question_id, ease, interval_days, due_at, reps, lapses, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      ).bind('other-user', 'other-question', 2500, 1, 1, 1, 0, 0),
+    ])
+
+    const sql = createDevSeedSql(
+      {
+        userId: FIXED_USER_ID,
+        questions: [{ questionId: 'security-xss-01-q1', answerIndex: 0 }],
+      },
+      1_700_000_000_000,
+    )
+
+    await env.DB.exec(sql)
+    await env.DB.exec(sql)
+
+    await expect(
+      env.DB.prepare(
+        'SELECT question_id, is_correct, answered_at, response_time_ms FROM answer_logs WHERE user_id = ? ORDER BY id',
+      )
+        .bind(FIXED_USER_ID)
+        .all(),
+    ).resolves.toEqual({
+      results: [
+        {
+          question_id: 'security-xss-01-q1',
+          is_correct: 1,
+          answered_at: 1_699_913_599_999,
+          response_time_ms: 1200,
+        },
+        {
+          question_id: 'security-xss-01-q1',
+          is_correct: 0,
+          answered_at: 1_699_913_599_998,
+          response_time_ms: null,
+        },
+      ],
+      success: true,
+      meta: expect.any(Object),
+    })
+    await expect(
+      env.DB.prepare('SELECT question_id, due_at FROM srs_states WHERE user_id = ?')
+        .bind(FIXED_USER_ID)
+        .all(),
+    ).resolves.toMatchObject({
+      results: [{ question_id: 'security-xss-01-q1', due_at: 1_699_913_600_000 }],
+    })
+    await expect(
+      env.DB.prepare('SELECT id, user_id FROM answer_logs WHERE user_id = ?')
+        .bind('other-user')
+        .all(),
+    ).resolves.toMatchObject({ results: [{ id: 'other-log', user_id: 'other-user' }] })
+    await expect(
+      env.DB.prepare('SELECT user_id, question_id FROM srs_states WHERE user_id = ?')
+        .bind('other-user')
+        .all(),
+    ).resolves.toMatchObject({
+      results: [{ user_id: 'other-user', question_id: 'other-question' }],
+    })
+  })
+})
