@@ -1088,14 +1088,17 @@ apps/api/
 │   ├── dal/
 │   │   ├── answer-repository.ts # AnswerDeps 実装（questions 照合・srs 取得・batch 書き込み）
 │   │   └── review-repository.ts # ReviewDeps 実装（due queue・due count）
-│   └── content-sync.ts          # content → 同期ペイロード/SQL への純粋変換（gray-matter・shared のみに依存。§10.8）
+│   ├── content-sync.ts          # content → 同期ペイロード/SQL への純粋変換（gray-matter・shared のみに依存。§10.8）
+│   └── dev-seed.ts               # 固定ユーザー用の動的開発 seed の純粋モデル/SQL 変換（§10.8）
 └── scripts/
-    └── sync-content.ts          # `src/content-sync.ts` の純粋関数を呼ぶ Node CLI（fs 読み取り・wrangler 実行。§10.8）
+    ├── sync-content.ts           # `src/content-sync.ts` の純粋関数を呼ぶ Node CLI（fs 読み取り・wrangler 実行。§10.8）
+    └── seed-dev.ts               # `src/dev-seed.ts` の純粋関数を呼ぶローカル専用 Node CLI（§10.8）
 ```
 
 - 上記は Walking Skeleton 中核 3 エンドポイントの構成（§10.1）。§7.3 の後続エンドポイントは同じ route → service → deps（dal 実装）の処理パターンで追加する：`routes/domains.ts`・`routes/analytics.ts`・`routes/activity.ts`、対応する `services/*-service.ts` と `dal/*-repository.ts`、`index.ts` への `.route()` 追記。アナリティクスは集計クエリ主体（読み取りのみ）のため service 層は薄くなる見込み。
 - **dal はテーブル単位ではなくユースケース単位**で置く。「service が要求する deps 型」を 1 ファイルで実装する形にすると、service ⇔ dal の対応が 1:1 で追いやすく、テーブル単位 repository の細切れ合成（と、それを束ねる工数）を避けられる。テーブル単位の共有が必要になった時点で分割する。
 - **`src/content-sync.ts` は `gray-matter` と `packages/shared` のみに依存する純粋ロジック**（frontmatter パース・同期ペイロード生成・upsert SQL 生成）。`scripts/sync-content.ts` は Node の `fs` 読み取りと `wrangler d1 execute` 実行を担う CLI 部で、`content-sync.ts` の純粋関数を呼び出すだけに留める（routes・services・dal・middleware は import しない）。
+- **`src/dev-seed.ts` は content sync で検証済みの question ID を入力として、固定ユーザーの動的開発データを生成する純粋ロジック**にする。`scripts/seed-dev.ts` は content 読み取り・時刻取得・一時 SQL ファイル作成・Wrangler 実行だけを担い、任意の CLI 引数を転送しない。
 
 ### 10.3 リクエストの流れ（`POST /answers` を例に）
 
@@ -1341,6 +1344,15 @@ app.onError((err, c) => {
 - content から削除された問題は**物理削除しない**（`answer_logs`・`srs_states` が参照するため）。出題対象からは自然に外れる（フロントのバンドルに含まれず、due queue の join でも解決されない）。整理が必要になったら論理削除フラグを検討する。
 - 実行タイミング：ローカル開発では手動、本番はデプロイフロー（CI）に組み込む。
 
+#### ローカル動的開発 seed
+
+`pnpm --filter @tsl/api db:seed:dev` は、ローカル D1 の開発確認用に固定ユーザー（`FIXED_USER_ID`）だけの動的データを冪等に投入する。content の question ID は、`content-sync` と同じ `gray-matter` + shared content Zod の検証経路から得る。content 同期や本番デプロイの責務を置き換えない。
+
+- 実行 SQL は固定ユーザーの `answer_logs` と `srs_states` だけを削除してから再投入する。他ユーザーの行、`questions`、教材 content は削除・更新しない。
+- 検証済みの各問題に `due_at` が seed 時刻以下の `srs_state` を 1 行作る。各問題には、正解かつ `response_time_ms` あり、不正解かつ `response_time_ms` なしの決定的な answer log を作る。問題が 1 件だけでも両方のケースを含める。
+- SQL の ID・時刻・解答内容は入力（question ID と seed 時刻）から決定的に生成し、再実行しても固定ユーザーのデータ量が増えない。
+- CLI は `wrangler d1 execute tech-study-lab --local --file <generated-sql>` の固定引数だけを使用し、`--remote` や利用者が渡した任意引数を受け付けない。remote D1 には使用しない。
+
 ### 10.9 テスト戦略
 
 §5 のガードレール方針を API の各層に割り当てる。
@@ -1466,8 +1478,9 @@ topic frontmatter の `order` も同様に表示順（0 以上の整数、小さ
 
 1. `pnpm install`
 2. `pnpm --filter @tsl/api db:migrate:local`（初回・スキーマ変更時）
-3. content sync のローカル実行（初回・content 変更時。§10.8）
-4. `pnpm --filter @tsl/api dev`（`:8787`）と `pnpm --filter @tsl/web dev`（`:3000`）を並走
+3. `pnpm --filter @tsl/api content:sync`（初回・content 変更時。ローカル D1 への問題キャッシュ同期。§10.8）
+4. `pnpm --filter @tsl/api db:seed:dev`（任意。固定ユーザーの解答ログ・SRS 状態を開発用データへ再投入。§10.8）
+5. `pnpm --filter @tsl/api dev`（`:8787`）と `pnpm --filter @tsl/web dev`（`:3000`）を並走
 
 ### 12.4 本番デプロイ手順（順序が仕様）
 
