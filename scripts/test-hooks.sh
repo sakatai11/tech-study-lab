@@ -83,6 +83,17 @@ check_section_contract() {
   fi
 }
 
+check_section_absent_contract() {
+  label=$1
+  section=$2
+  unexpected=$3
+
+  if printf '%s\n' "$section" | grep -F -- "$unexpected" >/dev/null; then
+    printf '%s\n' "unexpected section contract: $label" >&2
+    exit 1
+  fi
+}
+
 check_absent_contract() {
   label=$1
   unexpected=$2
@@ -242,6 +253,16 @@ check_agent_contract "reviewer defers to guidelines" '`.ai/review-guidelines.md`
 check_agent_contract "reviewer default profile" '`accuracy-first`（正確性優先）' .ai/agents/reviewer.md
 check_agent_contract "common uses spec profile" '`spec-compliance-first`' "$COMMON"
 check_agent_contract "common validates scope brief" '`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy`' "$COMMON"
+consent_section=$(extract_section "$COMMON" '### 1. 外部送信同意の確認' '### 2. 認証確認') || {
+  printf '%s\n' 'failed to extract external egress consent contract' >&2
+  exit 1
+}
+scope_validation_section=$(extract_section "$COMMON" '### 3. 範囲の検証と実効baseの決定' '### 4. レビュー実行') || {
+  printf '%s\n' 'failed to extract review scope validation contract' >&2
+  exit 1
+}
+check_section_absent_contract "missing scope fields are not consent failures" "$consent_section" 'レビュー範囲契約'
+check_section_contract "missing scope fields are brief errors" "$scope_validation_section" '「判定: error」として、不足項目を報告する'
 check_agent_contract "common outputs out-of-scope section" '### 別issue候補（範囲外）' "$COMMON"
 check_agent_contract "common excludes out-of-scope candidates from verdict" 'approve / request-changes の判定件数に含めない' "$COMMON"
 check_agent_contract "internal reviewer validates scope brief" '`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy`' .ai/agents/reviewer.md

@@ -46,7 +46,6 @@ private なリポジトリの内容を外部サービスへ送るため、**同�
 | `approvedScope` | 同意された送信対象。下記3種をすべて含むこと |
 | 同意の原文・時刻 | 今回のレビュー実行の直前に取得されたもの |
 | 対象issue・base・ブランチ・現在の差分範囲 | |
-| レビュー範囲契約 | `targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` |
 
 `approvedScope` は次の3種すべてを含んでいなければならない。**差分だけの同意で実行してはならない。**
 
