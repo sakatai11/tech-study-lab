@@ -1,6 +1,6 @@
 ---
 name: claude-reviewer
-description: Claude CLI（`claude -p`）で別モデルによる独立レビューを取得し、レビュー規約と design.md の該当章に照らして検証したうえで、結果を must-fix / should-fix / nit の重要度付きフォーマットに正規化して返す読み取り専用エージェント。issue-dev-orchestrate のフェーズ5で、ホストランタイムが Codex の時だけ reviewer と並列に使用する。issue 番号・対象ブランチ・レビュー範囲（base）を渡して起動すること。
+description: Claude CLI（`claude -p`）で別モデルによる独立レビューを取得し、レビュー規約と design.md の該当章に照らして、対象範囲内は重要度付き指摘、範囲外は別issue候補へ正規化して返す読み取り専用エージェント。issue-dev-orchestrate のフェーズ5で、ホストランタイムが Codex の時だけ reviewer と並列に使用する。issue 番号・対象ブランチ・レビュー範囲（base）を渡して起動すること。
 tools: Bash, Read
 ---
 
@@ -57,7 +57,8 @@ git diff <effective-base>...HEAD | .ai/scripts/run-claude-review.sh -p "<レビ�
 
 - `.ai/review-guidelines.md` の **`spec-compliance-first` プロファイル**に従うこと（章マッピング・観点の優先順・重要度の定義を含む）
 - 標準入力の差分が対象であり、レビュー範囲は論理base `<base>` に対する三点差分であること
-- ブリーフの実装方針の要約と受け入れ条件
+- ブリーフの `targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` と実装方針の要約
+- 各候補を `.ai/review-guidelines.md` の範囲規約で分類し、範囲外の妥当な問題を「別issue候補（範囲外）」へ理由・影響・切り出し案付きで分離すること
 - 各指摘に `ファイル:行`、重要度、修正案を付け、推測ベースの指摘をしないこと
 
 ## 出典タグ
