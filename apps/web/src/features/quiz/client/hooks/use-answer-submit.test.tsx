@@ -53,7 +53,7 @@ describe('useAnswerSubmit', () => {
     cleanup()
   })
 
-  it('creates and reuses the browser client only after the first submission', async () => {
+  it('初回送信時にブラウザクライアントを作成し、以降の送信で再利用する', async () => {
     const { result } = renderHook(() => useAnswerSubmit())
 
     expect(createBrowserApiClientMock).not.toHaveBeenCalled()
@@ -73,7 +73,7 @@ describe('useAnswerSubmit', () => {
     expect(postAnswerMock).toHaveBeenNthCalledWith(2, browserClient, input)
   })
 
-  it('ignores a successful response that completes after answers are reset', async () => {
+  it('解答リセット後に完了した成功レスポンスを無視する', async () => {
     const pendingResponse = createDeferred<AnswerResponse>()
     postAnswerMock.mockReturnValueOnce(pendingResponse.promise)
     const { result } = renderHook(() => useAnswerSubmit())
@@ -99,7 +99,7 @@ describe('useAnswerSubmit', () => {
     expect(result.current).toMatchObject({ error: undefined, results: {}, submitting: false })
   })
 
-  it('ignores a failed response that completes after answers are reset', async () => {
+  it('解答リセット後に完了した失敗レスポンスを無視する', async () => {
     const pendingResponse = createDeferred<AnswerResponse>()
     postAnswerMock.mockReturnValueOnce(pendingResponse.promise)
     const { result } = renderHook(() => useAnswerSubmit())
@@ -121,7 +121,7 @@ describe('useAnswerSubmit', () => {
     expect(result.current).toMatchObject({ error: undefined, results: {}, submitting: false })
   })
 
-  it('keeps a new submission active when an earlier generation finishes', async () => {
+  it('以前の世代が完了しても新しい送信を実行中のまま維持する', async () => {
     const firstResponse = createDeferred<AnswerResponse>()
     const secondResponse = createDeferred<AnswerResponse>()
     postAnswerMock

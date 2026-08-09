@@ -28,6 +28,8 @@ describe('QuizInteractive', () => {
     )
 
     expect(screen.getByText('出題できる問題がありません')).toBeTruthy()
+    const resultHomeLink = screen.getByRole('link', { name: 'レッスンへ戻る' })
+    expect(resultHomeLink.getAttribute('href')).toBe('/learn/security/xss')
     expect(screen.queryByRole('button', { name: '演習を開始 →' })).toBeNull()
     expect(screen.queryByText('quiz / exercise')).toBeNull()
 
