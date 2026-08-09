@@ -209,6 +209,7 @@ SM-2 の計算式（`packages/shared/src/srs/sm2.ts`）の周辺で、実装時�
 - **演習フロー**：1 問ずつ表示 → 即時に正誤＋解説 → 確定で選択肢をロック → 末尾に結果サマリ。**1 問解答＝1 `answer_log` POST**（SRS は問題粒度で更新）。
 - **正誤判定の権威はAPI（サーバー）**：Quiz/Review の `QuizViewModel` は選択肢と解説のみを持ち、正解（`answerIndex`）を含めない。クライアントは選んだ `selectedIndex` を `POST /answers` に送り、API が D1 の `questions`（4.4）と照合して `is_correct` を判定・記録し、結果（`isCorrect` / `correctIndex`）を返す。将来公開後もクライアントバンドルに正解を露出しない。
 - **Quiz 表示コンポーネント**：問題・解説・intro 内容・結果導線を表示 props で受け取り、画面フェーズと問題送りを管理する再利用可能な Client Component として設計する。`/quiz`（レッスン全問）・`/review`（due 問題）・「間違えた問題だけ」（`wrongOnly`）では、Server loader / mapper が組み立てる ViewModel と表示 props の供給元だけを差し替える。解答 mutation と通信 state は共通の Client hook が担当する。
+- **問題なしの扱い**：`QuizInteractive` は `questions` が空の場合に「出題できる問題がありません」を明示表示し、開始 CTA は表示しない。設定済みの戻り先（`resultHomeHref` / `resultHomeLabel`）は維持する。
 - **結果サマリの動線（出し分け）**：`/quiz` は学習の前進が目的 → 「次のレッスンへ」。`/review` は due 消化が目的 → 「ホームへ」（残があれば継続）。両者で「間違えた問題だけ復習」を提供。
 - **イントロ・演習・結果の状態遷移（URL は変えない）**：演習・復習とも 1 ルート内で `intro → exercise → result` のクライアント状態遷移を持つ（別 URL に切らない。モックの実装モデルに一致）。`intro` は開始前の確認（対象レッスンの概要／due 件数・滞留日数のプレビュー）に専念し、`exercise` は 1 問ずつ即時採点、`result` はスコア・問題ごとの正誤一覧・出し分けアクションを表示する。初回データ（問題・解説、`/review` は due queue）は Server loader で ViewModel 化して props で渡し、状態遷移そのものは Client Component が持つ（§8.5・§9.4 の `QuizInteractive` と同じ設計）。結果表示は `/quiz` と `/review` で共通コンポーネントとして再利用する。
 - **ID 設計**：`lessonId` / `questionId` は**グローバル一意**。学習導線は階層 URL（`/learn/...`）、演習・復習はフラット URL（`/quiz/[lesson]`・`/review`）。
@@ -569,10 +570,12 @@ export function useAnswerSubmit() {
   const [results, setResults] = useState<Record<string, SubmittedAnswer>>({});
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);  // 同一 tick の二重送信も同期的に防ぐ
+  const generationRef = useRef(0);  // reset 後に古い非同期応答を無効化する
 
   // responseTimeMs は Client Component が計測して input に含める（§8.5）。hook 側では計測しない
   const submitAnswer = useCallback(async (input: AnswerRequest) => {
     if (submittingRef.current) return;
+    const generation = generationRef.current;
     submittingRef.current = true;
     setSubmitting(true);
     setError(undefined);
@@ -581,21 +584,30 @@ export function useAnswerSubmit() {
       const response = await postAnswer(clientRef.current, input);
       // API の採点結果に選択肢を足して SubmittedAnswer にする。選択肢のロックと
       // 結果サマリが「どれを選んだか」を必要とするため（§8.5・§9.4）。
-      setResults(prev => ({
-        ...prev,
-        [input.questionId]: { ...response, selectedIndex: input.selectedIndex },
-      }));
+      if (generation === generationRef.current) {
+        setResults(prev => ({
+          ...prev,
+          [input.questionId]: { ...response, selectedIndex: input.selectedIndex },
+        }));
+      }
     } catch (caughtError) {
-      setError(caughtError instanceof Error ? caughtError.message : '解答の送信に失敗しました。');
+      if (generation === generationRef.current) {
+        setError(caughtError instanceof Error ? caughtError.message : '解答の送信に失敗しました。');
+      }
     } finally {
-      submittingRef.current = false;
-      setSubmitting(false);
+      if (generation === generationRef.current) {
+        submittingRef.current = false;
+        setSubmitting(false);
+      }
     }
   }, []);
 
   const resetAnswers = useCallback(() => {
+    generationRef.current += 1;
+    submittingRef.current = false;
     setError(undefined);
     setResults({});
+    setSubmitting(false);
   }, []);
 
   return { error, resetAnswers, results, submitAnswer, submitting };
@@ -814,6 +826,7 @@ export default function QuizPage({ params }: Props) {
       <QuizInteractive                            {/* 表示操作 state を持つ Client */}
         explanations={viewModel.explanations}
         questions={viewModel.questions}
+        resultHomeLabel="レッスン一覧へ"
         title={viewModel.title}
         resultHomeHref={`/learn/${viewModel.domain}/${viewModel.topic}`}
       />
@@ -823,7 +836,13 @@ export default function QuizPage({ params }: Props) {
 
 // features/quiz/client/components/quiz-interactive.tsx（Client）
 'use client';
-export function QuizInteractive({ viewModel }: Props) {
+export function QuizInteractive({
+  explanations,
+  questions,
+  resultHomeHref,
+  resultHomeLabel,
+  title,
+}: QuizInteractiveProps) {
   // 表示操作 state は component が持つ。
   const [phase, setPhase] = useState<'intro' | 'exercise' | 'result'>('intro');
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -834,20 +853,30 @@ export function QuizInteractive({ viewModel }: Props) {
   const { submitAnswer, resetAnswers, results, submitting, error } = useAnswerSubmit();
 
   // ViewModel は immutable な props として参照し、state に複製しない。
-  const questions = wrongOnlyQuestionIds
-    ? viewModel.questions.filter(q => wrongOnlyQuestionIds.includes(q.id))
-    : viewModel.questions;
-  const question = questions[currentIndex];
+  const activeQuestions = wrongOnlyQuestionIds
+    ? questions.filter(q => wrongOnlyQuestionIds.includes(q.id))
+    : questions;
+  const question = activeQuestions[currentIndex];
 
   // 選択肢の表示開始時刻は Client Component が記録する（§8.5）。hook 側では計測しない。
   useEffect(() => {
     if (phase === 'exercise' && question) setQuestionStartedAt(Date.now());
   }, [phase, question]);
 
+  if (questions.length === 0) {
+    return (
+      <Card>
+        <p>出題できる問題がありません</p>
+        <Link href={resultHomeHref}>{resultHomeLabel}</Link>
+      </Card>
+    );
+  }
+
   if (phase === 'intro') {
     return (
       <QuizIntro
-        viewModel={viewModel}
+        title={title}
+        questionCount={activeQuestions.length}
         onStart={() => {
           resetAnswers();
           setPhase('exercise');
@@ -858,7 +887,7 @@ export function QuizInteractive({ viewModel }: Props) {
   if (phase === 'result' || !question) {
     return (
       <QuizSummary
-        questions={questions}
+        questions={activeQuestions}
         results={results}
         onWrongOnly={questionIds => {
           resetAnswers();
@@ -870,12 +899,12 @@ export function QuizInteractive({ viewModel }: Props) {
     );
   }
 
-  const isLast = currentIndex === questions.length - 1;
+  const isLast = currentIndex === activeQuestions.length - 1;
 
   return (
     <QuestionCard
       question={question}
-      explanation={viewModel.explanations[question.id]}
+      explanation={explanations[question.id]}
       onAnswer={selectedIndex => submitAnswer({
         questionId: question.id,
         responseTimeMs: Math.max(0, Date.now() - (questionStartedAt || Date.now())),

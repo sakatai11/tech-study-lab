@@ -16,12 +16,14 @@ export function useAnswerSubmit() {
   const [results, setResults] = useState<Record<string, SubmittedAnswer>>({})
   const [submitting, setSubmitting] = useState(false)
   const submittingRef = useRef(false)
+  const generationRef = useRef(0)
 
   const submitAnswer = useCallback(async (input: AnswerRequest) => {
     if (submittingRef.current) {
       return
     }
 
+    const generation = generationRef.current
     submittingRef.current = true
     setSubmitting(true)
     setError(undefined)
@@ -29,24 +31,33 @@ export function useAnswerSubmit() {
     try {
       clientRef.current ??= createBrowserApiClient()
       const response = await postAnswer(clientRef.current, input)
-      setResults((currentResults) => ({
-        ...currentResults,
-        [input.questionId]: {
-          ...response,
-          selectedIndex: input.selectedIndex,
-        },
-      }))
+      if (generation === generationRef.current) {
+        setResults((currentResults) => ({
+          ...currentResults,
+          [input.questionId]: {
+            ...response,
+            selectedIndex: input.selectedIndex,
+          },
+        }))
+      }
     } catch (caughtError) {
-      setError(caughtError instanceof Error ? caughtError.message : '解答の送信に失敗しました。')
+      if (generation === generationRef.current) {
+        setError(caughtError instanceof Error ? caughtError.message : '解答の送信に失敗しました。')
+      }
     } finally {
-      submittingRef.current = false
-      setSubmitting(false)
+      if (generation === generationRef.current) {
+        submittingRef.current = false
+        setSubmitting(false)
+      }
     }
   }, [])
 
   const resetAnswers = useCallback(() => {
+    generationRef.current += 1
+    submittingRef.current = false
     setError(undefined)
     setResults({})
+    setSubmitting(false)
   }, [])
 
   return { error, resetAnswers, results, submitAnswer, submitting }
