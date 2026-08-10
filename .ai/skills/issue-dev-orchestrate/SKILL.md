@@ -155,6 +155,8 @@ Claude Code は `subagent_type`、Codex は `.codex/agents/<name>.toml` のカ�
 
 同意の原文・時刻・対象と、`reviewMode: cross-model-cli` / `reviewerAgent` / `egressDestination` / `externalEgressApproved` / `approvedScope` を `<scratchpad>/review-mode-<N>.md` に記録する。**送信先が変われば同意も取り直す。**
 
+同意取得後、スコープ契約、対象issue・実装方針、base・ブランチ・現在の差分範囲に加え、`reviewMode` / `reviewerAgent` / `egressDestination` / `externalEgressApproved` / `approvedScope` / 同意の原文・時刻を1つのレビューブリーフファイルへ統合する。internal reviewer と別モデルレビュアーの双方へ、同じレビューブリーフファイルの読み取り可能なパスを渡す。`review-mode-<N>.md` だけを渡して済ませない。Claude CLI にはレビュー指示でこのパスを明示して `Read` させ、Codex CLI には同じファイルの全文を `developer_instructions` で渡す。これにより、両レビュアーが同じスコープ契約と同意記録を自力で検証できる状態にする。
+
 ### レビューの実行
 
 - **`reviewer`** と**別モデルレビュアー**を並列起動する。CLIの実行手順・認証確認・権限昇格経路・コマンドフラグ・使用モデル・実効baseの求め方は `.ai/cross-model-reviewer-common.md` と各エージェント定義が単一ソースであり、オーケストレーターは範囲と同意だけを渡す。

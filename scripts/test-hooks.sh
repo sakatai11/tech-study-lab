@@ -137,6 +137,7 @@ check_agent_contract "failure is never approval" 'レビューが正常完了し
 check_agent_contract "zero findings can be a valid approve" 'must-fix / should-fix が0件なら、それは正当な `approve` である' "$SKILL"
 check_agent_contract "common defines scoped approve rule" '対象範囲内の must-fix / should-fix が0件' "$COMMON"
 check_agent_contract "out-of-scope candidates do not block approve" '「別issue候補（範囲外）」のみ' "$COMMON"
+check_agent_contract "confirmation items do not block approve" '「別issue候補（範囲外）」と確認事項は、approve / request-changes の判定件数に含めない' "$COMMON"
 legacy_zero_finding_ban=$(printf '%s%s' 'レビューの失敗・未取得・指摘ゼロ' 'を approve として扱わない')
 check_absent_contract "no blanket ban on zero findings" "$legacy_zero_finding_ban" "$SKILL"
 # フォールバックの2件目 reviewer は既定が accuracy-first のため、明示しないと観点が揃う。
@@ -153,7 +154,11 @@ check_agent_contract "orchestrator brief defines target feature" '`targetFeature
 check_agent_contract "orchestrator brief defines in-scope files" '`inScopeFiles`' "$SKILL"
 check_agent_contract "orchestrator brief defines acceptance criteria" '`acceptanceCriteria`' "$SKILL"
 check_agent_contract "orchestrator brief defines out-of-scope policy" '`outOfScopePolicy`' "$SKILL"
+check_agent_contract "orchestrator brief defines committed range" '`committedRange`' "$SKILL"
 check_agent_contract "both reviewer types receive the same scope" 'internal reviewer と別モデルレビュアーの両方へ同じ内容で渡す' "$SKILL"
+check_agent_contract "both reviewer types receive one full brief path" '同じレビューブリーフファイルの読み取り可能なパスを渡す' "$SKILL"
+check_agent_contract "review mode record alone is insufficient" '`review-mode-<N>.md` だけを渡して済ませない' "$SKILL"
+check_agent_contract "full brief includes consent record" '`reviewMode` / `reviewerAgent` / `egressDestination` / `externalEgressApproved` / `approvedScope` / 同意の原文・時刻' "$SKILL"
 check_agent_contract "out-of-scope candidates stay out of fix loop" 'nit、「別issue候補（範囲外）」、確認事項は含めない' "$SKILL"
 check_agent_contract "scope expansion requires user decision" 'ユーザー判断を得たうえでブリーフを更新する' "$SKILL"
 check_agent_contract "urgent independent severe findings pause for user decision" 'レビュー判定とは別にパイプラインを一時停止してユーザーへエスカレーション' "$SKILL"
@@ -230,6 +235,7 @@ check_agent_contract "guidelines define spec profile" '`spec-compliance-first`�
 check_agent_contract "guidelines define severities" '## 重要度' "$GUIDE"
 check_agent_contract "guidelines own review scope" '## レビュー範囲' "$GUIDE"
 check_agent_contract "guidelines define out-of-scope candidates" '**別issue候補（範囲外）**' "$GUIDE"
+check_agent_contract "guidelines require committed range" '`committedRange`: 今回レビューするコミット済み差分の範囲' "$GUIDE"
 check_agent_contract "feature or acceptance relevance is required" '`targetFeature` または `acceptanceCriteria` に直接関係し' "$GUIDE"
 check_agent_contract "in-scope files are an additional constraint" 'かつ指摘箇所が `inScopeFiles` に含まれる' "$GUIDE"
 check_agent_contract "file location alone never makes a finding in scope" '`inScopeFiles` に含まれることだけでは対象範囲内にしない' "$GUIDE"
@@ -252,7 +258,7 @@ check_agent_contract "claude toml reads common" "$COMMON" .codex/agents/claude-r
 check_agent_contract "reviewer defers to guidelines" '`.ai/review-guidelines.md` が単一ソース' .ai/agents/reviewer.md
 check_agent_contract "reviewer default profile" '`accuracy-first`（正確性優先）' .ai/agents/reviewer.md
 check_agent_contract "common uses spec profile" '`spec-compliance-first`' "$COMMON"
-check_agent_contract "common validates scope brief" '`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy`' "$COMMON"
+check_agent_contract "common validates scope brief" '`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `committedRange`' "$COMMON"
 consent_section=$(extract_section "$COMMON" '### 1. 外部送信同意の確認' '### 2. 認証確認') || {
   printf '%s\n' 'failed to extract external egress consent contract' >&2
   exit 1
@@ -263,13 +269,16 @@ scope_validation_section=$(extract_section "$COMMON" '### 3. 範囲の検証と�
 }
 check_section_absent_contract "missing scope fields are not consent failures" "$consent_section" 'レビュー範囲契約'
 check_section_contract "missing scope fields are brief errors" "$scope_validation_section" '「判定: error」として、不足項目を報告する'
+check_section_contract "committed range is a brief field" "$scope_validation_section" '`committedRange`'
 check_agent_contract "common outputs out-of-scope section" '### 別issue候補（範囲外）' "$COMMON"
 check_agent_contract "common excludes out-of-scope candidates from verdict" 'approve / request-changes の判定件数に含めない' "$COMMON"
-check_agent_contract "internal reviewer validates scope brief" '`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy`' .ai/agents/reviewer.md
+check_agent_contract "internal reviewer validates scope brief" '`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `committedRange`' .ai/agents/reviewer.md
 check_agent_contract "internal reviewer outputs out-of-scope section" '### 別issue候補（範囲外）' .ai/agents/reviewer.md
 check_agent_contract "claude prompt includes scope classification" '範囲外の妥当な問題を「別issue候補（範囲外）」へ' .ai/agents/claude-reviewer.md
-check_agent_contract "codex wrapper validates scope brief" '`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy`' .ai/agents/codex-reviewer.md
-check_agent_contract "codex TOML validates scope brief" '`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy`' .codex/agents/codex-reviewer.toml
+check_agent_contract "claude reads the full reviewer brief" '同じレビューブリーフファイルを `Read` で読み' .ai/agents/claude-reviewer.md
+check_agent_contract "claude validates the full consent record" '`reviewMode` / `reviewerAgent` / `egressDestination` / `externalEgressApproved` / `approvedScope` / 同意の原文・時刻' .ai/agents/claude-reviewer.md
+check_agent_contract "codex wrapper validates scope brief" '`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `committedRange`' .ai/agents/codex-reviewer.md
+check_agent_contract "codex TOML validates scope brief" '`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `committedRange`' .codex/agents/codex-reviewer.toml
 
 # ---- 不変条件: レビュアー側の安全則 ----
 check_agent_contract "common rejects diff-only consent" '差分だけの同意で実行してはならない' "$COMMON"

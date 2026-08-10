@@ -18,7 +18,7 @@ tools: Bash, Read, Grep, Glob
 
 ## レビュー手順
 
-1. ブリーフに `targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` が揃っていることを確認する。不足・矛盾があれば範囲を推測せず「判定: error」として不足項目を報告する。
+1. ブリーフに `targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `committedRange` が揃っていることを確認する。不足・矛盾があれば範囲を推測せず「判定: error」として不足項目を報告する。
 2. 差分を取得する。オーケストレーターがブリーフで指定した committed range を使う。初回は `git diff develop...HEAD`、修正周回の再レビューは `git diff <previous-reviewed-head>...HEAD` を使う。未コミット変更が残っていないことを `git status --short` で確認する。指定された range が不明・空・未コミット変更ありの場合は、推測で別の差分へ切り替えずオーケストレーターに報告する。
 3. 変更ファイルの**周辺コードも読む**（diff だけで判断しない）。呼び出し元・型定義・既存テストを確認する。外側を読むこと自体でレビュー範囲を広げない。
 4. 各候補を `.ai/review-guidelines.md`「レビュー範囲」に従って対象範囲内 / 今回差分が起こした範囲外機能の回帰 / 別issue候補（範囲外） / 確認事項へ分類する。

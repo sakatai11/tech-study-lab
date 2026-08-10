@@ -28,7 +28,7 @@ codex login status
 
 ## レビュー実行コマンド（共通定義の手順4）
 
-共通定義の手順3で求めた**実効base（`git merge-base <base> HEAD` の SHA）**と、起動プロンプトで指定された外側のブリーフファイルを使う。ブリーフファイルには対象issue・実装方針・`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` が含まれていることを確認し、パスが無い、読めない、または内容が不足する場合はレビューを実行せず「判定: error」とする。過去のブリーフや別issueのブリーフで補完しない。
+共通定義の手順3で求めた**実効base（`git merge-base <base> HEAD` の SHA）**と、起動プロンプトで指定された外側のブリーフファイルを使う。ブリーフファイルには対象issue・実装方針・`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `committedRange` が含まれていることを確認し、パスが無い、読めない、または内容が不足する場合はレビューを実行せず「判定: error」とする。過去のブリーフや別issueのブリーフで補完しない。
 
 ```bash
 if ! brief_instructions="$(

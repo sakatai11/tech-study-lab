@@ -76,9 +76,9 @@ private なリポジトリの内容を外部サービスへ送るため、**同�
 
 ### 3. 範囲の検証と実効baseの決定
 
-1. ブリーフに `targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` が揃い、互いに矛盾しないことを確認する。不足・矛盾があればレビューを実行せず「判定: error」として、不足項目を報告する。過去のブリーフやリポジトリの内容から推測で補完しない。
+1. ブリーフに `targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `committedRange` が揃い、互いに矛盾しないことを確認する。不足・矛盾があればレビューを実行せず「判定: error」として、不足項目を報告する。過去のブリーフやリポジトリの内容から推測で補完しない。
 2. `git status --short` が空であることを確認する。空でなければレビューを実行せず「判定: error」を返す。
-3. ブリーフ記載の対象 range が `git diff <base>...HEAD` と一致することを確認する。不一致なら「判定: error」を返す。
+3. ブリーフ記載の `committedRange` が `git diff <base>...HEAD` の対象 range と一致することを確認する。不一致なら「判定: error」を返す。
 4. **実効base（`<effective-base>`）を求める**。
 
    ```bash

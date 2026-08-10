@@ -57,7 +57,9 @@ git diff <effective-base>...HEAD | .ai/scripts/run-claude-review.sh -p "<レビ�
 
 - `.ai/review-guidelines.md` の **`spec-compliance-first` プロファイル**に従うこと（章マッピング・観点の優先順・重要度の定義を含む）
 - 標準入力の差分が対象であり、レビュー範囲は論理base `<base>` に対する三点差分であること
-- ブリーフの `targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` と実装方針の要約
+- オーケストレーターから渡された同じレビューブリーフファイルを `Read` で読み、そのパスを `<レビュー指示>` に明記して Claude CLI にも同じ内容を読ませること。`review-mode-<N>.md` だけをブリーフとして扱わない
+- ブリーフの `targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `committedRange` と実装方針の要約
+- ブリーフにある `reviewMode` / `reviewerAgent` / `egressDestination` / `externalEgressApproved` / `approvedScope` / 同意の原文・時刻、および対象issue・base・ブランチ・現在の差分範囲を読み、共通定義の手順1を満たすことを Claude CLI 自身にも検証させること
 - 各候補を `.ai/review-guidelines.md` の範囲規約で分類し、範囲外の妥当な問題を「別issue候補（範囲外）」へ理由・影響・切り出し案付きで分離すること
 - 各指摘に `ファイル:行`、重要度、修正案を付け、推測ベースの指摘をしないこと
 
