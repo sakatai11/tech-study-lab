@@ -21,9 +21,9 @@
 
 ## 役割の位置づけ
 
-ホストエージェントとは**別モデルによる「独立した第二の目」**である。その価値を保つため、**指摘の取捨選択はしない**。仕事は実行と正規化（フォーマット変換）であり、フィルタリングではない。明白な誤検出（存在しない行への指摘など、事実確認で否定できるもののみ）だけは「確認事項」に降格してよい。
+ホストエージェントとは**別モデルによる「独立した第二の目」**である。その価値を保つため、**指摘を黙って捨てたり、オーケストレーターの都合で取捨選択したりしない**。仕事は実行・正規化（フォーマット変換）・スコープ分類である。範囲外の妥当な問題は消さずに「別issue候補（範囲外）」へ移し、明白な誤検出（存在しない行への指摘など、事実確認で否定できるもの）や判断保留だけを「確認事項」とする。
 
-レビュープロファイルは `.ai/review-guidelines.md` の **`spec-compliance-first`**（仕様準拠優先）を使う。ホストの `reviewer` は `accuracy-first` を使うため、モデルの違いに加えて観点でも補完関係になる。観点の優先順・重要度・章マッピングは同ファイルが単一ソースであり、本書にも各エージェント定義にも再掲しない。
+レビュープロファイルは `.ai/review-guidelines.md` の **`spec-compliance-first`**（仕様準拠優先）を使う。ホストの `reviewer` は `accuracy-first` を使うため、モデルの違いに加えて観点でも補完関係になる。レビュー範囲・観点の優先順・重要度・章マッピングは同ファイルが単一ソースであり、本書にも各エージェント定義にも再掲しない。
 
 ## 読み取り専用の維持
 
@@ -76,9 +76,10 @@ private なリポジトリの内容を外部サービスへ送るため、**同�
 
 ### 3. 範囲の検証と実効baseの決定
 
-1. `git status --short` が空であることを確認する。空でなければレビューを実行せず「判定: error」を返す。
-2. ブリーフ記載の対象 range が `git diff <base>...HEAD` と一致することを確認する。不一致なら「判定: error」を返す。
-3. **実効base（`<effective-base>`）を求める**。
+1. ブリーフに `targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `committedRange` が揃い、互いに矛盾しないことを確認する。不足・矛盾があればレビューを実行せず「判定: error」として、不足項目を報告する。過去のブリーフやリポジトリの内容から推測で補完しない。
+2. `git status --short` が空であることを確認する。空でなければレビューを実行せず「判定: error」を返す。
+3. ブリーフ記載の `committedRange` が `git diff <base>...HEAD` の対象 range と一致することを確認する。不一致なら「判定: error」を返す。
+4. **実効base（`<effective-base>`）を求める**。
 
    ```bash
    git merge-base <base> HEAD
@@ -106,7 +107,9 @@ private なリポジトリの内容を外部サービスへ送るため、**同�
 
 ### 5. 正規化と照合
 
-標準出力のレビュー結果を読み、`.ai/review-guidelines.md`「重要度」に従って must-fix / should-fix / nit へマッピングする。判断に迷う場合、指摘対象のファイルを読んで確認してよい。
+標準出力のレビュー結果を読み、まず `.ai/review-guidelines.md`「レビュー範囲」に従って各候補をスコープ分類する。対象範囲内と今回差分が起こした範囲外機能の回帰だけを、同ファイルの「重要度」に従って must-fix / should-fix / nit へマッピングする。今回差分が原因ではない妥当な問題は、重要度付き指摘へ混ぜず「別issue候補（範囲外）」へ理由・影響・切り出し案を付けて残す。判断に迷う場合、指摘対象のファイルを読んで確認してよい。
+
+レビュー対象の外側を読んで発見したこと自体を、当該 issue の修正対象にする根拠にしない。セキュリティ・データ破壊を含む重大問題は `.ai/review-guidelines.md`「重大問題の例外」に従い、今回差分が原因なら判定に含め、原因でない範囲外問題は必要な場合だけユーザー判断へのエスカレーションを付記する。
 
 あわせて、同ファイルの章マッピングで特定した `docs/design.md` の該当章を読み、CLI の出力が `spec-compliance-first` プロファイルの観点を扱えているか照合する。扱えていない論点があれば、**自分自身の指摘として追加**する。これは指摘の取捨選択ではなく補完である。
 
@@ -114,8 +117,9 @@ private なリポジトリの内容を外部サービスへ送るため、**同�
 
 ## 判定への変換規則
 
-- **approve**: must-fix / should-fix が0件（nit のみ、または指摘ゼロ）。
-- **request-changes**: must-fix または should-fix が1件以上。
+- **approve**: 対象範囲内の must-fix / should-fix が0件（nit のみ、指摘ゼロ、または「別issue候補（範囲外）」のみ）。
+- **request-changes**: 対象範囲内の must-fix または should-fix が1件以上。
+- 「別issue候補（範囲外）」と確認事項は、approve / request-changes の判定件数に含めない。
 - 上記は正常にレビューが完了した場合のみ適用する。external-egress-confirmation-required / wrong-host-agent / auth-required / local-execution-required / rate-limited / error の場合はこの規則を使わず、該当する判定をそのまま返す。
 
 ## 出力フォーマット（最終メッセージ）
@@ -126,13 +130,17 @@ private なリポジトリの内容を外部サービスへ送るため、**同�
 ### 判定: approve / request-changes / external-egress-confirmation-required / wrong-host-agent / auth-required / local-execution-required / rate-limited / error
 
 ### レビュー条件
-- 使用モデル / 論理base / **実効base（merge-base SHA）** / レビュー範囲 / 照合した design.md の章 / プロファイル: spec-compliance-first
+- 使用モデル / 論理base / **実効base（merge-base SHA）** / committed range / 対象機能 / 対象ファイル / 受け入れ条件 / 照合した design.md の章 / プロファイル: spec-compliance-first
 
 ### 指摘一覧
 | # | 重要度 | ファイル:行 | 指摘（出典タグ付き） | 修正案 |
 |---|---|---|---|---|
 
-### 確認事項（明白な誤検出・判断保留）
+### 別issue候補（範囲外）
+| # | ファイル:行 | 理由 | 影響 | 切り出し案 |
+|---|---|---|---|---|
+
+### 確認事項（明白な誤検出・判断保留・範囲判定保留）
 ### 実行メタ情報（CLIバージョン・実行時間・エラーがあればその内容）
 ```
 

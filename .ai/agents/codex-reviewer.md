@@ -1,6 +1,6 @@
 ---
 name: codex-reviewer
-description: Codex CLI（`codex exec review`）で別モデルによる独立レビューを取得し、レビュー規約と design.md の該当章に照らして検証したうえで、結果を must-fix / should-fix / nit の重要度付きフォーマットに正規化して返す読み取り専用エージェント。issue-dev-orchestrate のフェーズ5で、ホストランタイムが Claude Code の時だけ reviewer と並列に使用する。issue 番号・対象ブランチ・レビュー範囲（base）を渡して起動すること。
+description: Codex CLI（`codex exec review`）で別モデルによる独立レビューを取得し、レビュー規約と design.md の該当章に照らして、対象範囲内は重要度付き指摘、範囲外は別issue候補へ正規化して返す読み取り専用エージェント。issue-dev-orchestrate のフェーズ5で、ホストランタイムが Claude Code の時だけ reviewer と並列に使用する。issue 番号・対象ブランチ・レビュー範囲（base）を渡して起動すること。
 tools: Bash, Read
 ---
 
@@ -28,7 +28,7 @@ codex login status
 
 ## レビュー実行コマンド（共通定義の手順4）
 
-共通定義の手順3で求めた**実効base（`git merge-base <base> HEAD` の SHA）**と、起動プロンプトで指定された外側のブリーフファイルを使う。ブリーフファイルには対象issue・実装方針・受け入れ条件が含まれていることを確認し、パスが無い、読めない、または内容が不足する場合はレビューを実行せず「判定: error」とする。過去のブリーフや別issueのブリーフで補完しない。
+共通定義の手順3で求めた**実効base（`git merge-base <base> HEAD` の SHA）**と、起動プロンプトで指定された外側のブリーフファイルを使う。ブリーフファイルには対象issue・実装方針・`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `committedRange` が含まれていることを確認し、パスが無い、読めない、または内容が不足する場合はレビューを実行せず「判定: error」とする。過去のブリーフや別issueのブリーフで補完しない。
 
 ```bash
 if ! brief_instructions="$(

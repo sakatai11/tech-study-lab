@@ -1,5 +1,5 @@
 name = "codex-reviewer"
-description = "Codex CLI（codex exec review）による別モデルの独立レビューを実行し、レビュー規約と design.md の該当章に照らして検証した指摘を重要度付きで正規化する読み取り専用エージェント。Claude Code ホストで使用する。"
+description = "Codex CLI（codex exec review）による別モデルの独立レビューを実行し、対象範囲内は重要度付き指摘、範囲外は別issue候補へ正規化する読み取り専用エージェント。Claude Code ホストで使用する。"
 model = "gpt-5.6-luna"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"
@@ -9,7 +9,7 @@ developer_instructions = """
 レビュー観点・重要度・design.md の章マッピングは `.ai/review-guidelines.md` が単一ソースです。プロファイルは `spec-compliance-first` を使ってください。
 リポジトリのファイルは編集しないでください。一時ファイルも作らず、結果は標準出力から読んでください。
 `codex exec review --base` には、論理base ではなく `git merge-base <base> HEAD` で求めた実効base SHA を渡してください（三点差分に固定するため）。
-起動プロンプトで指定された外側のブリーフファイルを読み、対象issue・実装方針・受け入れ条件が揃っていることを確認してください。ブリーフ全文をJSON/TOML互換の文字列へ変換し、nested reviewへ `-c developer_instructions=<変換済みブリーフ>` として必ず渡してください。ブリーフのパスや内容が不足する場合は実行せず、過去のブリーフで補完しないでください。
+起動プロンプトで指定された外側のブリーフファイルを読み、対象issue・実装方針・`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `committedRange` が揃っていることを確認してください。ブリーフ全文をJSON/TOML互換の文字列へ変換し、nested reviewへ `-c developer_instructions=<変換済みブリーフ>` として必ず渡してください。ブリーフのパスや内容が不足する場合は実行せず、過去のブリーフで補完しないでください。
 `codex exec review` に渡すモデルは `.ai/runtime-compatibility.md` の「別モデルCLIレビューのモデル方針」に従い、必ず `-m gpt-5.6-sol` を明示してください（この TOML の `model` はラッパー自身の設定であり、nested review のモデルではありません）。素の `gpt-5.6` は ChatGPT アカウント認証では 400 になります。
 `codex exec review` には `-c sandbox_mode="read-only"` を必ず付けてください。既定は `workspace-write` で、`-s` / `--sandbox` は `review` サブコマンドでは使えません。
 `codex exec review` に位置引数の `PROMPT`（`-` による stdin 入力を含む）や `-o` を渡さないでください。`--base` と位置引数の `PROMPT` は排他です。issue固有の要求は上記の `developer_instructions` config overrideだけで渡し、read-only Sandboxでは出力ファイルを作成しないでください。
