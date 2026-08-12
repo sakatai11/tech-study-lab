@@ -76,17 +76,24 @@ function recordVerification(state, lane, result, findingResults = []) {
   const next = {
     ...state,
     findings,
-    verification: { ...state.verification, [lane]: effectiveResult },
+    verification: {
+      ...state.verification,
+      [lane]: effectiveResult,
+      [`${lane}Head`]: state.head,
+    },
   }
   const bothApproved =
-    next.verification.internal === 'approve' && next.verification.external === 'approve'
+    next.verification.internal === 'approve' &&
+    next.verification.internalHead === next.head &&
+    next.verification.external === 'approve' &&
+    next.verification.externalHead === next.head
   return bothApproved && requiredFindingsResolved(findings)
     ? { ...next, reviewedHead: next.head }
     : next
 }
 
 function canStartExternalVerification(state) {
-  return state.verification.internal === 'approve'
+  return state.verification.internal === 'approve' && state.verification.internalHead === state.head
 }
 
 function classifyVerificationFinding(kind) {
@@ -132,7 +139,12 @@ const baseState = {
   head: 'head-1',
   reviewedHead: undefined,
   findings: [],
-  verification: { internal: undefined, external: undefined },
+  verification: {
+    internal: undefined,
+    internalHead: undefined,
+    external: undefined,
+    externalHead: undefined,
+  },
 }
 
 function createRequiredFindingState() {
@@ -177,9 +189,16 @@ const cases = [
   },
   {
     name: 'internal approval permits external verification',
-    run: () =>
-      canStartExternalVerification({ ...baseState, verification: { internal: 'approve' } }),
+    run: () => canStartExternalVerification(recordVerification(baseState, 'internal', 'approve')),
     expected: true,
+  },
+  {
+    name: 'external verification rejects an internal approval for a previous HEAD',
+    run: () => {
+      const internallyApproved = recordVerification(baseState, 'internal', 'approve')
+      return canStartExternalVerification({ ...internallyApproved, head: 'head-2' })
+    },
+    expected: false,
   },
   {
     name: 'zero findings update the boundary only after both approvals',
@@ -189,6 +208,18 @@ const cases = [
       return { afterInternal: internal.reviewedHead, afterExternal: external.reviewedHead }
     },
     expected: { afterInternal: undefined, afterExternal: 'head-1' },
+  },
+  {
+    name: 'different approved lane HEADs do not update the boundary',
+    run: () => {
+      const internal = recordVerification(baseState, 'internal', 'approve')
+      return recordVerification({ ...internal, head: 'head-2' }, 'external', 'approve')
+    },
+    expected: {
+      reviewedHead: undefined,
+      internalHead: 'head-1',
+      externalHead: 'head-2',
+    },
   },
   {
     name: 'all required resolved updates the boundary after both approvals',
@@ -328,6 +359,10 @@ for (const testCase of cases) {
   } else if (testCase.name === 'all required resolved updates the boundary after both approvals') {
     assert.equal(actual.reviewedHead, testCase.expected.reviewedHead)
     assert.equal(actual.findings[0].status, testCase.expected.status)
+  } else if (testCase.name === 'different approved lane HEADs do not update the boundary') {
+    assert.equal(actual.reviewedHead, testCase.expected.reviewedHead)
+    assert.equal(actual.verification.internalHead, testCase.expected.internalHead)
+    assert.equal(actual.verification.externalHead, testCase.expected.externalHead)
   } else if (
     testCase.name === 'partial required findings convert approval to request-changes' ||
     testCase.name === 'unresolved required findings convert approval to request-changes'
