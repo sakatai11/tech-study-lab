@@ -59,6 +59,35 @@ function selectFallback(state) {
   return { range: `${state.specBoundary}...${state.head}`, stage: 'fallback-incremental' }
 }
 
+function validateReviewerStage(state, brief) {
+  let selected
+
+  switch (brief.reviewStage) {
+    case 'internal-initial-cumulative':
+    case 'internal-incremental':
+      selected = selectInternal(state)
+      break
+    case 'fallback-cumulative':
+    case 'fallback-incremental':
+      selected = selectFallback(state)
+      break
+    default:
+      throw new Error('invalid reviewer stage')
+  }
+
+  if (selected.stage !== brief.reviewStage) {
+    throw new Error('review stage does not match boundary state')
+  }
+  if (selected.range !== brief.committedRange) {
+    throw new Error('committed range does not match review stage')
+  }
+  const [base] = selected.range.split('...')
+  if (base === state.head) {
+    throw new Error('empty review range')
+  }
+  return selected
+}
+
 function recordInternalResult(state, result) {
   return completed.has(result)
     ? { ...state, internalBoundary: state.head, internalResult: result }
@@ -97,6 +126,15 @@ const cases = [
     expected: { range: 'develop...initial-head', stage: 'internal-initial-cumulative' },
   },
   {
+    name: 'reviewer validates internal initial cumulative range',
+    run: () =>
+      validateReviewerStage(baseState, {
+        committedRange: 'develop...initial-head',
+        reviewStage: 'internal-initial-cumulative',
+      }),
+    expected: { range: 'develop...initial-head', stage: 'internal-initial-cumulative' },
+  },
+  {
     name: 'spec review is blocked before internal approval',
     run: () => selectExternal(baseState),
     error: 'internal approval required before spec review',
@@ -109,6 +147,18 @@ const cases = [
         head: 'fixed-head',
         internalBoundary: 'initial-head',
       }),
+    expected: { range: 'initial-head...fixed-head', stage: 'internal-incremental' },
+  },
+  {
+    name: 'reviewer validates internal incremental range',
+    run: () =>
+      validateReviewerStage(
+        { ...baseState, head: 'fixed-head', internalBoundary: 'initial-head' },
+        {
+          committedRange: 'initial-head...fixed-head',
+          reviewStage: 'internal-incremental',
+        },
+      ),
     expected: { range: 'initial-head...fixed-head', stage: 'internal-incremental' },
   },
   {
@@ -171,6 +221,23 @@ const cases = [
     expected: { range: 'develop...initial-head', stage: 'fallback-cumulative' },
   },
   {
+    name: 'reviewer validates fallback cumulative range without spec boundary',
+    run: () =>
+      validateReviewerStage(
+        {
+          ...baseState,
+          externalBoundary: 'initial-head',
+          internalBoundary: 'initial-head',
+          internalResult: 'approve',
+        },
+        {
+          committedRange: 'develop...initial-head',
+          reviewStage: 'fallback-cumulative',
+        },
+      ),
+    expected: { range: 'develop...initial-head', stage: 'fallback-cumulative' },
+  },
+  {
     name: 'fallback is incremental from its spec boundary regardless of route or external boundary',
     run: () =>
       selectFallback({
@@ -183,6 +250,58 @@ const cases = [
         specRoute: 'fallback-internal',
       }),
     expected: { range: 'initial-head...fixed-head', stage: 'fallback-incremental' },
+  },
+  {
+    name: 'reviewer validates fallback incremental range from spec boundary',
+    run: () =>
+      validateReviewerStage(
+        {
+          ...baseState,
+          externalBoundary: 'external-head',
+          head: 'fixed-head',
+          internalBoundary: 'fixed-head',
+          internalResult: 'approve',
+          specBoundary: 'initial-head',
+          specRoute: 'fallback-internal',
+        },
+        {
+          committedRange: 'initial-head...fixed-head',
+          reviewStage: 'fallback-incremental',
+        },
+      ),
+    expected: { range: 'initial-head...fixed-head', stage: 'fallback-incremental' },
+  },
+  {
+    name: 'reviewer rejects fallback incremental range mismatch',
+    run: () =>
+      validateReviewerStage(
+        {
+          ...baseState,
+          head: 'fixed-head',
+          internalBoundary: 'fixed-head',
+          internalResult: 'approve',
+          specBoundary: 'initial-head',
+        },
+        { committedRange: 'develop...fixed-head', reviewStage: 'fallback-incremental' },
+      ),
+    error: 'committed range does not match review stage',
+  },
+  {
+    name: 'reviewer rejects empty fallback incremental range',
+    run: () =>
+      validateReviewerStage(
+        {
+          ...baseState,
+          internalBoundary: 'initial-head',
+          internalResult: 'approve',
+          specBoundary: 'initial-head',
+        },
+        {
+          committedRange: 'initial-head...initial-head',
+          reviewStage: 'fallback-incremental',
+        },
+      ),
+    error: 'empty review range',
   },
   {
     name: 'non-ancestor spec boundary is rejected for fallback',

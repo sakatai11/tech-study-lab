@@ -127,6 +127,7 @@ jq -e '
   and (map(.id) | index("cumulative-split-union-coverage"))
   and (map(.id) | index("review-state-machine-transition-table"))
   and (map(.id) | index("fallback-route-independent-boundary"))
+  and (map(.id) | index("reviewer-fallback-stage-range-validation"))
   and (map(.id) | index("silent-live-cli-wait-policy"))
   and (map(.id) | index("timeout-metadata-redaction"))
   and any(.[]; .id == "external-review-stage-validation" and (.expected | contains("logical/effective base")))
@@ -135,6 +136,7 @@ jq -e '
   and any(.[]; .id == "cumulative-split-union-coverage" and (.expected | contains("do not update the external boundary")))
   and any(.[]; .id == "review-state-machine-transition-table" and (.action | contains("test-review-state-machine.mjs")))
   and any(.[]; .id == "fallback-route-independent-boundary" and (.expected | contains("Never use the external boundary")))
+  and any(.[]; .id == "reviewer-fallback-stage-range-validation" and (.expected | contains("brief-mismatched fallback incremental range")))
 ' "$EVALS" >/dev/null || {
   printf '%s\n' 'staged review eval contract is incomplete' >&2
   exit 1
@@ -402,10 +404,15 @@ check_agent_contract "codex reviewer host scope" 'Claude Code ホストでは in
 check_agent_contract "claude reviewer host scope" 'Codex ホストでは internal reviewer が current HEAD を approve した後に段階的に使用する' .ai/agents/claude-reviewer.md
 check_agent_contract "reviewer runs in phase 5" 'issue-dev-orchestrate のフェーズ5（レビュー）で使用する' .ai/agents/reviewer.md
 check_agent_contract "test fixer runs in phases 4 and 6" 'issue-dev-orchestrate のフェーズ4・6（品質ゲート）で使用する' .ai/agents/test-fixer.md
-check_agent_contract "reviewer committed range" '`git diff <last-internal-reviewed-head>...HEAD`' .ai/agents/reviewer.md
+check_agent_contract "reviewer internal incremental range" '`internal-incremental`: 解決可能でcurrent HEADの祖先である `last-internal-reviewed-head...HEAD`' .ai/agents/reviewer.md
 check_agent_contract "reviewer records staged range" '`reviewStage`' .ai/agents/reviewer.md
 check_agent_contract "reviewer gates spec review on internal approval" 'current HEAD に対する internal reviewer の `approve` が確認できるまで' .ai/agents/reviewer.md
 check_agent_contract "reviewer serializes profiles after internal approval" 'internal `accuracy-first` が current HEAD を approve した後に、別モデルまたは fallback が `spec-compliance-first` を直列に実行する' .ai/agents/reviewer.md
+check_agent_contract "reviewer documents all review stages" '`internal-initial-cumulative`' .ai/agents/reviewer.md
+check_agent_contract "reviewer documents fallback cumulative range" '`fallback-cumulative`: `git diff develop...HEAD`' .ai/agents/reviewer.md
+check_agent_contract "reviewer documents fallback incremental spec range" '`fallback-incremental`: 解決可能でcurrent HEADの祖先である `last-spec-review-head...HEAD`' .ai/agents/reviewer.md
+check_agent_contract "reviewer rejects invalid fallback range" 'spec boundaryが不正・祖先でない・空、またはブリーフrangeと不一致なら' .ai/agents/reviewer.md
+check_agent_contract "reviewer fallback ignores other boundaries" 'fallback のrange選択に internal / external boundary を使わない' .ai/agents/reviewer.md
 
 # ---- 段階的レビュー境界 ----
 check_agent_contract "internal boundary is distinct" 'last-internal-reviewed-head-<N>.txt' "$SKILL"

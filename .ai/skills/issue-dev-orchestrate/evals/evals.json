@@ -54,6 +54,12 @@
       "expected": "Use fallback-cumulative develop...HEAD without a spec boundary, fallback-incremental specBoundary...HEAD with any valid spec route, and error for a non-ancestor or unresolved spec boundary. Never use the external boundary to select or update fallback coverage."
     },
     {
+      "id": "reviewer-fallback-stage-range-validation",
+      "fixture": "The fallback reviewer receives reviewStage, committedRange, internal/external boundaries, and an optional spec boundary.",
+      "action": "Validate the reviewer's stage-specific range before reading the diff.",
+      "expected": "Use internal-initial-cumulative/develop...HEAD, internal-incremental/internalBoundary...HEAD, fallback-cumulative/develop...HEAD, and fallback-incremental/last-spec-review-head...HEAD. Reject an invalid, non-ancestor, empty, or brief-mismatched fallback incremental range without substituting an internal or external boundary."
+    },
+    {
       "id": "silent-live-cli-wait-policy",
       "fixture": "Review continuation session is alive, emits no stdout, and elapsed time is under 10 minutes",
       "action": "Poll the session.",
