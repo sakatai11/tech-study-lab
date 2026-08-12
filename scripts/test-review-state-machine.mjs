@@ -46,6 +46,19 @@ function selectExternal(state) {
   }
 }
 
+function selectFallback(state) {
+  if (!canStartSpec(state)) {
+    throw new Error('internal approval required before spec review')
+  }
+  if (!state.specBoundary) {
+    return { range: `develop...${state.head}`, stage: 'fallback-cumulative' }
+  }
+  if (!isAncestor(state, state.specBoundary, state.head)) {
+    throw new Error('invalid spec boundary')
+  }
+  return { range: `${state.specBoundary}...${state.head}`, stage: 'fallback-incremental' }
+}
+
 function recordInternalResult(state, result) {
   return completed.has(result)
     ? { ...state, internalBoundary: state.head, internalResult: result }
@@ -65,6 +78,7 @@ const baseState = {
   ancestorPairs: [
     ['develop-base', 'initial-head'],
     ['develop-base', 'fixed-head'],
+    ['initial-head', 'fixed-head'],
     ['external-head', 'fixed-head'],
   ],
   developEffectiveBase: 'develop-base',
@@ -86,6 +100,21 @@ const cases = [
     name: 'spec review is blocked before internal approval',
     run: () => selectExternal(baseState),
     error: 'internal approval required before spec review',
+  },
+  {
+    name: 'internal boundary enables incremental review after a fix',
+    run: () =>
+      selectInternal({
+        ...baseState,
+        head: 'fixed-head',
+        internalBoundary: 'initial-head',
+      }),
+    expected: { range: 'initial-head...fixed-head', stage: 'internal-incremental' },
+  },
+  {
+    name: 'non-ancestor internal boundary is rejected',
+    run: () => selectInternal({ ...baseState, internalBoundary: 'unrelated-head' }),
+    error: 'invalid internal boundary',
   },
   {
     name: 'fallback boundary cannot make external review incremental',
@@ -129,6 +158,42 @@ const cases = [
       specBoundary: 'initial-head',
       specRoute: 'fallback-internal',
     },
+  },
+  {
+    name: 'fallback is cumulative without a spec boundary even with an external boundary',
+    run: () =>
+      selectFallback({
+        ...baseState,
+        externalBoundary: 'initial-head',
+        internalBoundary: 'initial-head',
+        internalResult: 'approve',
+      }),
+    expected: { range: 'develop...initial-head', stage: 'fallback-cumulative' },
+  },
+  {
+    name: 'fallback is incremental from its spec boundary regardless of route or external boundary',
+    run: () =>
+      selectFallback({
+        ...baseState,
+        externalBoundary: 'external-head',
+        head: 'fixed-head',
+        internalBoundary: 'fixed-head',
+        internalResult: 'approve',
+        specBoundary: 'initial-head',
+        specRoute: 'fallback-internal',
+      }),
+    expected: { range: 'initial-head...fixed-head', stage: 'fallback-incremental' },
+  },
+  {
+    name: 'non-ancestor spec boundary is rejected for fallback',
+    run: () =>
+      selectFallback({
+        ...baseState,
+        internalBoundary: 'initial-head',
+        internalResult: 'approve',
+        specBoundary: 'unrelated-head',
+      }),
+    error: 'invalid spec boundary',
   },
   {
     name: 'timeout does not update review boundaries',

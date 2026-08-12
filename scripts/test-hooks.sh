@@ -126,6 +126,7 @@ jq -e '
   and (map(.id) | index("external-review-stage-validation"))
   and (map(.id) | index("cumulative-split-union-coverage"))
   and (map(.id) | index("review-state-machine-transition-table"))
+  and (map(.id) | index("fallback-route-independent-boundary"))
   and (map(.id) | index("silent-live-cli-wait-policy"))
   and (map(.id) | index("timeout-metadata-redaction"))
   and any(.[]; .id == "external-review-stage-validation" and (.expected | contains("logical/effective base")))
@@ -133,6 +134,7 @@ jq -e '
   and any(.[]; .id == "cumulative-split-union-coverage" and (.expected | contains("cross-cutting review")))
   and any(.[]; .id == "cumulative-split-union-coverage" and (.expected | contains("do not update the external boundary")))
   and any(.[]; .id == "review-state-machine-transition-table" and (.action | contains("test-review-state-machine.mjs")))
+  and any(.[]; .id == "fallback-route-independent-boundary" and (.expected | contains("Never use the external boundary")))
 ' "$EVALS" >/dev/null || {
   printf '%s\n' 'staged review eval contract is incomplete' >&2
   exit 1
@@ -182,6 +184,9 @@ check_agent_contract "external incremental requires actual external boundary" 'e
 check_agent_contract "non-ancestor external boundary stops incremental review" 'incremental review を拒否して停止・報告する' "$SKILL"
 check_agent_contract "fallback starts cumulatively without external coverage" 'fallback-cumulative' "$SKILL"
 check_agent_contract "fallback increment is route-scoped" 'fallback-incremental' "$SKILL"
+check_agent_contract "fallback range is route independent" 'routeに関係なく `fallback-incremental` としてそのspec boundary `...HEAD` をレビューする' "$SKILL"
+check_agent_contract "fallback rejects invalid spec boundary" 'spec boundary が解決不能または祖先でなければ、範囲を推測せず `error` として停止・報告する' "$SKILL"
+check_agent_contract "fallback ignores external boundary for range" '実外部境界の有無は fallback range の選択に使わず' "$SKILL"
 check_agent_contract "external brief records stage and coverage" '`reviewStage` / `logicalBase` / `externalCoverage`' "$SKILL"
 check_agent_contract "split cumulative review lists chunk coverage" '各chunkの commit SHA と file集合をブリーフに列挙し' "$SKILL"
 check_agent_contract "split cumulative review finishes cross-cutting" '最後に cross-cutting review を行う' "$SKILL"
@@ -400,6 +405,7 @@ check_agent_contract "test fixer runs in phases 4 and 6" 'issue-dev-orchestrate 
 check_agent_contract "reviewer committed range" '`git diff <last-internal-reviewed-head>...HEAD`' .ai/agents/reviewer.md
 check_agent_contract "reviewer records staged range" '`reviewStage`' .ai/agents/reviewer.md
 check_agent_contract "reviewer gates spec review on internal approval" 'current HEAD に対する internal reviewer の `approve` が確認できるまで' .ai/agents/reviewer.md
+check_agent_contract "reviewer serializes profiles after internal approval" 'internal `accuracy-first` が current HEAD を approve した後に、別モデルまたは fallback が `spec-compliance-first` を直列に実行する' .ai/agents/reviewer.md
 
 # ---- 段階的レビュー境界 ----
 check_agent_contract "internal boundary is distinct" 'last-internal-reviewed-head-<N>.txt' "$SKILL"

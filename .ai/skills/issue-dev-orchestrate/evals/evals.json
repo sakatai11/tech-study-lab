@@ -45,7 +45,13 @@
       "id": "review-state-machine-transition-table",
       "fixture": "Boundary state, route, ancestor relation, internal result, and external result are table inputs.",
       "action": "Run node scripts/test-review-state-machine.mjs through pnpm test:hooks.",
-      "expected": "Cover initial internal cumulative selection, spec blocking before internal approve, fallback-to-external isolation, external approve/request-changes boundary updates, non-normal no-update, non-ancestor rejection, external incremental selection, and initial cumulative coverage."
+      "expected": "Cover initial and incremental internal selection, internal non-ancestor rejection, spec blocking before internal approve, fallback cumulative/incremental selection from a valid spec boundary regardless of route or external boundary, spec-boundary non-ancestor rejection, fallback-to-external isolation, external approve/request-changes boundary updates, non-normal no-update, external non-ancestor rejection, external incremental selection, and initial cumulative coverage."
+    },
+    {
+      "id": "fallback-route-independent-boundary",
+      "fixture": "Current HEAD has internal approve; spec boundary is absent, valid, or non-ancestor; external boundary may be present or absent.",
+      "action": "Select the fallback stage and range.",
+      "expected": "Use fallback-cumulative develop...HEAD without a spec boundary, fallback-incremental specBoundary...HEAD with any valid spec route, and error for a non-ancestor or unresolved spec boundary. Never use the external boundary to select or update fallback coverage."
     },
     {
       "id": "silent-live-cli-wait-policy",
