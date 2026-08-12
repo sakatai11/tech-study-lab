@@ -36,6 +36,7 @@ jq -e -s '
 ' "$log_dir/skill-usage.jsonl" >/dev/null
 
 node scripts/sync-agent-config.mjs --check
+node scripts/test-review-state-machine.mjs
 
 # 外部CLIの認証と通信をSandbox内の結果だけで誤判定しない契約を固定する。
 check_agent_contract() {
@@ -124,12 +125,14 @@ jq -e '
   and (map(.id) | index("external-normal-results-create-coverage"))
   and (map(.id) | index("external-review-stage-validation"))
   and (map(.id) | index("cumulative-split-union-coverage"))
+  and (map(.id) | index("review-state-machine-transition-table"))
   and (map(.id) | index("silent-live-cli-wait-policy"))
   and (map(.id) | index("timeout-metadata-redaction"))
   and any(.[]; .id == "external-review-stage-validation" and (.expected | contains("logical/effective base")))
   and any(.[]; .id == "external-review-stage-validation" and (.expected | contains("normalized SHA range")))
   and any(.[]; .id == "cumulative-split-union-coverage" and (.expected | contains("cross-cutting review")))
   and any(.[]; .id == "cumulative-split-union-coverage" and (.expected | contains("do not update the external boundary")))
+  and any(.[]; .id == "review-state-machine-transition-table" and (.action | contains("test-review-state-machine.mjs")))
 ' "$EVALS" >/dev/null || {
   printf '%s\n' 'staged review eval contract is incomplete' >&2
   exit 1
@@ -390,8 +393,8 @@ check_agent_contract "claude toml effort" 'model_reasoning_effort = "high"' .cod
 check_agent_contract "communication is not authentication" '通信失敗を未認証と報告しない' "$RUNTIME"
 
 # ---- エージェント起動フェーズの整合 ----
-check_agent_contract "codex reviewer host scope" 'ホストランタイムが Claude Code の時だけ' .ai/agents/codex-reviewer.md
-check_agent_contract "claude reviewer host scope" 'ホストランタイムが Codex の時だけ' .ai/agents/claude-reviewer.md
+check_agent_contract "codex reviewer host scope" 'Claude Code ホストでは internal reviewer が current HEAD を approve した後に段階的に使用する' .ai/agents/codex-reviewer.md
+check_agent_contract "claude reviewer host scope" 'Codex ホストでは internal reviewer が current HEAD を approve した後に段階的に使用する' .ai/agents/claude-reviewer.md
 check_agent_contract "reviewer runs in phase 5" 'issue-dev-orchestrate のフェーズ5（レビュー）で使用する' .ai/agents/reviewer.md
 check_agent_contract "test fixer runs in phases 4 and 6" 'issue-dev-orchestrate のフェーズ4・6（品質ゲート）で使用する' .ai/agents/test-fixer.md
 check_agent_contract "reviewer committed range" '`git diff <last-internal-reviewed-head>...HEAD`' .ai/agents/reviewer.md

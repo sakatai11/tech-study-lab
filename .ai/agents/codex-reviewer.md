@@ -1,6 +1,6 @@
 ---
 name: codex-reviewer
-description: Codex CLI（`codex exec review`）で別モデルによる独立レビューを取得し、レビュー規約と design.md の該当章に照らして、対象範囲内は重要度付き指摘、範囲外は別issue候補へ正規化して返す読み取り専用エージェント。issue-dev-orchestrate のフェーズ5で、ホストランタイムが Claude Code の時だけ reviewer と並列に使用する。issue 番号・対象ブランチ・レビュー範囲（base）を渡して起動すること。
+description: Codex CLI（`codex exec review`）で別モデルによる独立レビューを取得し、レビュー規約と design.md の該当章に照らして、対象範囲内は重要度付き指摘、範囲外は別issue候補へ正規化して返す読み取り専用エージェント。issue-dev-orchestrate のフェーズ5で、Claude Code ホストでは internal reviewer が current HEAD を approve した後に段階的に使用する。issue 番号・対象ブランチ・レビュー範囲（base）を渡して起動すること。
 tools: Bash, Read
 ---
 

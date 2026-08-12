@@ -1,0 +1,215 @@
+import assert from 'node:assert/strict'
+
+const completed = new Set(['approve', 'request-changes'])
+
+function isAncestor(state, candidate, head) {
+  return (
+    candidate === head ||
+    state.ancestorPairs.some(
+      ([ancestor, descendant]) => ancestor === candidate && descendant === head,
+    )
+  )
+}
+
+function selectInternal(state) {
+  if (!state.internalBoundary) {
+    return { range: `develop...${state.head}`, stage: 'internal-initial-cumulative' }
+  }
+  if (!isAncestor(state, state.internalBoundary, state.head)) {
+    throw new Error('invalid internal boundary')
+  }
+  return { range: `${state.internalBoundary}...${state.head}`, stage: 'internal-incremental' }
+}
+
+function canStartSpec(state) {
+  return state.internalBoundary === state.head && state.internalResult === 'approve'
+}
+
+function selectExternal(state) {
+  if (!canStartSpec(state)) {
+    throw new Error('internal approval required before spec review')
+  }
+  if (!state.externalBoundary) {
+    return {
+      logicalBase: 'develop',
+      range: `${state.developEffectiveBase}...${state.head}`,
+      stage: 'external-initial-cumulative',
+    }
+  }
+  if (!isAncestor(state, state.externalBoundary, state.head)) {
+    throw new Error('invalid external boundary')
+  }
+  return {
+    logicalBase: state.externalBoundary,
+    range: `${state.externalBoundary}...${state.head}`,
+    stage: 'external-incremental',
+  }
+}
+
+function recordInternalResult(state, result) {
+  return completed.has(result)
+    ? { ...state, internalBoundary: state.head, internalResult: result }
+    : state
+}
+
+function recordSpecResult(state, route, result) {
+  if (!completed.has(result)) {
+    return state
+  }
+
+  const next = { ...state, specBoundary: state.head, specRoute: route }
+  return route === 'cross-model-cli' ? { ...next, externalBoundary: state.head } : next
+}
+
+const baseState = {
+  ancestorPairs: [
+    ['develop-base', 'initial-head'],
+    ['develop-base', 'fixed-head'],
+    ['external-head', 'fixed-head'],
+  ],
+  developEffectiveBase: 'develop-base',
+  head: 'initial-head',
+  internalBoundary: undefined,
+  internalResult: undefined,
+  externalBoundary: undefined,
+  specBoundary: undefined,
+  specRoute: undefined,
+}
+
+const cases = [
+  {
+    name: 'initial internal review is cumulative',
+    run: () => selectInternal(baseState),
+    expected: { range: 'develop...initial-head', stage: 'internal-initial-cumulative' },
+  },
+  {
+    name: 'spec review is blocked before internal approval',
+    run: () => selectExternal(baseState),
+    error: 'internal approval required before spec review',
+  },
+  {
+    name: 'fallback boundary cannot make external review incremental',
+    run: () =>
+      selectExternal({
+        ...baseState,
+        internalBoundary: 'initial-head',
+        internalResult: 'approve',
+        specBoundary: 'initial-head',
+        specRoute: 'fallback-internal',
+      }),
+    expected: {
+      logicalBase: 'develop',
+      range: 'develop-base...initial-head',
+      stage: 'external-initial-cumulative',
+    },
+  },
+  {
+    name: 'external approve records an external boundary',
+    run: () => recordSpecResult({ ...baseState }, 'cross-model-cli', 'approve'),
+    expected: {
+      externalBoundary: 'initial-head',
+      specBoundary: 'initial-head',
+      specRoute: 'cross-model-cli',
+    },
+  },
+  {
+    name: 'external request changes records an external boundary',
+    run: () => recordSpecResult({ ...baseState }, 'cross-model-cli', 'request-changes'),
+    expected: {
+      externalBoundary: 'initial-head',
+      specBoundary: 'initial-head',
+      specRoute: 'cross-model-cli',
+    },
+  },
+  {
+    name: 'fallback result does not record an external boundary',
+    run: () => recordSpecResult({ ...baseState }, 'fallback-internal', 'approve'),
+    expected: {
+      externalBoundary: undefined,
+      specBoundary: 'initial-head',
+      specRoute: 'fallback-internal',
+    },
+  },
+  {
+    name: 'timeout does not update review boundaries',
+    run: () => recordSpecResult({ ...baseState }, 'cross-model-cli', 'timeout'),
+    expected: { externalBoundary: undefined, specBoundary: undefined, specRoute: undefined },
+  },
+  {
+    name: 'error does not update review boundaries',
+    run: () => recordSpecResult({ ...baseState }, 'cross-model-cli', 'error'),
+    expected: { externalBoundary: undefined, specBoundary: undefined, specRoute: undefined },
+  },
+  {
+    name: 'auth required does not update review boundaries',
+    run: () => recordSpecResult({ ...baseState }, 'cross-model-cli', 'auth-required'),
+    expected: { externalBoundary: undefined, specBoundary: undefined, specRoute: undefined },
+  },
+  {
+    name: 'non-ancestor external boundary is rejected',
+    run: () =>
+      selectExternal({
+        ...baseState,
+        externalBoundary: 'unrelated-head',
+        internalBoundary: 'initial-head',
+        internalResult: 'approve',
+      }),
+    error: 'invalid external boundary',
+  },
+  {
+    name: 'external boundary enables incremental review after a fix',
+    run: () =>
+      selectExternal({
+        ...baseState,
+        externalBoundary: 'external-head',
+        head: 'fixed-head',
+        internalBoundary: 'fixed-head',
+        internalResult: 'approve',
+      }),
+    expected: {
+      logicalBase: 'external-head',
+      range: 'external-head...fixed-head',
+      stage: 'external-incremental',
+    },
+  },
+  {
+    name: 'initial implementation remains in external cumulative coverage',
+    run: () => {
+      const reviewed = recordInternalResult(baseState, 'approve')
+      return selectExternal(reviewed)
+    },
+    expected: {
+      logicalBase: 'develop',
+      range: 'develop-base...initial-head',
+      stage: 'external-initial-cumulative',
+    },
+  },
+  {
+    name: 'internal fixes remain in initial external cumulative coverage',
+    run: () =>
+      selectExternal({
+        ...baseState,
+        head: 'fixed-head',
+        internalBoundary: 'fixed-head',
+        internalResult: 'approve',
+      }),
+    expected: {
+      logicalBase: 'develop',
+      range: 'develop-base...fixed-head',
+      stage: 'external-initial-cumulative',
+    },
+  },
+]
+
+for (const testCase of cases) {
+  if (testCase.error) {
+    assert.throws(testCase.run, new RegExp(testCase.error))
+  } else {
+    const actual = testCase.run()
+    for (const [key, value] of Object.entries(testCase.expected)) {
+      assert.equal(actual[key], value, `${testCase.name}: ${key}`)
+    }
+  }
+}
+
+console.log(`Review state machine tests passed (${cases.length})`)

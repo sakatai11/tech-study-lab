@@ -42,6 +42,12 @@
       "expected": "Permit the final external verdict only after union coverage is complete and the cross-cutting review finishes. Missing coverage, contradictory sets, or overlap without an explained cross-cutting treatment return error and do not update the external boundary."
     },
     {
+      "id": "review-state-machine-transition-table",
+      "fixture": "Boundary state, route, ancestor relation, internal result, and external result are table inputs.",
+      "action": "Run node scripts/test-review-state-machine.mjs through pnpm test:hooks.",
+      "expected": "Cover initial internal cumulative selection, spec blocking before internal approve, fallback-to-external isolation, external approve/request-changes boundary updates, non-normal no-update, non-ancestor rejection, external incremental selection, and initial cumulative coverage."
+    },
+    {
       "id": "silent-live-cli-wait-policy",
       "fixture": "Review continuation session is alive, emits no stdout, and elapsed time is under 10 minutes",
       "action": "Poll the session.",
