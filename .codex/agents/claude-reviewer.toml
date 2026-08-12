@@ -8,8 +8,6 @@ developer_instructions = """
 役割・制約・手順・出力形式は `.ai/cross-model-reviewer-common.md` が単一ソースで、`.ai/agents/claude-reviewer.md` は Claude CLI 固有の差分だけを定義します。両方を厳守してください。
 レビュー観点・重要度・design.md の章マッピングは `.ai/review-guidelines.md` が単一ソースです。プロファイルは `spec-compliance-first` を使ってください。
 リポジトリのファイルは編集しないでください。一時ファイルも作らず、CLIを起動・停止・認証確認・外部送信しないでください。オーケストレーターから渡された要約済みCLI結果だけを正規化してください。
-差分は `git merge-base <base> HEAD` で求めた実効base SHA を使って `git diff <effective-base>...HEAD` で取得し、標準入力で渡してください（三点差分に固定するため）。
-`claude -p` に渡すモデルは `.ai/runtime-compatibility.md` の「別モデルCLIレビューのモデル方針」に従い、必ず `--model` で明示してください（この TOML の `model` はラッパー自身の設定であり、nested review のモデルではありません）。
-`claude -p` には `--allowedTools` と `--disallowedTools` を必ず両方指定し、`--dangerously-skip-permissions` や出力ファイルは使わないでください。read-only Sandbox では書き込みができません。
-別モデルCLIはオーケストレーターが継続セッションで直接監視します。5分無出力でもrunning、10分で進捗通知、20分で一度だけtimeoutとし、timeoutはFinding台帳・レビュー境界を更新しません。
+CLI実行・認証・read-only・明示モデル・監視の契約は、オーケストレーターが `.ai/cross-model-reviewer-common.md` と `.ai/runtime-compatibility.md` に従って担います。実行指示を再解釈または実行しないでください。
+ブリーフの必須項目は `targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage` / `committedRange` です。verificationではFinding台帳、修正要約、修正コミット範囲も確認してください。
 """

@@ -25,6 +25,10 @@
 - `verification`: Finding台帳、修正要約、修正コミット範囲を必須ブリーフとする。internal verification が current HEAD を `approve` した場合だけ、別モデルCLI verification を直接実行する。
 - verification で current loop に追加できる新規Findingは、修正起因回帰、明確な受け入れ条件未達、重大なsecurity/data destructionだけである。独立改善は「別issue候補（範囲外）」または追加改善に残し、判定件数・修正対象に含めない。
 
+### 有効なverification経路
+
+レビュー済み境界を更新できる有効なverification経路は、current HEAD に対する internal と別モデルCLIの**両方**が正常に `approve` し、required Finding（must-fix / should-fix）が全件 `resolved` となった経路だけである。Findingが0件の場合、required Finding全件resolvedは真であり、両方の `approve` 後に境界を更新できる。`partial` / `unresolved` のrequired Finding、`request-changes`、timeout、失敗、未取得では境界を更新しない。
+
 ## Finding台帳
 
 オーケストレーターは `<scratchpad>/findings-<N>.md` に issue 固有の台帳を保持する。IDは `I<issue>-F<3桁連番>` とし、場所移動・重要度変更・出典追加で再採番しない。同一ファイル・行かつ実質同内容の指摘は1 IDへ統合し、全出典を保持する。
@@ -34,13 +38,13 @@
 | ID | 出典 | 重要度 | 場所 | 内容 | 期待解消状態 | 状態 | 修正コミット | 検証結果 |
 |---|---|---|---|---|---|---|---|---|
 
-修正担当には台帳を渡し、修正内容と修正コミットをFindingへ対応付ける。verification は各Findingを `resolved` / `partial` / `unresolved` で更新する。timeout、失敗、未取得の結果で台帳の状態・修正コミット・検証結果を更新してはならない。
+修正担当には台帳を渡し、修正内容と修正コミットをFindingへ対応付ける。verification は各Findingを `resolved` / `partial` / `unresolved` で更新する。required Findingに `partial` / `unresolved` が残る場合は `request-changes` として修正ループへ戻す。timeout、失敗、未取得の結果で台帳の状態・修正コミット・検証結果を更新してはならない。
 
 ## オーケストレーターの直接実行・監視契約
 
 外部送信の直前に、今回の `committed-diff`、`brief-context`、`repository-reads` を具体的に列挙した明示同意を確認する。`reviewMode: cross-model-cli`、`reviewerAgent`、`egressDestination`、`externalEgressApproved: true`、`approvedScope`、同意原文・時刻をレビュー用ブリーフへ記録する。差分だけの同意、過去の同意、スキル文書で代用してはならない。
 
-オーケストレーターは正しいCLIを継続セッションで直接起動し、明示モデル、read-only、Keychain wrapper、資格情報非保存を維持する。Codexホストは Claude CLI、Claude Codeホストは Codex CLIを使う。raw stdout / stderr はファイル・ブリーフ・scratchpadへ永続化せず、正規化に必要な機密を除いた要約だけを渡す。
+オーケストレーターは正しいCLIを継続セッションで直接起動し、明示モデル、read-only、Keychain wrapper、資格情報非保存を維持する。Codexホストは `.ai/scripts/run-claude-review.sh auth status` を確認後、Claude CLIを実行する。Claude Codeホストは `codex login status` を確認後、Codex CLIを実行する。raw stdout / stderr はファイル・ブリーフ・scratchpadへ永続化せず、正規化に必要な機密を除いた要約だけを渡す。
 
 - 生存中で無出力のプロセスは `running`。5分で停止しない。
 - 10分で進捗通知を行い、`running` のまま監視を継続する。
@@ -50,7 +54,7 @@
 
 ## 範囲と分割coverage
 
-レビュー用ブリーフには `targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage` / `committedRange` を必須とする。verification にはFinding台帳、修正要約、修正コミット範囲を追加する。不足・矛盾があれば推測で補完せず「判定: error」とする。
+レビュー用ブリーフには `targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage` / `committedRange` を必須とする。verification にはFinding台帳、修正要約、修正コミット範囲を追加する。不足・矛盾があれば推測で補完せず「判定: error」とする。レビュー対象はコミット済み差分だけに限定し、開始前に `git status --short` が空であること、`committedRange` が `git diff <base>...HEAD` と一致することを確認する。不一致・未コミット変更があればレビューを実行しない。
 
 累積discoveryが20分timeoutした場合だけ、commit/file集合を明示したchunkに分割できる。`cumulativeSplit` は各chunkの `coveredCommitShas` と `coveredFiles`、重複理由を含む。chunk unionが元の累積差分のcommit集合と変更ファイル集合を完全に覆うことを照合し、最後に `crossCuttingReview` を完了する。欠落、説明不能な重複、横断レビュー未実施は「判定: error」とし、coverage・境界を更新しない。
 
@@ -58,7 +62,7 @@
 
 各候補を `.ai/review-guidelines.md` に従って対象範囲内、今回差分が起こした範囲外機能の回帰、別issue候補（範囲外）、確認事項へ分類する。`spec-compliance-first` で design.md の該当章を照合し、CLI出力で扱われていない論点は自分の指摘として追加する。出典タグはCLI由来と正規化エージェントの追加分を区別する。
 
-- `approve`: 正常完了し、対象範囲内の must-fix / should-fix が0件。
+- `approve`: 正常完了し、対象範囲内の must-fix / should-fix が0件。verificationではrequired Findingが全件 `resolved` であることも必要。
 - `request-changes`: 正常完了し、対象範囲内の must-fix / should-fix が1件以上。
 - `timeout` / `error` / `auth-required` / `local-execution-required` / `rate-limited` / `external-egress-confirmation-required` / `wrong-host-agent`: 正常レビューではない。指摘ゼロを `approve` と読み替えない。
 

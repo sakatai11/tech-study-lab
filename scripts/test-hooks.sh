@@ -137,7 +137,7 @@ check_agent_contract "failure is never approval" 'レビューが正常完了し
 check_agent_contract "zero findings can be a valid approve" 'must-fix / should-fix が0件なら、それは正当な `approve` である' "$SKILL"
 check_agent_contract "common defines scoped approve rule" '対象範囲内の must-fix / should-fix が0件' "$COMMON"
 check_agent_contract "out-of-scope candidates do not block approve" '判定件数・修正対象に含めない' "$COMMON"
-check_agent_contract "confirmation items do not block approve" '対象範囲内の must-fix / should-fix が0件' "$COMMON"
+check_agent_contract "confirmation items do not block approve" '「別issue候補（範囲外）」または「確認事項」として報告し、当該 issue の修正ループと approve / request-changes の判定件数には含めないこと' "$SKILL"
 legacy_zero_finding_ban=$(printf '%s%s' 'レビューの失敗・未取得・指摘ゼロ' 'を approve として扱わない')
 check_absent_contract "no blanket ban on zero findings" "$legacy_zero_finding_ban" "$SKILL"
 # フォールバックの2件目 reviewer は既定が accuracy-first のため、明示しないと観点が揃う。
@@ -274,11 +274,10 @@ check_agent_contract "common outputs out-of-scope section" '### 別issue候補�
 check_agent_contract "common excludes out-of-scope candidates from verdict" '判定件数・修正対象に含めない' "$COMMON"
 check_agent_contract "internal reviewer validates scope brief" '`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage` / `committedRange`' .ai/agents/reviewer.md
 check_agent_contract "internal reviewer outputs out-of-scope section" '### 別issue候補（範囲外）' .ai/agents/reviewer.md
-check_agent_contract "claude prompt includes scope classification" '範囲外の妥当な問題を「別issue候補（範囲外）」へ' .ai/agents/claude-reviewer.md
-check_agent_contract "claude reads the full reviewer brief" '同じレビューブリーフファイルを `Read` で読み' .ai/agents/claude-reviewer.md
-check_agent_contract "claude validates the full consent record" '`reviewMode` / `reviewerAgent` / `egressDestination` / `externalEgressApproved` / `approvedScope` / 同意の原文・時刻' .ai/agents/claude-reviewer.md
-check_agent_contract "codex wrapper validates scope brief" '`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `committedRange`' .ai/agents/codex-reviewer.md
-check_agent_contract "codex TOML validates scope brief" '`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `committedRange`' .codex/agents/codex-reviewer.toml
+check_agent_contract "claude normalizer validates staged scope brief" '`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage` / `committedRange`' .ai/agents/claude-reviewer.md
+check_agent_contract "codex normalizer validates staged scope brief" '`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage` / `committedRange`' .ai/agents/codex-reviewer.md
+check_agent_contract "claude TOML validates staged scope brief" '`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage` / `committedRange`' .codex/agents/claude-reviewer.toml
+check_agent_contract "codex TOML validates staged scope brief" '`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage` / `committedRange`' .codex/agents/codex-reviewer.toml
 
 # ---- 不変条件: レビュアー側の安全則 ----
 check_agent_contract "common rejects diff-only consent" '差分だけの同意、過去の同意、スキル文書で代用してはならない' "$COMMON"
@@ -290,39 +289,20 @@ check_agent_contract "common preserves failed CLI results" '認証・通信・�
 check_agent_contract "common requires direct CLI execution" 'オーケストレーターは正しいCLIを継続セッションで直接起動し' "$COMMON"
 check_agent_contract "common keeps consent before CLI execution" '外部送信の直前に' "$COMMON"
 check_agent_contract "common assigns CLI responsibility to orchestrator" 'CLI 実行と継続監視はオーケストレーターの責務' "$COMMON"
-check_agent_contract "codex auth is not literal-match based" 'この文言の一致に依存せず' .ai/agents/codex-reviewer.md
-check_agent_contract "claude committed-only review" 'private なコミット済み差分' .ai/agents/claude-reviewer.md
-check_agent_contract "codex leaves no output file" '`-o` / 出力ファイルを使わない' .ai/agents/codex-reviewer.md
-check_agent_contract "claude derives three-dot range" 'git merge-base <base> HEAD' .ai/agents/claude-reviewer.md
-check_agent_contract "common records both bases" '論理base / 実効base' "$COMMON"
-check_agent_contract "codex passes effective base" '<effective-base>' .ai/agents/codex-reviewer.md
-check_agent_contract "codex brief read pins UTF-8" 'read_text(encoding="utf-8")' .ai/agents/codex-reviewer.md
-check_agent_contract "codex stops on brief decode failure" 'UTF-8 デコードに失敗した場合はレビューを実行せず' .ai/agents/codex-reviewer.md
-check_agent_contract "claude passes effective base" '<effective-base>' .ai/agents/claude-reviewer.md
-check_agent_contract "codex read-only sandbox" 'sandbox_mode="read-only"' .ai/agents/codex-reviewer.md
-check_agent_contract "codex rejects prompt arg" '位置引数の `PROMPT`（`-` による stdin 入力を含む）は渡さない' .ai/agents/codex-reviewer.md
-check_agent_contract "claude restricts tools" '`--allowedTools` と `--disallowedTools` を必ず両方指定する' .ai/agents/claude-reviewer.md
-check_agent_contract "codex host guard" '**Codex ホストで使ってはならない**' .ai/agents/codex-reviewer.md
-check_agent_contract "claude host guard" '**Claude Code ホストで使ってはならない**' .ai/agents/claude-reviewer.md
-check_agent_contract "claude reviewer normalizes execution output" '受け取った要約済み結果を正規化し' .ai/agents/claude-reviewer.md
-check_agent_contract "claude reviewer uses independent opus command" '`claude -p --model opus`' .ai/agents/claude-reviewer.md
-check_agent_contract "claude credentials remain unexposed" '資格情報・トークン・認証キャッシュを読み取り、コピーし、またはブリーフ・コマンド・ログに埋め込んではならない' .ai/agents/claude-reviewer.md
-check_agent_contract "claude uses host-stored credentials without exposing them" '資格情報・トークン・認証キャッシュを読み取り、コピーし、またはブリーフ・コマンド・ログに埋め込んではならない' .ai/agents/claude-reviewer.md
-check_agent_contract "claude normalizer does not authenticate" 'CLI を起動、停止、認証確認、または外部送信しない' .ai/agents/claude-reviewer.md
-check_agent_contract "auth failures are never approvals" '`auth-required`' "$COMMON"
-check_agent_contract "communication failures are never approvals" '認証・通信・同意不足・実行失敗も、正常レビューの代わりに扱わず' "$COMMON"
-check_agent_contract "claude direct execution stays orchestrator-owned" 'オーケストレーターが直接' .ai/agents/claude-reviewer.md
-check_agent_contract "claude wrapper remains mandatory" '.ai/scripts/run-claude-review.sh' .ai/agents/claude-reviewer.md
-check_agent_contract "execution errors remain non-approvals" '`error`' "$COMMON"
-check_agent_contract "local execution requirement remains non-approval" '`local-execution-required`' "$COMMON"
-check_agent_contract "claude does not send private diff before consent" '不足時はレビューコマンドを実行しない' .ai/agents/claude-reviewer.md
-check_agent_contract "claude authentication uses Keychain wrapper" '.ai/scripts/run-claude-review.sh' .ai/agents/claude-reviewer.md
-check_agent_contract "claude review uses Keychain wrapper" 'git diff <effective-base>...HEAD | .ai/scripts/run-claude-review.sh -p' .ai/agents/claude-reviewer.md
+check_agent_contract "common requires a clean committed review range" 'レビュー対象はコミット済み差分だけに限定し' "$COMMON"
+check_agent_contract "common validates clean working tree" '`git status --short` が空' "$COMMON"
+check_agent_contract "common validates committed range" '`committedRange` が `git diff <base>...HEAD` と一致' "$COMMON"
+check_agent_contract "claude host guard" '**Codexホストだけ**' .ai/agents/claude-reviewer.md
+check_agent_contract "codex host guard" '**Claude Codeホストだけ**' .ai/agents/codex-reviewer.md
+check_agent_contract "claude normalizer only handles summaries" 'CLI を起動・停止・認証確認・外部送信せず' .ai/agents/claude-reviewer.md
+check_agent_contract "codex normalizer only handles summaries" 'CLI を起動・停止・認証確認・外部送信せず' .ai/agents/codex-reviewer.md
+check_agent_contract "claude execution remains orchestrator-owned" 'オーケストレーターが `.ai/scripts/run-claude-review.sh` 経由で直接実行' .ai/agents/claude-reviewer.md
+check_agent_contract "codex auth is explicitly orchestrator-owned" 'オーケストレーターが直接 `codex login status` を確認した後' .ai/agents/codex-reviewer.md
+check_absent_contract "claude normalizer has no CLI execution command" 'git diff <effective-base>...HEAD |' .ai/agents/claude-reviewer.md
+check_absent_contract "codex normalizer has no CLI execution command" 'codex exec review --base' .ai/agents/codex-reviewer.md
 check_agent_contract "Claude review wrapper loads Keychain secret" '. "$script_dir/load-secrets.sh"' .ai/scripts/run-claude-review.sh
 check_agent_contract "Claude review wrapper forwards arguments without interpolation" 'exec claude "$@"' .ai/scripts/run-claude-review.sh
 check_agent_contract "runtime requires Claude review wrapper" '`.ai/scripts/run-claude-review.sh` を使う' "$RUNTIME"
-check_absent_contract "common does not duplicate Claude OAuth classification" 'OAuth 認証情報が expired または revoked' "$COMMON"
-check_absent_contract "common does not classify preflight as auth required" 'Sandbox 外でも未認証なら、レビューを実行せず「判定: auth-required」を返す' "$COMMON"
 
 # ---- モデル方針（実地検証で確定した事実） ----
 check_agent_contract "model policy section exists" '## 別モデルCLIレビューのモデル方針' "$RUNTIME"
@@ -334,20 +314,18 @@ check_agent_contract "codex nested model" '`-m gpt-5.6-sol`' "$RUNTIME"
 check_agent_contract "claude nested model" '`--model opus`' "$RUNTIME"
 check_agent_contract "host to reviewer mapping" '| Claude Code | `codex-reviewer` |' "$RUNTIME"
 check_agent_contract "codex host uses claude reviewer" '| Codex（App / CLI） | `claude-reviewer` |' "$RUNTIME"
-check_agent_contract "codex toml pins variant" '`-m gpt-5.6-sol`' .codex/agents/codex-reviewer.toml
-check_agent_contract "codex toml pins sandbox" 'sandbox_mode="read-only"' .codex/agents/codex-reviewer.toml
 check_agent_contract "codex toml effort" 'model_reasoning_effort = "high"' .codex/agents/codex-reviewer.toml
 check_agent_contract "claude toml effort" 'model_reasoning_effort = "high"' .codex/agents/claude-reviewer.toml
 check_agent_contract "communication is not authentication" '通信失敗を未認証と報告しない' "$RUNTIME"
 
 # ---- エージェント起動フェーズの整合 ----
-check_agent_contract "codex reviewer host scope" 'ホストランタイムが Claude Code のときだけ' .ai/agents/codex-reviewer.md
-check_agent_contract "claude reviewer host scope" 'ホストランタイムが Codex のときだけ' .ai/agents/claude-reviewer.md
+check_agent_contract "codex reviewer host scope" '**Claude Codeホストだけ**' .ai/agents/codex-reviewer.md
+check_agent_contract "claude reviewer host scope" '**Codexホストだけ**' .ai/agents/claude-reviewer.md
 check_agent_contract "reviewer runs in phase 5" 'issue-dev-orchestrate のレビュー段階で使用する' .ai/agents/reviewer.md
 check_agent_contract "test fixer runs in phases 4 and 6" 'issue-dev-orchestrate のフェーズ4・6（品質ゲート）で使用する' .ai/agents/test-fixer.md
 check_agent_contract "reviewer committed range" '`git diff develop...HEAD`' .ai/agents/reviewer.md
 
- # ---- Issue #124: discovery / verification state-machine contracts ----
+# ---- Issue #124: discovery / verification state-machine contracts ----
 check_agent_contract "discovery is explicit" '`reviewStage: discovery`' "$SKILL"
 check_agent_contract "discovery reads cumulative diff" '`develop...HEAD` の**全累積差分**' "$SKILL"
 check_agent_contract "finding ID format" '`I<issue>-F<3桁連番>`' "$SKILL"
@@ -368,10 +346,12 @@ check_agent_contract "common retains all egress scopes" '`committed-diff`、`bri
 check_agent_contract "common remains read-only" 'read-only' "$COMMON"
 check_agent_contract "runtime assigns direct monitoring" 'オーケストレーターが直接担う' "$RUNTIME"
 check_agent_contract "reviewer reports verification outcomes" '`resolved` / `partial` / `unresolved`' .ai/agents/reviewer.md
-check_agent_contract "claude reviewer only normalizes CLI result" 'CLI を起動、停止、認証確認、または外部送信しない' .ai/agents/claude-reviewer.md
-check_agent_contract "codex reviewer only normalizes CLI result" 'CLI を起動、停止、認証確認、または外部送信しない' .ai/agents/codex-reviewer.md
+check_agent_contract "required findings must resolve before approval" 'required Finding（must-fix / should-fix）が全件 `resolved`' "$COMMON"
+check_agent_contract "zero findings can complete the verification path" 'Findingが0件の場合、required Finding全件resolvedは真' "$COMMON"
+check_agent_contract "boundary requires both reviews" 'internal と別モデルCLIの**両方**が正常に `approve`' "$COMMON"
+check_agent_contract "claude reviewer only normalizes CLI result" 'CLI を起動・停止・認証確認・外部送信せず' .ai/agents/claude-reviewer.md
+check_agent_contract "codex reviewer only normalizes CLI result" 'CLI を起動・停止・認証確認・外部送信せず' .ai/agents/codex-reviewer.md
 check_agent_contract "claude wrapper remains required" '.ai/scripts/run-claude-review.sh' .ai/agents/claude-reviewer.md
-check_agent_contract "codex model remains explicit" '-m <model>' .ai/agents/codex-reviewer.md
 node scripts/test-review-state-machine.mjs
 
 printf '%s\n' "Agent contract checks passed!"

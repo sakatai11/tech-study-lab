@@ -15,7 +15,7 @@ GitHub issue に登録された仕様を、**レビュー済み・品質ゲー�
 完了条件は次の4つ、ならびにスパイクまたはフェーズ分割を伴う作業では5つ目の条件が満たされた状態である。
 
 - 未コミット変更がない
-- `develop..HEAD` のすべてのコミットが、有効なレビュー経路による実レビューを通過している
+- `develop..HEAD` のすべてのコミットが、current HEADに対するinternal・別モデルCLIの両方のverification `approve` と、required Finding全件 `resolved` から成る有効なverification経路を通過している（Findingが0件でも両approve後に成立する）
 - 最新のローカル品質ゲート（typecheck / lint / test）が通過し、PR CI の品質ゲート（typecheck / lint / test / build）も通過している
 - `develop` 向けPRが作成され、そのURLをユーザーへ報告している
 - スパイクまたはフェーズ分割を伴う作業では、明示された関連Issue・撤回／置換PRの状態照合が完了し、現在Issueと明示的に関連するphase Issueに追跡可能な記録がある
@@ -75,7 +75,7 @@ verification のブリーフには、issue固有の Finding台帳、修正要約
 
 ## 背景
 
-- **なぜレビュー境界を記録するか**: 修正周回のたびに全差分を再レビューすると冗長になり、逆に範囲を推測すると未レビューのコミットが素通りする。前回レビュー済みHEADを記録し、その先の増分だけを確実にレビューするための仕組みである。
+- **なぜdiscoveryとverificationを分けるか**: discoveryは `develop...HEAD` の累積差分からFindingを漏れなく集め、verificationは台帳に対応付けた修正範囲で解消状態を確認する。初回発見と修正確認を混ぜず、未解消Findingや未レビューのHEADを境界更新しないためである。
 - **なぜオーケストレーターだけがコミットするか**: 実装者と品質修正者がそれぞれコミットすると、レビュー境界とコミット境界がずれ、増分レビューの前提が崩れる。
 - **なぜ別モデルのレビュアーを併用するか**: `reviewer` はホストランタイムと同じモデルで動くため、ホストが見落とした種類の誤りは同じように見落としやすい。別モデルレビュアーはホストと異なる提供元のモデルで、かつ仕様準拠を最優先の観点として差分を読むため、`reviewer`（正確性を最優先）と補完関係になる。
 - **なぜホストでレビュアーを切り替えるか**: チームにはホストランタイムが Claude Code の人と Codex の人がいる。使用エージェントを固定すると、片方のホストではレビュアーがホストと同系統のモデルになり「独立した第二の目」が成立しない。
@@ -166,7 +166,7 @@ Claude Code は `subagent_type`、Codex は `.codex/agents/<name>.toml` のカ�
 - discovery では internal reviewer と別モデルCLIを並列に開始してよい。CLIのモデル、read-only、Keychain wrapper、外部送信同意、認証確認は `.ai/cross-model-reviewer-common.md` と各エージェント定義に従う。
 - 生存中の無出力は `running` とする。5分で停止しない。10分で進捗通知し、20分で一度だけ終了して `timeout` とする。raw stdout/stderrを永続化しない。timeout、失敗、未取得はFinding状態とレビュー境界を更新しない。
 - **レビュープロファイルを必ず分ける**（定義は `.ai/review-guidelines.md`）。`reviewer` に `accuracy-first`、別モデルレビュアーに `spec-compliance-first`。同じ優先順で読ませると同じ見落とし方をする。
-- ブリーフには、**レビュアーが同意の網羅性とレビュー範囲の正しさを自力で検証できるだけの情報**を渡す。上記レビュー用ブリーフ契約の `targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `committedRange` を internal reviewer と別モデルレビュアーの両方へ同じ内容で渡す。不足したままレビューを開始しない。
+- ブリーフには、**レビュアーが同意の網羅性とレビュー範囲の正しさを自力で検証できるだけの情報**を渡す。上記レビュー用ブリーフ契約の `targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage` / `committedRange` を internal reviewer と別モデルレビュアーの両方へ同じ内容で渡す。不足したままレビューを開始しない。
 - `wrong-host-agent` はホストと送信先の対応を再照合して正しいCLIを選び直す。`external-egress-confirmation-required` は不足した対象を具体的に報告し、同意を取得・記録するまでCLIを再実行しない。timeout、認証・通信・実行エラーは、第二のinternal reviewerを代替レビューとして起動せず、レビュー未取得として停止・報告する。
 
 ### CodeRabbit App（補助・任意）
@@ -192,7 +192,7 @@ Claude Code は `subagent_type`、Codex は `.codex/agents/<name>.toml` のカ�
 
 ### レビュー境界の記録
 
-discovery は発見段階であり、レビュー済み境界を更新しない。`last-reviewed-head-<N>.txt` を更新できるのは、後続のverificationで internal と別モデルCLIがともに正常完了し、必要なFindingが `resolved` となったcurrent HEADだけである。別モデルCLIがtimeout・失敗・未取得の場合、2件目internal reviewerを実レビューの代替や境界更新の根拠にしない。
+discovery は発見段階であり、レビュー済み境界を更新しない。`last-reviewed-head-<N>.txt` を更新できるのは、後続のverificationで internal と別モデルCLIがともに `approve` し、required Finding（must-fix / should-fix）が全件 `resolved` となったcurrent HEADだけである。Findingが0件では両approve後に更新できる。`partial` / `unresolved`、`request-changes`、別モデルCLIのtimeout・失敗・未取得では更新しない。第二のinternal reviewerを実レビューの代替や境界更新の根拠にしない。
 
 ## フェーズ6: 修正・品質ゲート・verification
 

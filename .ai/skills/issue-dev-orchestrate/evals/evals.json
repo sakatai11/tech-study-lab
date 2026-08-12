@@ -19,7 +19,7 @@
       "無出力でも5分はrunning、10分で通知、20分で一度だけtimeoutし、timeoutはFinding・境界を更新しない",
       "20分timeout後のchunk分割はcommit/fileのunion coverageとcross-cutting reviewを必須とする"
     ],
-    "test": "node scripts/test-review-state-machine.mjs && sh scripts/test-hooks.sh"
+    "test": "sh scripts/test-hooks.sh"
   },
   "run": {
     "date": "2026-07-06",

@@ -22,7 +22,7 @@ tools: Bash, Read, Grep, Glob
 2. 差分を取得する。`discovery` は必ず `git diff develop...HEAD` の全累積差分を読む。`verification` は Finding台帳に対応付けられた修正コミット範囲を読み、各Findingを `resolved` / `partial` / `unresolved` で判定する。verification で current loop に追加できる新規Findingは、修正起因回帰、明確な受け入れ条件未達、重大なsecurity/data destructionだけである。独立改善は別issue候補または追加改善として分離する。未コミット変更が残っていないことを `git status --short` で確認する。指定された stage / range が不明・空・未コミット変更ありの場合は、推測で別の差分へ切り替えずオーケストレーターに報告する。
 3. 変更ファイルの**周辺コードも読む**（diff だけで判断しない）。呼び出し元・型定義・既存テストを確認する。外側を読むこと自体でレビュー範囲を広げない。
 4. 各候補を `.ai/review-guidelines.md`「レビュー範囲」に従って対象範囲内 / 今回差分が起こした範囲外機能の回帰 / 別issue候補（範囲外） / 確認事項へ分類する。
-5. 対象範囲内と今回差分が起こした回帰だけを、割り当てられたプロファイルの優先順で `.ai/review-guidelines.md`「レビュー観点」の5項目に照らし、must-fix / should-fix / nit へ分類する。discovery の重複指摘は同一ファイル・行かつ実質同内容の場合だけ台帳の同一Findingへ出典を追加する。
+5. 対象範囲内と今回差分が起こした回帰だけを、割り当てられたプロファイルの優先順で `.ai/review-guidelines.md`「レビュー観点」の5項目に照らし、must-fix / should-fix / nit へ分類する。discovery の重複指摘は同一ファイル・行かつ実質同内容の場合だけ台帳の同一Findingへ出典を追加する。verification では required Finding（must-fix / should-fix）が全件 `resolved` でなければ `approve` にせず `request-changes` とし、`partial` / `unresolved` を修正ループへ戻す。
 
 推測ベースの指摘はしない。確認できなかった懸念は「確認事項」として分けて書く。指摘ゼロなら堂々とゼロと報告する（水増ししない）。
 
