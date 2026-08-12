@@ -51,13 +51,13 @@
       "id": "fallback-route-independent-boundary",
       "fixture": "Current HEAD has internal approve; spec boundary is absent, valid, or non-ancestor; external boundary may be present or absent.",
       "action": "Select the fallback stage and range.",
-      "expected": "Use fallback-cumulative develop...HEAD without a spec boundary, fallback-incremental specBoundary...HEAD with any valid spec route, and error for a non-ancestor or unresolved spec boundary. Never use the external boundary to select or update fallback coverage."
+      "expected": "Use fallback-cumulative develop...HEAD only without a spec boundary, require fallback-incremental specBoundary...HEAD with any valid spec route, and return error for a valid spec boundary paired with a cumulative brief or for a non-ancestor/unresolved spec boundary. Never use the external boundary to select or update fallback coverage."
     },
     {
       "id": "reviewer-fallback-stage-range-validation",
       "fixture": "The fallback reviewer receives reviewStage, committedRange, internal/external boundaries, and an optional spec boundary.",
       "action": "Validate the reviewer's stage-specific range before reading the diff.",
-      "expected": "Use internal-initial-cumulative/develop...HEAD, internal-incremental/internalBoundary...HEAD, fallback-cumulative/develop...HEAD, and fallback-incremental/last-spec-review-head...HEAD. Reject an invalid, non-ancestor, empty, or brief-mismatched fallback incremental range without substituting an internal or external boundary."
+      "expected": "Use internal-initial-cumulative/develop...HEAD, internal-incremental/internalBoundary...HEAD, fallback-cumulative/develop...HEAD only without last-spec-review-head, and fallback-incremental/last-spec-review-head...HEAD otherwise. Reject an invalid, non-ancestor, empty, brief-mismatched, or valid-spec-boundary-plus-cumulative fallback range without substituting an internal or external boundary."
     },
     {
       "id": "silent-live-cli-wait-policy",

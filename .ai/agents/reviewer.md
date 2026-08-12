@@ -22,10 +22,10 @@ tools: Bash, Read, Grep, Glob
 2. 差分を取得する。オーケストレーターがブリーフで指定した `reviewStage` と `committedRange` を使い、次の規則以外のstageは「判定: error」とする。
    - `internal-initial-cumulative`: `git diff develop...HEAD`。
    - `internal-incremental`: 解決可能でcurrent HEADの祖先である `last-internal-reviewed-head...HEAD`。
-   - `fallback-cumulative`: `git diff develop...HEAD`。
+   - `fallback-cumulative`: `last-spec-review-head` が存在しない場合だけ `git diff develop...HEAD`。
    - `fallback-incremental`: 解決可能でcurrent HEADの祖先である `last-spec-review-head...HEAD`。ブリーフの `committedRange` と一致することを確認する。
 
-   fallback のrange選択に internal / external boundary を使わない。`fallback-incremental` のspec boundaryが不正・祖先でない・空、またはブリーフrangeと不一致なら、推測で別の差分へ切り替えず「判定: error」とする。current HEAD に対する internal reviewer の `approve` が確認できるまで、外部または fallback の仕様準拠レビューへ進ませない。未コミット変更が残っていないことを `git status --short` で確認する。指定された range が不明・空・未コミット変更ありの場合は、推測で別の差分へ切り替えずオーケストレーターに報告する。
+   fallback のrange選択に internal / external boundary を使わない。有効な `last-spec-review-head` が存在するのにブリーフが `fallback-cumulative` を指定した場合は「判定: error」とし、cumulativeへ降格しない。`fallback-incremental` のspec boundaryが不正・祖先でない・空、またはブリーフrangeと不一致なら、推測で別の差分へ切り替えず「判定: error」とする。current HEAD に対する internal reviewer の `approve` が確認できるまで、外部または fallback の仕様準拠レビューへ進ませない。未コミット変更が残っていないことを `git status --short` で確認する。指定された range が不明・空・未コミット変更ありの場合は、推測で別の差分へ切り替えずオーケストレーターに報告する。
 3. 変更ファイルの**周辺コードも読む**（diff だけで判断しない）。呼び出し元・型定義・既存テストを確認する。外側を読むこと自体でレビュー範囲を広げない。
 4. 各候補を `.ai/review-guidelines.md`「レビュー範囲」に従って対象範囲内 / 今回差分が起こした範囲外機能の回帰 / 別issue候補（範囲外） / 確認事項へ分類する。
 5. 対象範囲内と今回差分が起こした回帰だけを、割り当てられたプロファイルの優先順で `.ai/review-guidelines.md`「レビュー観点」の5項目に照らし、must-fix / should-fix / nit へ分類する。

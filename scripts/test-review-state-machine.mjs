@@ -238,6 +238,21 @@ const cases = [
     expected: { range: 'develop...initial-head', stage: 'fallback-cumulative' },
   },
   {
+    name: 'reviewer rejects fallback cumulative when a valid spec boundary exists',
+    run: () =>
+      validateReviewerStage(
+        {
+          ...baseState,
+          head: 'fixed-head',
+          internalBoundary: 'fixed-head',
+          internalResult: 'approve',
+          specBoundary: 'initial-head',
+        },
+        { committedRange: 'develop...fixed-head', reviewStage: 'fallback-cumulative' },
+      ),
+    error: 'review stage does not match boundary state',
+  },
+  {
     name: 'fallback is incremental from its spec boundary regardless of route or external boundary',
     run: () =>
       selectFallback({

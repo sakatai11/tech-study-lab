@@ -135,8 +135,9 @@ jq -e '
   and any(.[]; .id == "cumulative-split-union-coverage" and (.expected | contains("cross-cutting review")))
   and any(.[]; .id == "cumulative-split-union-coverage" and (.expected | contains("do not update the external boundary")))
   and any(.[]; .id == "review-state-machine-transition-table" and (.action | contains("test-review-state-machine.mjs")))
+  and any(.[]; .id == "fallback-route-independent-boundary" and (.expected | contains("valid spec boundary paired with a cumulative brief")))
   and any(.[]; .id == "fallback-route-independent-boundary" and (.expected | contains("Never use the external boundary")))
-  and any(.[]; .id == "reviewer-fallback-stage-range-validation" and (.expected | contains("brief-mismatched fallback incremental range")))
+  and any(.[]; .id == "reviewer-fallback-stage-range-validation" and (.expected | contains("valid-spec-boundary-plus-cumulative fallback range")))
 ' "$EVALS" >/dev/null || {
   printf '%s\n' 'staged review eval contract is incomplete' >&2
   exit 1
@@ -409,10 +410,11 @@ check_agent_contract "reviewer records staged range" '`reviewStage`' .ai/agents/
 check_agent_contract "reviewer gates spec review on internal approval" 'current HEAD に対する internal reviewer の `approve` が確認できるまで' .ai/agents/reviewer.md
 check_agent_contract "reviewer serializes profiles after internal approval" 'internal `accuracy-first` が current HEAD を approve した後に、別モデルまたは fallback が `spec-compliance-first` を直列に実行する' .ai/agents/reviewer.md
 check_agent_contract "reviewer documents all review stages" '`internal-initial-cumulative`' .ai/agents/reviewer.md
-check_agent_contract "reviewer documents fallback cumulative range" '`fallback-cumulative`: `git diff develop...HEAD`' .ai/agents/reviewer.md
+check_agent_contract "reviewer documents fallback cumulative range" '`fallback-cumulative`: `last-spec-review-head` が存在しない場合だけ `git diff develop...HEAD`' .ai/agents/reviewer.md
 check_agent_contract "reviewer documents fallback incremental spec range" '`fallback-incremental`: 解決可能でcurrent HEADの祖先である `last-spec-review-head...HEAD`' .ai/agents/reviewer.md
 check_agent_contract "reviewer rejects invalid fallback range" 'spec boundaryが不正・祖先でない・空、またはブリーフrangeと不一致なら' .ai/agents/reviewer.md
 check_agent_contract "reviewer fallback ignores other boundaries" 'fallback のrange選択に internal / external boundary を使わない' .ai/agents/reviewer.md
+check_agent_contract "reviewer rejects cumulative with valid spec boundary" '有効な `last-spec-review-head` が存在するのにブリーフが `fallback-cumulative` を指定した場合は「判定: error」' .ai/agents/reviewer.md
 
 # ---- 段階的レビュー境界 ----
 check_agent_contract "internal boundary is distinct" 'last-internal-reviewed-head-<N>.txt' "$SKILL"
