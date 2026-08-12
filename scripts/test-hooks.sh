@@ -136,19 +136,19 @@ check_agent_contract "failure is never approval" 'レビューが正常完了し
 # 共通定義の approve 規則と矛盾する。禁止と正当な approve の区別が明記されていること。
 check_agent_contract "zero findings can be a valid approve" 'must-fix / should-fix が0件なら、それは正当な `approve` である' "$SKILL"
 check_agent_contract "common defines scoped approve rule" '対象範囲内の must-fix / should-fix が0件' "$COMMON"
-check_agent_contract "out-of-scope candidates do not block approve" '「別issue候補（範囲外）」のみ' "$COMMON"
-check_agent_contract "confirmation items do not block approve" '「別issue候補（範囲外）」と確認事項は、approve / request-changes の判定件数に含めない' "$COMMON"
+check_agent_contract "out-of-scope candidates do not block approve" '判定件数・修正対象に含めない' "$COMMON"
+check_agent_contract "confirmation items do not block approve" '対象範囲内の must-fix / should-fix が0件' "$COMMON"
 legacy_zero_finding_ban=$(printf '%s%s' 'レビューの失敗・未取得・指摘ゼロ' 'を approve として扱わない')
 check_absent_contract "no blanket ban on zero findings" "$legacy_zero_finding_ban" "$SKILL"
 # フォールバックの2件目 reviewer は既定が accuracy-first のため、明示しないと観点が揃う。
-check_agent_contract "fallback reviewer gets spec profile" '`reviewProfile: spec-compliance-first` をブリーフで明示する' "$SKILL"
-check_agent_contract "consent-blocked result does not enter fallback" '`external-egress-confirmation-required` を返した場合は**レビュー未取得fallbackへ進めない**' "$SKILL"
-check_agent_contract "consent-blocked result reports missing scope" '同意記録に不足している同意項目を具体的に報告し' "$SKILL"
-check_agent_contract "consent-blocked result requires fresh confirmation" '必要な外部送信の明示同意を取得・記録するまで、別モデルレビュアーの再実行も2件目の `reviewer` の起動も行わない' "$SKILL"
+check_agent_contract "fallback reviewer gets spec profile" '別モデルレビュアーに `spec-compliance-first`' "$SKILL"
+check_agent_contract "consent-blocked result does not enter fallback" '第二のinternal reviewerを代替レビューとして起動せず' "$SKILL"
+check_agent_contract "consent-blocked result reports missing scope" '不足した対象を具体的に報告し' "$SKILL"
+check_agent_contract "consent-blocked result requires fresh confirmation" '同意を取得・記録するまでCLIを再実行しない' "$SKILL"
 check_agent_contract "green check is not review" 'ステータスチェックが緑でも、レビュー済みの根拠にしない' "$SKILL"
 check_agent_contract "no guessing review range" 'レビュー範囲を推測で決めない' "$SKILL"
 check_agent_contract "no cherry-picking findings" 'オーケストレーターの判断で取捨選択しない' "$SKILL"
-check_agent_contract "reviewed head only after real review" '有効なレビュー経路の実レビューが正常完了したときだけ' "$SKILL"
+check_agent_contract "reviewed head only after real review" 'timeout、失敗、未取得はFinding状態とレビュー境界を更新しない' "$SKILL"
 check_agent_contract "profiles must differ" 'レビュープロファイルを必ず分ける' "$SKILL"
 check_agent_contract "orchestrator brief defines target feature" '`targetFeature`' "$SKILL"
 check_agent_contract "orchestrator brief defines in-scope files" '`inScopeFiles`' "$SKILL"
@@ -258,21 +258,21 @@ check_agent_contract "claude toml reads common" "$COMMON" .codex/agents/claude-r
 check_agent_contract "reviewer defers to guidelines" '`.ai/review-guidelines.md` が単一ソース' .ai/agents/reviewer.md
 check_agent_contract "reviewer default profile" '`accuracy-first`（正確性優先）' .ai/agents/reviewer.md
 check_agent_contract "common uses spec profile" '`spec-compliance-first`' "$COMMON"
-check_agent_contract "common validates scope brief" '`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `committedRange`' "$COMMON"
-consent_section=$(extract_section "$COMMON" '### 1. 外部送信同意の確認' '### 2. 認証確認') || {
+check_agent_contract "common validates scope brief" '`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage` / `committedRange`' "$COMMON"
+consent_section=$(extract_section "$COMMON" '## オーケストレーターの直接実行・監視契約' '## 範囲と分割coverage') || {
   printf '%s\n' 'failed to extract external egress consent contract' >&2
   exit 1
 }
-scope_validation_section=$(extract_section "$COMMON" '### 3. 範囲の検証と実効baseの決定' '### 4. レビュー実行') || {
+scope_validation_section=$(extract_section "$COMMON" '## 範囲と分割coverage' '## 正規化と判定') || {
   printf '%s\n' 'failed to extract review scope validation contract' >&2
   exit 1
 }
 check_section_absent_contract "missing scope fields are not consent failures" "$consent_section" 'レビュー範囲契約'
-check_section_contract "missing scope fields are brief errors" "$scope_validation_section" '「判定: error」として、不足項目を報告する'
+check_section_contract "missing scope fields are brief errors" "$scope_validation_section" '「判定: error」とする'
 check_section_contract "committed range is a brief field" "$scope_validation_section" '`committedRange`'
 check_agent_contract "common outputs out-of-scope section" '### 別issue候補（範囲外）' "$COMMON"
-check_agent_contract "common excludes out-of-scope candidates from verdict" 'approve / request-changes の判定件数に含めない' "$COMMON"
-check_agent_contract "internal reviewer validates scope brief" '`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `committedRange`' .ai/agents/reviewer.md
+check_agent_contract "common excludes out-of-scope candidates from verdict" '判定件数・修正対象に含めない' "$COMMON"
+check_agent_contract "internal reviewer validates scope brief" '`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage` / `committedRange`' .ai/agents/reviewer.md
 check_agent_contract "internal reviewer outputs out-of-scope section" '### 別issue候補（範囲外）' .ai/agents/reviewer.md
 check_agent_contract "claude prompt includes scope classification" '範囲外の妥当な問題を「別issue候補（範囲外）」へ' .ai/agents/claude-reviewer.md
 check_agent_contract "claude reads the full reviewer brief" '同じレビューブリーフファイルを `Read` で読み' .ai/agents/claude-reviewer.md
@@ -281,20 +281,20 @@ check_agent_contract "codex wrapper validates scope brief" '`targetFeature` / `i
 check_agent_contract "codex TOML validates scope brief" '`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `committedRange`' .codex/agents/codex-reviewer.toml
 
 # ---- 不変条件: レビュアー側の安全則 ----
-check_agent_contract "common rejects diff-only consent" '差分だけの同意で実行してはならない' "$COMMON"
+check_agent_contract "common rejects diff-only consent" '差分だけの同意、過去の同意、スキル文書で代用してはならない' "$COMMON"
 check_agent_contract "common verifies scope" 'approvedScope' "$COMMON"
 check_agent_contract "common verifies destination" 'egressDestination' "$COMMON"
 check_agent_contract "common rejects wrong host" 'wrong-host-agent' "$COMMON"
-check_agent_contract "common never approves on failure" '「指摘ゼロ＝approve」と誤って報告してはならない' "$COMMON"
-check_agent_contract "common delegates recognized CLI auth failures" '各 CLI のエージェント定義で認識された認証失敗' "$COMMON"
-check_agent_contract "common requires actual execution before CLI auth classification" '**実際のレビューコマンドが実行された後**' "$COMMON"
-check_agent_contract "common keeps consent before CLI auth classification" 'この分類のためにレビューコマンドを実行してはならない' "$COMMON"
-check_agent_contract "common defers auth classification to CLI contract" '各 CLI のエージェント定義に従う' "$COMMON"
-check_agent_contract "common auth not literal match" '未認証の判定を特定の文言の一致に依存しない' "$COMMON"
-check_agent_contract "common committed only" 'レビュー対象はコミット済み差分だけに限定する' "$COMMON"
-check_agent_contract "common no temp files" '一時ファイルも作らない' "$COMMON"
-check_agent_contract "common three-dot base" 'git merge-base <base> HEAD' "$COMMON"
-check_agent_contract "common records both bases" '論理base（ブランチ名）と実効base（SHA）' "$COMMON"
+check_agent_contract "common never approves on failure" '指摘ゼロを `approve` と読み替えない' "$COMMON"
+check_agent_contract "common preserves failed CLI results" '認証・通信・同意不足・実行失敗も、正常レビューの代わりに扱わず' "$COMMON"
+check_agent_contract "common requires direct CLI execution" 'オーケストレーターは正しいCLIを継続セッションで直接起動し' "$COMMON"
+check_agent_contract "common keeps consent before CLI execution" '外部送信の直前に' "$COMMON"
+check_agent_contract "common assigns CLI responsibility to orchestrator" 'CLI 実行と継続監視はオーケストレーターの責務' "$COMMON"
+check_agent_contract "codex auth is not literal-match based" 'この文言の一致に依存せず' .ai/agents/codex-reviewer.md
+check_agent_contract "claude committed-only review" 'private なコミット済み差分' .ai/agents/claude-reviewer.md
+check_agent_contract "codex leaves no output file" '`-o` / 出力ファイルを使わない' .ai/agents/codex-reviewer.md
+check_agent_contract "claude derives three-dot range" 'git merge-base <base> HEAD' .ai/agents/claude-reviewer.md
+check_agent_contract "common records both bases" '論理base / 実効base' "$COMMON"
 check_agent_contract "codex passes effective base" '<effective-base>' .ai/agents/codex-reviewer.md
 check_agent_contract "codex brief read pins UTF-8" 'read_text(encoding="utf-8")' .ai/agents/codex-reviewer.md
 check_agent_contract "codex stops on brief decode failure" 'UTF-8 デコードに失敗した場合はレビューを実行せず' .ai/agents/codex-reviewer.md
@@ -304,19 +304,19 @@ check_agent_contract "codex rejects prompt arg" '位置引数の `PROMPT`（`-` 
 check_agent_contract "claude restricts tools" '`--allowedTools` と `--disallowedTools` を必ず両方指定する' .ai/agents/claude-reviewer.md
 check_agent_contract "codex host guard" '**Codex ホストで使ってはならない**' .ai/agents/codex-reviewer.md
 check_agent_contract "claude host guard" '**Claude Code ホストで使ってはならない**' .ai/agents/claude-reviewer.md
-check_agent_contract "claude reviewer is execution and normalization wrapper" 'Claude CLI の実行と結果の正規化を担うラッパー' .ai/agents/claude-reviewer.md
+check_agent_contract "claude reviewer normalizes execution output" '受け取った要約済み結果を正規化し' .ai/agents/claude-reviewer.md
 check_agent_contract "claude reviewer uses independent opus command" '`claude -p --model opus`' .ai/agents/claude-reviewer.md
-check_agent_contract "claude uses host-stored credentials automatically" '認証情報を自動的に利用する' .ai/agents/claude-reviewer.md
+check_agent_contract "claude credentials remain unexposed" '資格情報・トークン・認証キャッシュを読み取り、コピーし、またはブリーフ・コマンド・ログに埋め込んではならない' .ai/agents/claude-reviewer.md
 check_agent_contract "claude uses host-stored credentials without exposing them" '資格情報・トークン・認証キャッシュを読み取り、コピーし、またはブリーフ・コマンド・ログに埋め込んではならない' .ai/agents/claude-reviewer.md
-check_agent_contract "claude auth status is preflight only" '`claude auth status` は preflight に限る' .ai/agents/claude-reviewer.md
-check_agent_contract "claude preflight does not decide auth required" 'preflight だけで `auth-required` と確定せず' .ai/agents/claude-reviewer.md
-check_agent_contract "claude execution proves authentication and communication" '実際の `claude -p` の正常完了だけを認証と通信が成功した最終的な証拠として扱う' .ai/agents/claude-reviewer.md
-check_agent_contract "claude recognized expired or revoked OAuth maps to auth required" 'HTTP `401` と、OAuth 認証情報が expired または revoked である意味が明確に含まれる場合だけ、「判定: auth-required」' .ai/agents/claude-reviewer.md
-check_agent_contract "claude auth remediation is explicit" '`claude auth login` を案内する' .ai/agents/claude-reviewer.md
-check_agent_contract "claude ambiguous 401 remains error" '文脈が曖昧な一般的な `401` は `auth-required` にせず' .ai/agents/claude-reviewer.md
-check_agent_contract "claude local execution requires unavailable outside sandbox confirmation" 'その必要な確認を実行できない、または承認されなかった場合だけ「判定: local-execution-required」' .ai/agents/claude-reviewer.md
+check_agent_contract "claude normalizer does not authenticate" 'CLI を起動、停止、認証確認、または外部送信しない' .ai/agents/claude-reviewer.md
+check_agent_contract "auth failures are never approvals" '`auth-required`' "$COMMON"
+check_agent_contract "communication failures are never approvals" '認証・通信・同意不足・実行失敗も、正常レビューの代わりに扱わず' "$COMMON"
+check_agent_contract "claude direct execution stays orchestrator-owned" 'オーケストレーターが直接' .ai/agents/claude-reviewer.md
+check_agent_contract "claude wrapper remains mandatory" '.ai/scripts/run-claude-review.sh' .ai/agents/claude-reviewer.md
+check_agent_contract "execution errors remain non-approvals" '`error`' "$COMMON"
+check_agent_contract "local execution requirement remains non-approval" '`local-execution-required`' "$COMMON"
 check_agent_contract "claude does not send private diff before consent" '不足時はレビューコマンドを実行しない' .ai/agents/claude-reviewer.md
-check_agent_contract "claude auth uses Keychain wrapper" '.ai/scripts/run-claude-review.sh auth status' .ai/agents/claude-reviewer.md
+check_agent_contract "claude authentication uses Keychain wrapper" '.ai/scripts/run-claude-review.sh' .ai/agents/claude-reviewer.md
 check_agent_contract "claude review uses Keychain wrapper" 'git diff <effective-base>...HEAD | .ai/scripts/run-claude-review.sh -p' .ai/agents/claude-reviewer.md
 check_agent_contract "Claude review wrapper loads Keychain secret" '. "$script_dir/load-secrets.sh"' .ai/scripts/run-claude-review.sh
 check_agent_contract "Claude review wrapper forwards arguments without interpolation" 'exec claude "$@"' .ai/scripts/run-claude-review.sh
@@ -341,10 +341,37 @@ check_agent_contract "claude toml effort" 'model_reasoning_effort = "high"' .cod
 check_agent_contract "communication is not authentication" '通信失敗を未認証と報告しない' "$RUNTIME"
 
 # ---- エージェント起動フェーズの整合 ----
-check_agent_contract "codex reviewer host scope" 'ホストランタイムが Claude Code の時だけ' .ai/agents/codex-reviewer.md
-check_agent_contract "claude reviewer host scope" 'ホストランタイムが Codex の時だけ' .ai/agents/claude-reviewer.md
-check_agent_contract "reviewer runs in phase 5" 'issue-dev-orchestrate のフェーズ5（レビュー）で使用する' .ai/agents/reviewer.md
+check_agent_contract "codex reviewer host scope" 'ホストランタイムが Claude Code のときだけ' .ai/agents/codex-reviewer.md
+check_agent_contract "claude reviewer host scope" 'ホストランタイムが Codex のときだけ' .ai/agents/claude-reviewer.md
+check_agent_contract "reviewer runs in phase 5" 'issue-dev-orchestrate のレビュー段階で使用する' .ai/agents/reviewer.md
 check_agent_contract "test fixer runs in phases 4 and 6" 'issue-dev-orchestrate のフェーズ4・6（品質ゲート）で使用する' .ai/agents/test-fixer.md
-check_agent_contract "reviewer committed range" '`git diff <previous-reviewed-head>...HEAD`' .ai/agents/reviewer.md
+check_agent_contract "reviewer committed range" '`git diff develop...HEAD`' .ai/agents/reviewer.md
+
+ # ---- Issue #124: discovery / verification state-machine contracts ----
+check_agent_contract "discovery is explicit" '`reviewStage: discovery`' "$SKILL"
+check_agent_contract "discovery reads cumulative diff" '`develop...HEAD` の**全累積差分**' "$SKILL"
+check_agent_contract "finding ID format" '`I<issue>-F<3桁連番>`' "$SKILL"
+check_agent_contract "finding metadata" '期待解消状態、状態、修正コミット、検証結果' "$SKILL"
+check_agent_contract "duplicate findings merge" '同一 `ファイル:行` かつ指摘内容が実質的に同じ場合' "$SKILL"
+check_agent_contract "verification brief requirement" 'Finding台帳、修正要約、修正コミット範囲を必須ブリーフ' "$SKILL"
+check_agent_contract "verification internal first" 'current HEAD が approve の場合だけ' "$SKILL"
+check_agent_contract "verification permitted new finding classes" '修正起因回帰、明確な受け入れ条件未達、重大なsecurity/data destruction' "$SKILL"
+check_agent_contract "orchestrator directly monitors CLI" '別モデルCLIはサブエージェントから起動しない' "$SKILL"
+check_agent_contract "five minutes remains running" '5分で停止しない' "$SKILL"
+check_agent_contract "ten-minute progress notification" '10分で進捗通知' "$SKILL"
+check_agent_contract "twenty-minute single timeout" '20分で一度だけ終了して `timeout`' "$SKILL"
+check_agent_contract "timeout preserves review state" 'timeout、失敗、未取得はFinding状態とレビュー境界を更新しない' "$SKILL"
+check_agent_contract "chunk union coverage" 'coveredCommitShas` と `coveredFiles` のunionが元差分を完全に覆い' "$SKILL"
+check_agent_contract "cross-cutting review required" '`crossCuttingReview` が完了' "$SKILL"
+check_agent_contract "common avoids raw-output persistence" 'raw stdout / stderr はファイル・ブリーフ・scratchpadへ永続化せず' "$COMMON"
+check_agent_contract "common retains all egress scopes" '`committed-diff`、`brief-context`、`repository-reads`' "$COMMON"
+check_agent_contract "common remains read-only" 'read-only' "$COMMON"
+check_agent_contract "runtime assigns direct monitoring" 'オーケストレーターが直接担う' "$RUNTIME"
+check_agent_contract "reviewer reports verification outcomes" '`resolved` / `partial` / `unresolved`' .ai/agents/reviewer.md
+check_agent_contract "claude reviewer only normalizes CLI result" 'CLI を起動、停止、認証確認、または外部送信しない' .ai/agents/claude-reviewer.md
+check_agent_contract "codex reviewer only normalizes CLI result" 'CLI を起動、停止、認証確認、または外部送信しない' .ai/agents/codex-reviewer.md
+check_agent_contract "claude wrapper remains required" '.ai/scripts/run-claude-review.sh' .ai/agents/claude-reviewer.md
+check_agent_contract "codex model remains explicit" '-m <model>' .ai/agents/codex-reviewer.md
+node scripts/test-review-state-machine.mjs
 
 printf '%s\n' "Agent contract checks passed!"

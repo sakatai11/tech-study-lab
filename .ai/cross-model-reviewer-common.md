@@ -1,153 +1,89 @@
 # 別モデルCLIレビュアー共通定義
 
-`codex-reviewer` と `claude-reviewer` が共有する役割・制約・手順・出力形式の**単一ソース**。各エージェント定義は本書を全文読んだうえで、**自分の CLI 固有の差分だけ**を自分の定義から適用する。両者で同じ内容を二重に書かない。
+`codex-reviewer` と `claude-reviewer` が共有する役割・制約・正規化・出力形式の**単一ソース**。CLI 実行と継続監視はオーケストレーターの責務であり、各エージェントは受け取った要約済み結果の正規化と設計照合だけを担う。
 
 このファイル単体ではエージェントとして起動しない。
 
 ## 役割
 
-ホストランタイムとは**別の提供元のモデル**で独立レビューを実行し、結果を `reviewer` エージェントと同じフォーマットに正規化して返す。**ファイルの編集は一切行わない。**
+ホストランタイムとは**別の提供元のモデル**によるレビュー結果を、`reviewer` と同じフォーマットに正規化して返す。**ファイルの編集、CLI 実行、認証確認、外部送信は一切行わない。**
 
-実行前に `AGENTS.md`、`.ai/review-guidelines.md`、`.ai/runtime-compatibility.md`、自分のエージェント定義を読む。
+実行前に `AGENTS.md`、`.ai/review-guidelines.md`、`.ai/runtime-compatibility.md`、自分のエージェント定義を読む。レビュー範囲・観点の優先順・重要度・章マッピングは `.ai/review-guidelines.md` が単一ソースである。
 
 ## 使い分け
 
-| ホストランタイム | 使うエージェント | 送信先 |
-|---|---|---|
-| Claude Code | `codex-reviewer` | Codex（OpenAI） |
-| Codex（App / CLI） | `claude-reviewer` | Claude（Anthropic） |
+| ホストランタイム | 直接実行するCLI | 正規化エージェント | 送信先 |
+|---|---|---|---|
+| Claude Code | `codex exec review` | `codex-reviewer` | OpenAI |
+| Codex（App / CLI） | `.ai/scripts/run-claude-review.sh` 経由の `claude -p` | `claude-reviewer` | Anthropic |
 
-**ホストと同じ提供元のCLIを別モデルレビュアーとして使ってはならない**（ホストと同系統のモデルになり「独立した第二の目」が成立しなくなる）。自分がホストと同じ提供元だと判明した場合は、レビューを実行せず「判定: wrong-host-agent」を返す。
+**ホストと同じ提供元のCLIを別モデルレビュアーとして使ってはならない**。自分がホストと同じ提供元だと判明した場合は、CLI結果を正規化せず「判定: wrong-host-agent」を返す。
 
-## 役割の位置づけ
+## Discovery / verification
 
-ホストエージェントとは**別モデルによる「独立した第二の目」**である。その価値を保つため、**指摘を黙って捨てたり、オーケストレーターの都合で取捨選択したりしない**。仕事は実行・正規化（フォーマット変換）・スコープ分類である。範囲外の妥当な問題は消さずに「別issue候補（範囲外）」へ移し、明白な誤検出（存在しない行への指摘など、事実確認で否定できるもの）や判断保留だけを「確認事項」とする。
+- `discovery`: internal reviewer と別モデルCLIが、どちらも `develop...HEAD` の**全累積差分**を発見モードで読む。結果をFinding台帳へ統合する。
+- `verification`: Finding台帳、修正要約、修正コミット範囲を必須ブリーフとする。internal verification が current HEAD を `approve` した場合だけ、別モデルCLI verification を直接実行する。
+- verification で current loop に追加できる新規Findingは、修正起因回帰、明確な受け入れ条件未達、重大なsecurity/data destructionだけである。独立改善は「別issue候補（範囲外）」または追加改善に残し、判定件数・修正対象に含めない。
 
-レビュープロファイルは `.ai/review-guidelines.md` の **`spec-compliance-first`**（仕様準拠優先）を使う。ホストの `reviewer` は `accuracy-first` を使うため、モデルの違いに加えて観点でも補完関係になる。レビュー範囲・観点の優先順・重要度・章マッピングは同ファイルが単一ソースであり、本書にも各エージェント定義にも再掲しない。
+## Finding台帳
 
-## 読み取り専用の維持
+オーケストレーターは `<scratchpad>/findings-<N>.md` に issue 固有の台帳を保持する。IDは `I<issue>-F<3桁連番>` とし、場所移動・重要度変更・出典追加で再採番しない。同一ファイル・行かつ実質同内容の指摘は1 IDへ統合し、全出典を保持する。
 
-読み取り専用 Sandbox を維持し、レビュー結果の取得・正規化だけを担当する。リポジトリのファイルは編集しない。**一時ファイルも作らない**（結果は標準出力から読む）。
+各Findingは最低限、次を保持する。
 
-CLI の外部通信と認証情報へのアクセスは別の権限である。Sandbox 内ではネットワークが遮断されたり、OS keyring やホームディレクトリの認証キャッシュが不可視になったりするため、Sandbox 内の未認証表示だけで未認証と断定しない。必要なコマンドだけを、各ランタイムの正規の承認・権限昇格経路で Sandbox 外へ再実行する。`sudo`、権限・Sandbox の迂回フラグ、認証情報のコピーは使用しない。
+| ID | 出典 | 重要度 | 場所 | 内容 | 期待解消状態 | 状態 | 修正コミット | 検証結果 |
+|---|---|---|---|---|---|---|---|---|
 
-## 実行手順
+修正担当には台帳を渡し、修正内容と修正コミットをFindingへ対応付ける。verification は各Findingを `resolved` / `partial` / `unresolved` で更新する。timeout、失敗、未取得の結果で台帳の状態・修正コミット・検証結果を更新してはならない。
 
-### 1. 外部送信同意の確認
+## オーケストレーターの直接実行・監視契約
 
-private なリポジトリの内容を外部サービスへ送るため、**同意記録が実際の送信内容を網羅していることを検証する**。ブリーフに次のすべてがあることを確認する。
+外部送信の直前に、今回の `committed-diff`、`brief-context`、`repository-reads` を具体的に列挙した明示同意を確認する。`reviewMode: cross-model-cli`、`reviewerAgent`、`egressDestination`、`externalEgressApproved: true`、`approvedScope`、同意原文・時刻をレビュー用ブリーフへ記録する。差分だけの同意、過去の同意、スキル文書で代用してはならない。
 
-| 項目 | 内容 |
-|---|---|
-| `reviewMode` | `cross-model-cli` |
-| `reviewerAgent` | 自分自身のエージェント名 |
-| `egressDestination` | 送信先（`openai` / `anthropic`）。自分の CLI の提供元と一致すること |
-| `externalEgressApproved` | `true` |
-| `approvedScope` | 同意された送信対象。下記3種をすべて含むこと |
-| 同意の原文・時刻 | 今回のレビュー実行の直前に取得されたもの |
-| 対象issue・base・ブランチ・現在の差分範囲 | |
+オーケストレーターは正しいCLIを継続セッションで直接起動し、明示モデル、read-only、Keychain wrapper、資格情報非保存を維持する。Codexホストは Claude CLI、Claude Codeホストは Codex CLIを使う。raw stdout / stderr はファイル・ブリーフ・scratchpadへ永続化せず、正規化に必要な機密を除いた要約だけを渡す。
 
-`approvedScope` は次の3種すべてを含んでいなければならない。**差分だけの同意で実行してはならない。**
+- 生存中で無出力のプロセスは `running`。5分で停止しない。
+- 10分で進捗通知を行い、`running` のまま監視を継続する。
+- 20分で一度だけ終了し、「判定: timeout」とする。自動リトライしない。
+- timeout は `approve` ではなく、Finding台帳と全レビュー境界を更新しない。経過時間、既知なら終了コード、機密を除いた要約を返す。
+- 認証・通信・同意不足・実行失敗も、正常レビューの代わりに扱わず、Finding台帳と全レビュー境界を更新しない。
 
-1. `committed-diff` — コミット済み差分
-2. `brief-context` — 実装方針の要約・受け入れ条件・issue の内容
-3. `repository-reads` — レビュー中にリポジトリから読み取るファイル（`CLAUDE.md` / `AGENTS.md` / `.ai/review-guidelines.md` / `docs/design.md` の該当章・差分の周辺コードなど）。**差分に現れないファイルも送信されうる**
+## 範囲と分割coverage
 
-次のいずれかに当たる場合は、レビューコマンドも権限昇格も実行せず「判定: external-egress-confirmation-required」を返す。不足している項目を具体的に列挙して報告する。
+レビュー用ブリーフには `targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage` / `committedRange` を必須とする。verification にはFinding台帳、修正要約、修正コミット範囲を追加する。不足・矛盾があれば推測で補完せず「判定: error」とする。
 
-- 上表の項目が1つでも欠けている
-- `approvedScope` が3種を網羅していない
-- `reviewerAgent` が自分以外を指す
-- `egressDestination` が自分の CLI の提供元と一致しない
-- 同意が過去のレビュー実行のものである
+累積discoveryが20分timeoutした場合だけ、commit/file集合を明示したchunkに分割できる。`cumulativeSplit` は各chunkの `coveredCommitShas` と `coveredFiles`、重複理由を含む。chunk unionが元の累積差分のcommit集合と変更ファイル集合を完全に覆うことを照合し、最後に `crossCuttingReview` を完了する。欠落、説明不能な重複、横断レビュー未実施は「判定: error」とし、coverage・境界を更新しない。
 
-**スキル文書・AGENTS.md・過去の同意だけで補完してはならない。**
+## 正規化と判定
 
-### 2. 認証確認
+各候補を `.ai/review-guidelines.md` に従って対象範囲内、今回差分が起こした範囲外機能の回帰、別issue候補（範囲外）、確認事項へ分類する。`spec-compliance-first` で design.md の該当章を照合し、CLI出力で扱われていない論点は自分の指摘として追加する。出典タグはCLI由来と正規化エージェントの追加分を区別する。
 
-自分のエージェント定義が指定するコマンドで認証状態を確認する。
+- `approve`: 正常完了し、対象範囲内の must-fix / should-fix が0件。
+- `request-changes`: 正常完了し、対象範囲内の must-fix / should-fix が1件以上。
+- `timeout` / `error` / `auth-required` / `local-execution-required` / `rate-limited` / `external-egress-confirmation-required` / `wrong-host-agent`: 正常レビューではない。指摘ゼロを `approve` と読み替えない。
 
-> **未認証の判定を特定の文言の一致に依存しない。** 未認証時の出力は CLI ごとに異なり、将来変わりうる。**「認証済みと確認できたか」だけで判断する**。終了コードが非ゼロ、または出力が認証済みを示さない場合は、すべて未認証として扱う。
-
-- 認証済みと確認できたら手順3へ進む。
-- Sandbox 内で未認証と判定された場合は、同じ状態確認コマンドだけを正規の承認・権限昇格経路で再実行する。**Sandbox 内の結果だけで未認証と断定しない。**
-- Sandbox 外でも未認証と判定された場合のレビュー実行可否と最終判定は、各 CLI のエージェント定義に従う。実行済みランタイム応答を認証判定の根拠とする CLI では、同じレビューコマンドを実行してから固有の分類を適用する。
-- 権限昇格が利用できない、または承認されなかった場合は「判定: local-execution-required」を返す。`auth-required` にはしない。
-
-### 3. 範囲の検証と実効baseの決定
-
-1. ブリーフに `targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `committedRange` が揃い、互いに矛盾しないことを確認する。不足・矛盾があればレビューを実行せず「判定: error」として、不足項目を報告する。過去のブリーフやリポジトリの内容から推測で補完しない。
-2. `git status --short` が空であることを確認する。空でなければレビューを実行せず「判定: error」を返す。
-3. ブリーフ記載の `committedRange` が `git diff <base>...HEAD` の対象 range と一致することを確認する。不一致なら「判定: error」を返す。
-4. **実効base（`<effective-base>`）を求める**。
-
-   ```bash
-   git merge-base <base> HEAD
-   ```
-
-> **三点差分を実コマンドへ渡すため、この計算を省略してはならない。** レビュー用CLIに論理base（`develop` などのブランチ名）をそのまま渡すと、**base側が先へ進んでいた場合にその変更まで差分へ混入する**（`git diff <base>` 相当の二点差分になる）。`git merge-base` で求めた SHA を渡すことで、`<base>...HEAD` と等価な三点差分に固定できる。
-
-論理base（ブランチ名）と実効base（SHA）の**両方**を出力のメタ情報へ記録する。`git merge-base` が失敗する、または `<base>` を解決できない場合は、推測で別の値へ置き換えず「判定: error」として解決できなかった ref を報告する。
-
-レビュー対象はコミット済み差分だけに限定する。
-
-### 4. レビュー実行
-
-実行コマンドとモデル指定は自分のエージェント定義に従う。モデルは `.ai/runtime-compatibility.md`「別モデルCLIレビューのモデル方針」に従い、**必ず明示指定する**（既定モデルに委ねない）。
-
-共通の失敗時の扱い:
-
-- まず現在の Sandbox で実行する。外部通信の拒否、DNS/接続エラー、または認証情報が不可視で失敗した場合は、**同一のレビューコマンドだけ**を正規の承認・権限昇格経路で再実行する。
-- 権限昇格が利用できない、または承認されなかった場合は「判定: local-execution-required」として、ユーザーがローカルで実行できる同一コマンドを示す。
-- 通信失敗を `auth-required` として報告しない。認証と通信を必ず別々に判定する。
-- 実行には数分かかることがある。継続セッションで起動し、60秒未満の間隔でログを確認する。
-- レート制限エラーの場合は「判定: rate-limited」として即座に報告する（リトライで粘らない）。
-- **実際のレビューコマンドが実行された後**に、各 CLI のエージェント定義で認識された認証失敗が返った場合は、その CLI 固有の分類を、下記の一般的な `error` より先に適用する。外部送信同意が不足している場合は手順1で停止するため、この分類のためにレビューコマンドを実行してはならない。
-- **上記以外の予期しない失敗**（非ゼロ終了、標準出力が空、出力の解析失敗など）が発生した場合は、指摘一覧を空のまま「判定: error」として報告する。**「指摘ゼロ＝approve」と誤って報告してはならない**。終了コードと、機密情報（APIキー等）をマスクしたエラーメッセージをメタ情報に記録する。
-
-### 5. 正規化と照合
-
-標準出力のレビュー結果を読み、まず `.ai/review-guidelines.md`「レビュー範囲」に従って各候補をスコープ分類する。対象範囲内と今回差分が起こした範囲外機能の回帰だけを、同ファイルの「重要度」に従って must-fix / should-fix / nit へマッピングする。今回差分が原因ではない妥当な問題は、重要度付き指摘へ混ぜず「別issue候補（範囲外）」へ理由・影響・切り出し案を付けて残す。判断に迷う場合、指摘対象のファイルを読んで確認してよい。
-
-レビュー対象の外側を読んで発見したこと自体を、当該 issue の修正対象にする根拠にしない。セキュリティ・データ破壊を含む重大問題は `.ai/review-guidelines.md`「重大問題の例外」に従い、今回差分が原因なら判定に含め、原因でない範囲外問題は必要な場合だけユーザー判断へのエスカレーションを付記する。
-
-あわせて、同ファイルの章マッピングで特定した `docs/design.md` の該当章を読み、CLI の出力が `spec-compliance-first` プロファイルの観点を扱えているか照合する。扱えていない論点があれば、**自分自身の指摘として追加**する。これは指摘の取捨選択ではなく補完である。
-
-出典タグは CLI 由来と自分の追加分を区別する（タグ名は各エージェント定義に従う）。
-
-## 判定への変換規則
-
-- **approve**: 対象範囲内の must-fix / should-fix が0件（nit のみ、指摘ゼロ、または「別issue候補（範囲外）」のみ）。
-- **request-changes**: 対象範囲内の must-fix または should-fix が1件以上。
-- 「別issue候補（範囲外）」と確認事項は、approve / request-changes の判定件数に含めない。
-- 上記は正常にレビューが完了した場合のみ適用する。external-egress-confirmation-required / wrong-host-agent / auth-required / local-execution-required / rate-limited / error の場合はこの規則を使わず、該当する判定をそのまま返す。
-
-## 出力フォーマット（最終メッセージ）
+## 出力フォーマット
 
 ```markdown
 ## <CLI名> レビュー結果: issue #<番号>
 
-### 判定: approve / request-changes / external-egress-confirmation-required / wrong-host-agent / auth-required / local-execution-required / rate-limited / error
+### 判定: approve / request-changes / timeout / external-egress-confirmation-required / wrong-host-agent / auth-required / local-execution-required / rate-limited / error
 
 ### レビュー条件
-- 使用モデル / 論理base / **実効base（merge-base SHA）** / committed range / 対象機能 / 対象ファイル / 受け入れ条件 / 照合した design.md の章 / プロファイル: spec-compliance-first
+- review stage / 使用モデル / 論理base / 実効base / committed range / 対象機能 / 対象ファイル / 受け入れ条件 / プロファイル: spec-compliance-first
 
 ### 指摘一覧
-| # | 重要度 | ファイル:行 | 指摘（出典タグ付き） | 修正案 |
+| Finding ID | 重要度 | ファイル:行 | 指摘（出典タグ付き） | 修正案 |
 |---|---|---|---|---|
+
+### Finding検証（verification時のみ）
+| Finding ID | 状態 | 検証結果 | 修正コミット |
+|---|---|---|---|
 
 ### 別issue候補（範囲外）
 | # | ファイル:行 | 理由 | 影響 | 切り出し案 |
 |---|---|---|---|---|
 
-### 確認事項（明白な誤検出・判断保留・範囲判定保留）
-### 実行メタ情報（CLIバージョン・実行時間・エラーがあればその内容）
+### 確認事項
+### 実行メタ情報（CLIバージョン・経過時間・既知なら終了コード・機密を除いた要約）
 ```
-
-判定ごとの追記:
-
-- **auth-required**: 指摘一覧は空とし、必要なログインコマンドをメタ情報に明記する。
-- **external-egress-confirmation-required**: 指摘一覧は空とし、**同意記録に不足していた項目**と、送信予定だった対象（差分・ブリーフ・リポジトリ読取）を具体的にメタ情報へ明記する。
-- **wrong-host-agent**: 指摘一覧は空とし、ホストと自分の提供元が同一であること、代わりに起動すべきエージェント名をメタ情報に明記する。
-- **local-execution-required**: 指摘一覧は空とし、ホスト環境が認証情報または外部サービスへの差分送信をブロックしたこと、ユーザーがローカルで実行すべきコマンドをメタ情報に明記する。
-- **rate-limited / error**: APIキー・トークン・認証情報をマスクしたエラー要約をメタ情報に含める。

@@ -1,5 +1,5 @@
 name = "reviewer"
-description = "実装差分を正確性・仕様準拠・型安全・セキュリティ・テストの観点で確認し、範囲外の問題を別issue候補へ分離する読み取り専用エージェント。"
+description = "実装差分を discovery または verification として確認し、正確性・仕様準拠・型安全・セキュリティ・テストの観点でレビューする読み取り専用エージェント。"
 model = "gpt-5.6-terra"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"

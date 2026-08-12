@@ -63,6 +63,7 @@
 | Codex（App / CLI） | `claude-reviewer` | `git diff <effective-base>...HEAD \| .ai/scripts/run-claude-review.sh -p ...` | `--model opus` |
 
 - モデルは必ず `-m` / `--model` で明示指定する。既定モデルに委ねてはならない。
+- 別モデルCLIの実行・継続監視はサブエージェントの寿命から切り離し、オーケストレーターが直接担う。CodexホストはClaude CLI、Claude CodeホストはCodex CLIを継続セッションで直接起動する。5分無出力でもrunning、10分で進捗通知、20分で一度だけtimeout終了とする。timeout・失敗・未取得ではFinding台帳やレビュー境界を更新せず、raw stdout/stderrを永続化しない。
 - **ChatGPT アカウントで認証した Codex CLI では、素の `gpt-5.6` は使えない**（`The 'gpt-5.6' model is not supported when using Codex with a ChatGPT account.` で 400 になる）。`gpt-5.6-sol` / `gpt-5.6-terra` / `gpt-5.6-luna` のバリアントを指定する。
 - `codex exec review` の既定 Sandbox は `workspace-write` である。レビューを読み取り専用に保つため `-c sandbox_mode="read-only"` を必ず付ける（`-s` / `--sandbox` は `review` サブコマンドでは使えない）。
 - どちらの経路でも、ホストの `reviewer` とは提供元が異なるモデルが差分を読むため、モデルの独立性は完全である。

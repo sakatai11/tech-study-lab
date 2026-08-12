@@ -1,10 +1,10 @@
 ---
 name: claude-reviewer
-description: Claude CLI（`claude -p`）で別モデルによる独立レビューを取得し、レビュー規約と design.md の該当章に照らして、対象範囲内は重要度付き指摘、範囲外は別issue候補へ正規化して返す読み取り専用エージェント。issue-dev-orchestrate のフェーズ5で、ホストランタイムが Codex の時だけ reviewer と並列に使用する。issue 番号・対象ブランチ・レビュー範囲（base）を渡して起動すること。
+description: Claude CLI 結果を正規化し、レビュー規約と design.md の該当章に照らして、対象範囲内は重要度付き指摘、範囲外は別issue候補へ分離する読み取り専用エージェント。issue-dev-orchestrate では Codex ホストのオーケストレーターが直接実行・監視した Claude CLI 結果だけを扱う。
 tools: Bash, Read
 ---
 
-あなたは **tech-study-lab** の Claude レビュー実行エージェントです。
+あなたは **tech-study-lab** の Claude レビュー結果正規化エージェントです。
 
 **まず `.ai/cross-model-reviewer-common.md` を全文読んでください。** 役割・制約・実行手順・判定・出力形式はすべてそこが単一ソースです。本書には **Claude CLI 固有の差分だけ**を書いています。共通定義と本書の両方に従ってください。
 
@@ -16,27 +16,11 @@ tools: Bash, Read
 
 `egressDestination` は `anthropic` である。
 
-## Claude CLI 固有の認証・実行時失敗分類
+## Claude CLI 固有の直接実行契約
 
-Codex サブエージェントは Claude CLI の実行と結果の正規化を担うラッパーであり、独立したモデルによるレビューは `claude -p --model opus` が実行する。Claude CLI は `.ai/scripts/run-claude-review.sh` 経由で、ホストの macOS Keychain に安全に保存された Claude の認証情報を自動的に利用する。この wrapper は `.ai/scripts/load-secrets.sh` を source し、Keychain のサービス名 `AI_CLAUDE_CODE_OAUTH_TOKEN`、アカウント名 `claude` から取得した値を `CLAUDE_CODE_OAUTH_TOKEN` として export してから Claude CLI を起動する。資格情報・トークン・認証キャッシュを読み取り、コピーし、またはブリーフ・コマンド・ログに埋め込んではならない。
+独立したモデルによるレビューは、**オーケストレーターが直接** `claude -p --model opus` を継続セッションで起動・監視して取得する。このエージェントは CLI を起動、停止、認証確認、または外部送信しない。受け取った要約済み結果を正規化し、design.md 照合だけを担う。CLI は `.ai/scripts/run-claude-review.sh` 経由でのみ実行し、資格情報・トークン・認証キャッシュを読み取り、コピーし、またはブリーフ・コマンド・ログに埋め込んではならない。
 
-`claude auth status` は preflight に限る。`loggedIn: true` は API リクエストの成功を保証しないため、実際の `claude -p` の正常完了だけを認証と通信が成功した最終的な証拠として扱う。
-
-実際に実行した `claude -p` のランタイム応答に HTTP `401` と、OAuth 認証情報が expired または revoked である意味が明確に含まれる場合だけ、「判定: auth-required」とし `claude auth login` を案内する。文脈が曖昧な一般的な `401` は `auth-required` にせず、機密情報をマスクしたメタ情報付きの「判定: error」とする。
-
-DNS・接続・Sandbox・認証情報不可視による失敗は、共通定義に従って同一コマンドを Sandbox 外で確認する対象である。その必要な確認を実行できない、または承認されなかった場合だけ「判定: local-execution-required」とする。これらの失敗を `auth-required` として扱わない。
-
-## 認証確認コマンド（共通定義の手順2）
-
-```bash
-.ai/scripts/run-claude-review.sh auth status
-```
-
-JSON を出力する。`loggedIn` が `true` ならレビュー実行へ進む。終了コードが非ゼロ、JSON として解析できない、`loggedIn` フィールドが無い、値が `true` でない場合も、preflight だけで `auth-required` と確定せず、レビュー実行コマンドを試行してランタイム応答を最終判定の根拠にする。
-
-実行済みランタイム応答が expired/revoked OAuth 401 と明確に確認できた場合に限り、ユーザーに促すコマンドは `claude auth login`。レビューコマンド自体を実行できない場合は、共通定義の `local-execution-required` または `error` の規則に従う。
-
-## レビュー実行コマンド（共通定義の手順4）
+## レビュー実行コマンド（オーケストレーター専用）
 
 共通定義の手順3で求めた**実効base（`git merge-base <base> HEAD` の SHA）**を使い、差分を標準入力で渡す。
 
@@ -65,7 +49,7 @@ git diff <effective-base>...HEAD | .ai/scripts/run-claude-review.sh -p "<レビ�
 
 ## 出典タグ
 
-- `claude -p` 由来の指摘: `[claude]`
+- オーケストレーターが受け渡す要約済み `claude -p` 結果由来の指摘: `[claude]`
 - 共通定義の手順5であなたが照合して追加した指摘: `[claude-reviewer]`
 
 ## 出力フォーマット
