@@ -319,8 +319,6 @@ check_agent_contract "claude toml effort" 'model_reasoning_effort = "high"' .cod
 check_agent_contract "communication is not authentication" '通信失敗を未認証と報告しない' "$RUNTIME"
 
 # ---- エージェント起動フェーズの整合 ----
-check_agent_contract "codex reviewer host scope" '**Claude Codeホストだけ**' .ai/agents/codex-reviewer.md
-check_agent_contract "claude reviewer host scope" '**Codexホストだけ**' .ai/agents/claude-reviewer.md
 check_agent_contract "reviewer runs in phase 5" 'issue-dev-orchestrate のレビュー段階で使用する' .ai/agents/reviewer.md
 check_agent_contract "test fixer runs in phases 4 and 6" 'issue-dev-orchestrate のフェーズ4・6（品質ゲート）で使用する' .ai/agents/test-fixer.md
 check_agent_contract "reviewer committed range" '`git diff develop...HEAD`' .ai/agents/reviewer.md
@@ -332,7 +330,10 @@ check_agent_contract "finding ID format" '`I<issue>-F<3桁連番>`' "$SKILL"
 check_agent_contract "finding metadata" '期待解消状態、状態、修正コミット、検証結果' "$SKILL"
 check_agent_contract "duplicate findings merge" '同一 `ファイル:行` かつ指摘内容が実質的に同じ場合' "$SKILL"
 check_agent_contract "verification brief requirement" 'Finding台帳、修正要約、修正コミット範囲を必須ブリーフ' "$SKILL"
+check_agent_contract "zero findings skip only fix work" 'Findingが0件なら修正・品質ゲート・周回コミットだけをskipし、verificationはskipしない' "$SKILL"
+check_agent_contract "zero findings still verify the current HEAD" 'verification はFindingの有無にかかわらず、current HEADに対する' "$SKILL"
 check_agent_contract "verification internal first" 'current HEAD が approve の場合だけ' "$SKILL"
+check_agent_contract "phase 7 requires both verification approvals" '両方のapprove後だけフェーズ7へ進む' "$SKILL"
 check_agent_contract "verification permitted new finding classes" '修正起因回帰、明確な受け入れ条件未達、重大なsecurity/data destruction' "$SKILL"
 check_agent_contract "orchestrator directly monitors CLI" '別モデルCLIはサブエージェントから起動しない' "$SKILL"
 check_agent_contract "five minutes remains running" '5分で停止しない' "$SKILL"
@@ -345,12 +346,12 @@ check_agent_contract "common avoids raw-output persistence" 'raw stdout / stderr
 check_agent_contract "common retains all egress scopes" '`committed-diff`、`brief-context`、`repository-reads`' "$COMMON"
 check_agent_contract "common remains read-only" 'read-only' "$COMMON"
 check_agent_contract "runtime assigns direct monitoring" 'オーケストレーターが直接担う' "$RUNTIME"
+check_agent_contract "Claude CLI restricts allowed tools" '`--allowedTools "Read Grep Glob"`' "$RUNTIME"
+check_agent_contract "Claude CLI restricts disallowed tools" '`--disallowedTools "Edit Write NotebookEdit Bash"`' "$RUNTIME"
 check_agent_contract "reviewer reports verification outcomes" '`resolved` / `partial` / `unresolved`' .ai/agents/reviewer.md
 check_agent_contract "required findings must resolve before approval" 'required Finding（must-fix / should-fix）が全件 `resolved`' "$COMMON"
 check_agent_contract "zero findings can complete the verification path" 'Findingが0件の場合、required Finding全件resolvedは真' "$COMMON"
 check_agent_contract "boundary requires both reviews" 'internal と別モデルCLIの**両方**が正常に `approve`' "$COMMON"
-check_agent_contract "claude reviewer only normalizes CLI result" 'CLI を起動・停止・認証確認・外部送信せず' .ai/agents/claude-reviewer.md
-check_agent_contract "codex reviewer only normalizes CLI result" 'CLI を起動・停止・認証確認・外部送信せず' .ai/agents/codex-reviewer.md
 check_agent_contract "claude wrapper remains required" '.ai/scripts/run-claude-review.sh' .ai/agents/claude-reviewer.md
 node scripts/test-review-state-machine.mjs
 

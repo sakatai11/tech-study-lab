@@ -198,10 +198,9 @@ discovery は発見段階であり、レビュー済み境界を更新しない�
 
 **達成状態**: Finding台帳の must-fix / should-fix が修正コミットに対応付けられ、各Findingがverificationで判定済みになっている。
 
-- fix 対象は**対象範囲内の** Finding台帳にある must-fix / should-fix と、今回変更に起因する test-fixer の残課題（nit、「別issue候補（範囲外）」、確認事項は含めない）。修正担当へ台帳を渡し、修正内容・修正コミットをFindingへ対応付ける。空ならフェーズ7へ。
-- 修正は `developer`、品質ゲートは `test-fixer` へ委譲する。**当該周回の変更ファイル一覧を確定してブリーフに明記し**、test-fixer はその範囲だけを対象にする。対象外の修正が必要ならスコープを推測で広げず、理由と候補を報告させる。
-- 通過後、その一覧のファイルだけを1コミットにする。未コミット変更が残る間は再レビューへ進まない。
-- verification は Finding台帳、修正要約、修正コミット範囲を必須ブリーフにする。まず internal reviewer を `reviewStage: verification` で実行し、**current HEAD が approve の場合だけ**別モデルCLI verification をオーケストレーターが直接実行・監視する。internal approve前に別モデルverificationを実行してはならない。
+- fix 対象は**対象範囲内の** Finding台帳にある must-fix / should-fix と、今回変更に起因する test-fixer の残課題（nit、「別issue候補（範囲外）」、確認事項は含めない）。修正担当へ台帳を渡し、修正内容・修正コミットをFindingへ対応付ける。**Findingが0件なら修正・品質ゲート・周回コミットだけをskipし、verificationはskipしない。**
+- fix 対象がある場合、修正は `developer`、品質ゲートは `test-fixer` へ委譲する。**当該周回の変更ファイル一覧を確定してブリーフに明記し**、test-fixer はその範囲だけを対象にする。対象外の修正が必要ならスコープを推測で広げず、理由と候補を報告させる。通過後、その一覧のファイルだけを1コミットにする。未コミット変更が残る間はverificationへ進まない。
+- verification はFindingの有無にかかわらず、current HEADに対する Finding台帳、修正要約、修正コミット範囲を必須ブリーフにする。まず internal reviewer を `reviewStage: verification` で実行し、**current HEAD が approve の場合だけ**別モデルCLI verification をオーケストレーターが直接実行・監視する。両方のapprove後だけフェーズ7へ進む。internal approve前に別モデルverificationを実行してはならない。
 - verification の各Findingは `resolved` / `partial` / `unresolved` で判定する。current loopへ追加できる新規Findingは、修正起因回帰、明確な受け入れ条件未達、重大なsecurity/data destructionだけである。独立改善は別Issue候補または追加改善として残し、判定件数・修正対象に含めない。
 - verificationでも**新しい明示同意を実行直前に取り直す**（`approvedScope` の3種すべてを再掲）。初回や過去の同意を再利用しない。CLI timeout・失敗・未取得ならFinding・境界は更新せず、未取得として停止・報告する。
 - PR作成済みでAppレビューも参照する場合は、**PRの最新HEADに対する**レビューだけを取り込む。古いHEADのレビューを再レビュー済みとして扱わない。
