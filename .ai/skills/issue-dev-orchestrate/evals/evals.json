@@ -4,6 +4,56 @@
   "hostRuntime": "claude",
   "safety": "実在 issue・branch・cleanup を含む履歴記録。再実行しない。回帰テストは一時リポジトリまたは fixture と dry-run で再構成する。",
   "evalId": "issue-dev-orchestrate-smoke-001",
+  "contractEvals": [
+    {
+      "id": "staged-review-initial-coverage",
+      "fixture": "internal boundary absent; external boundary absent; fallback boundary absent; HEAD has initial implementation commit",
+      "action": "Run the internal lane, then a successful external CLI review or an unavailable external CLI followed by fallback.",
+      "expected": "Internal uses develop...HEAD first. After its approve, external uses external-initial-cumulative with logicalBase develop and a normalized <merge-base SHA>...<current HEAD SHA> range equivalent to git diff develop...HEAD; its first fallback uses fallback-cumulative with develop...HEAD. No initial implementation commit can be excluded."
+    },
+    {
+      "id": "external-incremental-requires-actual-boundary",
+      "fixture": "external boundary absent; fallback spec boundary exists",
+      "action": "Select the next external CLI range.",
+      "expected": "Reject external-incremental and select external-initial-cumulative with logicalBase develop and its normalized SHA range. Do not infer external coverage from fallback."
+    },
+    {
+      "id": "fallback-does-not-create-external-coverage",
+      "fixture": "external CLI is unavailable after internal approve; fallback reviewer approves",
+      "action": "Record review boundaries.",
+      "expected": "Update last-spec-review-head with fallback-internal route only; leave last-external-reviewed-head absent."
+    },
+    {
+      "id": "external-normal-results-create-coverage",
+      "fixture": "external CLI completes once with approve and once with request-changes",
+      "action": "Record review boundaries for each completion.",
+      "expected": "Both results update last-external-reviewed-head because both are completed external reviews."
+    },
+    {
+      "id": "external-review-stage-validation",
+      "fixture": "One initial external brief has no external boundary and a develop merge-base; one incremental brief has a previous external reviewed HEAD; invalid variants omit or contradict those fields.",
+      "action": "Validate reviewStage, logicalBase, committedRange, externalCoverage, previousExternalReviewedHead, and effective base before invoking the external CLI.",
+      "expected": "Accept external-initial-cumulative only with externalCoverage none, logicalBase develop, and a normalized SHA range equivalent to git diff develop...HEAD. Accept external-incremental only when its previous external reviewed HEAD is the logical/effective base, an ancestor of HEAD, and the start of its normalized SHA range; reject missing, fallback-derived, or contradictory boundary data as error."
+    },
+    {
+      "id": "cumulative-split-union-coverage",
+      "fixture": "A normalized cumulative SHA range equivalent to develop...HEAD is split into chunks with listed commit SHAs and changed files, followed by a cross-cutting review.",
+      "action": "Compare the union of every chunk's SHA and file sets with the cumulative diff, then complete the cross-cutting review.",
+      "expected": "Permit the final external verdict only after union coverage is complete and the cross-cutting review finishes. Missing coverage, contradictory sets, or overlap without an explained cross-cutting treatment return error and do not update the external boundary."
+    },
+    {
+      "id": "silent-live-cli-wait-policy",
+      "fixture": "Review continuation session is alive, emits no stdout, and elapsed time is under 10 minutes",
+      "action": "Poll the session.",
+      "expected": "Classify it as running; do not report error, unavailable, or timeout."
+    },
+    {
+      "id": "timeout-metadata-redaction",
+      "fixture": "Review continuation session exceeds 10 minutes",
+      "action": "Terminate the session once and normalize the result.",
+      "expected": "Return timeout/unavailable with interruptionSource, elapsed time, known exit code when available, and a credential-masked summary only; do not persist raw stdout or stderr."
+    }
+  ],
   "target": {
     "skill": "issue-dev-orchestrate",
     "agents": ["issue-investigator", "developer", "reviewer", "test-fixer"],

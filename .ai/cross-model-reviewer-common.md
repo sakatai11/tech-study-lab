@@ -76,18 +76,28 @@ private なリポジトリの内容を外部サービスへ送るため、**同�
 
 ### 3. 範囲の検証と実効baseの決定
 
-1. ブリーフに `targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `committedRange` が揃い、互いに矛盾しないことを確認する。不足・矛盾があればレビューを実行せず「判定: error」として、不足項目を報告する。過去のブリーフやリポジトリの内容から推測で補完しない。
-2. `git status --short` が空であることを確認する。空でなければレビューを実行せず「判定: error」を返す。
-3. ブリーフ記載の `committedRange` が `git diff <base>...HEAD` の対象 range と一致することを確認する。不一致なら「判定: error」を返す。
-4. **実効base（`<effective-base>`）を求める**。
+1. ブリーフに `targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `committedRange` / `reviewStage` が揃い、互いに矛盾しないことを確認する。外部 review stage では、さらに `logicalBase` / `externalCoverage` を必須とする。不足・矛盾があればレビューを実行せず「判定: error」として、不足項目を報告する。過去のブリーフやリポジトリの内容から推測で補完しない。
+2. 外部レビュー段階を検証する。
+   - `external-initial-cumulative` は `externalCoverage: none`、`logicalBase: develop`、`previousExternalReviewedHead` が無いことを必須とする。fallback の境界や spec-review boundary を外部coverageとして使ってはならない。
+   - `external-incremental` は `externalCoverage: cross-model-cli` と、明示された `previousExternalReviewedHead` を必須とする。`logicalBase` はそのHEADと一致し、`git merge-base --is-ancestor <previousExternalReviewedHead> HEAD` が成功しなければならない。失敗・不一致・欠落なら、増分範囲を推測せず「判定: error」を返す。
+   - 上記以外の `reviewStage`、または external stage に fallback route を示すcoverageは「判定: error」とする。
+3. `git status --short` が空であることを確認する。空でなければレビューを実行せず「判定: error」を返す。
+4. **実効base（`<effective-base>`）と current HEAD SHA（`<current-head>`）を求める**。
 
    ```bash
-   git merge-base <base> HEAD
+   git merge-base <logicalBase> HEAD
+   git rev-parse HEAD
    ```
 
-> **三点差分を実コマンドへ渡すため、この計算を省略してはならない。** レビュー用CLIに論理base（`develop` などのブランチ名）をそのまま渡すと、**base側が先へ進んでいた場合にその変更まで差分へ混入する**（`git diff <base>` 相当の二点差分になる）。`git merge-base` で求めた SHA を渡すことで、`<base>...HEAD` と等価な三点差分に固定できる。
+> **三点差分を実コマンドへ渡すため、この計算を省略してはならない。** レビュー用CLIに論理base（`develop` または previous external reviewed HEAD）をそのまま渡すと、**base側が先へ進んでいた場合にその変更まで差分へ混入する**（`git diff <logicalBase>` 相当の二点差分になる）。`git merge-base` で求めた SHA を渡すことで、`<logicalBase>...HEAD` と等価な三点差分に固定できる。
 
-論理base（ブランチ名）と実効base（SHA）の**両方**を出力のメタ情報へ記録する。`git merge-base` が失敗する、または `<base>` を解決できない場合は、推測で別の値へ置き換えず「判定: error」として解決できなかった ref を報告する。
+論理baseと実効base（SHA）の**両方**を出力のメタ情報へ記録する。`git merge-base` が失敗する、または `<logicalBase>` を解決できない場合は、推測で別の値へ置き換えず「判定: error」として解決できなかった ref を報告する。
+
+5. ブリーフの `committedRange` は正規化済みSHA範囲 `<effective-base>...<current-head>` と完全一致しなければならない。`external-initial-cumulative` では、このSHA範囲が `git diff develop...HEAD` と等価であることを確認する。`develop...HEAD` をブリーフの `committedRange` として記録してはならない。
+
+`external-incremental` では、求めた実効base が `previousExternalReviewedHead` と一致し、`committedRange` が `<previousExternalReviewedHead>...<current-head>` であることも確認する。不一致なら「判定: error」とする。これにより、actual external coverage がないHEADや祖先でないHEADを増分baseに使わない。
+
+累積外部レビューを複数chunkへ分割する場合は、ブリーフに `cumulativeSplit` を含める。各chunkは `coveredCommitShas` と `coveredFiles` を列挙し、レビュアーはそれぞれの集合のunionを正規化済み累積SHA範囲のcommit SHA・変更ファイル集合と照合する。重複するcoverageは理由とcross-cutting reviewでの扱いを明記し、理由を確定できない重複、欠落、不整合があれば「判定: error」とする。全chunkの後に累積差分全体を横断する `crossCuttingReview` を完了するまで、approve / request-changes や external boundary の記録へ進まない。
 
 レビュー対象はコミット済み差分だけに限定する。
 
@@ -100,7 +110,9 @@ private なリポジトリの内容を外部サービスへ送るため、**同�
 - まず現在の Sandbox で実行する。外部通信の拒否、DNS/接続エラー、または認証情報が不可視で失敗した場合は、**同一のレビューコマンドだけ**を正規の承認・権限昇格経路で再実行する。
 - 権限昇格が利用できない、または承認されなかった場合は「判定: local-execution-required」として、ユーザーがローカルで実行できる同一コマンドを示す。
 - 通信失敗を `auth-required` として報告しない。認証と通信を必ず別々に判定する。
-- 実行には数分かかることがある。継続セッションで起動し、60秒未満の間隔でログを確認する。
+- 実行には数分かかることがある。継続セッションで起動し、60秒未満の間隔で確認する。セッションが生存中で標準出力が無い状態は `running` であり、hang や error と分類しない。
+- CLI 固有の text output format を維持し、raw stdout / stderr をファイル・ブリーフ・scratchpad に永続化しない。結果の正規化に必要な要約だけを使う。
+- 既定の待機上限はレビュー1回につき10分とする。上限に達したらセッションを1回だけ終了し、「判定: timeout」としてレビュー unavailable を報告する。実行メタ情報には `interruptionSource: timeout`、経過時間、判明していれば終了コード、資格情報とraw sensitive outputを除いたエラー要約を含める。自動リトライしない。
 - レート制限エラーの場合は「判定: rate-limited」として即座に報告する（リトライで粘らない）。
 - **実際のレビューコマンドが実行された後**に、各 CLI のエージェント定義で認識された認証失敗が返った場合は、その CLI 固有の分類を、下記の一般的な `error` より先に適用する。外部送信同意が不足している場合は手順1で停止するため、この分類のためにレビューコマンドを実行してはならない。
 - **上記以外の予期しない失敗**（非ゼロ終了、標準出力が空、出力の解析失敗など）が発生した場合は、指摘一覧を空のまま「判定: error」として報告する。**「指摘ゼロ＝approve」と誤って報告してはならない**。終了コードと、機密情報（APIキー等）をマスクしたエラーメッセージをメタ情報に記録する。
@@ -120,14 +132,14 @@ private なリポジトリの内容を外部サービスへ送るため、**同�
 - **approve**: 対象範囲内の must-fix / should-fix が0件（nit のみ、指摘ゼロ、または「別issue候補（範囲外）」のみ）。
 - **request-changes**: 対象範囲内の must-fix または should-fix が1件以上。
 - 「別issue候補（範囲外）」と確認事項は、approve / request-changes の判定件数に含めない。
-- 上記は正常にレビューが完了した場合のみ適用する。external-egress-confirmation-required / wrong-host-agent / auth-required / local-execution-required / rate-limited / error の場合はこの規則を使わず、該当する判定をそのまま返す。
+- 上記は正常にレビューが完了した場合のみ適用する。external-egress-confirmation-required / wrong-host-agent / auth-required / local-execution-required / rate-limited / timeout / error の場合はこの規則を使わず、該当する判定をそのまま返す。
 
 ## 出力フォーマット（最終メッセージ）
 
 ```markdown
 ## <CLI名> レビュー結果: issue #<番号>
 
-### 判定: approve / request-changes / external-egress-confirmation-required / wrong-host-agent / auth-required / local-execution-required / rate-limited / error
+### 判定: approve / request-changes / external-egress-confirmation-required / wrong-host-agent / auth-required / local-execution-required / rate-limited / timeout / error
 
 ### レビュー条件
 - 使用モデル / 論理base / **実効base（merge-base SHA）** / committed range / 対象機能 / 対象ファイル / 受け入れ条件 / 照合した design.md の章 / プロファイル: spec-compliance-first
@@ -151,3 +163,4 @@ private なリポジトリの内容を外部サービスへ送るため、**同�
 - **wrong-host-agent**: 指摘一覧は空とし、ホストと自分の提供元が同一であること、代わりに起動すべきエージェント名をメタ情報に明記する。
 - **local-execution-required**: 指摘一覧は空とし、ホスト環境が認証情報または外部サービスへの差分送信をブロックしたこと、ユーザーがローカルで実行すべきコマンドをメタ情報に明記する。
 - **rate-limited / error**: APIキー・トークン・認証情報をマスクしたエラー要約をメタ情報に含める。
+- **timeout**: 指摘一覧は空とし、`interruptionSource: timeout`、経過時間、判明していれば終了コード、資格情報とraw sensitive outputを含まないエラー要約をメタ情報に含める。

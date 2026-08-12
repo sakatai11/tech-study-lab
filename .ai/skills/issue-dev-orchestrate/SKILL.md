@@ -15,7 +15,7 @@ GitHub issue に登録された仕様を、**レビュー済み・品質ゲー�
 完了条件は次の4つ、ならびにスパイクまたはフェーズ分割を伴う作業では5つ目の条件が満たされた状態である。
 
 - 未コミット変更がない
-- `develop..HEAD` のすべてのコミットが、有効なレビュー経路による実レビューを通過している
+- `develop..HEAD` のすべてのコミットが、現在のHEADまで収束した internal accuracy-first レビューと、有効な仕様準拠レビュー経路を通過している
 - 最新のローカル品質ゲート（typecheck / lint / test）が通過し、PR CI の品質ゲート（typecheck / lint / test / build）も通過している
 - `develop` 向けPRが作成され、そのURLをユーザーへ報告している
 - スパイクまたはフェーズ分割を伴う作業では、明示された関連Issue・撤回／置換PRの状態照合が完了し、現在Issueと明示的に関連するphase Issueに追跡可能な記録がある
@@ -34,13 +34,16 @@ GitHub issue に登録された仕様を、**レビュー済み・品質ゲー�
 
 ### レビュー用ブリーフの契約
 
-初回レビューと増分レビューのたびに、internal reviewer と別モデルレビュアーへ同じスコープ契約を渡す。レビュー用ブリーフには少なくとも次を含める。
+各 review stage で、その reviewer に対応するブリーフを渡す。internal と仕様準拠レビューのブリーフは同じ issue scope を共有するが、`reviewStage` と `committedRange` は各 lane の境界に従う。レビュー用ブリーフには少なくとも次を含める。
 
 - `targetFeature`: 当該 issue で変更する対象機能・振る舞い
 - `inScopeFiles`: 修正対象として合意したファイルまたはパス
 - `acceptanceCriteria`: 当該 issue の受け入れ条件
 - `outOfScopePolicy`: 範囲外の問題は「別issue候補（範囲外）」または「確認事項」として報告し、当該 issue の修正ループと approve / request-changes の判定件数には含めないこと
 - `committedRange`: 今回レビューするコミット済み差分の範囲
+- `reviewStage`: `internal-initial-cumulative` など、今回のレビューlaneと段階
+
+外部 review stage のブリーフには、`logicalBase` / `externalCoverage` を追加で必須とし、増分時だけ `previousExternalReviewedHead` も含める。外部の `committedRange` は、論理baseではなく正規化済みの `<effective-base SHA>...<current HEAD SHA>` を記録する。
 
 対象範囲はフェーズ2で決定した実装方針と issue の受け入れ条件から具体化する。レビュー時に範囲を推測したり、レビュアーが周辺で見つけた問題を理由に暗黙に広げたりしない。範囲変更が必要なら、その理由と影響を示してユーザー判断を得たうえでブリーフを更新する。
 
@@ -143,7 +146,22 @@ Claude Code は `subagent_type`、Codex は `.codex/agents/<name>.toml` のカ�
 
 ## フェーズ5: 初回のコミット済み差分レビュー
 
-**達成状態**: `develop...HEAD` の committed diff が有効なレビュー経路でレビューされ、指摘が統合され、レビュー境界が記録されている。
+**達成状態**: `develop...HEAD` の committed diff が、current HEAD まで収束した internal accuracy-first レビューの後に、有効な仕様準拠レビュー経路でレビューされ、指摘が統合され、各レビュー境界が記録されている。
+
+### 段階的レビューと範囲
+
+各レビュー周回は、次の順で進める。internal lane が current HEAD まで収束する前に、外部または fallback の仕様準拠レビューを開始してはならない。
+
+1. `last-internal-reviewed-head-<N>.txt` が無ければ `internal-initial-cumulative` として `develop...HEAD` を `reviewer`（`accuracy-first`）でレビューする。存在し、現在のHEADの祖先なら `internal-incremental` としてそのHEAD `...HEAD` をレビューする。存在しない、解決不能、または祖先でない境界を推測して使わない。
+2. internal reviewer が `approve` / `request-changes` で正常完了したら、`last-internal-reviewed-head-<N>.txt` を現在のHEADへ更新する。対象範囲内の must-fix / should-fix があればフェーズ6で修正し、次の周回でもこの段階から始める。`approve` になった current HEAD だけが仕様準拠レビューへ進める。
+3. `last-external-reviewed-head-<N>.txt` が無ければ、別モデルCLIには `external-initial-cumulative`、`logicalBase: develop`、`committedRange: <merge-base SHA>...<current HEAD SHA>` を渡す。この正規化済みSHA範囲が `git diff develop...HEAD` と等価であることを検証する。fallback の実績や `last-spec-review-*` から外部境界を推測して増分にしてはならない。外部境界が存在し現在のHEADの祖先なら、`external-incremental` として `committedRange: <previous external SHA>...<current HEAD SHA>` を渡す。存在する外部境界が現在のHEADの祖先でなければ、incremental review を拒否して停止・報告する。
+4. 外部CLIが利用不能で fallback へ進む場合、実外部境界が無ければ最初の fallback は `fallback-cumulative` として `develop...HEAD` をレビューする。その fallback が指摘した修正の後、同じ fallback route が継続しているときだけ `last-spec-review-head-<N>.txt` を `fallback-incremental` のbaseに使える。後から別モデルCLIを試行する場合、実外部境界が無い限り常に `external-initial-cumulative` のままである。
+
+ブリーフには `reviewStage` と、使用した論理base・境界ファイル名を記録し、internal / external / fallback の範囲を取り違えない。
+
+仕様準拠の外部ブリーフには、`reviewStage` / `logicalBase` / `externalCoverage` と、増分時だけ `previousExternalReviewedHead` を必ず含める。`committedRange` は正規化済みSHA範囲だけを記録する。値の妥当性、実効base、分割時のcoverage検証は `.ai/cross-model-reviewer-common.md` が単一ソースであり、同定義が `error` とする不整合を推測で補わない。
+
+累積外部差分が大きく分割が必要な場合は、各chunkの commit SHA と file集合をブリーフに列挙し、正規化済み累積SHA範囲とのunion coverageを検証してから最後に cross-cutting review を行う。欠落または説明できない重複があれば `error` として止め、外部boundaryを更新しない。詳細な検証規則は `.ai/cross-model-reviewer-common.md` に従う。
 
 ### 外部送信の明示同意（レビュー実行の直前）
 
@@ -153,18 +171,18 @@ Claude Code は `subagent_type`、Codex は `.codex/agents/<name>.toml` のカ�
 2. `brief-context` — 実装方針の要約・受け入れ条件・issue の内容
 3. `repository-reads` — レビュアーがリポジトリから読み取るファイル（差分に現れないものも含む）
 
-同意の原文・時刻・対象と、`reviewMode: cross-model-cli` / `reviewerAgent` / `egressDestination` / `externalEgressApproved` / `approvedScope` を `<scratchpad>/review-mode-<N>.md` に記録する。**送信先が変われば同意も取り直す。**
+internal lane が current HEAD まで `approve` で収束した後、外部CLIを実行する直前に同意を取る。同意の原文・時刻・対象と、`reviewMode: cross-model-cli` / `reviewerAgent` / `egressDestination` / `externalEgressApproved` / `approvedScope` を `<scratchpad>/review-mode-<N>.md` に記録する。**送信先が変われば同意も取り直す。**
 
-同意取得後、スコープ契約、対象issue・実装方針、base・ブランチ・現在の差分範囲に加え、`reviewMode` / `reviewerAgent` / `egressDestination` / `externalEgressApproved` / `approvedScope` / 同意の原文・時刻を1つのレビューブリーフファイルへ統合する。internal reviewer と別モデルレビュアーの双方へ、同じレビューブリーフファイルの読み取り可能なパスを渡す。`review-mode-<N>.md` だけを渡して済ませない。Claude CLI にはレビュー指示でこのパスを明示して `Read` させ、Codex CLI には同じファイルの全文を `developer_instructions` で渡す。これにより、両レビュアーが同じスコープ契約と同意記録を自力で検証できる状態にする。
+同意取得後、スコープ契約、対象issue・実装方針、base・ブランチ・現在の差分範囲に加え、`reviewMode` / `reviewerAgent` / `egressDestination` / `externalEgressApproved` / `approvedScope` / 同意の原文・時刻を仕様準拠レビュー用の1つのレビューブリーフファイルへ統合する。`review-mode-<N>.md` だけをブリーフとして渡して済ませない。Claude CLI にはレビュー指示でこのパスを明示して `Read` させ、Codex CLI には同じファイルの全文を `developer_instructions` で渡す。これにより、仕様準拠レビュアーがスコープ契約と同意記録を自力で検証できる状態にする。
 
 ### レビューの実行
 
-- **`reviewer`** と**別モデルレビュアー**を並列起動する。CLIの実行手順・認証確認・権限昇格経路・コマンドフラグ・使用モデル・実効baseの求め方は `.ai/cross-model-reviewer-common.md` と各エージェント定義が単一ソースであり、オーケストレーターは範囲と同意だけを渡す。
-- **レビュープロファイルを必ず分ける**（定義は `.ai/review-guidelines.md`）。`reviewer` に `accuracy-first`、別モデルレビュアーに `spec-compliance-first`。同じ優先順で読ませると同じ見落とし方をする。
-- ブリーフには、**レビュアーが同意の網羅性とレビュー範囲の正しさを自力で検証できるだけの情報**を渡す。上記レビュー用ブリーフ契約の `targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `committedRange` を internal reviewer と別モデルレビュアーの両方へ同じ内容で渡す。不足したままレビューを開始しない。
+- **`reviewer` を先に実行し、その current HEAD への internal lane が `approve` で収束してから**別モデルレビュアーまたは fallback を起動する。二者を並列起動しない。CLIの実行手順・認証確認・権限昇格経路・コマンドフラグ・使用モデル・実効baseの求め方は `.ai/cross-model-reviewer-common.md` と各エージェント定義が単一ソースであり、オーケストレーターは段階・範囲・同意だけを渡す。
+- **レビュープロファイルを必ず分ける**（定義は `.ai/review-guidelines.md`）。`reviewer` に `accuracy-first`、別モデルレビュアーと fallback reviewer に `spec-compliance-first`。同じ優先順で読ませると同じ見落とし方をする。
+- ブリーフには、**レビュアーがレビュー範囲の正しさを自力で検証できるだけの情報**を渡す。上記レビュー用ブリーフ契約の `targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `committedRange` を各 stage に渡す。不足したままレビューを開始しない。仕様準拠レビュー用ブリーフには同意の網羅性も含める。
 - 別モデルレビュアーが `wrong-host-agent` を返した場合は**レビュー未取得fallbackへ進めない**。フェーズ0の表と現在のホストランタイムを再照合し、正しい別モデルレビュアーを選び直して実行する。この再実行を2件目の `reviewer` による代替レビューとして数えない。
 - 別モデルレビュアーが `external-egress-confirmation-required` を返した場合は**レビュー未取得fallbackへ進めない**。同意記録に不足している同意項目を具体的に報告し、送信先と `committed-diff` / `brief-context` / `repository-reads` のうち不足した対象を列挙して、今回のレビューに必要な外部送信の明示同意を取得・記録するまで、別モデルレビュアーの再実行も2件目の `reviewer` の起動も行わない。同意の取得・記録後に同じ正しい別モデルレビュアーを再実行し、その実行結果を次の分岐で扱う。
-- 正しく選択され、外部送信同意も充足した別モデルレビュアー（`wrong-host-agent` または `external-egress-confirmation-required` 後に再実行した場合を含む）が `approve` / `request-changes` 以外を返した場合に限り、**レビュー未取得**として扱う。理由を報告し、2件目の `reviewer` を代替として起動する。このとき **`reviewProfile: spec-compliance-first` をブリーフで明示する**（`reviewer` の既定は `accuracy-first` であり、指定しないと1件目と同じ観点になって仕様準拠が誰にもカバーされない）。あわせて境界条件・保守性・テスト十分性も重点確認させる。
+- 正しく選択され、外部送信同意も充足した別モデルレビュアー（`wrong-host-agent` または `external-egress-confirmation-required` 後に再実行した場合を含む）が `approve` / `request-changes` 以外を返した場合に限り、**レビュー未取得**として扱う。理由を報告し、internal lane が current HEAD に収束済みであることを確認したうえで、2件目の `reviewer` を fallback として起動する。このとき **`reviewProfile: spec-compliance-first` をブリーフで明示する**（`reviewer` の既定は `accuracy-first` であり、指定しないと1件目と同じ観点になって仕様準拠が誰にもカバーされない）。あわせて境界条件・保守性・テスト十分性も重点確認させる。
   - `auth-required`（Sandbox 外でも未認証と確認された状態）のときだけ、fallbackの前にユーザーへログインを促し、同じエージェントを再起動してよい。それ以外の判定でCLIを再試行しない。
 
 ### CodeRabbit App（補助・任意）
@@ -186,9 +204,13 @@ Claude Code は `subagent_type`、Codex は `.codex/agents/<name>.toml` のカ�
 
 ### レビュー境界の記録
 
-**有効なレビュー経路**: 別モデルレビュアーが `approve` / `request-changes` で正常完了した場合。別モデルレビュアーが未取得に終わった場合に限り、代替として起動した2件目の `reviewer` の正常完了も有効とする。
+次の3種類を別々に記録する。欠けた境界を別の記録から推測しない。
 
-`<scratchpad>/last-reviewed-head-<N>.txt` を現在のHEADへ更新してよいのは、そのHEADに対する有効なレビュー経路の実レビューが正常完了したときだけである。未取得の理由は必ず報告する。
+- `<scratchpad>/last-internal-reviewed-head-<N>.txt`: current HEAD に対する internal reviewer の正常完了（`approve` / `request-changes`）時だけ更新する。
+- `<scratchpad>/last-spec-review-head-<N>.txt` と `<scratchpad>/last-spec-review-route-<N>.txt`: 仕様準拠レビューが正常完了した current HEAD と route（`cross-model-cli` / `fallback-internal`）を組で記録する。fallback はこの仕様境界だけを更新する。
+- `<scratchpad>/last-external-reviewed-head-<N>.txt`: 別モデルCLIが `approve` / `request-changes` で正常完了した current HEAD のみを更新する。fallback、timeout、認証・同意・通信エラーは絶対に更新しない。
+
+別モデルCLIの `approve` と `request-changes` はどちらも actual external coverage を確立する。fallback の正常完了は有効な仕様準拠レビュー経路だが、external coverage として表示・記録しない。未取得の理由は必ず報告する。
 
 ## フェーズ6: 修正・品質ゲート・周回コミット・増分再レビュー
 
@@ -197,7 +219,7 @@ Claude Code は `subagent_type`、Codex は `.codex/agents/<name>.toml` のカ�
 - fix 対象は**対象範囲内の** must-fix / should-fix と、今回変更に起因する test-fixer の残課題（nit、「別issue候補（範囲外）」、確認事項は含めない）。空ならフェーズ7へ。
 - 修正は `developer`、品質ゲートは `test-fixer` へ委譲する。**当該周回の変更ファイル一覧を確定してブリーフに明記し**、test-fixer はその範囲だけを対象にする。対象外の修正が必要ならスコープを推測で広げず、理由と候補を報告させる。
 - 通過後、その一覧のファイルだけを1コミットにする。未コミット変更が残る間は再レビューへ進まない。
-- 再レビュー範囲は `<previous-reviewed-head>...HEAD` の増分だけに絞る。前回レビュー済みHEADが無い・不正・現HEADの祖先でない場合は、**範囲を推測せず停止して報告する**。
+- 修正後はフェーズ5の段階的レビューへ戻る。internal lane の既存境界、または incremental に使う実外部 lane の既存境界が不正・現在のHEADの祖先でない場合は、**範囲を推測せず停止して報告する**。internal 境界が無い場合は `develop...HEAD` の cumulative review、実外部境界が無い外部CLIも常に `develop...HEAD` の cumulative review とする。
 - 増分レビューでも**新しい明示同意を実行直前に取り直す**（`approvedScope` の3種すべてを再掲）。初回や過去の同意を再利用しない。初回と同じエージェントを使う。
 - PR作成済みでAppレビューも参照する場合は、**PRの最新HEADに対する**レビューだけを取り込む。古いHEADのレビューを再レビュー済みとして扱わない。
 

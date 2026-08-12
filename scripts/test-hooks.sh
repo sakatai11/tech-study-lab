@@ -114,6 +114,26 @@ SKILL=.ai/skills/issue-dev-orchestrate/SKILL.md
 COMMON=.ai/cross-model-reviewer-common.md
 GUIDE=.ai/review-guidelines.md
 RUNTIME=.ai/runtime-compatibility.md
+EVALS=.ai/skills/issue-dev-orchestrate/evals/evals.json
+
+jq -e '
+  .contractEvals | type == "array"
+  and (map(.id) | index("staged-review-initial-coverage"))
+  and (map(.id) | index("external-incremental-requires-actual-boundary"))
+  and (map(.id) | index("fallback-does-not-create-external-coverage"))
+  and (map(.id) | index("external-normal-results-create-coverage"))
+  and (map(.id) | index("external-review-stage-validation"))
+  and (map(.id) | index("cumulative-split-union-coverage"))
+  and (map(.id) | index("silent-live-cli-wait-policy"))
+  and (map(.id) | index("timeout-metadata-redaction"))
+  and any(.[]; .id == "external-review-stage-validation" and (.expected | contains("logical/effective base")))
+  and any(.[]; .id == "external-review-stage-validation" and (.expected | contains("normalized SHA range")))
+  and any(.[]; .id == "cumulative-split-union-coverage" and (.expected | contains("cross-cutting review")))
+  and any(.[]; .id == "cumulative-split-union-coverage" and (.expected | contains("do not update the external boundary")))
+' "$EVALS" >/dev/null || {
+  printf '%s\n' 'staged review eval contract is incomplete' >&2
+  exit 1
+}
 
 for file in \
   "$SKILL" \
@@ -148,16 +168,29 @@ check_agent_contract "consent-blocked result requires fresh confirmation" '必�
 check_agent_contract "green check is not review" 'ステータスチェックが緑でも、レビュー済みの根拠にしない' "$SKILL"
 check_agent_contract "no guessing review range" 'レビュー範囲を推測で決めない' "$SKILL"
 check_agent_contract "no cherry-picking findings" 'オーケストレーターの判断で取捨選択しない' "$SKILL"
-check_agent_contract "reviewed head only after real review" '有効なレビュー経路の実レビューが正常完了したときだけ' "$SKILL"
+check_agent_contract "reviewed head only after real review" '別モデルCLIが `approve` / `request-changes` で正常完了した current HEAD のみを更新する' "$SKILL"
 check_agent_contract "profiles must differ" 'レビュープロファイルを必ず分ける' "$SKILL"
+check_agent_contract "internal review precedes spec review" 'internal lane が current HEAD まで収束する前に、外部または fallback の仕様準拠レビューを開始してはならない' "$SKILL"
+check_agent_contract "initial internal coverage is cumulative" 'internal-initial-cumulative' "$SKILL"
+check_agent_contract "initial external coverage is cumulative" 'external-initial-cumulative' "$SKILL"
+check_agent_contract "general brief declares review stage" '`reviewStage`: `internal-initial-cumulative` など' "$SKILL"
+check_agent_contract "missing external boundary cannot become incremental" 'fallback の実績や `last-spec-review-*` から外部境界を推測して増分にしてはならない' "$SKILL"
+check_agent_contract "external incremental requires actual external boundary" 'external-incremental' "$SKILL"
+check_agent_contract "non-ancestor external boundary stops incremental review" 'incremental review を拒否して停止・報告する' "$SKILL"
+check_agent_contract "fallback starts cumulatively without external coverage" 'fallback-cumulative' "$SKILL"
+check_agent_contract "fallback increment is route-scoped" 'fallback-incremental' "$SKILL"
+check_agent_contract "external brief records stage and coverage" '`reviewStage` / `logicalBase` / `externalCoverage`' "$SKILL"
+check_agent_contract "split cumulative review lists chunk coverage" '各chunkの commit SHA と file集合をブリーフに列挙し' "$SKILL"
+check_agent_contract "split cumulative review finishes cross-cutting" '最後に cross-cutting review を行う' "$SKILL"
+check_agent_contract "unresolved split coverage is error" '欠落または説明できない重複があれば `error` として止め' "$SKILL"
 check_agent_contract "orchestrator brief defines target feature" '`targetFeature`' "$SKILL"
 check_agent_contract "orchestrator brief defines in-scope files" '`inScopeFiles`' "$SKILL"
 check_agent_contract "orchestrator brief defines acceptance criteria" '`acceptanceCriteria`' "$SKILL"
 check_agent_contract "orchestrator brief defines out-of-scope policy" '`outOfScopePolicy`' "$SKILL"
 check_agent_contract "orchestrator brief defines committed range" '`committedRange`' "$SKILL"
-check_agent_contract "both reviewer types receive the same scope" 'internal reviewer と別モデルレビュアーの両方へ同じ内容で渡す' "$SKILL"
-check_agent_contract "both reviewer types receive one full brief path" '同じレビューブリーフファイルの読み取り可能なパスを渡す' "$SKILL"
-check_agent_contract "review mode record alone is insufficient" '`review-mode-<N>.md` だけを渡して済ませない' "$SKILL"
+check_agent_contract "stage briefs share issue scope" 'internal と仕様準拠レビューのブリーフは同じ issue scope を共有する' "$SKILL"
+check_agent_contract "spec reviewer receives one full brief path" '仕様準拠レビュー用の1つのレビューブリーフファイルへ統合する' "$SKILL"
+check_agent_contract "review mode record alone is insufficient" '`review-mode-<N>.md` だけをブリーフとして渡して済ませない' "$SKILL"
 check_agent_contract "full brief includes consent record" '`reviewMode` / `reviewerAgent` / `egressDestination` / `externalEgressApproved` / `approvedScope` / 同意の原文・時刻' "$SKILL"
 check_agent_contract "out-of-scope candidates stay out of fix loop" 'nit、「別issue候補（範囲外）」、確認事項は含めない' "$SKILL"
 check_agent_contract "scope expansion requires user decision" 'ユーザー判断を得たうえでブリーフを更新する' "$SKILL"
@@ -259,6 +292,7 @@ check_agent_contract "reviewer defers to guidelines" '`.ai/review-guidelines.md`
 check_agent_contract "reviewer default profile" '`accuracy-first`（正確性優先）' .ai/agents/reviewer.md
 check_agent_contract "common uses spec profile" '`spec-compliance-first`' "$COMMON"
 check_agent_contract "common validates scope brief" '`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `committedRange`' "$COMMON"
+check_agent_contract "common requires external stage brief fields" '外部 review stage では、さらに `logicalBase` / `externalCoverage` を必須とする' "$COMMON"
 consent_section=$(extract_section "$COMMON" '### 1. 外部送信同意の確認' '### 2. 認証確認') || {
   printf '%s\n' 'failed to extract external egress consent contract' >&2
   exit 1
@@ -272,7 +306,7 @@ check_section_contract "missing scope fields are brief errors" "$scope_validatio
 check_section_contract "committed range is a brief field" "$scope_validation_section" '`committedRange`'
 check_agent_contract "common outputs out-of-scope section" '### 別issue候補（範囲外）' "$COMMON"
 check_agent_contract "common excludes out-of-scope candidates from verdict" 'approve / request-changes の判定件数に含めない' "$COMMON"
-check_agent_contract "internal reviewer validates scope brief" '`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `committedRange`' .ai/agents/reviewer.md
+check_agent_contract "internal reviewer validates staged scope brief" '`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage` / `committedRange`' .ai/agents/reviewer.md
 check_agent_contract "internal reviewer outputs out-of-scope section" '### 別issue候補（範囲外）' .ai/agents/reviewer.md
 check_agent_contract "claude prompt includes scope classification" '範囲外の妥当な問題を「別issue候補（範囲外）」へ' .ai/agents/claude-reviewer.md
 check_agent_contract "claude reads the full reviewer brief" '同じレビューブリーフファイルを `Read` で読み' .ai/agents/claude-reviewer.md
@@ -293,8 +327,22 @@ check_agent_contract "common defers auth classification to CLI contract" '各 CL
 check_agent_contract "common auth not literal match" '未認証の判定を特定の文言の一致に依存しない' "$COMMON"
 check_agent_contract "common committed only" 'レビュー対象はコミット済み差分だけに限定する' "$COMMON"
 check_agent_contract "common no temp files" '一時ファイルも作らない' "$COMMON"
-check_agent_contract "common three-dot base" 'git merge-base <base> HEAD' "$COMMON"
-check_agent_contract "common records both bases" '論理base（ブランチ名）と実効base（SHA）' "$COMMON"
+check_agent_contract "common three-dot base" 'git merge-base <logicalBase> HEAD' "$COMMON"
+check_agent_contract "common records both bases" '論理baseと実効base（SHA）' "$COMMON"
+check_agent_contract "initial external stage uses develop logical base" '`external-initial-cumulative` は `externalCoverage: none`、`logicalBase: develop`' "$COMMON"
+check_agent_contract "incremental external stage requires verified boundary" '`git merge-base --is-ancestor <previousExternalReviewedHead> HEAD`' "$COMMON"
+check_agent_contract "incremental effective base equals external boundary" '求めた実効base が `previousExternalReviewedHead` と一致し、' "$COMMON"
+check_agent_contract "external brief range uses normalized SHAs" '`committedRange` は正規化済みSHA範囲 `<effective-base>...<current-head>` と完全一致' "$COMMON"
+check_agent_contract "initial normalized range verifies develop equivalence" '`git diff develop...HEAD` と等価であることを確認する' "$COMMON"
+check_agent_contract "incremental normalized range starts at external boundary" '`committedRange` が `<previousExternalReviewedHead>...<current-head>`' "$COMMON"
+check_agent_contract "common validates split union coverage" '`cumulativeSplit`' "$COMMON"
+check_agent_contract "common requires split cross-cutting review" '`crossCuttingReview` を完了するまで' "$COMMON"
+check_agent_contract "common rejects unresolved split overlap" '理由を確定できない重複、欠落、不整合があれば「判定: error」' "$COMMON"
+check_agent_contract "silent live process remains running" 'セッションが生存中で標準出力が無い状態は `running`' "$COMMON"
+check_agent_contract "review wait limit is ten minutes" '既定の待機上限はレビュー1回につき10分' "$COMMON"
+check_agent_contract "timeout is unavailable" '「判定: timeout」としてレビュー unavailable を報告する' "$COMMON"
+check_agent_contract "timeout metadata identifies interruption" '`interruptionSource: timeout`' "$COMMON"
+check_agent_contract "raw output is not persisted" 'raw stdout / stderr をファイル・ブリーフ・scratchpad に永続化しない' "$COMMON"
 check_agent_contract "codex passes effective base" '<effective-base>' .ai/agents/codex-reviewer.md
 check_agent_contract "codex brief read pins UTF-8" 'read_text(encoding="utf-8")' .ai/agents/codex-reviewer.md
 check_agent_contract "codex stops on brief decode failure" 'UTF-8 デコードに失敗した場合はレビューを実行せず' .ai/agents/codex-reviewer.md
@@ -318,6 +366,7 @@ check_agent_contract "claude local execution requires unavailable outside sandbo
 check_agent_contract "claude does not send private diff before consent" '不足時はレビューコマンドを実行しない' .ai/agents/claude-reviewer.md
 check_agent_contract "claude auth uses Keychain wrapper" '.ai/scripts/run-claude-review.sh auth status' .ai/agents/claude-reviewer.md
 check_agent_contract "claude review uses Keychain wrapper" 'git diff <effective-base>...HEAD | .ai/scripts/run-claude-review.sh -p' .ai/agents/claude-reviewer.md
+check_agent_contract "claude keeps text output" '--output-format text' .ai/agents/claude-reviewer.md
 check_agent_contract "Claude review wrapper loads Keychain secret" '. "$script_dir/load-secrets.sh"' .ai/scripts/run-claude-review.sh
 check_agent_contract "Claude review wrapper forwards arguments without interpolation" 'exec claude "$@"' .ai/scripts/run-claude-review.sh
 check_agent_contract "runtime requires Claude review wrapper" '`.ai/scripts/run-claude-review.sh` を使う' "$RUNTIME"
@@ -345,6 +394,15 @@ check_agent_contract "codex reviewer host scope" 'ホストランタイムが Cl
 check_agent_contract "claude reviewer host scope" 'ホストランタイムが Codex の時だけ' .ai/agents/claude-reviewer.md
 check_agent_contract "reviewer runs in phase 5" 'issue-dev-orchestrate のフェーズ5（レビュー）で使用する' .ai/agents/reviewer.md
 check_agent_contract "test fixer runs in phases 4 and 6" 'issue-dev-orchestrate のフェーズ4・6（品質ゲート）で使用する' .ai/agents/test-fixer.md
-check_agent_contract "reviewer committed range" '`git diff <previous-reviewed-head>...HEAD`' .ai/agents/reviewer.md
+check_agent_contract "reviewer committed range" '`git diff <last-internal-reviewed-head>...HEAD`' .ai/agents/reviewer.md
+check_agent_contract "reviewer records staged range" '`reviewStage`' .ai/agents/reviewer.md
+check_agent_contract "reviewer gates spec review on internal approval" 'current HEAD に対する internal reviewer の `approve` が確認できるまで' .ai/agents/reviewer.md
+
+# ---- 段階的レビュー境界 ----
+check_agent_contract "internal boundary is distinct" 'last-internal-reviewed-head-<N>.txt' "$SKILL"
+check_agent_contract "spec boundary keeps its route" 'last-spec-review-route-<N>.txt' "$SKILL"
+check_agent_contract "external boundary is distinct" 'last-external-reviewed-head-<N>.txt' "$SKILL"
+check_agent_contract "fallback never updates external boundary" 'fallback、timeout、認証・同意・通信エラーは絶対に更新しない' "$SKILL"
+check_agent_contract "external approve establishes coverage" '別モデルCLIの `approve` と `request-changes` はどちらも actual external coverage を確立する' "$SKILL"
 
 printf '%s\n' "Agent contract checks passed!"
