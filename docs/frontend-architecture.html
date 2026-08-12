@@ -542,8 +542,10 @@
             <code>cacheComponents</code> は有効化済み。<code>dynamic</code> /
             <code>dynamicParams</code> の route segment config は併用できないため置かない。
             PPR streaming の対象は <code>/</code> と <code>/review</code> のみで、後者では
-            静的シェルに <code>ReviewQueueFallback</code> を表示してから、queue 完了後に
-            非キャッシュの <code>ReviewRunner</code> をストリーミングする。
+            静的シェルに <code>ReviewQueueFallback</code> を表示してから、queue 完了後は
+            <code>ReviewUserContent</code> が joined 表示件数と <code>hasMore</code> に応じて
+            route error boundary、空キュー、または1件以上の場合だけ
+            <code>ReviewRunner</code> を選ぶ。
           </li>
         </ul>
         <div class="note">

@@ -663,7 +663,7 @@ export function ReviewRunner({ viewModel }: Props) {
 - **初回＝Server loader で VM 化し、page は feature component への props 渡しのみ**。`/quiz` は content のみ、`/review` は API queue + content join。`/review` は静的 `ReviewPageShell` の内部に `<Suspense fallback={<ReviewQueueFallback />}>` で囲んだ `ReviewUserContent` を置き、fallback を表示してから queue 完了後に結果をストリーミングする。後者はユーザー固有の queue を読むため非キャッシュとする（§9.1 の原則どおり整形ロジックは mapper 一本のまま）。`ReviewUserContent` は joined 表示件数と `hasMore` を三分岐し、0/true は content 整合性エラー、0/false は空キュー、1以上は `hasMore` の値を問わず `ReviewRunner` とする（§4.5）。
 - **VM はクライアント state に複製しない**。`ReviewRunner` は Review VM を Quiz 表示コンポーネントの props へ変換して渡す。`useAnswerSubmit` hook が解答結果（`results`）・`submitting`・送信エラーを保持し、Client Component は画面フェーズ・現在問題などの表示操作 state だけを保持する。due queue の再取得は `router.refresh()` による Server Component 再実行に一本化し、content との join を常にサーバー側に閉じ込める。
 - **RPC 呼び出しは `apps/web/src/features/*/api` の endpoint アダプター経由**。Server loader と Client hook は同じアダプターへ実行環境に合った `ApiClient` を渡す。HTTP レスポンス処理は `requestJson` に寄せ、feature 側では重複させない。
-- **初回ローディング表示の条件**：`/review` は静的シェルに `ReviewQueueFallback` と due バッジ fallback を表示し、queue 完了後に `ReviewRunner` をストリーミングする。`router.refresh()` 中の待機表示が必要なら `loading.tsx` かローカルな `isRefreshing` フラグで扱う。
+- **初回ローディング表示の条件**：`/review` は静的シェルに `ReviewQueueFallback` と due バッジ fallback を表示し、queue 完了後は `ReviewUserContent` が joined 表示件数と `hasMore` に応じて route error boundary、空キュー、または `ReviewRunner`（1件以上の場合のみ）を選ぶ。`router.refresh()` 中の待機表示が必要なら `loading.tsx` かローカルな `isRefreshing` フラグで扱う。
 - **将来：**TanStack Query 等へ置き換える際、mapper・ViewModel 型・page は変わらず、hook（`useAnswerSubmit` 相当）内部だけ差し替わる（契約保証）。
 
 ### 9.3 DTO / ViewModel の分離と配置
@@ -939,7 +939,7 @@ export function QuizInteractive({
 
 #### 復習（PPR streaming 対象）
 
-`/review` は queue 取得そのものをキャッシュしない。静的シェルに `<Suspense fallback={<ReviewQueueFallback />}>` の fallback を表示し、ユーザー固有の async Server Component が queue 完了後に `ReviewRunner` をストリーミングする。解答後は `router.refresh()` で最新 queue を Server loader から再取得する。`'use cache'`・`cacheLife`・`cacheTag`・`revalidateTag` は使わない。
+`/review` は queue 取得そのものをキャッシュしない。静的シェルに `<Suspense fallback={<ReviewQueueFallback />}>` の fallback を表示し、ユーザー固有の async Server Component `ReviewUserContent` が queue 完了後に joined 表示件数と `hasMore` に応じて route error boundary、空キュー、または `ReviewRunner`（1件以上の場合のみ）を選ぶ。解答後は `router.refresh()` で最新 queue を Server loader から再取得する。`'use cache'`・`cacheLife`・`cacheTag`・`revalidateTag` は使わない。
 
 構成の実コード例は §9.2 に一本化する（重複させると実装との同期漏れが起きるため）。要点は次の3つ。
 
@@ -983,7 +983,7 @@ export default function Error({ error }: { error: Error }) {
 
 #### Client（演習・復習系）
 
-`/review` は静的シェルに `ReviewQueueFallback` を表示し、queue 完了後に `ReviewRunner` をストリーミングする（§9.2・§9.4 参照）。Client 側で扱うのは以下の 2 つ：
+`/review` は静的シェルに `ReviewQueueFallback` を表示し、queue 完了後は `ReviewUserContent` が joined 表示件数と `hasMore` に応じて route error boundary、空キュー、または `ReviewRunner`（1件以上の場合のみ）を選ぶ（§9.2・§9.4 参照）。Client 側で扱うのは以下の 2 つ：
 
 - **初回データ形成の失敗**：content 未検出・検証失敗、`/review` の初回 queue 取得失敗、または queue と bundled content の join 後に表示可能な問題が 0 件かつ `hasMore` が真である content 整合性エラー → ルートの `error.tsx` で捕捉（Server 系と同じ経路）。
 - **mutation の失敗/待機**：hook が返す `error`・`submitting` を component で出し分ける。`router.refresh()` による再取得中の表示が必要なら、component の `isRefreshing` または route の `loading.tsx` で扱う。
