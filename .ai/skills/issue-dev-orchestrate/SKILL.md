@@ -77,7 +77,7 @@ verification のブリーフには、issue固有の Finding台帳、修正要約
 
 - **なぜdiscoveryとverificationを分けるか**: discoveryは `develop...HEAD` の累積差分からFindingを漏れなく集め、verificationは台帳に対応付けた修正範囲で解消状態を確認する。初回発見と修正確認を混ぜず、未解消Findingや未レビューのHEADを境界更新しないためである。
 - **なぜオーケストレーターだけがコミットするか**: 実装者と品質修正者がそれぞれコミットすると、レビュー境界とコミット境界がずれ、増分レビューの前提が崩れる。
-- **なぜ別モデルのレビュアーを併用するか**: `reviewer` はホストランタイムと同じモデルで動くため、ホストが見落とした種類の誤りは同じように見落としやすい。別モデルレビュアーはホストと異なる提供元のモデルで、かつ仕様準拠を最優先の観点として差分を読むため、`reviewer`（正確性を最優先）と補完関係になる。
+- **なぜ別モデルCLIを併用するか**: `reviewer` はホストランタイムと同じモデルで動くため、ホストが見落とした種類の誤りは同じように見落としやすい。別モデルCLIはホストと異なる提供元のモデルで、かつ仕様準拠を最優先の観点として差分を読むため、`reviewer`（正確性を最優先）と補完関係になる。
 - **なぜホストでレビュアーを切り替えるか**: チームにはホストランタイムが Claude Code の人と Codex の人がいる。使用エージェントを固定すると、片方のホストではレビュアーがホストと同系統のモデルになり「独立した第二の目」が成立しない。
 - **なぜ外部送信同意をレビュー直前に取るか**: 何が送られるかはコードが存在して初めて具体的に示せる。実装前の同意では対象を提示できない。
 - **なぜ同意が差分だけでは足りないか**: レビュアーCLIはリポジトリ読み取り権限を持ち、`CLAUDE.md` / `AGENTS.md` を自動で読み込み、規約や design.md の該当章、差分の周辺コードも参照する。差分に現れないファイルも送信されうる。
@@ -94,17 +94,17 @@ Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runt
 
 ## フェーズ0: 準備
 
-**達成状態**: issue の内容を把握し、`develop` から切った作業ブランチ上にいて、別モデルレビュアーが決まっている。
+**達成状態**: issue の内容を把握し、`develop` から切った作業ブランチ上にいて、別モデルCLIと正規化エージェントが決まっている。
 
 - issue は認証済みの `gh` CLI で取得する（Codex AppでGitHubコネクタが接続済みならそれでもよい）。
 - ブランチ名は `AGENTS.md`「ブランチ戦略」の命名規則に従う。種別は issue のラベル・タイトル・本文から判断し、**迷う場合は `feature`** とする。
 - 最新の `origin/develop` を取り込んだ `develop` から切る。`develop` がローカル・リモートともに存在しない初回だけ新規作成し、その旨を報告する。
-- **別モデルレビュアーはホストランタイムから一意に決まる**（選択制ではない）。`.ai/runtime-compatibility.md`「別モデルCLIレビューのモデル方針」の表に従う。ホストが判定できない場合は推測せず停止して確認する。
+- **別モデルCLIと正規化エージェントはホストランタイムから一意に決まる**（選択制ではない）。`.ai/runtime-compatibility.md`「別モデルCLIレビューのモデル方針」の表に従う。ホストが判定できない場合は推測せず停止して確認する。
 
-| ホストランタイム | 使うエージェント | 送信先（`egressDestination`） |
+| ホストランタイム | 正規化エージェント | 送信先（`egressDestination`） |
 |---|---|---|
-| Claude Code | `codex-reviewer` | `openai` |
-| Codex（App / CLI） | `claude-reviewer` | `anthropic` |
+| Claude Code | `codex-review-normalizer` | `openai` |
+| Codex（App / CLI） | `claude-review-normalizer` | `anthropic` |
 
 一時ブリーフと記録には `.claude/logs/briefs/`（gitignore 対象、以後 `<scratchpad>` と表記）を使う。決定したレビュアー名と送信先を `<scratchpad>/review-mode-<N>.md` に記録する。
 
@@ -128,7 +128,7 @@ Claude Code は `subagent_type`、Codex は `.codex/agents/<name>.toml` のカ�
 
 - 調査レポートの推奨案を基本とする。方針が拮抗している、または「要確認事項」が実装内容を左右する場合のみユーザーに確認し、それ以外は推奨案で進む。
 - **design.md との乖離が報告された場合は、実装より先に `docs/design.md` を更新する**（仕様駆動開発の原則）。
-- 決定した方針と別モデルレビュアー名を issue にコメントで記録する。外部送信同意の原文は転載しない。
+- 決定した方針、別モデルCLI、正規化エージェント名を issue にコメントで記録する。外部送信同意の原文は転載しない。
 
 ## フェーズ3: 実装
 
@@ -156,17 +156,17 @@ Claude Code は `subagent_type`、Codex は `.codex/agents/<name>.toml` のカ�
 2. `brief-context` — 実装方針の要約・受け入れ条件・issue の内容
 3. `repository-reads` — レビュアーがリポジトリから読み取るファイル（差分に現れないものも含む）
 
-同意の原文・時刻・対象と、`reviewMode: cross-model-cli` / `reviewerAgent` / `egressDestination` / `externalEgressApproved` / `approvedScope` を `<scratchpad>/review-mode-<N>.md` に記録する。**送信先が変われば同意も取り直す。**
+同意の原文・時刻・対象と、`reviewMode: cross-model-cli` / `normalizerAgent` / `egressDestination` / `externalEgressApproved` / `approvedScope` を `<scratchpad>/review-mode-<N>.md` に記録する。**送信先が変われば同意も取り直す。**
 
-同意取得後、スコープ契約、対象issue・実装方針、base・ブランチ・現在の差分範囲に加え、`reviewMode` / `reviewerAgent` / `egressDestination` / `externalEgressApproved` / `approvedScope` / 同意の原文・時刻を1つのレビューブリーフファイルへ統合する。internal reviewer と別モデルレビュアーの双方へ、同じレビューブリーフファイルの読み取り可能なパスを渡す。`review-mode-<N>.md` だけを渡して済ませない。Claude CLI にはレビュー指示でこのパスを明示して `Read` させ、Codex CLI には同じファイルの全文を `developer_instructions` で渡す。これにより、両レビュアーが同じスコープ契約と同意記録を自力で検証できる状態にする。
+同意取得後、スコープ契約、対象issue・実装方針、base・ブランチ・現在の差分範囲に加え、`reviewMode` / `normalizerAgent` / `egressDestination` / `externalEgressApproved` / `approvedScope` / 同意の原文・時刻を1つのレビューブリーフファイルへ統合する。internal reviewer と別モデルCLI、正規化エージェントへ、同じレビューブリーフファイルの読み取り可能なパスを渡す。`review-mode-<N>.md` だけを渡して済ませない。Claude CLI にはレビュー指示でこのパスを明示して `Read` させ、Codex CLI には同じファイルの全文を `developer_instructions` で渡す。これにより、各主体が同じスコープ契約と同意記録を自力で検証できる状態にする。
 
 ### Discovery の実行
 
 - `reviewer` と別モデルCLIは、どちらも `develop...HEAD` の**全累積差分**を `reviewStage: discovery` で読む。internal reviewer はサブエージェントへ委譲できるが、**別モデルCLIはサブエージェントから起動しない**。オーケストレーターが継続セッションで直接起動・監視する。Codexホストは Claude CLI、Claude Codeホストは Codex CLIを使う。
 - discovery では internal reviewer と別モデルCLIを並列に開始してよい。CLIのモデル、read-only、Keychain wrapper、外部送信同意、認証確認は `.ai/cross-model-reviewer-common.md` と各エージェント定義に従う。
 - 生存中の無出力は `running` とする。5分で停止しない。10分で進捗通知し、20分で一度だけ終了して `timeout` とする。raw stdout/stderrを永続化しない。timeout、失敗、未取得はFinding状態とレビュー境界を更新しない。
-- **レビュープロファイルを必ず分ける**（定義は `.ai/review-guidelines.md`）。`reviewer` に `accuracy-first`、別モデルレビュアーに `spec-compliance-first`。同じ優先順で読ませると同じ見落とし方をする。
-- ブリーフには、**レビュアーが同意の網羅性とレビュー範囲の正しさを自力で検証できるだけの情報**を渡す。上記レビュー用ブリーフ契約の `targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage` / `committedRange` を internal reviewer と別モデルレビュアーの両方へ同じ内容で渡す。不足したままレビューを開始しない。
+- **レビュープロファイルを必ず分ける**（定義は `.ai/review-guidelines.md`）。`reviewer` に `accuracy-first`、別モデルCLIと正規化エージェントに `spec-compliance-first`。同じ優先順で読ませると同じ見落とし方をする。
+- ブリーフには、**各レビュー主体が同意の網羅性とレビュー範囲の正しさを自力で検証できるだけの情報**を渡す。上記レビュー用ブリーフ契約の `targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage` / `committedRange` を internal reviewer、別モデルCLI、正規化エージェントへ同じ内容で渡す。不足したままレビューを開始しない。
 - `wrong-host-agent` はホストと送信先の対応を再照合して正しいCLIを選び直す。`external-egress-confirmation-required` は不足した対象を具体的に報告し、同意を取得・記録するまでCLIを再実行しない。timeout、認証・通信・実行エラーは、第二のinternal reviewerを代替レビューとして起動せず、レビュー未取得として停止・報告する。
 
 ### CodeRabbit App（補助・任意）
@@ -178,9 +178,9 @@ Claude Code は `subagent_type`、Codex は `.codex/agents/<name>.toml` のカ�
 
 ### 結果の統合とFinding台帳
 
-`<scratchpad>/findings-<N>.md` に Finding台帳を作る。**同一 `ファイル:行` かつ指摘内容が実質的に同じ場合**だけ1 IDへ統合し（重要度は高い方を採用）、出典タグ（`[reviewer]` / `[codex]` / `[codex-reviewer]` / `[claude]` / `[claude-reviewer]`）を保持する。同じ行でも内容が異なれば別IDを割り当てる。迷う場合は統合しない。
+`<scratchpad>/findings-<N>.md` に Finding台帳を作る。**同一 `ファイル:行` かつ指摘内容が実質的に同じ場合**だけ1 IDへ統合し（重要度は高い方を採用）、出典タグ（`[reviewer]` / `[codex]` / `[codex-review-normalizer]` / `[claude]` / `[claude-review-normalizer]`）を保持する。同じ行でも内容が異なれば別IDを割り当てる。迷う場合は統合しない。
 
-`reviewer` と別モデルレビュアーが同じコードに異なる重要度を付けるのは、プロファイルが違うため**設計どおり**である。統合漏れではない。
+`reviewer` と別モデルCLI・正規化エージェントが同じコードに異なる重要度を付けるのは、プロファイルが違うため**設計どおり**である。統合漏れではない。
 
 各結果の「指摘一覧」「別issue候補（範囲外）」「確認事項」は区分を保ったまま統合する。オーケストレーターが範囲外候補を must-fix / should-fix に昇格させたり、対象範囲内の指摘を範囲外へ降格させたりしない。分類が食い違う場合は `.ai/review-guidelines.md` の範囲規約と根拠を照合し、確定できなければ確認事項としてユーザー判断へ回す。
 
@@ -214,7 +214,7 @@ discovery は発見段階であり、レビュー済み境界を更新しない�
 - **このフェーズで追加コミットは作らない。** 最終確認として作業ツリー・コミット列・ローカル品質ゲート・PR CI の状態を確かめるだけ。
 - push とPR作成はユーザー承認を得てから行う。既にPRを作成済みなら再作成しない。
 - PR作成には利用可能なら `pr-creator` skill を使い、なければ `.github/pull_request_template.md` に従う。**ベースブランチは `develop`**。
-- 完了報告に含めるもの: 実装サマリ／コミット履歴／使用した別モデルレビュアー名と送信先／レビュー結果（未取得ならその理由）／別issue候補（範囲外）と切り出し案／Appレビューを取得した場合はその結果／ローカル品質ゲート（typecheck / lint / test）の結果／PR CI（typecheck / lint / test / build）の結果／作業ブランチ名／PR URL。
+- 完了報告に含めるもの: 実装サマリ／コミット履歴／使用した別モデルCLI・正規化エージェント名・送信先／レビュー結果（未取得ならその理由）／別issue候補（範囲外）と切り出し案／Appレビューを取得した場合はその結果／ローカル品質ゲート（typecheck / lint / test）の結果／PR CI（typecheck / lint / test / build）の結果／作業ブランチ名／PR URL。
 
 ### スパイクまたはフェーズ分割時の関連状態照合
 

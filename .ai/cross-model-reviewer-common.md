@@ -1,6 +1,6 @@
-# 別モデルCLIレビュアー共通定義
+# 別モデルCLIレビュー正規化共通定義
 
-`codex-reviewer` と `claude-reviewer` が共有する役割・制約・正規化・出力形式の**単一ソース**。CLI 実行と継続監視はオーケストレーターの責務であり、各エージェントは受け取った要約済み結果の正規化と設計照合だけを担う。
+`codex-review-normalizer` と `claude-review-normalizer` が共有する役割・制約・正規化・出力形式の**単一ソース**。CLI 実行と継続監視はオーケストレーターの責務であり、各エージェントは受け取った要約済み結果の正規化と設計照合だけを担う。
 
 このファイル単体ではエージェントとして起動しない。
 
@@ -14,10 +14,10 @@
 
 | ホストランタイム | 直接実行するCLI | 正規化エージェント | 送信先 |
 |---|---|---|---|
-| Claude Code | `codex exec review` | `codex-reviewer` | OpenAI |
-| Codex（App / CLI） | `.ai/scripts/run-claude-review.sh` 経由の `claude -p` | `claude-reviewer` | Anthropic |
+| Claude Code | `codex exec review` | `codex-review-normalizer` | OpenAI |
+| Codex（App / CLI） | `.ai/scripts/run-claude-review.sh` 経由の `claude -p` | `claude-review-normalizer` | Anthropic |
 
-**ホストと同じ提供元のCLIを別モデルレビュアーとして使ってはならない**。自分がホストと同じ提供元だと判明した場合は、CLI結果を正規化せず「判定: wrong-host-agent」を返す。
+**ホストと同じ提供元のCLIを別モデルレビューに使ってはならない**。正規化エージェントがホストに不適合だと判明した場合は、CLI結果を正規化せず「判定: wrong-host-agent」を返す。
 
 ## Discovery / verification
 
@@ -42,7 +42,7 @@
 
 ## オーケストレーターの直接実行・監視契約
 
-外部送信の直前に、今回の `committed-diff`、`brief-context`、`repository-reads` を具体的に列挙した明示同意を確認する。`reviewMode: cross-model-cli`、`reviewerAgent`、`egressDestination`、`externalEgressApproved: true`、`approvedScope`、同意原文・時刻をレビュー用ブリーフへ記録する。差分だけの同意、過去の同意、スキル文書で代用してはならない。
+外部送信の直前に、今回の `committed-diff`、`brief-context`、`repository-reads` を具体的に列挙した明示同意を確認する。`reviewMode: cross-model-cli`、`normalizerAgent`、`egressDestination`、`externalEgressApproved: true`、`approvedScope`、同意原文・時刻をレビュー用ブリーフへ記録する。差分だけの同意、過去の同意、スキル文書で代用してはならない。
 
 オーケストレーターは正しいCLIを継続セッションで直接起動し、明示モデル、read-only、Keychain wrapper、資格情報非保存を維持する。Codexホストは `.ai/scripts/run-claude-review.sh auth status` を確認後、Claude CLIを実行する。Claude Codeホストは `codex login status` を確認後、Codex CLIを実行する。raw stdout / stderr はファイル・ブリーフ・scratchpadへ永続化せず、正規化に必要な機密を除いた要約だけを渡す。
 

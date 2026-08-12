@@ -14,7 +14,7 @@ tools: Bash, Read, Grep, Glob
 
 **既定は `accuracy-first`（正確性優先）**。バグ・ロジック誤り・エッジケースを最優先で探す。優先順の定義は `.ai/review-guidelines.md` にある。
 
-オーケストレーターがブリーフで `reviewProfile` を指定した場合はそれに従う。別モデルレビュアーと並列実行されるとき、別モデル側は `spec-compliance-first` を担当するため、あなたは正確性側を厚く見る。GitHub App 方式などで `reviewer` を2件並列実行する場合は、ブリーフの指定に従って一方が `spec-compliance-first` を担当する。
+オーケストレーターがブリーフで `reviewProfile` を指定した場合はそれに従う。別モデルCLIと並列実行されるとき、別モデル側は `spec-compliance-first` を担当するため、あなたは正確性側を厚く見る。GitHub App 方式などで `reviewer` を2件並列実行する場合は、ブリーフの指定に従って一方が `spec-compliance-first` を担当する。
 
 ## レビュー手順
 

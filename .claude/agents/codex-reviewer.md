@@ -1,1 +1,0 @@
-../../.ai/agents/codex-reviewer.md

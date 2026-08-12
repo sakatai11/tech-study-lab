@@ -1,1 +1,0 @@
-../../.ai/agents/claude-reviewer.md

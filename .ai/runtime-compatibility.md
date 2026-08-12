@@ -50,22 +50,22 @@
 `.codex/agents/*.toml` に登録するエージェント**自身**のモデル設定。別モデルCLIレビューで nested に呼ぶモデル（次節）とは別物である。
 
 - 通常の実装・レビュー・調査・教材執筆・テスト修正には `gpt-5.6-terra` を使う。`developer` と `reviewer` は `high`、その他は `medium` の reasoning effort を使う。
-- `codex-reviewer` / `claude-reviewer` エージェント自身（レビュー結果の正規化と `docs/design.md` 該当章の照合を担当）には `gpt-5.6-luna` と `high` reasoning effort を使う。照合には仕様の読み取りと判断が必要なため、正規化だけの作業より高い推論を割り当てる。
+- `codex-review-normalizer` / `claude-review-normalizer` エージェント自身（レビュー結果の正規化と `docs/design.md` 該当章の照合を担当）には `gpt-5.6-luna` と `high` reasoning effort を使う。照合には仕様の読み取りと判断が必要なため、正規化だけの作業より高い推論を割り当てる。
 - 難易度が高い実装またはセキュリティレビューに限り、該当TOMLの `model` を一時的に `gpt-5.6-sol`、`model_reasoning_effort` を `high` に変更する。作業後は標準設定へ戻す。素の `gpt-5.6` は ChatGPT アカウント認証では使えないため指定しない。
 
 ## 別モデルCLIレビューのモデル方針
 
-コミット済み差分の独立レビューは、**ホストランタイムとは別のモデルのCLI**で実行する。使用するエージェントはホストで決まる。ホストと同じ提供元のCLIを別モデルレビュアーとして使ってはならない（「独立した第二の目」が成立しなくなる）。
+コミット済み差分の独立レビューは、**ホストランタイムとは別のモデルのCLI**で実行する。使用するCLIと正規化エージェントはホストで決まる。ホストと同じ提供元のCLIを別モデルレビューに使ってはならない（「独立した第二の目」が成立しなくなる）。
 
-| ホストランタイム | 使うエージェント | 実行コマンド | モデル指定 |
+| ホストランタイム | 正規化エージェント | オーケストレーターが直接実行するコマンド | モデル指定 |
 |---|---|---|---|
-| Claude Code | `codex-reviewer` | `codex exec review --base <effective-base> -c sandbox_mode="read-only"` | `-m gpt-5.6-sol` |
-| Codex（App / CLI） | `claude-reviewer` | `git diff <effective-base>...HEAD \| .ai/scripts/run-claude-review.sh -p ...` | `--model opus` |
+| Claude Code | `codex-review-normalizer` | `codex exec review --base <effective-base> -c sandbox_mode="read-only"` | `-m gpt-5.6-sol` |
+| Codex（App / CLI） | `claude-review-normalizer` | `git diff <effective-base>...HEAD \| .ai/scripts/run-claude-review.sh -p ...` | `--model opus` |
 
 - モデルは必ず `-m` / `--model` で明示指定する。既定モデルに委ねてはならない。
 - 別モデルCLIの実行・継続監視はサブエージェントの寿命から切り離し、オーケストレーターが直接担う。CodexホストはClaude CLI、Claude CodeホストはCodex CLIを継続セッションで直接起動する。Claude CLIには `--allowedTools "Read Grep Glob"` と `--disallowedTools "Edit Write NotebookEdit Bash"` の両方を必ず指定する。5分無出力でもrunning、10分で進捗通知、20分で一度だけtimeout終了とする。timeout・失敗・未取得ではFinding台帳やレビュー境界を更新せず、raw stdout/stderrを永続化しない。
 - **ChatGPT アカウントで認証した Codex CLI では、素の `gpt-5.6` は使えない**（`The 'gpt-5.6' model is not supported when using Codex with a ChatGPT account.` で 400 になる）。`gpt-5.6-sol` / `gpt-5.6-terra` / `gpt-5.6-luna` のバリアントを指定する。
 - `codex exec review` の既定 Sandbox は `workspace-write` である。レビューを読み取り専用に保つため `-c sandbox_mode="read-only"` を必ず付ける（`-s` / `--sandbox` は `review` サブコマンドでは使えない）。
 - どちらの経路でも、ホストの `reviewer` とは提供元が異なるモデルが差分を読むため、モデルの独立性は完全である。
-- レビュー観点の分担は `reviewer` が正確性優先、別モデルレビュアーが仕様準拠（`.ai/review-guidelines.md` と `docs/design.md`）優先である。モデルを変えるだけでなくこの観点差でも補完させる。
+- レビュー観点の分担は `reviewer` が正確性優先、別モデルCLIと正規化エージェントが仕様準拠（`.ai/review-guidelines.md` と `docs/design.md`）優先である。モデルを変えるだけでなくこの観点差でも補完させる。
 - サブエージェント機能がない環境では、オーケストレーター自身が該当エージェント定義を全文読み、同じ制約でCLIを実行する。
