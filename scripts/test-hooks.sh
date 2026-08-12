@@ -348,10 +348,15 @@ check_agent_contract "common remains read-only" 'read-only' "$COMMON"
 check_agent_contract "runtime assigns direct monitoring" 'オーケストレーターが直接担う' "$RUNTIME"
 check_agent_contract "Claude CLI restricts allowed tools" '`--allowedTools "Read Grep Glob"`' "$RUNTIME"
 check_agent_contract "Claude CLI restricts disallowed tools" '`--disallowedTools "Edit Write NotebookEdit Bash"`' "$RUNTIME"
+check_agent_contract "Codex nested review requires read-only sandbox" '`-c sandbox_mode="read-only"` を必ず付ける' "$RUNTIME"
 check_agent_contract "reviewer reports verification outcomes" '`resolved` / `partial` / `unresolved`' .ai/agents/reviewer.md
 check_agent_contract "required findings must resolve before approval" 'required Finding（must-fix / should-fix）が全件 `resolved`' "$COMMON"
 check_agent_contract "zero findings can complete the verification path" 'Findingが0件の場合、required Finding全件resolvedは真' "$COMMON"
 check_agent_contract "boundary requires both reviews" 'internal と別モデルCLIの**両方**が正常に `approve`' "$COMMON"
+check_agent_contract "standard budgets do not stop autonomous continuation" '到達だけでは自律的な継続を止めず、継続確認も求めない' "$SKILL"
+check_agent_contract "current-loop findings continue within existing issue scope" 'current issueの既存`acceptanceCriteria`と`inScopeFiles`内で、verificationが許すcurrent-loop Finding' "$SKILL"
+check_agent_contract "scope expansion is the only stop trigger" '停止してユーザー判断を求めるのは重大なスコープ変更が必要な場合だけ' "$SKILL"
+check_absent_contract "legacy standard-budget stop policy stays removed" '到達したら自律的な継続を止め、状況・残課題・継続の選択肢を報告して判断を仰ぐ' "$SKILL"
 check_agent_contract "claude wrapper remains required" '.ai/scripts/run-claude-review.sh' .ai/agents/claude-reviewer.md
 node scripts/test-review-state-machine.mjs
 
