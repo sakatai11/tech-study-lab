@@ -15,6 +15,11 @@ function createFallbackApiClient(): ApiClient {
   return createClient(process.env.API_BASE_URL ?? localApiBaseUrl)
 }
 
+const browserApiFetch: NonNullable<ClientRequestOptions['fetch']> = (
+  input: RequestInfo | URL,
+  init?: RequestInit,
+) => fetch(input, { ...init, credentials: 'include' })
+
 export function createBrowserApiClient(): ApiClient {
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL
 
@@ -22,7 +27,7 @@ export function createBrowserApiClient(): ApiClient {
     throw new Error('NEXT_PUBLIC_API_BASE_URL is required in production')
   }
 
-  return createClient(apiBaseUrl ?? localApiBaseUrl)
+  return createClient(apiBaseUrl ?? localApiBaseUrl, { fetch: browserApiFetch })
 }
 
 export async function createServerApiClient(): Promise<ApiClient> {

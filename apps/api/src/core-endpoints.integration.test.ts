@@ -1,4 +1,4 @@
-import { SELF, applyD1Migrations, env } from 'cloudflare:test'
+import { applyD1Migrations, env } from 'cloudflare:test'
 import { drizzle } from 'drizzle-orm/d1'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
@@ -7,6 +7,7 @@ import srsVersionMigration from '../drizzle/migrations/0001_add_srs_version.sql?
 
 import { createReviewDeps } from './dal/review-repository'
 import { FIXED_USER_ID } from './fixed-user'
+import { createInternalApiApp, createPublicApiApp } from './index'
 
 declare module 'cloudflare:test' {
   interface ProvidedEnv {
@@ -40,6 +41,10 @@ async function seedSrsState(
     .run()
 }
 
+async function fetchInternal(path: string, init?: RequestInit): Promise<Response> {
+  return await createInternalApiApp().fetch(new Request(`https://api.internal${path}`, init), env)
+}
+
 describe('core API endpoints', () => {
   beforeAll(async () => {
     await applyD1Migrations(env.DB, [
@@ -58,7 +63,7 @@ describe('core API endpoints', () => {
   })
 
   it('ミドルウェアで確定したユーザーの教材閲覧を記録する', async () => {
-    const response = await SELF.fetch('https://api.test/lesson-views', {
+    const response = await fetchInternal('/lesson-views', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ lessonId: 'security-xss-01' }),
@@ -80,7 +85,7 @@ describe('core API endpoints', () => {
   })
 
   it('クライアント指定の userId を拒否し教材閲覧を記録しない', async () => {
-    const response = await SELF.fetch('https://api.test/lesson-views', {
+    const response = await fetchInternal('/lesson-views', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -98,7 +103,7 @@ describe('core API endpoints', () => {
   it('grades an answer and atomically records its log and next SRS state for the fixed user', async () => {
     await seedQuestion('question-1', 2)
 
-    const response = await SELF.fetch('https://api.test/answers', {
+    const response = await fetchInternal('/answers', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -139,7 +144,7 @@ describe('core API endpoints', () => {
   })
 
   it('maps a missing authoritative question to the public 404 error contract', async () => {
-    const response = await SELF.fetch('https://api.test/answers', {
+    const response = await fetchInternal('/answers', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ questionId: 'missing-question', selectedIndex: 0 }),
@@ -155,7 +160,7 @@ describe('core API endpoints', () => {
   })
 
   it('rejects a client-provided userId before it can affect the fixed user context', async () => {
-    const response = await SELF.fetch('https://api.test/answers', {
+    const response = await fetchInternal('/answers', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -182,8 +187,8 @@ describe('core API endpoints', () => {
     await seedSrsState('other-user', now - 60_000, 'another-user')
 
     const [queueResponse, countResponse] = await Promise.all([
-      SELF.fetch('https://api.test/review/queue'),
-      SELF.fetch('https://api.test/dashboard/due-count'),
+      fetchInternal('/review/queue'),
+      fetchInternal('/dashboard/due-count'),
     ])
 
     expect(queueResponse.status).toBe(200)
@@ -214,5 +219,55 @@ describe('core API endpoints', () => {
       ],
     })
     await expect(reviewDeps.countDueQuestions(FIXED_USER_ID, now)).resolves.toBe(2)
+  })
+
+  it('allows an Access-verified public write and rejects unauthorized writes before D1 changes', async () => {
+    const app = createPublicApiApp(async () => undefined)
+    const bindings = {
+      ...env,
+      ACCESS_AUDIENCE: 'access-audience',
+      ACCESS_ISSUER: 'https://team.cloudflareaccess.com',
+      WEB_ORIGIN: 'https://web.example.com',
+    }
+    const request = new Request('https://api.example.com/lesson-views', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ lessonId: 'security-xss-01' }),
+    })
+
+    await seedQuestion('protected-question', 0)
+    const [unauthorizedLessonView, unauthorizedAnswer] = await Promise.all([
+      app.fetch(request, bindings),
+      app.fetch(
+        new Request('https://api.example.com/answers', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ questionId: 'protected-question', selectedIndex: 0 }),
+        }),
+        bindings,
+      ),
+    ])
+
+    expect(unauthorizedLessonView.status).toBe(401)
+    expect(unauthorizedAnswer.status).toBe(401)
+    await expect(
+      env.DB.prepare(
+        'SELECT (SELECT COUNT(*) FROM answer_logs) AS answer_logs, (SELECT COUNT(*) FROM lesson_views) AS lesson_views, (SELECT COUNT(*) FROM srs_states) AS srs_states',
+      ).first(),
+    ).resolves.toEqual({ answer_logs: 0, lesson_views: 0, srs_states: 0 })
+
+    const authorized = await app.fetch(
+      new Request(request, {
+        headers: {
+          ...Object.fromEntries(request.headers),
+          'Cf-Access-Jwt-Assertion': 'valid-token',
+        },
+      }),
+      bindings,
+    )
+    expect(authorized.status).toBe(201)
+    await expect(env.DB.prepare('SELECT user_id FROM lesson_views').all()).resolves.toMatchObject({
+      results: [{ user_id: FIXED_USER_ID }],
+    })
   })
 })
