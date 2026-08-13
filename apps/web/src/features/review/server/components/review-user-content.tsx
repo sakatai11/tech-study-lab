@@ -7,6 +7,9 @@ import { ReviewRunner } from '@/features/review/client/components/review-runner'
 
 import { loadReviewOnce } from '../load-review'
 
+const REVIEW_CONTENT_INTEGRITY_ERROR =
+  'Review queue has no displayable content while more items remain'
+
 /**
  * ユーザー固有の due queue を読む非キャッシュの async Server Component。
  * <Suspense> の内側に置き、queue 完了後に ReviewRunner をストリーミングする
@@ -14,6 +17,10 @@ import { loadReviewOnce } from '../load-review'
  */
 export async function ReviewUserContent() {
   const viewModel = await loadReviewOnce()
+
+  if (viewModel.dueCount === 0 && viewModel.hasMore) {
+    throw new Error(REVIEW_CONTENT_INTEGRITY_ERROR)
+  }
 
   if (viewModel.dueCount === 0) {
     return (

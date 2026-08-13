@@ -542,8 +542,10 @@
             <code>cacheComponents</code> は有効化済み。<code>dynamic</code> /
             <code>dynamicParams</code> の route segment config は併用できないため置かない。
             PPR streaming の対象は <code>/</code> と <code>/review</code> のみで、後者では
-            静的シェルに <code>ReviewQueueFallback</code> を表示してから、queue 完了後に
-            非キャッシュの <code>ReviewRunner</code> をストリーミングする。
+            静的シェルに <code>ReviewQueueFallback</code> を表示してから、queue 完了後は
+            <code>ReviewUserContent</code> が joined 表示件数と <code>hasMore</code> に応じて
+            route error boundary、空キュー、または1件以上の場合だけ
+            <code>ReviewRunner</code> を選ぶ。
           </li>
         </ul>
         <div class="note">
@@ -740,7 +742,10 @@ flowchart LR
           <p>
             静的シェルと <code>ReviewQueueFallback</code> を先に返し、
             Suspense 内の非キャッシュ Server Component が
-            API から due queue のIDとSRSメタを受け、本文・解説を content index へ join した後に
+            API から due queue のIDとSRSメタを受け、本文・解説を content index へ join します。
+            <code>ReviewUserContent</code> は joined 表示件数と <code>hasMore</code> を判定し、
+            0件かつ <code>hasMore: true</code> は content 整合性エラー、0件かつ
+            <code>hasMore: false</code> は空キューカード、1件以上は
             <code>ReviewRunner</code> をストリーミングします。
           </p>
           <div class="diagram-toolbar" aria-label="復習ページ初回表示の図操作">
@@ -757,7 +762,7 @@ flowchart LR
 
   subgraph server["Server / RSC"]
     page["app/review/page.tsx\n静的 shell + Suspense"]:::server
-    userContent["ReviewUserContent\n非キャッシュ・user 固有"]:::server
+    userContent["ReviewUserContent\n非キャッシュ・user 固有\n0/true: error boundary\n0/false: empty queue\n1+: ReviewRunner"]:::server
     serverLoader["features/review/server\nloadReview"]:::server
     rpcWrapper["features/review/api\nfetchReviewQueue"]:::server
     contentIndex["apps/web/src/lib/content.ts\nquestion_idを本文・解説へjoin"]:::content
@@ -775,6 +780,14 @@ flowchart LR
   page --&gt;|Suspense| userContent --&gt;|calls| serverLoader --&gt;|uses wrapper| rpcWrapper --&gt;|"hc $get（Service Binding）"| endpoint
   endpoint -->|query| service -->|returns| dto
   dto -->|join by question_id| contentIndex -->|map| mapper -->|props| runner</pre>
+          <div class="note">
+            <strong>件数の意味</strong><br />
+            <code>ReviewViewModel.dueCount</code> は、このバッチで content と join できて実際に表示できる問題の件数です。
+            ダッシュボードの due 件数は、content join や 20件のバッチ上限を適用しない
+            <code>srs_states</code> の生の due-state 件数です。復習用の content と保存済み state がずれた場合でも、
+            空表示のまま進行不能にしないため、joined 0件・<code>hasMore: true</code> は route error boundary に渡します。
+            エラー画面は通信失敗とこの不整合の両方を案内し、再読み込みに加えてホームへ戻れます。
+          </div>
         </div>
 
         <h3>クライアント更新処理</h3>
