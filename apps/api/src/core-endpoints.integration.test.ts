@@ -1,4 +1,4 @@
-import { applyD1Migrations, env } from 'cloudflare:test'
+import { SELF, applyD1Migrations, env } from 'cloudflare:test'
 import { drizzle } from 'drizzle-orm/d1'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
@@ -269,5 +269,23 @@ describe('core API endpoints', () => {
     await expect(env.DB.prepare('SELECT user_id FROM lesson_views').all()).resolves.toMatchObject({
       results: [{ user_id: FIXED_USER_ID }],
     })
+  })
+
+  it('rejects an unauthorized non-loopback write through the default public Worker before D1 changes', async () => {
+    const response = await SELF.fetch('https://api.test/answers', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ questionId: 'protected-question', selectedIndex: 0 }),
+    })
+
+    expect(response.status).toBe(401)
+    await expect(response.json()).resolves.toEqual({
+      error: { code: 'UNAUTHORIZED', message: 'Unauthorized' },
+    })
+    await expect(
+      env.DB.prepare(
+        'SELECT (SELECT COUNT(*) FROM answer_logs) AS answer_logs, (SELECT COUNT(*) FROM lesson_views) AS lesson_views, (SELECT COUNT(*) FROM srs_states) AS srs_states',
+      ).first(),
+    ).resolves.toEqual({ answer_logs: 0, lesson_views: 0, srs_states: 0 })
   })
 })

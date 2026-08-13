@@ -91,11 +91,12 @@ tech-study-lab/
 
 固定ユーザー MVP の公開 API は、アプリケーション内の `userContext` より前で Cloudflare Access JWT を検証する。Cloudflare Access のアプリケーションプロキシだけに依存する案は、Worker の公開 URL への経路、アプリ内での認可前提、テスト可能な失敗契約を一箇所で保証できないため採用しない。Access が発行する JWT を Worker 自身で署名・**完全一致の issuer**・audience まで検証する方式を採用する。
 
-- default/public entrypoint は `CORS → Access boundary → userContext → shared user routes` とする。`/health` は Access と `userContext` の前で公開し、CORS preflight（`OPTIONS`）は CORS middleware が 204 で終了させるため、Access・`userContext`・route・D1 へ到達しない。
+- default/public entrypoint は `CORS → Access boundary → userContext → shared user routes` とする。`/health` は Access と `userContext` の前で公開する。**Worker 内**では、Worker まで到達した CORS preflight（`OPTIONS`）を CORS middleware が 204 で終了させるため、Access boundary・`userContext`・route・D1 へ到達しない。これは Cloudflare Access の edge/proxy 側で preflight を Worker へ転送できること、または同等の正しい preflight 応答を返せることとは別の責務である。
 - Access boundary は `Cf-Access-Jwt-Assertion` を `jose` の JWKS 検証で確認する。JWKS URL は信頼する `ACCESS_ISSUER` から標準の `/cdn-cgi/access/certs` を導出し、設定値または JWT の issuer を任意 URL としては扱わない。設定不足、トークン欠落、署名・issuer・audience の不一致はすべて詳細を出さず、`401 { "error": { "code": "UNAUTHORIZED", "message": "Unauthorized" } }` を返す。
 - `localhost`、IPv4/IPv6 loopback の URL に限るローカル開発では Access を bypass する。これは `next dev` とローカル API の HTTP フォールバックだけを対象とし、非 loopback の URL で設定が欠ける場合は fail closed する。
 - named `InternalApi extends WorkerEntrypoint` は `userContext → shared user routes` だけを実行する private entrypoint とする。Service Binding で `entrypoint: "InternalApi"` を指定した web Server loader のみが使い、公開 HTTP から Access を回避する経路にはしない。
-- この境界は Issue #35 の Cloudflare Access application / policy / `ACCESS_ISSUER` / `ACCESS_AUDIENCE` の本番設定に依存する。値は非秘密 binding として環境に設定し、リポジトリや `.env` へ保存しない。
+- この境界は Issue #35 の Cloudflare Access application / policy / `ACCESS_ISSUER` / `ACCESS_AUDIENCE` の本番設定に依存する。値は非秘密 binding として環境に設定し、リポジトリや `.env` へ保存しない。Issue #35 では API Worker に Access を適用する公開 hostname または custom domain を用意し、ブラウザの `POST` を含む CORS preflight が Access edge で遮断されず Worker の CORS 応答へ到達するか、同等の Access 側応答を返すことをデプロイ前に確認する。Access dashboard の具体的な設定値はここで固定せず、この結果を実機で検証する。
+- browser の `credentials: 'include'` は Access application cookie が web と API の両方へ適切に送られる構成を前提とする。cross-site cookie 設定と両立しない組み合わせを避け、可能なら同一 site（例: `web.example.com` と `api.example.com`）または同一 origin の API route を採る。異なる site を使う場合も、実際の Access cookie 属性とブラウザの credentialed CORS 制約を本番 hostname で検証してから公開する。
 
 ## 4. データモデル
 
