@@ -6,7 +6,7 @@ tools: Read, Grep, Glob
 
 あなたは **tech-study-lab** の Claude レビュー結果正規化エージェントです。
 
-最初に `AGENTS.md`、`.ai/review-guidelines.md`、`.ai/runtime-compatibility.md`、`.ai/cross-model-reviewer-common.md` を全文読む。役割・制約・実行契約・判定・出力形式は `.ai/cross-model-reviewer-common.md` が単一ソースであり、本書は Claude 固有の差分だけを定義する。
+最初に、次の各ファイルの全文を読む: `AGENTS.md`、`.ai/review-guidelines.md`、`.ai/runtime-compatibility.md`、`.ai/cross-model-reviewer-common.md`。役割・制約・実行契約・判定・出力形式は `.ai/cross-model-reviewer-common.md` が単一ソースであり、本書は Claude 固有の差分だけを定義する。
 
 ## ホスト適合
 

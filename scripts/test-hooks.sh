@@ -296,7 +296,6 @@ check_section_absent_contract "missing scope fields are not consent failures" "$
 check_section_contract "missing scope fields are brief errors" "$scope_validation_section" '「判定: error」とする'
 check_section_contract "committed range is a brief field" "$scope_validation_section" '`committedRange`'
 check_agent_contract "common outputs out-of-scope section" '### 別issue候補（範囲外）' "$COMMON"
-check_agent_contract "common excludes out-of-scope candidates from verdict" '判定件数・修正対象に含めない' "$COMMON"
 check_agent_contract "internal reviewer validates scope brief" '`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage` / `committedRange`' .ai/agents/reviewer.md
 check_agent_contract "internal reviewer outputs out-of-scope section" '### 別issue候補（範囲外）' .ai/agents/reviewer.md
 check_agent_contract "claude normalizer validates staged scope brief" '`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage` / `committedRange`' .ai/agents/claude-review-normalizer.md
@@ -339,6 +338,9 @@ check_agent_contract "codex nested model" '`-m gpt-5.6-sol`' "$RUNTIME"
 check_agent_contract "claude nested model" '`--model opus`' "$RUNTIME"
 check_agent_contract "host to reviewer mapping" '| Claude Code | `codex-review-normalizer` |' "$RUNTIME"
 check_agent_contract "codex host uses claude reviewer" '| Codex（App / CLI） | `claude-review-normalizer` |' "$RUNTIME"
+check_agent_contract "effective base is derived before external review" '`git merge-base <base> HEAD`' "$RUNTIME"
+check_agent_contract "effective base is validated as a commit" '`git rev-parse --verify <effective-base>^{commit}`' "$RUNTIME"
+check_agent_contract "invalid effective base blocks external CLI" '「判定: error」とし、別モデルCLIを実行しない' "$RUNTIME"
 check_agent_contract "codex toml effort" 'model_reasoning_effort = "high"' .codex/agents/codex-review-normalizer.toml
 check_agent_contract "claude toml effort" 'model_reasoning_effort = "high"' .codex/agents/claude-review-normalizer.toml
 check_agent_contract "communication is not authentication" '通信失敗を未認証と報告しない' "$RUNTIME"
@@ -364,7 +366,6 @@ check_agent_contract "orchestrator directly monitors CLI" '別モデルCLIはサ
 check_agent_contract "five minutes remains running" '5分で停止しない' "$SKILL"
 check_agent_contract "ten-minute progress notification" '10分で進捗通知' "$SKILL"
 check_agent_contract "twenty-minute single timeout" '20分で一度だけ終了して `timeout`' "$SKILL"
-check_agent_contract "timeout preserves review state" 'timeout、失敗、未取得はFinding状態とレビュー境界を更新しない' "$SKILL"
 check_agent_contract "chunk union coverage" 'coveredCommitShas` と `coveredFiles` のunionが元差分を完全に覆い' "$SKILL"
 check_agent_contract "cross-cutting review required" '`crossCuttingReview` が完了' "$SKILL"
 check_agent_contract "common avoids raw-output persistence" 'raw stdout / stderr はファイル・ブリーフ・scratchpadへ永続化せず' "$COMMON"

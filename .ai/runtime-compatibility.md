@@ -57,6 +57,8 @@
 
 コミット済み差分の独立レビューは、**ホストランタイムとは別のモデルのCLI**で実行する。使用するCLIと正規化エージェントはホストで決まる。ホストと同じ提供元のCLIを別モデルレビューに使ってはならない（「独立した第二の目」が成立しなくなる）。
 
+`<effective-base>` は推測や論理ベース名の直書きで代用せず、CLI起動前にオーケストレーターが `git merge-base <base> HEAD` で算出する。終了コードが非0、出力が空または複数行、もしくは `git rev-parse --verify <effective-base>^{commit}` が失敗した場合は「判定: error」とし、別モデルCLIを実行しない。検証済みの単一commit SHAだけを、以下の両経路の `<effective-base>` に渡す。
+
 | ホストランタイム | 正規化エージェント | オーケストレーターが直接実行するコマンド | モデル指定 |
 |---|---|---|---|
 | Claude Code | `codex-review-normalizer` | `codex exec review --base <effective-base> -c sandbox_mode="read-only"` | `-m gpt-5.6-sol` |

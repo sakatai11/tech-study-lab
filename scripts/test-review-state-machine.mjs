@@ -181,6 +181,13 @@ const cases = [
       })
     },
     expected: { id: 'I124-F001', severity: 'must-fix', location: 'moved.ts:9', sources: 2 },
+    assert: (actual, expected) => {
+      assert.equal(actual.findings.length, 1)
+      assert.equal(actual.findings[0].id, expected.id)
+      assert.equal(actual.findings[0].severity, expected.severity)
+      assert.equal(actual.findings[0].location, expected.location)
+      assert.equal(actual.findings[0].sources.length, expected.sources)
+    },
   },
   {
     name: 'external verification requires internal approval',
@@ -220,6 +227,11 @@ const cases = [
       internalHead: 'head-1',
       externalHead: 'head-2',
     },
+    assert: (actual, expected) => {
+      assert.equal(actual.reviewedHead, expected.reviewedHead)
+      assert.equal(actual.verification.internalHead, expected.internalHead)
+      assert.equal(actual.verification.externalHead, expected.externalHead)
+    },
   },
   {
     name: 'all required resolved updates the boundary after both approvals',
@@ -232,6 +244,10 @@ const cases = [
       ])
     },
     expected: { reviewedHead: 'head-1', status: 'resolved' },
+    assert: (actual, expected) => {
+      assert.equal(actual.reviewedHead, expected.reviewedHead)
+      assert.equal(actual.findings[0].status, expected.status)
+    },
   },
   {
     name: 'partial required findings convert approval to request-changes',
@@ -241,6 +257,11 @@ const cases = [
       ])
     },
     expected: { reviewedHead: undefined, internal: 'request-changes', status: 'partial' },
+    assert: (actual, expected) => {
+      assert.equal(actual.reviewedHead, expected.reviewedHead)
+      assert.equal(actual.verification.internal, expected.internal)
+      assert.equal(actual.findings[0].status, expected.status)
+    },
   },
   {
     name: 'unresolved required findings convert approval to request-changes',
@@ -250,6 +271,11 @@ const cases = [
       ])
     },
     expected: { reviewedHead: undefined, internal: 'request-changes', status: 'unresolved' },
+    assert: (actual, expected) => {
+      assert.equal(actual.reviewedHead, expected.reviewedHead)
+      assert.equal(actual.verification.internal, expected.internal)
+      assert.equal(actual.findings[0].status, expected.status)
+    },
   },
   {
     name: 'only permitted verification findings enter the current loop',
@@ -295,6 +321,11 @@ const cases = [
         [{ id: 'I124-F001', status: 'resolved', fixCommit: 'must-not-apply' }],
       ),
     expected: { reviewedHead: 'old', status: 'open', external: undefined },
+    assert: (actual, expected) => {
+      assert.equal(actual.reviewedHead, expected.reviewedHead)
+      assert.equal(actual.findings[0].status, expected.status)
+      assert.equal(actual.verification.external, expected.external)
+    },
   },
   {
     name: 'chunk union coverage and cross-cutting review are required',
@@ -346,36 +377,15 @@ const cases = [
 
 for (const testCase of cases) {
   if (testCase.error) {
-    assert.throws(testCase.run, new RegExp(testCase.error))
+    assert.throws(
+      testCase.run,
+      (error) => error instanceof Error && error.message.includes(testCase.error),
+    )
     continue
   }
   const actual = testCase.run()
-  if (testCase.name === 'finding IDs survive severity, source, and location changes') {
-    assert.equal(actual.findings.length, 1)
-    assert.equal(actual.findings[0].id, testCase.expected.id)
-    assert.equal(actual.findings[0].severity, testCase.expected.severity)
-    assert.equal(actual.findings[0].location, testCase.expected.location)
-    assert.equal(actual.findings[0].sources.length, testCase.expected.sources)
-  } else if (testCase.name === 'all required resolved updates the boundary after both approvals') {
-    assert.equal(actual.reviewedHead, testCase.expected.reviewedHead)
-    assert.equal(actual.findings[0].status, testCase.expected.status)
-  } else if (testCase.name === 'different approved lane HEADs do not update the boundary') {
-    assert.equal(actual.reviewedHead, testCase.expected.reviewedHead)
-    assert.equal(actual.verification.internalHead, testCase.expected.internalHead)
-    assert.equal(actual.verification.externalHead, testCase.expected.externalHead)
-  } else if (
-    testCase.name === 'partial required findings convert approval to request-changes' ||
-    testCase.name === 'unresolved required findings convert approval to request-changes'
-  ) {
-    assert.equal(actual.reviewedHead, testCase.expected.reviewedHead)
-    assert.equal(actual.verification.internal, testCase.expected.internal)
-    assert.equal(actual.findings[0].status, testCase.expected.status)
-  } else if (
-    testCase.name === 'timeout leaves non-empty finding updates and review boundary unchanged'
-  ) {
-    assert.equal(actual.reviewedHead, testCase.expected.reviewedHead)
-    assert.equal(actual.findings[0].status, testCase.expected.status)
-    assert.equal(actual.verification.external, testCase.expected.external)
+  if (testCase.assert) {
+    testCase.assert(actual, testCase.expected)
   } else {
     assert.deepEqual(actual, testCase.expected)
   }
