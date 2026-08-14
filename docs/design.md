@@ -4,7 +4,7 @@
 
 本書は **一次ソース（Single Source of Truth）** であり、仕様駆動開発（Spec-Driven）の起点となる。実装判断に迷ったときは本書に従い、本書と実装が乖離した場合は本書を先に更新する。
 
-設計文書の一次ソースは本ファイル（`docs/design.md`）の Markdown のみとし、全文の HTML ミラーは持たない。HTML は実装時に参照しやすい形へ再構成した補助資料（[`docs/api-spec.html`](./api-spec.html)・[`docs/frontend-architecture.html`](./frontend-architecture.html)・[`docs/backend-architecture.html`](./backend-architecture.html)）に限る。
+設計文書の一次ソースは本ファイル（`docs/design.md`）の Markdown のみとし、全文の HTML ミラーは持たない。HTML は実装時に参照しやすい形へ再構成した補助資料（[`docs/api-spec.html`](./api-spec.html)・[`docs/frontend-architecture.html`](./frontend-architecture.html)・[`docs/backend-architecture.html`](./backend-architecture.html)・[`docs/authentication-architecture.html`](./authentication-architecture.html)）に限る。
 
 ## 1. プロダクト方針
 
@@ -97,6 +97,8 @@ tech-study-lab/
 - named `InternalApi extends WorkerEntrypoint` は `userContext → shared user routes` だけを実行する private entrypoint とする。Service Binding で `entrypoint: "InternalApi"` を指定した web Server loader のみが使い、公開 HTTP から Access を回避する経路にはしない。
 - この境界は Issue #35 の Cloudflare Access application / policy / `ACCESS_ISSUER` / `ACCESS_AUDIENCE` の本番設定に依存する。値は非秘密 binding として環境に設定し、リポジトリや `.env` へ保存しない。Issue #35 では API Worker に Access を適用する公開 hostname または custom domain を用意し、ブラウザの `POST` を含む CORS preflight が Access edge で遮断されず Worker の CORS 応答へ到達するか、同等の Access 側応答を返すことをデプロイ前に確認する。Access dashboard の具体的な設定値はここで固定せず、この結果を実機で検証する。
 - browser の `credentials: 'include'` は Access application cookie が web と API の両方へ適切に送られる構成を前提とする。cross-site cookie 設定と両立しない組み合わせを避け、可能なら同一 site（例: `web.example.com` と `api.example.com`）または同一 origin の API route を採る。異なる site を使う場合も、実際の Access cookie 属性とブラウザの credentialed CORS 制約を本番 hostname で検証してから公開する。
+
+認証方式の信頼境界、公開トップから `/home` へのログイン導線、ブラウザ API と Service Binding のシークエンス図は、補助資料として [`docs/authentication-architecture.html`](./authentication-architecture.html) に整理する。本節を一次ソースとし、補助資料は実装状況と通信順序を参照しやすい形へ再構成したものとする。
 
 ## 4. データモデル
 
