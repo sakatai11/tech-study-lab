@@ -177,6 +177,80 @@ function renderIssues(items) {
     </table>`
 }
 
+const normalIssueClassificationTone = {
+  close候補: 'good',
+  残条件あり: 'warn',
+  別Issueへ移管済み: 'info',
+}
+
+function renderLink(item, fallback) {
+  const title = escapeHtml(item?.title || fallback)
+  return item?.url ? `<a href="${safeUrl(item.url)}">${title}</a>` : title
+}
+
+function renderIssueReference(item, fallback) {
+  const number = text(item?.number)
+  const label = renderLink(item, fallback)
+  return number ? `#${escapeHtml(number)} ${label}` : label
+}
+
+function renderNormalIssueReconciliation(items) {
+  if (!list(items).length) return empty('照合対象となる通常Issueはありません。')
+
+  return list(items)
+    .map((item) => {
+      const issue = item?.issue && typeof item.issue === 'object' ? item.issue : {}
+      const pullRequests = list(item?.pullRequests)
+      const completionCriteria = list(item?.completionCriteria)
+      const remainingConditions = list(item?.remainingConditions)
+      const parentTrackers = list(item?.parentTrackers)
+      const transfer = item?.transfer && typeof item.transfer === 'object' ? item.transfer : null
+      const issueLabel = `#${escapeHtml(issue.number || '—')} ${renderLink(issue, '無題')}`
+      const pullRequestRows = pullRequests.length
+        ? pullRequests
+            .map(
+              (pullRequest) =>
+                `<li>${renderLink(pullRequest, `PR #${escapeHtml(pullRequest?.number || '—')}`)} · ${escapeHtml(pullRequest?.reference || '参照未確認')} · merge先: ${escapeHtml(pullRequest?.mergeTarget || '未確認')}<span class="issue-note">${escapeHtml(pullRequest?.evidence || '根拠未確認')}</span></li>`,
+            )
+            .join('')
+        : '<li>関連するmerge済みPRは未確認です。</li>'
+      const criteriaRows = completionCriteria.length
+        ? completionCriteria
+            .map(
+              (criterion) =>
+                `<li><strong>${escapeHtml(criterion?.status || '未確認')}</strong>: ${escapeHtml(criterion?.criterion || '完了条件未記載')}<span class="issue-note">${escapeHtml(criterion?.evidence || '根拠未確認')}</span></li>`,
+            )
+            .join('')
+        : '<li>完了条件の照合結果は未確認です。</li>'
+      const transferDetail = transfer
+        ? `${renderIssueReference(transfer, '移管先Issue')} — ${escapeHtml(transfer.unmetCriteria || '対応する未達条件は未確認')}`
+        : 'なし'
+      const trackerRows = parentTrackers.length
+        ? parentTrackers
+            .map(
+              (tracker) =>
+                `<li>${renderIssueReference(tracker, '親tracker')} (${escapeHtml(tracker?.relation || '明示関係')}) — 子Issue: ${escapeHtml(tracker?.childClassification || item?.classification || '未判定')}</li>`,
+            )
+            .join('')
+        : '<li>明示された親trackerはありません。</li>'
+
+      return `
+      <article class="card reconciliation-card">
+        <span class="status ${normalIssueClassificationTone[item?.classification] ?? 'neutral'}">${escapeHtml(item?.classification || '未判定')}</span>
+        <h3>${issueLabel}</h3>
+        <dl class="detail-list">
+          <dt>関連PR・merge先</dt><dd><ul>${pullRequestRows}</ul></dd>
+          <dt>完了条件の根拠</dt><dd><ul>${criteriaRows}</ul></dd>
+          <dt>残条件</dt><dd>${escapeHtml(remainingConditions.join(' / ') || 'なし')}</dd>
+          <dt>移管先</dt><dd>${transferDetail}</dd>
+          <dt>親tracker</dt><dd><ul>${trackerRows}</ul></dd>
+          <dt>人間の次アクション</dt><dd>${escapeHtml(item?.humanNextAction || '確認して判断する')}</dd>
+        </dl>
+      </article>`
+    })
+    .join('')
+}
+
 function renderNewIssues(items) {
   return list(items).length
     ? list(items)
@@ -284,6 +358,7 @@ const replacements = {
   PROBLEMS: renderProblems(report.problems),
   TRIES: renderSimpleCards(report.tries, '次週に試す項目はありません。'),
   ISSUES: renderIssues(report.issueRefinement),
+  NORMAL_ISSUE_RECONCILIATION: renderNormalIssueReconciliation(report.normalIssueReconciliation),
   NEW_ISSUES: renderNewIssues(report.newIssueCandidates),
   FOCUS: renderFocus(report.focus),
   PRIORITY_CANDIDATES: renderPriorityCandidates(report.focus?.priorityCandidates),

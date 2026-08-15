@@ -55,6 +55,22 @@
 
 既存Issueでカバーされない改善だけを「新規Issue候補」として別枠にする。重複が疑われる場合は新規候補にせず、既存Issueとの統合案を出す。新規Issueは作成しない。
 
+### 4.1 通常Issueのマージ後照合
+
+`issueRefinement` とは別に、通常Issueのマージ後照合を行う。merge済みPRの本文またはコミットメッセージに、正確な `refs #<N>` がある通常Issueだけを対象にする。`refs #99` がないPRから #99 を対象化してはならない。
+
+スパイクまたはフェーズ分割の状態照合で扱うIssueは通常Issueから除外する。現在Issue本文、GitHub sub-issue関係、実装方針コメントで親／子／phase／spike／implementation Issueとして明示された関係だけをその状態照合の対象とし、通常Issueの3分類と重複させない。通常Issueか判定できない場合は `meta.limitations` に記録し、`normalIssueReconciliation` へ入れず推測で分類しない。
+
+対象ごとに、PR・merge先・Issue固有の完了条件の明示的証拠を照合し、次のいずれか1つに分類する。
+
+- `close候補`: 全完了条件を根拠付きで充足し、未達・未検証・未移管条件がない。
+- `残条件あり`: 未達または未検証の完了条件がある。
+- `別Issueへ移管済み`: 未達条件と移管先Issueを対応付けられる。
+
+親trackerはGitHub sub-issue関係など明示された関係だけを表示し、子Issueの現在分類を記録する。任意のIssue番号言及、参考リンク、推測から対象や親子関係を作らない。収集不能な情報は `meta.limitations` へ記録し、推測で分類しない。
+
+Issueは自動closeせず、人間が最終判断する。各対象には関連PR、merge先、完了条件の根拠、残条件または移管先、人間の次アクションを必ず記録する。
+
 ### 5. 次週フォーカスを決める
 
 - 主目標を1件選ぶ。
@@ -64,7 +80,7 @@
 
 ### 6. 固定HTMLレポートを生成する
 
-1. `references/report-data.example.json` と同じ構造でJSONを一時領域に作る。欠けた情報は空配列または空文字にし、推測で埋めない。
+1. `references/report-data.example.json` と同じ構造でJSONを一時領域に作る。通常Issueのマージ後照合は `normalIssueReconciliation` 配列に入れ、各要素に `issue`、`classification`、`pullRequests`、`completionCriteria`、`remainingConditions`、`transfer`、`parentTrackers`、`humanNextAction` を記録する。欠けた情報は、配列項目では空配列、文字列項目では空文字、`transfer` では `null` にし、推測で埋めない。
 2. 次を実行する。
 
 ```bash
