@@ -384,6 +384,35 @@ check_agent_contract "current-loop findings continue within existing issue scope
 check_agent_contract "scope expansion is the only stop trigger" '停止してユーザー判断を求めるのは重大なスコープ変更が必要な場合だけ' "$SKILL"
 check_absent_contract "legacy standard-budget stop policy stays removed" '到達したら自律的な継続を止め、状況・残課題・継続の選択肢を報告して判断を仰ぐ' "$SKILL"
 check_agent_contract "claude wrapper remains required" '.ai/scripts/run-claude-review.sh' .ai/agents/claude-review-normalizer.md
+
+# ---- Issue #128: 通常Issueのマージ後照合 ----
+WEEKLY_RETRO_PROMPT=.ai/automations/weekly-retro-refine/prompt.md
+WEEKLY_RETRO_RENDERER=.ai/automations/weekly-retro-refine/scripts/render-report.mjs
+WEEKLY_RETRO_SAMPLE=.ai/automations/weekly-retro-refine/references/report-data.example.json
+WEEKLY_RETRO_TEMPLATE=.ai/automations/weekly-retro-refine/assets/report-template.html
+WEEKLY_RETRO_OUTPUT="$log_dir/weekly-retro.html"
+
+check_agent_contract "ordinary issue reconciliation uses exact refs" '正確な `refs #<N>`' "$WEEKLY_RETRO_PROMPT"
+check_agent_contract "ordinary issue reconciliation excludes arbitrary references" '任意のIssue番号言及、参考リンク、推測から対象や親子関係を作らない' "$WEEKLY_RETRO_PROMPT"
+check_agent_contract "ordinary issue reconciliation has close candidate classification" '`close候補`' "$WEEKLY_RETRO_PROMPT"
+check_agent_contract "ordinary issue reconciliation has remaining conditions classification" '`残条件あり`' "$WEEKLY_RETRO_PROMPT"
+check_agent_contract "ordinary issue reconciliation has transferred classification" '`別Issueへ移管済み`' "$WEEKLY_RETRO_PROMPT"
+check_agent_contract "ordinary issue reconciliation preserves human close decision" 'Issueは自動closeせず、人間が最終判断する' "$WEEKLY_RETRO_PROMPT"
+check_agent_contract "renderer includes ordinary issue reconciliation" 'NORMAL_ISSUE_RECONCILIATION' "$WEEKLY_RETRO_RENDERER"
+
+node "$WEEKLY_RETRO_RENDERER" --input "$WEEKLY_RETRO_SAMPLE" --output "$WEEKLY_RETRO_OUTPUT" >/dev/null
+for placeholder in $(grep -oE '\{\{[A-Z_]+\}\}' "$WEEKLY_RETRO_TEMPLATE" | sort -u); do
+  check_absent_contract "weekly retro resolves $placeholder" "$placeholder" "$WEEKLY_RETRO_OUTPUT"
+done
+check_agent_contract "weekly retro renders close candidate" 'close候補' "$WEEKLY_RETRO_OUTPUT"
+check_agent_contract "weekly retro renders remaining conditions" '残条件あり' "$WEEKLY_RETRO_OUTPUT"
+check_agent_contract "weekly retro renders transfer" '別Issueへ移管済み' "$WEEKLY_RETRO_OUTPUT"
+check_agent_contract "weekly retro renders exact refs evidence" 'refs #114' "$WEEKLY_RETRO_OUTPUT"
+check_agent_contract "weekly retro renders merge destination" 'develop' "$WEEKLY_RETRO_OUTPUT"
+check_agent_contract "weekly retro renders transfer destination" '運用手順の自動化を実装する' "$WEEKLY_RETRO_OUTPUT"
+check_agent_contract "weekly retro renders explicit parent tracker" 'GitHub sub-issue' "$WEEKLY_RETRO_OUTPUT"
+check_agent_contract "weekly retro renders human next action" '人間がcloseを判断' "$WEEKLY_RETRO_OUTPUT"
+
 node scripts/test-review-state-machine.mjs
 
 printf '%s\n' "Agent contract checks passed!"
