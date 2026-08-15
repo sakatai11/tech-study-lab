@@ -4,7 +4,7 @@
 
 本書は **一次ソース（Single Source of Truth）** であり、仕様駆動開発（Spec-Driven）の起点となる。実装判断に迷ったときは本書に従い、本書と実装が乖離した場合は本書を先に更新する。
 
-設計文書の一次ソースは本ファイル（`docs/design.md`）の Markdown のみとし、全文の HTML ミラーは持たない。HTML は実装時に参照しやすい形へ再構成した補助資料（[`docs/api-spec.html`](./api-spec.html)・[`docs/frontend-architecture.html`](./frontend-architecture.html)・[`docs/backend-architecture.html`](./backend-architecture.html)）に限る。
+設計文書の一次ソースは本ファイル（`docs/design.md`）の Markdown のみとし、全文の HTML ミラーは持たない。HTML は実装時に参照しやすい形へ再構成した補助資料（[`docs/api-spec.html`](./api-spec.html)・[`docs/frontend-architecture.html`](./frontend-architecture.html)・[`docs/backend-architecture.html`](./backend-architecture.html)・[`docs/authentication-architecture.html`](./authentication-architecture.html)）に限る。
 
 ## 1. プロダクト方針
 
@@ -80,12 +80,25 @@ tech-study-lab/
 
 | 呼び出し元 | 経路 | 備考 |
 | --- | --- | --- |
-| Server loader（web Worker 内） | **Service Binding**（`env.API`） | Worker 間の内部呼び出し。公衆インターネットを経由せず、CORS 不要 |
-| Client hook（ブラウザ） | API Worker の公開 URL | 当面は Hono の `cors()` で web オリジンのみ許可。将来カスタムドメイン導入時は同一ゾーンのルート割当（`example.com/api/*` → API Worker）で同一オリジン化し、CORS 設定を撤去する |
+| Server loader（web Worker 内） | **named Service Binding**（`env.API` → `InternalApi`） | Worker 間の private entrypoint。公衆インターネットを経由せず、CORS・Cloudflare Access JWT 検証を通さない |
+| Client hook（ブラウザ） | API Worker の公開 URL | Cloudflare Access で保護する。Access application cookie を送るため `credentials: 'include'` を指定し、API は `WEB_ORIGIN` だけを CORS 許可する。将来カスタムドメイン導入時は同一ゾーンのルート割当（`example.com/api/*` → API Worker）で同一オリジン化し、CORS 設定を撤去する |
 | ローカル開発 | URL（`http://localhost:8787`） | `next dev` と `wrangler dev` を並走させ、env の URL にフォールバック |
 
-- web 側の wrangler 設定に `services: [{ "binding": "API", "service": "<API Worker 名>" }]` を宣言し、Server 側の `hc` には `getCloudflareContext().env.API.fetch` をカスタム `fetch` として渡す。
+- web 側の wrangler 設定に `services: [{ "binding": "API", "service": "<API Worker 名>", "entrypoint": "InternalApi" }]` を宣言し、Server 側の `hc` には `getCloudflareContext().env.API.fetch` をカスタム `fetch` として渡す。
 - Service Binding 経由でも `hc<AppType>` の型安全 RPC はそのまま維持される（差し替わるのは fetch 実装のみで、パス・メソッド・型は不変。baseURL のホスト名はダミーでよい）。
+
+#### 本番アクセス境界（Issue #112）
+
+固定ユーザー MVP の公開 API は、アプリケーション内の `userContext` より前で Cloudflare Access JWT を検証する。Cloudflare Access のアプリケーションプロキシだけに依存する案は、Worker の公開 URL への経路、アプリ内での認可前提、テスト可能な失敗契約を一箇所で保証できないため採用しない。Access が発行する JWT を Worker 自身で署名・**完全一致の issuer**・audience まで検証する方式を採用する。
+
+- default/public entrypoint は `CORS → Access boundary → userContext → shared user routes` とする。`/health` は Access と `userContext` の前で公開する。**Worker 内**では、Worker まで到達した CORS preflight（`OPTIONS`）を CORS middleware が 204 で終了させるため、Access boundary・`userContext`・route・D1 へ到達しない。これは Cloudflare Access の edge/proxy 側で preflight を Worker へ転送できること、または同等の正しい preflight 応答を返せることとは別の責務である。
+- Access boundary は `Cf-Access-Jwt-Assertion` を `jose` の JWKS 検証で確認する。JWKS URL は信頼する `ACCESS_ISSUER` から標準の `/cdn-cgi/access/certs` を導出し、設定値または JWT の issuer を任意 URL としては扱わない。設定不足、トークン欠落、署名・issuer・audience の不一致はすべて詳細を出さず、`401 { "error": { "code": "UNAUTHORIZED", "message": "Unauthorized" } }` を返す。
+- `ACCESS_ISSUER` と `ACCESS_AUDIENCE` がともに未設定で、かつ URL が `localhost` または IPv4/IPv6 loopback の場合に限り、ローカル開発として Access を bypass する。Access 設定が一部でも存在する場合は loopback URL でも bypass せず、設定不足または JWT 不備として fail closed する。これは `next dev` とローカル API の HTTP フォールバックだけを対象とする。
+- named `InternalApi extends WorkerEntrypoint` は `userContext → shared user routes` だけを実行する private entrypoint とする。Service Binding で `entrypoint: "InternalApi"` を指定した web Server loader のみが使い、公開 HTTP から Access を回避する経路にはしない。
+- この境界は Issue #35 の Cloudflare Access application / policy / `ACCESS_ISSUER` / `ACCESS_AUDIENCE` の本番設定に依存する。値は非秘密 binding として環境に設定し、リポジトリや `.env` へ保存しない。Issue #35 では API Worker に Access を適用する公開 hostname または custom domain を用意し、ブラウザの `POST` を含む CORS preflight が Access edge で遮断されず Worker の CORS 応答へ到達するか、同等の Access 側応答を返すことをデプロイ前に確認する。Access dashboard の具体的な設定値はここで固定せず、この結果を実機で検証する。
+- browser の `credentials: 'include'` は Access application cookie が web と API の両方へ適切に送られる構成を前提とする。cross-site cookie 設定と両立しない組み合わせを避け、可能なら同一 site（例: `web.example.com` と `api.example.com`）または同一 origin の API route を採る。異なる site を使う場合も、実際の Access cookie 属性とブラウザの credentialed CORS 制約を本番 hostname で検証してから公開する。
+
+認証方式の信頼境界、公開トップから `/home` へのログイン導線、ブラウザ API と Service Binding のシークエンス図は、補助資料として [`docs/authentication-architecture.html`](./authentication-architecture.html) に整理する。本節を一次ソースとし、補助資料は実装状況と通信順序を参照しやすい形へ再構成したものとする。
 
 ## 4. データモデル
 
@@ -336,7 +349,7 @@ apps/web/src/
 - `apps/api` が `AppType` をエクスポート → `apps/web` は `hc<AppType>` で型安全クライアントを生成（既存 `apps/api/src/client.ts` のファクトリを利用。Service Binding の fetch を渡せるよう、ファクトリは `hc` の第2引数（`fetch` オプション等）を受け取れる形に拡張する）。
 - `apps/web/src/lib/api.ts` に**API 共通基盤を集約**する。クライアント生成と共通レスポンス処理は同じ小さな責務群であり、現規模ではファイルを分けない。将来、独立した変更理由や十分な規模が生じた場合だけ分割する。baseURL は env（Workers バインディング / 環境変数）から解決し、ハードコードしない。
   - `createServerApiClient`：Server loader 用。本番は Service Binding（`getCloudflareContext().env.API.fetch` を `hc` のカスタム `fetch` に渡す）を必須とし、binding欠落や取得失敗は fail-fast する。ローカル開発だけ env の URL にフォールバックする。
-  - `createBrowserApiClient`：Client hook 用。env から解決した API Worker の公開 baseURL を使う。
+  - `createBrowserApiClient`：Client hook 用。env から解決した API Worker の公開 baseURL を使い、Cloudflare Access application cookie を API ドメインへ送るため `credentials: 'include'` を常に指定する。
 - feature の `api/` は呼び出し側から `ApiClient` を受け取り、`hc` の path・method・引数、共有 Zod による入出力検証、機能固有のエラーメッセージを薄く閉じ込める。Server loader と Client hook の両方から使うため、client 生成、`server-only`、cookies、headers、秘密情報など環境専用処理を入れない。
 - `res.ok` チェックと `res.json()` 変換は `apps/web/src/lib/api.ts` の `requestJson` に共通化する。
 - `hc` の path 呼び出し自体は文字列パスの汎用 fetch に置き換えない。`client.review.queue.$get()` のような endpoint ごとの wrapper を残すことで、Hono RPC の型推論を維持する。
@@ -1285,6 +1298,8 @@ export const userContext = createMiddleware<AppEnv>(async (c, next) => {
 export type Bindings = {
   DB: D1Database
   WEB_ORIGIN: string  // CORS 許可オリジン（wrangler.toml の vars で環境ごとに設定）
+  ACCESS_ISSUER?: string  // Cloudflare Access JWT の完全一致 issuer（本番のみ必須）
+  ACCESS_AUDIENCE?: string  // Cloudflare Access application の AUD（本番のみ必須）
 }
 export type Variables = {
   userId: string
@@ -1296,14 +1311,15 @@ export type AppEnv = { Bindings: Bindings; Variables: Variables }
 // index.ts — middleware 適用・ルート合成・AppType エクスポート
 const app = new Hono<AppEnv>()
 
-// CORS はブラウザ経路（§3.1）用。Service Binding 経由の呼び出しには関与しない。
-// origin resolver はリクエストコンテキストから環境別の許可オリジンを解決する。
-app.use('*', cors({ origin: (_origin, c) => c.env.WEB_ORIGIN }))
-app.use('*', userContext)
+// CORS はブラウザ経路（§3.1）用。credentials と GET/POST/OPTIONS、Content-Type だけを許可する。
+// Service Binding 経由の呼び出しには関与しない。
+app.use('*', cors({ origin: (origin, c) => origin === c.env.WEB_ORIGIN ? origin : null, credentials: true }))
+.get('/health', (c) => c.json({ status: 'ok' as const }))
+.use('*', accessBoundary)
+.use('*', userContext)
 app.onError(errorHandler)  // §10.6
 
 const routes = app
-  .get('/health', (c) => c.json({ status: 'ok' as const }))
   .route('/answers', answersRoute)
   .route('/review', reviewRoute)
   .route('/dashboard', dashboardRoute)
@@ -1314,6 +1330,7 @@ export default app
 
 - **`hc` の型推論を保つため、ルート定義はメソッドチェーンで書く**。各サブルーターは `new Hono<AppEnv>().post(...)` のチェーンで定義・export し、`index.ts` では `.route()` のチェーンで合成する。チェーンを分断（`app.post(...)` を文として並べる等）すると `AppType` からエンドポイント型が消える。
 - パス設計は §7.3 の契約（`POST /answers`・`GET /review/queue`・`GET /dashboard/due-count`）をそのまま `.route()` のプレフィックス＋サブルーター内パスで構成する。後続の `GET /domains`・`GET /analytics/*`・`GET /activity/recent`（§10.1）も同じ要領で `.route('/domains', ...)` 等をチェーンに追記する。
+- Access boundary は public entrypoint だけに置く。route・service・DAL は Access JWT を参照せず、`userContext` が実行済みであるという既存契約を保つ。internal entrypoint は同じ user route sub-app を `userContext` の後に mount することで、DTO・固定ユーザー挙動・Hono RPC 契約を public entrypoint と共有する。
 
 ### 10.6 バリデーション・DTO・エラー処理
 
@@ -1511,7 +1528,9 @@ topic frontmatter の `order` も同様に表示順（0 以上の整数、小さ
 | --- | --- | --- | --- | --- |
 | `DB` | D1 バインディング（api） | dal（Drizzle） | `wrangler dev` のローカル D1 | `apps/api/wrangler.toml` の `d1_databases`（要実 ID。§12.4） |
 | `WEB_ORIGIN` | var（api） | CORS 許可オリジン（§10.5） | `http://localhost:3000` | web Worker の公開 URL |
-| `API` | Service Binding（web） | Server loader（§3.1・§8.4） | なし（URL フォールバック） | `services: [{ binding: "API", service: "tech-study-lab-api" }]` |
+| `ACCESS_ISSUER` | var（api） | Cloudflare Access JWT の issuer 検証（§3.1） | 未設定（両 Access 設定なし＋loopback URL のみ bypass） | Cloudflare Access team domain の issuer。Issue #35 で設定 |
+| `ACCESS_AUDIENCE` | var（api） | Cloudflare Access JWT の audience 検証（§3.1） | 未設定（両 Access 設定なし＋loopback URL のみ bypass） | API 用 Access application の AUD。Issue #35 で設定 |
+| `API` | Service Binding（web） | Server loader（§3.1・§8.4） | なし（URL フォールバック） | `services: [{ binding: "API", service: "tech-study-lab-api", entrypoint: "InternalApi" }]` |
 | `API_BASE_URL` | env（web / Server 専用） | Server loader のローカルフォールバック（§8.4） | `http://localhost:8787` | 設定しない（Service Binding必須。欠落時はfail-fast） |
 | `NEXT_PUBLIC_API_BASE_URL` | ビルド時 env（web / Client） | Client hook（§8.4） | `http://localhost:8787` | api Worker の公開 URL |
 

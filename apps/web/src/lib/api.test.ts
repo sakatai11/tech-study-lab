@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { getCloudflareContext } from '@opennextjs/cloudflare'
 
-import { createServerApiClient, requestJson } from './api'
+import { createBrowserApiClient, createServerApiClient, requestJson } from './api'
 
 vi.mock('@opennextjs/cloudflare', () => ({
   getCloudflareContext: vi.fn(),
@@ -51,6 +51,24 @@ describe('createServerApiClient', () => {
     mockGetCloudflareContext.mockRejectedValue(new Error('Node runtime'))
 
     await expect(createServerApiClient()).resolves.toBeDefined()
+  })
+})
+
+describe('createBrowserApiClient', () => {
+  it('includes credentials so the Cloudflare Access application cookie reaches the public API', async () => {
+    vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', 'https://api.example.com')
+    const browserFetch = vi
+      .fn()
+      .mockResolvedValue(Response.json({ isCorrect: true, correctIndex: 0 }))
+    vi.stubGlobal('fetch', browserFetch)
+
+    const client = createBrowserApiClient()
+    await client.answers.$post({ json: { questionId: 'question-1', selectedIndex: 0 } })
+
+    expect(browserFetch).toHaveBeenCalledWith(
+      'https://api.example.com/answers',
+      expect.objectContaining({ credentials: 'include' }),
+    )
   })
 })
 
