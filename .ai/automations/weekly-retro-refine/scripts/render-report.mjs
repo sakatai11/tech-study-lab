@@ -188,6 +188,12 @@ function renderLink(item, fallback) {
   return item?.url ? `<a href="${safeUrl(item.url)}">${title}</a>` : title
 }
 
+function renderIssueReference(item, fallback) {
+  const number = text(item?.number)
+  const label = renderLink(item, fallback)
+  return number ? `#${escapeHtml(number)} ${label}` : label
+}
+
 function renderNormalIssueReconciliation(items) {
   if (!list(items).length) return empty('照合対象となる通常Issueはありません。')
 
@@ -217,13 +223,13 @@ function renderNormalIssueReconciliation(items) {
             .join('')
         : '<li>完了条件の照合結果は未確認です。</li>'
       const transferDetail = transfer
-        ? `${renderLink(transfer, '移管先Issue')} — ${escapeHtml(transfer.unmetCriteria || '対応する未達条件は未確認')}`
+        ? `${renderIssueReference(transfer, '移管先Issue')} — ${escapeHtml(transfer.unmetCriteria || '対応する未達条件は未確認')}`
         : 'なし'
       const trackerRows = parentTrackers.length
         ? parentTrackers
             .map(
               (tracker) =>
-                `<li>${renderLink(tracker, '親tracker')} (${escapeHtml(tracker?.relation || '明示関係')}) — 子Issue: ${escapeHtml(tracker?.childClassification || item?.classification || '未判定')}</li>`,
+                `<li>${renderIssueReference(tracker, '親tracker')} (${escapeHtml(tracker?.relation || '明示関係')}) — 子Issue: ${escapeHtml(tracker?.childClassification || item?.classification || '未判定')}</li>`,
             )
             .join('')
         : '<li>明示された親trackerはありません。</li>'

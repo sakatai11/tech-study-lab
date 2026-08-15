@@ -59,6 +59,8 @@
 
 `issueRefinement` とは別に、通常Issueのマージ後照合を行う。merge済みPRの本文またはコミットメッセージに、正確な `refs #<N>` がある通常Issueだけを対象にする。`refs #99` がないPRから #99 を対象化してはならない。
 
+スパイクまたはフェーズ分割の状態照合で扱うIssueは通常Issueから除外する。現在Issue本文、GitHub sub-issue関係、実装方針コメントで親／子／phase／spike／implementation Issueとして明示された関係だけをその状態照合の対象とし、通常Issueの3分類と重複させない。通常Issueか判定できない場合は `meta.limitations` に記録し、`normalIssueReconciliation` へ入れず推測で分類しない。
+
 対象ごとに、PR・merge先・Issue固有の完了条件の明示的証拠を照合し、次のいずれか1つに分類する。
 
 - `close候補`: 全完了条件を根拠付きで充足し、未達・未検証・未移管条件がない。

@@ -391,6 +391,8 @@ WEEKLY_RETRO_RENDERER=.ai/automations/weekly-retro-refine/scripts/render-report.
 WEEKLY_RETRO_SAMPLE=.ai/automations/weekly-retro-refine/references/report-data.example.json
 WEEKLY_RETRO_TEMPLATE=.ai/automations/weekly-retro-refine/assets/report-template.html
 WEEKLY_RETRO_OUTPUT="$log_dir/weekly-retro.html"
+WEEKLY_RETRO_NUMBER_FALLBACK_INPUT="$log_dir/weekly-retro-number-fallback.json"
+WEEKLY_RETRO_NUMBER_FALLBACK_OUTPUT="$log_dir/weekly-retro-number-fallback.html"
 
 check_agent_contract "ordinary issue reconciliation uses exact refs" '正確な `refs #<N>`' "$WEEKLY_RETRO_PROMPT"
 check_agent_contract "ordinary issue reconciliation excludes arbitrary references" '任意のIssue番号言及、参考リンク、推測から対象や親子関係を作らない' "$WEEKLY_RETRO_PROMPT"
@@ -398,6 +400,8 @@ check_agent_contract "ordinary issue reconciliation has close candidate classifi
 check_agent_contract "ordinary issue reconciliation has remaining conditions classification" '`残条件あり`' "$WEEKLY_RETRO_PROMPT"
 check_agent_contract "ordinary issue reconciliation has transferred classification" '`別Issueへ移管済み`' "$WEEKLY_RETRO_PROMPT"
 check_agent_contract "ordinary issue reconciliation preserves human close decision" 'Issueは自動closeせず、人間が最終判断する' "$WEEKLY_RETRO_PROMPT"
+check_agent_contract "ordinary issue reconciliation excludes phase and spike issues" 'スパイクまたはフェーズ分割の状態照合で扱うIssueは通常Issueから除外する' "$WEEKLY_RETRO_PROMPT"
+check_agent_contract "ordinary issue reconciliation records uncertain scope as a limitation" '通常Issueか判定できない場合は `meta.limitations` に記録し、`normalIssueReconciliation` へ入れず推測で分類しない' "$WEEKLY_RETRO_PROMPT"
 check_agent_contract "renderer includes ordinary issue reconciliation" 'NORMAL_ISSUE_RECONCILIATION' "$WEEKLY_RETRO_RENDERER"
 
 node "$WEEKLY_RETRO_RENDERER" --input "$WEEKLY_RETRO_SAMPLE" --output "$WEEKLY_RETRO_OUTPUT" >/dev/null
@@ -408,10 +412,28 @@ check_agent_contract "weekly retro renders close candidate" 'close候補' "$WEEK
 check_agent_contract "weekly retro renders remaining conditions" '残条件あり' "$WEEKLY_RETRO_OUTPUT"
 check_agent_contract "weekly retro renders transfer" '別Issueへ移管済み' "$WEEKLY_RETRO_OUTPUT"
 check_agent_contract "weekly retro renders exact refs evidence" 'refs #114' "$WEEKLY_RETRO_OUTPUT"
-check_agent_contract "weekly retro renders merge destination" 'develop' "$WEEKLY_RETRO_OUTPUT"
-check_agent_contract "weekly retro renders transfer destination" '運用手順の自動化を実装する' "$WEEKLY_RETRO_OUTPUT"
-check_agent_contract "weekly retro renders explicit parent tracker" 'GitHub sub-issue' "$WEEKLY_RETRO_OUTPUT"
+check_agent_contract "weekly retro renders merge destination" 'merge先: develop' "$WEEKLY_RETRO_OUTPUT"
+check_agent_contract "weekly retro renders close candidate status badge" '<span class="status good">close候補</span>' "$WEEKLY_RETRO_OUTPUT"
+check_agent_contract "weekly retro renders remaining conditions status badge" '<span class="status warn">残条件あり</span>' "$WEEKLY_RETRO_OUTPUT"
+check_agent_contract "weekly retro renders transferred status badge" '<span class="status info">別Issueへ移管済み</span>' "$WEEKLY_RETRO_OUTPUT"
+check_agent_contract "weekly retro renders transfer issue reference" '<dt>移管先</dt><dd>#118 <a href="https://github.com/example/tech-study-lab/issues/118">運用手順の自動化を実装する</a> — 運用手順を自動化する</dd>' "$WEEKLY_RETRO_OUTPUT"
+check_agent_contract "weekly retro renders parent tracker issue reference" '<li>#115 <a href="https://github.com/example/tech-study-lab/issues/115">削除操作の品質tracker</a> (GitHub sub-issue) — 子Issue: close候補</li>' "$WEEKLY_RETRO_OUTPUT"
 check_agent_contract "weekly retro renders human next action" '人間がcloseを判断' "$WEEKLY_RETRO_OUTPUT"
+
+jq '
+  .normalIssueReconciliation[2].transfer |= {
+    number: .number,
+    unmetCriteria: .unmetCriteria
+  }
+  | .normalIssueReconciliation[0].parentTrackers[0] |= {
+    number: .number,
+    relation: .relation,
+    childClassification: .childClassification
+  }
+' "$WEEKLY_RETRO_SAMPLE" > "$WEEKLY_RETRO_NUMBER_FALLBACK_INPUT"
+node "$WEEKLY_RETRO_RENDERER" --input "$WEEKLY_RETRO_NUMBER_FALLBACK_INPUT" --output "$WEEKLY_RETRO_NUMBER_FALLBACK_OUTPUT" >/dev/null
+check_agent_contract "weekly retro renders transfer number without title or URL" '<dt>移管先</dt><dd>#118 移管先Issue — 運用手順を自動化する</dd>' "$WEEKLY_RETRO_NUMBER_FALLBACK_OUTPUT"
+check_agent_contract "weekly retro renders parent tracker number without title or URL" '<li>#115 親tracker (GitHub sub-issue) — 子Issue: close候補</li>' "$WEEKLY_RETRO_NUMBER_FALLBACK_OUTPUT"
 
 node scripts/test-review-state-machine.mjs
 
