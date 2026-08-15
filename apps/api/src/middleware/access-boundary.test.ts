@@ -86,4 +86,37 @@ describe('createAccessBoundary', () => {
     expect(response.status).toBe(200)
     expect(verifier).not.toHaveBeenCalled()
   })
+
+  it('requires an Access JWT for a loopback URL when Access configuration exists', async () => {
+    const verifier = vi.fn<AccessTokenVerifier>()
+    const response = await createApp(verifier).request(
+      'http://localhost:8787/private',
+      undefined,
+      configuredBindings,
+    )
+
+    expect(response.status).toBe(401)
+    expect(verifier).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    { ACCESS_ISSUER: 'https://team.cloudflareaccess.com' },
+    { ACCESS_AUDIENCE: 'access-audience' },
+  ])(
+    'fails closed for a loopback URL with incomplete Access configuration',
+    async (accessBinding) => {
+      const verifier = vi.fn<AccessTokenVerifier>()
+      const response = await createApp(verifier).request(
+        'http://localhost:8787/private',
+        undefined,
+        {
+          ...accessBinding,
+          WEB_ORIGIN: 'http://localhost:3000',
+        } as AppEnv['Bindings'],
+      )
+
+      expect(response.status).toBe(401)
+      expect(verifier).not.toHaveBeenCalled()
+    },
+  )
 })

@@ -229,15 +229,16 @@ describe('core API endpoints', () => {
       ACCESS_ISSUER: 'https://team.cloudflareaccess.com',
       WEB_ORIGIN: 'https://web.example.com',
     }
-    const request = new Request('https://api.example.com/lesson-views', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ lessonId: 'security-xss-01' }),
-    })
+    const lessonViewRequest = (headers: Record<string, string> = {}) =>
+      new Request('https://api.example.com/lesson-views', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', ...headers },
+        body: JSON.stringify({ lessonId: 'security-xss-01' }),
+      })
 
     await seedQuestion('protected-question', 0)
     const [unauthorizedLessonView, unauthorizedAnswer] = await Promise.all([
-      app.fetch(request, bindings),
+      app.fetch(lessonViewRequest(), bindings),
       app.fetch(
         new Request('https://api.example.com/answers', {
           method: 'POST',
@@ -257,12 +258,7 @@ describe('core API endpoints', () => {
     ).resolves.toEqual({ answer_logs: 0, lesson_views: 0, srs_states: 0 })
 
     const authorized = await app.fetch(
-      new Request(request, {
-        headers: {
-          ...Object.fromEntries(request.headers),
-          'Cf-Access-Jwt-Assertion': 'valid-token',
-        },
-      }),
+      lessonViewRequest({ 'Cf-Access-Jwt-Assertion': 'valid-token' }),
       bindings,
     )
     expect(authorized.status).toBe(201)

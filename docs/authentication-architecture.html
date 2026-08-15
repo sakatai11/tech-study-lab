@@ -1137,9 +1137,9 @@ sequenceDiagram
                 <tr>
                   <td><code>localhost</code> / loopback</td>
                   <td class="route-local">LOCAL ONLY</td>
-                  <td>Access bypass</td>
+                  <td>Access設定が両方ない場合だけbypass</td>
                   <td>ローカルD1</td>
-                  <td>非loopbackではfail closed</td>
+                  <td>設定済み・設定不足・非loopbackではfail closed</td>
                 </tr>
               </tbody>
             </table>
@@ -1350,7 +1350,7 @@ sequenceDiagram
                 </tr>
                 <tr>
                   <td>localhostのみ認証なしで成功</td>
-                  <td>明示的なloopback開発経路</td>
+                  <td>Access設定が両方未設定の明示的なloopback開発経路</td>
                   <td>ローカルD1のみ</td>
                   <td>request URL hostname</td>
                 </tr>

@@ -93,7 +93,7 @@ tech-study-lab/
 
 - default/public entrypoint は `CORS → Access boundary → userContext → shared user routes` とする。`/health` は Access と `userContext` の前で公開する。**Worker 内**では、Worker まで到達した CORS preflight（`OPTIONS`）を CORS middleware が 204 で終了させるため、Access boundary・`userContext`・route・D1 へ到達しない。これは Cloudflare Access の edge/proxy 側で preflight を Worker へ転送できること、または同等の正しい preflight 応答を返せることとは別の責務である。
 - Access boundary は `Cf-Access-Jwt-Assertion` を `jose` の JWKS 検証で確認する。JWKS URL は信頼する `ACCESS_ISSUER` から標準の `/cdn-cgi/access/certs` を導出し、設定値または JWT の issuer を任意 URL としては扱わない。設定不足、トークン欠落、署名・issuer・audience の不一致はすべて詳細を出さず、`401 { "error": { "code": "UNAUTHORIZED", "message": "Unauthorized" } }` を返す。
-- `localhost`、IPv4/IPv6 loopback の URL に限るローカル開発では Access を bypass する。これは `next dev` とローカル API の HTTP フォールバックだけを対象とし、非 loopback の URL で設定が欠ける場合は fail closed する。
+- `ACCESS_ISSUER` と `ACCESS_AUDIENCE` がともに未設定で、かつ URL が `localhost` または IPv4/IPv6 loopback の場合に限り、ローカル開発として Access を bypass する。Access 設定が一部でも存在する場合は loopback URL でも bypass せず、設定不足または JWT 不備として fail closed する。これは `next dev` とローカル API の HTTP フォールバックだけを対象とする。
 - named `InternalApi extends WorkerEntrypoint` は `userContext → shared user routes` だけを実行する private entrypoint とする。Service Binding で `entrypoint: "InternalApi"` を指定した web Server loader のみが使い、公開 HTTP から Access を回避する経路にはしない。
 - この境界は Issue #35 の Cloudflare Access application / policy / `ACCESS_ISSUER` / `ACCESS_AUDIENCE` の本番設定に依存する。値は非秘密 binding として環境に設定し、リポジトリや `.env` へ保存しない。Issue #35 では API Worker に Access を適用する公開 hostname または custom domain を用意し、ブラウザの `POST` を含む CORS preflight が Access edge で遮断されず Worker の CORS 応答へ到達するか、同等の Access 側応答を返すことをデプロイ前に確認する。Access dashboard の具体的な設定値はここで固定せず、この結果を実機で検証する。
 - browser の `credentials: 'include'` は Access application cookie が web と API の両方へ適切に送られる構成を前提とする。cross-site cookie 設定と両立しない組み合わせを避け、可能なら同一 site（例: `web.example.com` と `api.example.com`）または同一 origin の API route を採る。異なる site を使う場合も、実際の Access cookie 属性とブラウザの credentialed CORS 制約を本番 hostname で検証してから公開する。
@@ -1528,8 +1528,8 @@ topic frontmatter の `order` も同様に表示順（0 以上の整数、小さ
 | --- | --- | --- | --- | --- |
 | `DB` | D1 バインディング（api） | dal（Drizzle） | `wrangler dev` のローカル D1 | `apps/api/wrangler.toml` の `d1_databases`（要実 ID。§12.4） |
 | `WEB_ORIGIN` | var（api） | CORS 許可オリジン（§10.5） | `http://localhost:3000` | web Worker の公開 URL |
-| `ACCESS_ISSUER` | var（api） | Cloudflare Access JWT の issuer 検証（§3.1） | 未設定（loopback URL のみ bypass） | Cloudflare Access team domain の issuer。Issue #35 で設定 |
-| `ACCESS_AUDIENCE` | var（api） | Cloudflare Access JWT の audience 検証（§3.1） | 未設定（loopback URL のみ bypass） | API 用 Access application の AUD。Issue #35 で設定 |
+| `ACCESS_ISSUER` | var（api） | Cloudflare Access JWT の issuer 検証（§3.1） | 未設定（両 Access 設定なし＋loopback URL のみ bypass） | Cloudflare Access team domain の issuer。Issue #35 で設定 |
+| `ACCESS_AUDIENCE` | var（api） | Cloudflare Access JWT の audience 検証（§3.1） | 未設定（両 Access 設定なし＋loopback URL のみ bypass） | API 用 Access application の AUD。Issue #35 で設定 |
 | `API` | Service Binding（web） | Server loader（§3.1・§8.4） | なし（URL フォールバック） | `services: [{ binding: "API", service: "tech-study-lab-api", entrypoint: "InternalApi" }]` |
 | `API_BASE_URL` | env（web / Server 専用） | Server loader のローカルフォールバック（§8.4） | `http://localhost:8787` | 設定しない（Service Binding必須。欠落時はfail-fast） |
 | `NEXT_PUBLIC_API_BASE_URL` | ビルド時 env（web / Client） | Client hook（§8.4） | `http://localhost:8787` | api Worker の公開 URL |

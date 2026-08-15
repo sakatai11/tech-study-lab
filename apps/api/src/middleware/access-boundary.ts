@@ -69,13 +69,13 @@ function unauthorized(c: Context<AppEnv>) {
  */
 export function createAccessBoundary(verifier: AccessTokenVerifier = verifyAccessToken) {
   return createMiddleware<AppEnv>(async (c, next) => {
-    if (isLoopbackHostname(new URL(c.req.url).hostname)) {
-      await next()
-      return
-    }
-
     const config = accessConfiguration(c.env)
     if (!config) {
+      const accessIsUnconfigured = !c.env.ACCESS_ISSUER && !c.env.ACCESS_AUDIENCE
+      if (accessIsUnconfigured && isLoopbackHostname(new URL(c.req.url).hostname)) {
+        await next()
+        return
+      }
       return unauthorized(c)
     }
 
