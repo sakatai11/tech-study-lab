@@ -80,7 +80,7 @@ Issueは自動closeせず、人間が最終判断する。各対象には関連P
 
 ### 6. 固定HTMLレポートを生成する
 
-1. `references/report-data.example.json` と同じ構造でJSONを一時領域に作る。通常Issueのマージ後照合は `normalIssueReconciliation` 配列に入れ、各要素に `issue`、`classification`、`pullRequests`、`completionCriteria`、`remainingConditions`、`transfer`、`parentTrackers`、`humanNextAction` を記録する。欠けた情報は空配列または空文字にし、推測で埋めない。
+1. `references/report-data.example.json` と同じ構造でJSONを一時領域に作る。通常Issueのマージ後照合は `normalIssueReconciliation` 配列に入れ、各要素に `issue`、`classification`、`pullRequests`、`completionCriteria`、`remainingConditions`、`transfer`、`parentTrackers`、`humanNextAction` を記録する。欠けた情報は、配列項目では空配列、文字列項目では空文字、`transfer` では `null` にし、推測で埋めない。
 2. 次を実行する。
 
 ```bash

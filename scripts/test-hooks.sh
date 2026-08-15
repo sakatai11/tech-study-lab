@@ -402,6 +402,7 @@ check_agent_contract "ordinary issue reconciliation has transferred classificati
 check_agent_contract "ordinary issue reconciliation preserves human close decision" 'Issueは自動closeせず、人間が最終判断する' "$WEEKLY_RETRO_PROMPT"
 check_agent_contract "ordinary issue reconciliation excludes phase and spike issues" 'スパイクまたはフェーズ分割の状態照合で扱うIssueは通常Issueから除外する' "$WEEKLY_RETRO_PROMPT"
 check_agent_contract "ordinary issue reconciliation records uncertain scope as a limitation" '通常Issueか判定できない場合は `meta.limitations` に記録し、`normalIssueReconciliation` へ入れず推測で分類しない' "$WEEKLY_RETRO_PROMPT"
+check_agent_contract "ordinary issue reconciliation uses null for missing transfer" '`transfer` では `null`' "$WEEKLY_RETRO_PROMPT"
 check_agent_contract "renderer includes ordinary issue reconciliation" 'NORMAL_ISSUE_RECONCILIATION' "$WEEKLY_RETRO_RENDERER"
 
 node "$WEEKLY_RETRO_RENDERER" --input "$WEEKLY_RETRO_SAMPLE" --output "$WEEKLY_RETRO_OUTPUT" >/dev/null
