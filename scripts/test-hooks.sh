@@ -385,6 +385,109 @@ check_agent_contract "scope expansion is the only stop trigger" '停止してユ
 check_absent_contract "legacy standard-budget stop policy stays removed" '到達したら自律的な継続を止め、状況・残課題・継続の選択肢を報告して判断を仰ぐ' "$SKILL"
 check_agent_contract "claude wrapper remains required" '.ai/scripts/run-claude-review.sh' .ai/agents/claude-review-normalizer.md
 
+# ---- Issue #131: develop -> main release PR skill contracts ----
+RELEASE_MAIN_PR_SKILL=.ai/skills/release-main-pr/SKILL.md
+
+if [ "$(readlink .claude/skills/release-main-pr)" != '../../.ai/skills/release-main-pr' ] ||
+  [ "$(readlink .agents/skills/release-main-pr)" != '../../.ai/skills/release-main-pr' ]; then
+  printf '%s\n' 'release-main-pr discovery links are invalid' >&2
+  exit 1
+fi
+
+check_agent_contract "release skill requires GitHub auth" '`gh auth status`' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill verifies default branch through repository metadata" '`gh repo view --json nameWithOwner,defaultBranchRef`' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill requires main as the default branch" 'default branchが`main`であることを確認する' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill stops PR creation for a non-main default branch" '期待値と実際の値を報告してPR作成を停止する' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill stops before keywords for a non-main default branch" 'closing keywordを含むPRは作成しない' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill requires a clean worktree" '`git status --short`が空' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill logs its explicit start command" '`./.ai/hooks/log-skill-usage.sh --runtime codex --skill release-main-pr --status started`' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill logs its explicit completion command" '`./.ai/hooks/log-skill-usage.sh --runtime codex --skill release-main-pr --status completed`' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill fetches remote release refs" '`git fetch origin main develop`' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill stops on fetch failure" '失敗したらエラーを報告して停止し、キャッシュ済みのremote-tracking refを使わない' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill checks duplicate PRs" '`base=main`かつ`head=develop`のopen PR' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill rejects an empty remote diff" '`origin/main..origin/develop`が空でない' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill distinguishes diff exit codes" '終了コード0なら差分なしとして停止、1なら差分ありとして続行、0と1以外なら検証エラーを報告して停止する' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill does not mask diff errors" '終了コードを`|| true`などで握りつぶさない' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill reconstructs remote release range" '`origin/main...origin/develop`' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill only accepts exact refs candidates" '正確な`refs #N`トークン' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill resolves candidate types through the REST Issue endpoint" 'GitHub REST Issue endpointの`gh api "repos/<nameWithOwner>/issues/<番号>"`応答' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill rejects PR resources as close candidates" '`pull_request`フィールドがあれば、その番号はPRリソースでありIssueではない' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill routes PR resources to no-keyword candidates" 'closing keywordなしの要確認候補へ「PRリソースのため」と記載する' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill requires every close proof" '全条件を満たすIssueだけを自動close対象にする' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill separates uncertain candidates" '## 要確認候補（closing keywordなし）' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill states empty close state" '<対象がなければ「なし」>' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill states empty uncertain state" '<候補がなければ「なし」>' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill scans the full generated body for every closing keyword family" '本文生成後は本文全文を対象に、大文字小文字を区別せず、`close`、`closes`、`closed`、`fix`、`fixes`、`fixed`、`resolve`、`resolves`、`resolved`と任意のコロンに続く同一または別リポジトリのIssue参照をすべてトークン単位で抽出する' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill validates every closing token against the approved set" '抽出結果が自動close対象の番号集合と完全一致し、重複がなく、すべて自動close欄の規定書式に由来することを確認する' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill requires fresh approval after closing token mismatch" '本文と候補判定を作り直して全文を再提示し、新しい承認を得る' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill requires pre-create approval" '明示的なユーザー承認を得る。承認前はPRを作成しない。' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill revalidates immediately after approval" '承認後かつ一時ファイル作成前に、`git fetch origin main develop`、remote refのSHA、差分有無、重複PR、含まれるPR、Issue候補、自動close対象、生成本文を同じ規則で再検証する' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill invalidates stale approval" '以前の承認を無効にし、タイトル、本文、候補判定を再生成して全文を再提示し、新しい明示的承認を得る' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill uses a portable final-suffix mktemp template" '`body_file=$(mktemp "${TMPDIR:-/tmp}/release-main-pr.XXXXXX")`' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill writes approved body through a non-shell file operation" '現在のランタイムのパッチ編集またはファイル書き込み機能を使い、承認済み本文全文をリテラルデータとしてそのパスへ書く。' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill forbids shell expansion while writing approved body" 'shellのheredoc、`echo`、`printf`、リダイレクトで本文を書かない。' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill verifies the approved body byte-for-byte" '書き込み後にファイルを読み、承認済み本文と完全一致することを確認する。' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill cleans up after body write failure" '本文の書き込みに失敗した場合は、返された正確な一時パスを削除して停止する。' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill cleans up after body mismatch" '不一致ならPRを作成せず、返された正確な一時パスを削除して停止する。' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill cleans up its PR body file" '`trap '\''rm -f "$body_file"'\'' EXIT`' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill creates PR with explicit non-interactive inputs" '`gh pr create --base main --head develop --title "chore: merge develop into main" --body-file "$body_file"`' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill keeps cleanup and PR creation in one shell invocation" '`trap '\''rm -f "$body_file"'\'' EXIT`の登録と`gh pr create --base main --head develop --title "chore: merge develop into main" --body-file "$body_file"`を一つのshell invocation内でこの順に非対話実行する。' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill checks post-create mergeability" '`gh pr view <PR番号> --json mergeable,mergeStateStatus,statusCheckRollup`でmergeable状態をポーリングする' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill waits for a resolved mergeable state" '`UNKNOWN`の間は完了扱いせず再確認し、`CONFLICTING`なら状態を報告して人間の判断を待つ' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill identifies required checks separately" '`gh pr checks <PR番号> --required`でrequired checkを別に特定する' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill only completes after required checks succeed" 'required checkが存在し、すべて成功した場合だけ完了扱いにする' "$RELEASE_MAIN_PR_SKILL"
+
+release_summary_section=$(extract_section "$RELEASE_MAIN_PR_SKILL" '## 概要' '## 含まれるPR')
+release_pr_section=$(extract_section "$RELEASE_MAIN_PR_SKILL" '## 含まれるPR' '## mainマージ時に自動closeするIssue')
+release_auto_close_section=$(extract_section "$RELEASE_MAIN_PR_SKILL" '## mainマージ時に自動closeするIssue' '## 要確認候補（closing keywordなし）')
+release_uncertain_section=$(extract_section "$RELEASE_MAIN_PR_SKILL" '## 要確認候補（closing keywordなし）' '## 確認結果')
+release_prohibited_section=$(extract_section "$RELEASE_MAIN_PR_SKILL" '## 禁止操作' '## 完了報告')
+
+check_section_contract "release skill places closing keywords in auto-close list" "$release_auto_close_section" 'Closes #<Issue番号>'
+extract_closing_issue_refs() {
+  awk '
+    {
+      line = tolower($0)
+      if (match(line, /(^|[^[:alnum:]_])(close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)[[:space:]]*:?[[:space:]]+/)) {
+        remainder = substr(line, RSTART + RLENGTH)
+        while (match(remainder, /([[:alnum:]_.-]+\/[[:alnum:]_.-]+)?#([0-9]+|<issue番号>)/)) {
+          print substr(remainder, RSTART, RLENGTH)
+          remainder = substr(remainder, RSTART + RLENGTH)
+        }
+      }
+    }
+  '
+}
+
+release_all_closing_refs=$(extract_closing_issue_refs < "$RELEASE_MAIN_PR_SKILL")
+release_auto_close_refs=$(printf '%s\n' "$release_auto_close_section" | extract_closing_issue_refs)
+if [ "$release_all_closing_refs" != '#<issue番号>' ] ||
+  [ "$release_auto_close_refs" != '#<issue番号>' ]; then
+  printf '%s\n' 'release skill closing references must appear exactly once and only in the auto-close list' >&2
+  exit 1
+fi
+
+release_closing_fixture_refs=$(
+  printf '%s\n' \
+    'CLOSE: #1, #10' \
+    'ClOsEs #2' \
+    'closed: #3' \
+    'FIX #4' \
+    'Fixes: #5' \
+    'fixed #6' \
+    'RESOLVE: #7' \
+    'Resolves #8' \
+    'resolved: Owner.Name/Repo-Name#9' |
+    extract_closing_issue_refs
+)
+release_closing_fixture_expected=$(printf '%s\n' '#1' '#10' '#2' '#3' '#4' '#5' '#6' '#7' '#8' 'owner.name/repo-name#9')
+if [ "$release_closing_fixture_refs" != "$release_closing_fixture_expected" ]; then
+  printf '%s\n' 'release skill closing reference extractor missed a keyword variant or same-line reference' >&2
+  exit 1
+fi
+check_section_contract "release skill prohibition forbids PR merging" "$release_prohibited_section" '`gh pr merge`、`gh issue close`、auto-mergeの有効化、リポジトリ設定の変更、関係ない変更の`git commit`・`git push`を実行しない。'
+check_section_contract "release skill prohibition leaves duplicate PRs unchanged" "$release_prohibited_section" '重複PRがあるときも、そのPRを変更・マージしない。'
+
 # ---- Issue #128: 通常Issueのマージ後照合 ----
 WEEKLY_RETRO_PROMPT=.ai/automations/weekly-retro-refine/prompt.md
 WEEKLY_RETRO_RENDERER=.ai/automations/weekly-retro-refine/scripts/render-report.mjs
