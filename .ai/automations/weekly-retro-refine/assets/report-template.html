@@ -357,6 +357,7 @@
         <a href="#summary">要約</a>
         <a href="#retro">振り返り</a>
         <a href="#issues">既存Issue</a>
+        <a href="#close-candidates">close候補</a>
         <a href="#candidates">新規候補</a>
         <a href="#focus">次週</a>
         <a href="#approvals">承認事項</a>
@@ -382,6 +383,11 @@
       <section class="panel" id="issues">
         <div class="section-heading"><h2>既存Issueのリファイメント</h2><p>新規作成より先に確認</p></div>
         <div class="table-wrap">{{ISSUES}}</div>
+      </section>
+
+      <section class="panel" id="close-candidates">
+        <div class="section-heading"><h2>通常Issueのマージ後照合</h2><p>根拠を確認し、人間がcloseを判断</p></div>
+        <div class="two-column">{{NORMAL_ISSUE_RECONCILIATION}}</div>
       </section>
 
       <section class="panel" id="candidates">

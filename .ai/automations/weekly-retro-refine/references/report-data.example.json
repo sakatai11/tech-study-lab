@@ -69,6 +69,113 @@
       "nextAction": "Issue本文の更新案を承認依頼"
     }
   ],
+  "normalIssueReconciliation": [
+    {
+      "issue": {
+        "number": 114,
+        "title": "削除失敗時のクライアント状態を保持する",
+        "url": "https://github.com/example/tech-study-lab/issues/114"
+      },
+      "classification": "close候補",
+      "pullRequests": [
+        {
+          "number": 127,
+          "title": "fix: handle delete list failures",
+          "url": "https://github.com/example/tech-study-lab/pull/127",
+          "reference": "refs #114",
+          "mergeTarget": "develop",
+          "evidence": "PR #127 は develop へmerge済みです。"
+        }
+      ],
+      "completionCriteria": [
+        {
+          "criterion": "削除API失敗時にユーザーへ通知し、クライアント状態を保持する",
+          "status": "充足",
+          "evidence": "PR #127 の実装とテストで確認済みです。"
+        }
+      ],
+      "remainingConditions": [],
+      "transfer": null,
+      "parentTrackers": [
+        {
+          "number": 115,
+          "title": "削除操作の品質tracker",
+          "url": "https://github.com/example/tech-study-lab/issues/115",
+          "relation": "GitHub sub-issue",
+          "childClassification": "close候補"
+        }
+      ],
+      "humanNextAction": "根拠を確認し、人間がcloseを判断する。"
+    },
+    {
+      "issue": {
+        "number": 116,
+        "title": "開発環境の確認手順を更新する",
+        "url": "https://github.com/example/tech-study-lab/issues/116"
+      },
+      "classification": "残条件あり",
+      "pullRequests": [
+        {
+          "number": 128,
+          "title": "docs: update local setup guide",
+          "url": "https://github.com/example/tech-study-lab/pull/128",
+          "reference": "refs #116",
+          "mergeTarget": "develop",
+          "evidence": "PR #128 は develop へmerge済みです。"
+        }
+      ],
+      "completionCriteria": [
+        {
+          "criterion": "ローカルセットアップ手順を更新する",
+          "status": "充足",
+          "evidence": "PR #128 の変更で確認済みです。"
+        },
+        {
+          "criterion": "新手順をCIで検証する",
+          "status": "未検証",
+          "evidence": "CI実行結果を取得できていません。"
+        }
+      ],
+      "remainingConditions": ["新手順のCI検証"],
+      "transfer": null,
+      "parentTrackers": [],
+      "humanNextAction": "未検証の完了条件を確認してからcloseを判断する。"
+    },
+    {
+      "issue": {
+        "number": 117,
+        "title": "運用手順の自動化",
+        "url": "https://github.com/example/tech-study-lab/issues/117"
+      },
+      "classification": "別Issueへ移管済み",
+      "pullRequests": [
+        {
+          "number": 129,
+          "title": "chore: split automation work",
+          "url": "https://github.com/example/tech-study-lab/pull/129",
+          "reference": "refs #117",
+          "mergeTarget": "develop",
+          "evidence": "PR #129 は develop へmerge済みです。"
+        }
+      ],
+      "completionCriteria": [
+        {
+          "criterion": "運用手順を自動化する",
+          "status": "移管済み",
+          "evidence": "実装をIssue #118へ分割しました。"
+        }
+      ],
+      "remainingConditions": ["運用手順の自動化"],
+      "transfer": {
+        "number": 118,
+        "title": "運用手順の自動化を実装する",
+        "url": "https://github.com/example/tech-study-lab/issues/118",
+        "unmetCriteria": "運用手順を自動化する"
+      },
+      "parentTrackers": [],
+      "humanNextAction": "移管先Issue #118の進捗を確認する。"
+    }
+  ],
   "newIssueCandidates": [
     {
       "type": "chore",

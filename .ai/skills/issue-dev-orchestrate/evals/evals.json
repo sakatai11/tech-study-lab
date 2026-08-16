@@ -9,6 +9,18 @@
     "agents": ["issue-investigator", "developer", "reviewer", "test-fixer"],
     "mode": "native-agent"
   },
+  "issue124Regression": {
+    "purpose": "discovery / Finding台帳 / verification / 別モデルCLI直接監視の契約を、実在Issueや外部送信なしに状態機械で固定する。",
+    "scenarios": [
+      "discoveryではinternal reviewerと別モデルCLIがdevelop...HEADの全累積差分を読む",
+      "同一ファイル・行かつ実質同内容の指摘は安定したI<issue>-F<3桁連番>のFindingへ統合し出典を保持する",
+      "verificationはFinding台帳、修正要約、修正コミット範囲を必須とし、internal approve後だけ別モデルCLIを実行する",
+      "verificationの各Findingをresolved / partial / unresolvedで判定し、独立改善をcurrent loopへ入れない",
+      "無出力でも5分はrunning、10分で通知、20分で一度だけtimeoutし、timeoutはFinding・境界を更新しない",
+      "20分timeout後のchunk分割はcommit/fileのunion coverageとcross-cutting reviewを必須とする"
+    ],
+    "test": "sh scripts/test-hooks.sh"
+  },
   "run": {
     "date": "2026-07-06",
     "issue": 12,

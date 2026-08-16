@@ -4,7 +4,7 @@
 
 本書は **一次ソース（Single Source of Truth）** であり、仕様駆動開発（Spec-Driven）の起点となる。実装判断に迷ったときは本書に従い、本書と実装が乖離した場合は本書を先に更新する。
 
-設計文書の一次ソースは本ファイル（`docs/design.md`）の Markdown のみとし、全文の HTML ミラーは持たない。HTML は実装時に参照しやすい形へ再構成した補助資料（[`docs/api-spec.html`](./api-spec.html)・[`docs/frontend-architecture.html`](./frontend-architecture.html)・[`docs/backend-architecture.html`](./backend-architecture.html)）に限る。
+設計文書の一次ソースは本ファイル（`docs/design.md`）の Markdown のみとし、全文の HTML ミラーは持たない。HTML は実装時に参照しやすい形へ再構成した補助資料（[`docs/api-spec.html`](./api-spec.html)・[`docs/frontend-architecture.html`](./frontend-architecture.html)・[`docs/backend-architecture.html`](./backend-architecture.html)・[`docs/authentication-architecture.html`](./authentication-architecture.html)）に限る。
 
 ## 1. プロダクト方針
 
@@ -80,12 +80,25 @@ tech-study-lab/
 
 | 呼び出し元 | 経路 | 備考 |
 | --- | --- | --- |
-| Server loader（web Worker 内） | **Service Binding**（`env.API`） | Worker 間の内部呼び出し。公衆インターネットを経由せず、CORS 不要 |
-| Client hook（ブラウザ） | API Worker の公開 URL | 当面は Hono の `cors()` で web オリジンのみ許可。将来カスタムドメイン導入時は同一ゾーンのルート割当（`example.com/api/*` → API Worker）で同一オリジン化し、CORS 設定を撤去する |
+| Server loader（web Worker 内） | **named Service Binding**（`env.API` → `InternalApi`） | Worker 間の private entrypoint。公衆インターネットを経由せず、CORS・Cloudflare Access JWT 検証を通さない |
+| Client hook（ブラウザ） | API Worker の公開 URL | Cloudflare Access で保護する。Access application cookie を送るため `credentials: 'include'` を指定し、API は `WEB_ORIGIN` だけを CORS 許可する。将来カスタムドメイン導入時は同一ゾーンのルート割当（`example.com/api/*` → API Worker）で同一オリジン化し、CORS 設定を撤去する |
 | ローカル開発 | URL（`http://localhost:8787`） | `next dev` と `wrangler dev` を並走させ、env の URL にフォールバック |
 
-- web 側の wrangler 設定に `services: [{ "binding": "API", "service": "<API Worker 名>" }]` を宣言し、Server 側の `hc` には `getCloudflareContext().env.API.fetch` をカスタム `fetch` として渡す。
+- web 側の wrangler 設定に `services: [{ "binding": "API", "service": "<API Worker 名>", "entrypoint": "InternalApi" }]` を宣言し、Server 側の `hc` には `getCloudflareContext().env.API.fetch` をカスタム `fetch` として渡す。
 - Service Binding 経由でも `hc<AppType>` の型安全 RPC はそのまま維持される（差し替わるのは fetch 実装のみで、パス・メソッド・型は不変。baseURL のホスト名はダミーでよい）。
+
+#### 本番アクセス境界（Issue #112）
+
+固定ユーザー MVP の公開 API は、アプリケーション内の `userContext` より前で Cloudflare Access JWT を検証する。Cloudflare Access のアプリケーションプロキシだけに依存する案は、Worker の公開 URL への経路、アプリ内での認可前提、テスト可能な失敗契約を一箇所で保証できないため採用しない。Access が発行する JWT を Worker 自身で署名・**完全一致の issuer**・audience まで検証する方式を採用する。
+
+- default/public entrypoint は `CORS → Access boundary → userContext → shared user routes` とする。`/health` は Access と `userContext` の前で公開する。**Worker 内**では、Worker まで到達した CORS preflight（`OPTIONS`）を CORS middleware が 204 で終了させるため、Access boundary・`userContext`・route・D1 へ到達しない。これは Cloudflare Access の edge/proxy 側で preflight を Worker へ転送できること、または同等の正しい preflight 応答を返せることとは別の責務である。
+- Access boundary は `Cf-Access-Jwt-Assertion` を `jose` の JWKS 検証で確認する。JWKS URL は信頼する `ACCESS_ISSUER` から標準の `/cdn-cgi/access/certs` を導出し、設定値または JWT の issuer を任意 URL としては扱わない。設定不足、トークン欠落、署名・issuer・audience の不一致はすべて詳細を出さず、`401 { "error": { "code": "UNAUTHORIZED", "message": "Unauthorized" } }` を返す。
+- `ACCESS_ISSUER` と `ACCESS_AUDIENCE` がともに未設定で、かつ URL が `localhost` または IPv4/IPv6 loopback の場合に限り、ローカル開発として Access を bypass する。Access 設定が一部でも存在する場合は loopback URL でも bypass せず、設定不足または JWT 不備として fail closed する。これは `next dev` とローカル API の HTTP フォールバックだけを対象とする。
+- named `InternalApi extends WorkerEntrypoint` は `userContext → shared user routes` だけを実行する private entrypoint とする。Service Binding で `entrypoint: "InternalApi"` を指定した web Server loader のみが使い、公開 HTTP から Access を回避する経路にはしない。
+- この境界は Issue #35 の Cloudflare Access application / policy / `ACCESS_ISSUER` / `ACCESS_AUDIENCE` の本番設定に依存する。値は非秘密 binding として環境に設定し、リポジトリや `.env` へ保存しない。Issue #35 では API Worker に Access を適用する公開 hostname または custom domain を用意し、ブラウザの `POST` を含む CORS preflight が Access edge で遮断されず Worker の CORS 応答へ到達するか、同等の Access 側応答を返すことをデプロイ前に確認する。Access dashboard の具体的な設定値はここで固定せず、この結果を実機で検証する。
+- browser の `credentials: 'include'` は Access application cookie が web と API の両方へ適切に送られる構成を前提とする。cross-site cookie 設定と両立しない組み合わせを避け、可能なら同一 site（例: `web.example.com` と `api.example.com`）または同一 origin の API route を採る。異なる site を使う場合も、実際の Access cookie 属性とブラウザの credentialed CORS 制約を本番 hostname で検証してから公開する。
+
+認証方式の信頼境界、公開トップから `/home` へのログイン導線、ブラウザ API と Service Binding のシークエンス図は、補助資料として [`docs/authentication-architecture.html`](./authentication-architecture.html) に整理する。本節を一次ソースとし、補助資料は実装状況と通信順序を参照しやすい形へ再構成したものとする。
 
 ## 4. データモデル
 
@@ -141,6 +154,7 @@ SM-2 の計算式（`packages/shared/src/srs/sm2.ts`）の周辺で、実装時�
 
 - **SRS 更新の入口は 1 つ**：`POST /answers` は呼び出し元（`/quiz`・`/review`・`wrongOnly`）を区別せず、1 解答ごとに `answer_log` 記録と SRS 更新を必ず行う。演習と復習で採点・記録の仕様差を作らない（API はリクエストの文脈を持たない）。演習（`/quiz`）で正解した問題が SM-2 に従い翌日 due になるのは意図した挙動である。
 - **due queue の順序と上限**：API が `dueAt` 昇順（滞留が古いものから）で返す。1 回のレスポンスは**最大 20 件**で、`hasMore` で残バッチの有無を返す。フロントは順序を並べ替えず、完了後に `hasMore` が真なら `router.refresh()` で次のバッチを取得する（§9.2 の再取得動線と整合）。
+- **due 件数の意味と content 不整合**：ダッシュボードの `GET /dashboard/due-count` は、`srs_states` のうち `due_at` が現在時刻以前の行を数える**生の due-state 件数**であり、content との join や 20 件上限では減らさない。一方、`/review` の `ReviewViewModel.dueCount` は、現在バッチの queue を bundled content と join して実際に表示できる問題だけを数える**joined 表示件数**である。content から削除済みなどで queue ID を解決できない場合も mapper はその ID を除外する。ただし、joined 表示件数が 0 なのに `hasMore` が真なら、後続バッチを指す状態で空キューを表示して進行不能になるため、`ReviewUserContent` は content 整合性エラーを throw して route error boundary に渡す。`hasMore` が偽の joined 表示件数 0 は通常の空キューとして表示する。
 - **同一問題の複数回解答**：制御しない。解答のたびに SRS を更新する（最後の解答が次回出題日を決める）。`answer_logs` には全解答が残るため、事後分析は可能。
 - **正解データの修正**：content の `answerIndex` を修正しても、過去の `answer_logs` は再評価しない（記録時点の判定を保持する）。
 
@@ -209,6 +223,8 @@ SM-2 の計算式（`packages/shared/src/srs/sm2.ts`）の周辺で、実装時�
 - **演習フロー**：1 問ずつ表示 → 即時に正誤＋解説 → 確定で選択肢をロック → 末尾に結果サマリ。**1 問解答＝1 `answer_log` POST**（SRS は問題粒度で更新）。
 - **正誤判定の権威はAPI（サーバー）**：Quiz/Review の `QuizViewModel` は選択肢と解説のみを持ち、正解（`answerIndex`）を含めない。クライアントは選んだ `selectedIndex` を `POST /answers` に送り、API が D1 の `questions`（4.4）と照合して `is_correct` を判定・記録し、結果（`isCorrect` / `correctIndex`）を返す。将来公開後もクライアントバンドルに正解を露出しない。
 - **Quiz 表示コンポーネント**：問題・解説・intro 内容・結果導線を表示 props で受け取り、画面フェーズと問題送りを管理する再利用可能な Client Component として設計する。`/quiz`（レッスン全問）・`/review`（due 問題）・「間違えた問題だけ」（`wrongOnly`）では、Server loader / mapper が組み立てる ViewModel と表示 props の供給元だけを差し替える。解答 mutation と通信 state は共通の Client hook が担当する。
+- **問題なしの扱い**：`QuizInteractive` は `questions` が空の場合に「出題できる問題がありません」を明示表示し、開始 CTA は表示しない。設定済みの戻り先（`resultHomeHref` / `resultHomeLabel`）は維持する。
+- **Review の空キュー判定**：`/review` は mapper 後の joined 表示件数と API の `hasMore` を Server Component で判定する。joined 表示件数 0・`hasMore: false` は通常の「今日は復習済みです」カード、joined 表示件数 0・`hasMore: true` は bundled content と保存済み review state の不整合として error boundary へ送る。joined 表示件数が 1 以上なら `hasMore` の値を問わず `ReviewRunner` を表示する（§4.5・§9.2）。
 - **結果サマリの動線（出し分け）**：`/quiz` は学習の前進が目的 → 「次のレッスンへ」。`/review` は due 消化が目的 → 「ホームへ」（残があれば継続）。両者で「間違えた問題だけ復習」を提供。
 - **イントロ・演習・結果の状態遷移（URL は変えない）**：演習・復習とも 1 ルート内で `intro → exercise → result` のクライアント状態遷移を持つ（別 URL に切らない。モックの実装モデルに一致）。`intro` は開始前の確認（対象レッスンの概要／due 件数・滞留日数のプレビュー）に専念し、`exercise` は 1 問ずつ即時採点、`result` はスコア・問題ごとの正誤一覧・出し分けアクションを表示する。初回データ（問題・解説、`/review` は due queue）は Server loader で ViewModel 化して props で渡し、状態遷移そのものは Client Component が持つ（§8.5・§9.4 の `QuizInteractive` と同じ設計）。結果表示は `/quiz` と `/review` で共通コンポーネントとして再利用する。
 - **ID 設計**：`lessonId` / `questionId` は**グローバル一意**。学習導線は階層 URL（`/learn/...`）、演習・復習はフラット URL（`/quiz/[lesson]`・`/review`）。
@@ -327,13 +343,13 @@ apps/web/src/
 - 実行場所はディレクトリ名ではなく import 境界で決まる。`apps/web/src/features/*/server` は `apps/web/src/app/**/page.tsx` など Server Component から import する限りサーバー側で実行される。誤用防止のため `import 'server-only'` を必須にする。
 - Server Actions は使わず、動的データは Hono API に一本化する。初回取得は Server loader、mutation は Client hook から `hc` で実行する。Server data の再取得は Client Component が `router.refresh()` で Server loader を再実行する（API 契約を `apps/api` に一本化し、RPC 型を素直に効かせる）。
   - **不採用の根拠**：変更系を Hono に一本化することで ①契約（`AppType`）と `user_id` 注入点（§7.2）を単一ソースに保てる、②Hono+Cloudflare の学習目的（§2）を素通りしない。Server Actions の利点（フォームのプログレッシブエンハンスメント等）は、即時採点の Client 主導 Quiz・変更系が `POST /answers` ほぼ一択の本アプリでは恩恵が小さい。重いフォームが必要になった時点で再検討する。
-- **キャッシュ方針**：`cacheComponents` を有効化済みである。`export const dynamic` と `export const dynamicParams` は Cache Components と併用できないため、**page-level の route segment config を置かない**。ユーザー固有データを読む Server loader は先頭で `connection()` を呼び、リクエスト時実行であることを宣言する（Cloudflare context の解決と現在時刻の読み取りは prerender 中に行えない）。PPR streaming の対象は `/` と `/review` のみであり、`/review` では静的シェルの内側に `<Suspense fallback={<ReviewQueueFallback />}>` を置き、fallback を表示してから、ユーザー固有データを読む非キャッシュの async Server Component と `ReviewRunner` をストリーミングする（§7.1・§9.2・§9.4）。due 件数・統計・review queue には `'use cache'`・`cacheLife`・`cacheTag`・`revalidateTag` を使わない。API 側で権威的に注入する `user_id` が web の共有キャッシュキーに含まれず、共有キャッシュでユーザー間データが混入し得るためである。feature の `api/` adapter にキャッシュ方針を持ち込まず、解答後・画面復帰時の鮮度回復は Client 側の `router.refresh()` で RSC を再実行して担う。同一リクエスト内で複数の `<Suspense>` 境界が同じ queue を参照する場合は、React の `cache()`（リクエストスコープ）で loader を1回に畳む。これはユーザー横断の共有キャッシュではない。`/domains`・`/analytics` は未実装であり、実装時に同じ分離を適用するが、PPR streaming 対象に含めるかは別途判断する。
+- **キャッシュ方針**：`cacheComponents` を有効化済みである。`export const dynamic` と `export const dynamicParams` は Cache Components と併用できないため、**page-level の route segment config を置かない**。ユーザー固有データを読む Server loader は先頭で `connection()` を呼び、リクエスト時実行であることを宣言する（Cloudflare context の解決と現在時刻の読み取りは prerender 中に行えない）。PPR streaming の対象は `/` と `/review` のみであり、`/review` では静的シェルの内側に `<Suspense fallback={<ReviewQueueFallback />}>` を置く。fallback の後に、非キャッシュの `ReviewUserContent` がストリーミングされ、joined 表示件数と `hasMore` に応じて route error boundary、通常の空キュー、または表示可能な問題が1件以上ある場合のみ `ReviewRunner` を選ぶ（§7.1・§9.2・§9.4）。due 件数・統計・review queue には `'use cache'`・`cacheLife`・`cacheTag`・`revalidateTag` を使わない。API 側で権威的に注入する `user_id` が web の共有キャッシュキーに含まれず、共有キャッシュでユーザー間データが混入し得るためである。feature の `api/` adapter にキャッシュ方針を持ち込まず、解答後・画面復帰時の鮮度回復は Client 側の `router.refresh()` で RSC を再実行して担う。同一リクエスト内で複数の `<Suspense>` 境界が同じ queue を参照する場合は、React の `cache()`（リクエストスコープ）で loader を1回に畳む。これはユーザー横断の共有キャッシュではない。`/domains`・`/analytics` は未実装であり、実装時に同じ分離を適用するが、PPR streaming 対象に含めるかは別途判断する。
 ### 8.4 `hc` クライアントの取り回し
 
 - `apps/api` が `AppType` をエクスポート → `apps/web` は `hc<AppType>` で型安全クライアントを生成（既存 `apps/api/src/client.ts` のファクトリを利用。Service Binding の fetch を渡せるよう、ファクトリは `hc` の第2引数（`fetch` オプション等）を受け取れる形に拡張する）。
 - `apps/web/src/lib/api.ts` に**API 共通基盤を集約**する。クライアント生成と共通レスポンス処理は同じ小さな責務群であり、現規模ではファイルを分けない。将来、独立した変更理由や十分な規模が生じた場合だけ分割する。baseURL は env（Workers バインディング / 環境変数）から解決し、ハードコードしない。
   - `createServerApiClient`：Server loader 用。本番は Service Binding（`getCloudflareContext().env.API.fetch` を `hc` のカスタム `fetch` に渡す）を必須とし、binding欠落や取得失敗は fail-fast する。ローカル開発だけ env の URL にフォールバックする。
-  - `createBrowserApiClient`：Client hook 用。env から解決した API Worker の公開 baseURL を使う。
+  - `createBrowserApiClient`：Client hook 用。env から解決した API Worker の公開 baseURL を使い、Cloudflare Access application cookie を API ドメインへ送るため `credentials: 'include'` を常に指定する。
 - feature の `api/` は呼び出し側から `ApiClient` を受け取り、`hc` の path・method・引数、共有 Zod による入出力検証、機能固有のエラーメッセージを薄く閉じ込める。Server loader と Client hook の両方から使うため、client 生成、`server-only`、cookies、headers、秘密情報など環境専用処理を入れない。
 - `res.ok` チェックと `res.json()` 変換は `apps/web/src/lib/api.ts` の `requestJson` に共通化する。
 - `hc` の path 呼び出し自体は文字列パスの汎用 fetch に置き換えない。`client.review.queue.$get()` のような endpoint ごとの wrapper を残すことで、Hono RPC の型推論を維持する。
@@ -346,6 +362,7 @@ apps/web/src/
   - MVP フローは「イントロ確認 → 1 問表示 → 選択 → 即時採点 → ロック → 解説表示 → 次問 → 結果」で線形・シンプルなため、`useState` で充分。複雑な状態遷移が出現（例：問題セット内での再検索・フィルタ等）したら、その時点で `useReducer` へ段階的にリファクタリング。
 - **リロードで進捗はリセット（許容）**。リロードすると `intro` フェーズに戻る。ただし「1 問解答＝1 `answer_log` POST」（7.2 で定義済みの原則）なので、解答そのものは即サーバーに残る。途中復帰（sessionStorage）やサーバー復元は将来拡張ポイントとして留保。
 - フロー：イントロ（概要／due プレビュー）→ 1 問表示 → 即時採点（正誤＋解説）→ 選択肢ロック → 末尾に結果サマリ → 出し分け動線（`/quiz`=次のレッスンへ／`/review`=ホームへ、両者「間違えた問題だけ」提供）。
+- `/review` の空キュー・content 整合性の分岐は、Client state ではなく Server Component が joined 済み ViewModel を受け取った時点で確定する。`ReviewRunner` は joined 表示件数が 1 以上の場合だけ描画するため、通常の空キューを `QuizInteractive` の空問題表示に読み替えない。
 - 解答の反応時間（`responseTimeMs`）は Client Component が選択肢の表示開始時刻からの経過時間として計測し、`submitAnswer` の引数として Client hook へ渡す。Client hook は時刻を計測せず、受け取った値をそのまま API へ転送する。
 
 ### 8.6 `packages/shared` の Zod 利用パターン
@@ -523,7 +540,15 @@ export const loadReviewOnce = cache((): Promise<ReviewViewModel> => loadReview()
 async function ReviewUserContent() {
   // Suspense 内でのみ実行する。API が user_id を権威的に注入するため、ここには 'use cache' を置かない。
   const viewModel = await loadReviewOnce();
-  return <ReviewRunner viewModel={viewModel} />;  // dueCount 0 のときは空キュー表示に分岐
+
+  if (viewModel.dueCount === 0 && viewModel.hasMore) {
+    // queue の ID を bundled content へ join できず、次バッチだけが残る状態。error.tsx へ送る。
+    throw new Error('Review queue has no displayable content while more items remain');
+  }
+  if (viewModel.dueCount === 0) {
+    return <ReviewEmptyQueue />;
+  }
+  return <ReviewRunner viewModel={viewModel} />;  // hasMore の値を問わず現在バッチを表示する
 }
 
 // app/review/page.tsx（Server）— 静的シェルと動的領域の分離
@@ -569,10 +594,12 @@ export function useAnswerSubmit() {
   const [results, setResults] = useState<Record<string, SubmittedAnswer>>({});
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);  // 同一 tick の二重送信も同期的に防ぐ
+  const generationRef = useRef(0);  // reset 後に古い非同期応答を無効化する
 
   // responseTimeMs は Client Component が計測して input に含める（§8.5）。hook 側では計測しない
   const submitAnswer = useCallback(async (input: AnswerRequest) => {
     if (submittingRef.current) return;
+    const generation = generationRef.current;
     submittingRef.current = true;
     setSubmitting(true);
     setError(undefined);
@@ -581,21 +608,30 @@ export function useAnswerSubmit() {
       const response = await postAnswer(clientRef.current, input);
       // API の採点結果に選択肢を足して SubmittedAnswer にする。選択肢のロックと
       // 結果サマリが「どれを選んだか」を必要とするため（§8.5・§9.4）。
-      setResults(prev => ({
-        ...prev,
-        [input.questionId]: { ...response, selectedIndex: input.selectedIndex },
-      }));
+      if (generation === generationRef.current) {
+        setResults(prev => ({
+          ...prev,
+          [input.questionId]: { ...response, selectedIndex: input.selectedIndex },
+        }));
+      }
     } catch (caughtError) {
-      setError(caughtError instanceof Error ? caughtError.message : '解答の送信に失敗しました。');
+      if (generation === generationRef.current) {
+        setError(caughtError instanceof Error ? caughtError.message : '解答の送信に失敗しました。');
+      }
     } finally {
-      submittingRef.current = false;
-      setSubmitting(false);
+      if (generation === generationRef.current) {
+        submittingRef.current = false;
+        setSubmitting(false);
+      }
     }
   }, []);
 
   const resetAnswers = useCallback(() => {
+    generationRef.current += 1;
+    submittingRef.current = false;
     setError(undefined);
     setResults({});
+    setSubmitting(false);
   }, []);
 
   return { error, resetAnswers, results, submitAnswer, submitting };
@@ -637,10 +673,10 @@ export function ReviewRunner({ viewModel }: Props) {
 }
 ```
 
-- **初回＝Server loader で VM 化し、page は feature component への props 渡しのみ**。`/quiz` は content のみ、`/review` は API queue + content join。`/review` は静的 `ReviewPageShell` の内部に `<Suspense fallback={<ReviewQueueFallback />}>` で囲んだ `ReviewUserContent` を置き、fallback を表示してから queue 完了後に `ReviewRunner` をストリーミングする。後者はユーザー固有の queue を読むため非キャッシュとする（§9.1 の原則どおり整形ロジックは mapper 一本のまま）。
+- **初回＝Server loader で VM 化し、page は feature component への props 渡しのみ**。`/quiz` は content のみ、`/review` は API queue + content join。`/review` は静的 `ReviewPageShell` の内部に `<Suspense fallback={<ReviewQueueFallback />}>` で囲んだ `ReviewUserContent` を置き、fallback を表示してから queue 完了後に結果をストリーミングする。後者はユーザー固有の queue を読むため非キャッシュとする（§9.1 の原則どおり整形ロジックは mapper 一本のまま）。`ReviewUserContent` は joined 表示件数と `hasMore` を三分岐し、0/true は content 整合性エラー、0/false は空キュー、1以上は `hasMore` の値を問わず `ReviewRunner` とする（§4.5）。
 - **VM はクライアント state に複製しない**。`ReviewRunner` は Review VM を Quiz 表示コンポーネントの props へ変換して渡す。`useAnswerSubmit` hook が解答結果（`results`）・`submitting`・送信エラーを保持し、Client Component は画面フェーズ・現在問題などの表示操作 state だけを保持する。due queue の再取得は `router.refresh()` による Server Component 再実行に一本化し、content との join を常にサーバー側に閉じ込める。
 - **RPC 呼び出しは `apps/web/src/features/*/api` の endpoint アダプター経由**。Server loader と Client hook は同じアダプターへ実行環境に合った `ApiClient` を渡す。HTTP レスポンス処理は `requestJson` に寄せ、feature 側では重複させない。
-- **初回ローディング表示の条件**：`/review` は静的シェルに `ReviewQueueFallback` と due バッジ fallback を表示し、queue 完了後に `ReviewRunner` をストリーミングする。`router.refresh()` 中の待機表示が必要なら `loading.tsx` かローカルな `isRefreshing` フラグで扱う。
+- **初回ローディング表示の条件**：`/review` は静的シェルに `ReviewQueueFallback` と due バッジ fallback を表示し、queue 完了後は `ReviewUserContent` が joined 表示件数と `hasMore` に応じて route error boundary、空キュー、または `ReviewRunner`（1件以上の場合のみ）を選ぶ。`router.refresh()` 中の待機表示が必要なら `loading.tsx` かローカルな `isRefreshing` フラグで扱う。
 - **将来：**TanStack Query 等へ置き換える際、mapper・ViewModel 型・page は変わらず、hook（`useAnswerSubmit` 相当）内部だけ差し替わる（契約保証）。
 
 ### 9.3 DTO / ViewModel の分離と配置
@@ -814,6 +850,7 @@ export default function QuizPage({ params }: Props) {
       <QuizInteractive                            {/* 表示操作 state を持つ Client */}
         explanations={viewModel.explanations}
         questions={viewModel.questions}
+        resultHomeLabel="レッスン一覧へ"
         title={viewModel.title}
         resultHomeHref={`/learn/${viewModel.domain}/${viewModel.topic}`}
       />
@@ -823,7 +860,13 @@ export default function QuizPage({ params }: Props) {
 
 // features/quiz/client/components/quiz-interactive.tsx（Client）
 'use client';
-export function QuizInteractive({ viewModel }: Props) {
+export function QuizInteractive({
+  explanations,
+  questions,
+  resultHomeHref,
+  resultHomeLabel,
+  title,
+}: QuizInteractiveProps) {
   // 表示操作 state は component が持つ。
   const [phase, setPhase] = useState<'intro' | 'exercise' | 'result'>('intro');
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -834,20 +877,30 @@ export function QuizInteractive({ viewModel }: Props) {
   const { submitAnswer, resetAnswers, results, submitting, error } = useAnswerSubmit();
 
   // ViewModel は immutable な props として参照し、state に複製しない。
-  const questions = wrongOnlyQuestionIds
-    ? viewModel.questions.filter(q => wrongOnlyQuestionIds.includes(q.id))
-    : viewModel.questions;
-  const question = questions[currentIndex];
+  const activeQuestions = wrongOnlyQuestionIds
+    ? questions.filter(q => wrongOnlyQuestionIds.includes(q.id))
+    : questions;
+  const question = activeQuestions[currentIndex];
 
   // 選択肢の表示開始時刻は Client Component が記録する（§8.5）。hook 側では計測しない。
   useEffect(() => {
     if (phase === 'exercise' && question) setQuestionStartedAt(Date.now());
   }, [phase, question]);
 
+  if (questions.length === 0) {
+    return (
+      <Card>
+        <p>出題できる問題がありません</p>
+        <Link href={resultHomeHref}>{resultHomeLabel}</Link>
+      </Card>
+    );
+  }
+
   if (phase === 'intro') {
     return (
       <QuizIntro
-        viewModel={viewModel}
+        title={title}
+        questionCount={activeQuestions.length}
         onStart={() => {
           resetAnswers();
           setPhase('exercise');
@@ -858,7 +911,7 @@ export function QuizInteractive({ viewModel }: Props) {
   if (phase === 'result' || !question) {
     return (
       <QuizSummary
-        questions={questions}
+        questions={activeQuestions}
         results={results}
         onWrongOnly={questionIds => {
           resetAnswers();
@@ -870,12 +923,12 @@ export function QuizInteractive({ viewModel }: Props) {
     );
   }
 
-  const isLast = currentIndex === questions.length - 1;
+  const isLast = currentIndex === activeQuestions.length - 1;
 
   return (
     <QuestionCard
       question={question}
-      explanation={viewModel.explanations[question.id]}
+      explanation={explanations[question.id]}
       onAnswer={selectedIndex => submitAnswer({
         questionId: question.id,
         responseTimeMs: Math.max(0, Date.now() - (questionStartedAt || Date.now())),
@@ -899,7 +952,7 @@ export function QuizInteractive({ viewModel }: Props) {
 
 #### 復習（PPR streaming 対象）
 
-`/review` は queue 取得そのものをキャッシュしない。静的シェルに `<Suspense fallback={<ReviewQueueFallback />}>` の fallback を表示し、ユーザー固有の async Server Component が queue 完了後に `ReviewRunner` をストリーミングする。解答後は `router.refresh()` で最新 queue を Server loader から再取得する。`'use cache'`・`cacheLife`・`cacheTag`・`revalidateTag` は使わない。
+`/review` は queue 取得そのものをキャッシュしない。静的シェルに `<Suspense fallback={<ReviewQueueFallback />}>` の fallback を表示し、ユーザー固有の async Server Component `ReviewUserContent` が queue 完了後に joined 表示件数と `hasMore` に応じて route error boundary、空キュー、または `ReviewRunner`（1件以上の場合のみ）を選ぶ。解答後は `router.refresh()` で最新 queue を Server loader から再取得する。`'use cache'`・`cacheLife`・`cacheTag`・`revalidateTag` は使わない。
 
 構成の実コード例は §9.2 に一本化する（重複させると実装との同期漏れが起きるため）。要点は次の3つ。
 
@@ -943,10 +996,11 @@ export default function Error({ error }: { error: Error }) {
 
 #### Client（演習・復習系）
 
-`/review` は静的シェルに `ReviewQueueFallback` を表示し、queue 完了後に `ReviewRunner` をストリーミングする（§9.2・§9.4 参照）。Client 側で扱うのは以下の 2 つ：
+`/review` は静的シェルに `ReviewQueueFallback` を表示し、queue 完了後は `ReviewUserContent` が joined 表示件数と `hasMore` に応じて route error boundary、空キュー、または `ReviewRunner`（1件以上の場合のみ）を選ぶ（§9.2・§9.4 参照）。Client 側で扱うのは以下の 2 つ：
 
-- **初回データ形成の失敗**：content 未検出・検証失敗、または `/review` の初回 queue 取得失敗 → ルートの `error.tsx` で捕捉（Server 系と同じ経路）。
+- **初回データ形成の失敗**：content 未検出・検証失敗、`/review` の初回 queue 取得失敗、または queue と bundled content の join 後に表示可能な問題が 0 件かつ `hasMore` が真である content 整合性エラー → ルートの `error.tsx` で捕捉（Server 系と同じ経路）。
 - **mutation の失敗/待機**：hook が返す `error`・`submitting` を component で出し分ける。`router.refresh()` による再取得中の表示が必要なら、component の `isRefreshing` または route の `loading.tsx` で扱う。
+- `/review/error.tsx` は本番の Server Component error message が redact され得るため、`error.message` による失敗種別の判定をしない。API/通信の一時的失敗と、bundled content と保存済み review state の不整合の両方を含む案内を常に表示する。`reset` による再試行に加え、恒久的な不整合で再試行ループに閉じ込めないようホームへの Link を必ず提供する。
 
 ```typescript
 // features/review/client/components/review-runner.tsx
@@ -1088,14 +1142,17 @@ apps/api/
 │   ├── dal/
 │   │   ├── answer-repository.ts # AnswerDeps 実装（questions 照合・srs 取得・batch 書き込み）
 │   │   └── review-repository.ts # ReviewDeps 実装（due queue・due count）
-│   └── content-sync.ts          # content → 同期ペイロード/SQL への純粋変換（gray-matter・shared のみに依存。§10.8）
+│   ├── content-sync.ts          # content → 同期ペイロード/SQL への純粋変換（gray-matter・shared のみに依存。§10.8）
+│   └── dev-seed.ts               # 固定ユーザー用の動的開発 seed の純粋モデル/SQL 変換（§10.8）
 └── scripts/
-    └── sync-content.ts          # `src/content-sync.ts` の純粋関数を呼ぶ Node CLI（fs 読み取り・wrangler 実行。§10.8）
+    ├── sync-content.ts           # `src/content-sync.ts` の純粋関数を呼ぶ Node CLI（fs 読み取り・wrangler 実行。§10.8）
+    └── seed-dev.ts               # `src/dev-seed.ts` の純粋関数を呼ぶローカル専用 Node CLI（§10.8）
 ```
 
 - 上記は Walking Skeleton 中核 3 エンドポイントの構成（§10.1）。§7.3 の後続エンドポイントは同じ route → service → deps（dal 実装）の処理パターンで追加する：`routes/domains.ts`・`routes/analytics.ts`・`routes/activity.ts`、対応する `services/*-service.ts` と `dal/*-repository.ts`、`index.ts` への `.route()` 追記。アナリティクスは集計クエリ主体（読み取りのみ）のため service 層は薄くなる見込み。
 - **dal はテーブル単位ではなくユースケース単位**で置く。「service が要求する deps 型」を 1 ファイルで実装する形にすると、service ⇔ dal の対応が 1:1 で追いやすく、テーブル単位 repository の細切れ合成（と、それを束ねる工数）を避けられる。テーブル単位の共有が必要になった時点で分割する。
 - **`src/content-sync.ts` は `gray-matter` と `packages/shared` のみに依存する純粋ロジック**（frontmatter パース・同期ペイロード生成・upsert SQL 生成）。`scripts/sync-content.ts` は Node の `fs` 読み取りと `wrangler d1 execute` 実行を担う CLI 部で、`content-sync.ts` の純粋関数を呼び出すだけに留める（routes・services・dal・middleware は import しない）。
+- **`src/dev-seed.ts` は content sync で検証済みの question ID を入力として、固定ユーザーの動的開発データを生成する純粋ロジック**にする。`scripts/seed-dev.ts` は content 読み取り・時刻取得・一時 SQL ファイル作成・Wrangler 実行だけを担い、任意の CLI 引数を転送しない。
 
 ### 10.3 リクエストの流れ（`POST /answers` を例に）
 
@@ -1241,6 +1298,8 @@ export const userContext = createMiddleware<AppEnv>(async (c, next) => {
 export type Bindings = {
   DB: D1Database
   WEB_ORIGIN: string  // CORS 許可オリジン（wrangler.toml の vars で環境ごとに設定）
+  ACCESS_ISSUER?: string  // Cloudflare Access JWT の完全一致 issuer（本番のみ必須）
+  ACCESS_AUDIENCE?: string  // Cloudflare Access application の AUD（本番のみ必須）
 }
 export type Variables = {
   userId: string
@@ -1252,14 +1311,15 @@ export type AppEnv = { Bindings: Bindings; Variables: Variables }
 // index.ts — middleware 適用・ルート合成・AppType エクスポート
 const app = new Hono<AppEnv>()
 
-// CORS はブラウザ経路（§3.1）用。Service Binding 経由の呼び出しには関与しない。
-// origin resolver はリクエストコンテキストから環境別の許可オリジンを解決する。
-app.use('*', cors({ origin: (_origin, c) => c.env.WEB_ORIGIN }))
-app.use('*', userContext)
+// CORS はブラウザ経路（§3.1）用。credentials と GET/POST/OPTIONS、Content-Type だけを許可する。
+// Service Binding 経由の呼び出しには関与しない。
+app.use('*', cors({ origin: (origin, c) => origin === c.env.WEB_ORIGIN ? origin : null, credentials: true }))
+.get('/health', (c) => c.json({ status: 'ok' as const }))
+.use('*', accessBoundary)
+.use('*', userContext)
 app.onError(errorHandler)  // §10.6
 
 const routes = app
-  .get('/health', (c) => c.json({ status: 'ok' as const }))
   .route('/answers', answersRoute)
   .route('/review', reviewRoute)
   .route('/dashboard', dashboardRoute)
@@ -1270,6 +1330,7 @@ export default app
 
 - **`hc` の型推論を保つため、ルート定義はメソッドチェーンで書く**。各サブルーターは `new Hono<AppEnv>().post(...)` のチェーンで定義・export し、`index.ts` では `.route()` のチェーンで合成する。チェーンを分断（`app.post(...)` を文として並べる等）すると `AppType` からエンドポイント型が消える。
 - パス設計は §7.3 の契約（`POST /answers`・`GET /review/queue`・`GET /dashboard/due-count`）をそのまま `.route()` のプレフィックス＋サブルーター内パスで構成する。後続の `GET /domains`・`GET /analytics/*`・`GET /activity/recent`（§10.1）も同じ要領で `.route('/domains', ...)` 等をチェーンに追記する。
+- Access boundary は public entrypoint だけに置く。route・service・DAL は Access JWT を参照せず、`userContext` が実行済みであるという既存契約を保つ。internal entrypoint は同じ user route sub-app を `userContext` の後に mount することで、DTO・固定ユーザー挙動・Hono RPC 契約を public entrypoint と共有する。
 
 ### 10.6 バリデーション・DTO・エラー処理
 
@@ -1340,6 +1401,15 @@ app.onError((err, c) => {
 - 固定ユーザー行（`users`）の seed も同スクリプトで行う（`user-context.ts` の `FIXED_USER_ID` と同じ値）。
 - content から削除された問題は**物理削除しない**（`answer_logs`・`srs_states` が参照するため）。出題対象からは自然に外れる（フロントのバンドルに含まれず、due queue の join でも解決されない）。整理が必要になったら論理削除フラグを検討する。
 - 実行タイミング：ローカル開発では手動、本番はデプロイフロー（CI）に組み込む。
+
+#### ローカル動的開発 seed
+
+`pnpm --filter @tsl/api db:seed:dev` は、ローカル D1 の開発確認用に固定ユーザー（`FIXED_USER_ID`）だけの動的データを冪等に投入する。content の question ID は、`content-sync` と同じ `gray-matter` + shared content Zod の検証経路から得る。content 同期や本番デプロイの責務を置き換えない。
+
+- 実行 SQL は固定ユーザーの `answer_logs` と `srs_states` だけを削除してから再投入する。他ユーザーの行、`questions`、教材 content は削除・更新しない。
+- 検証済みの各問題に `due_at` が seed 時刻以下の `srs_state` を 1 行作る。各問題には、正解かつ `response_time_ms` あり、不正解かつ `response_time_ms` なしの決定的な answer log を作る。問題が 1 件だけでも両方のケースを含める。
+- SQL の ID・時刻・解答内容は入力（question ID と seed 時刻）から決定的に生成し、再実行しても固定ユーザーのデータ量が増えない。
+- CLI は `wrangler d1 execute tech-study-lab --local --file <generated-sql>` の固定引数だけを使用し、`--remote` や利用者が渡した任意引数を受け付けない。remote D1 には使用しない。
 
 ### 10.9 テスト戦略
 
@@ -1458,7 +1528,9 @@ topic frontmatter の `order` も同様に表示順（0 以上の整数、小さ
 | --- | --- | --- | --- | --- |
 | `DB` | D1 バインディング（api） | dal（Drizzle） | `wrangler dev` のローカル D1 | `apps/api/wrangler.toml` の `d1_databases`（要実 ID。§12.4） |
 | `WEB_ORIGIN` | var（api） | CORS 許可オリジン（§10.5） | `http://localhost:3000` | web Worker の公開 URL |
-| `API` | Service Binding（web） | Server loader（§3.1・§8.4） | なし（URL フォールバック） | `services: [{ binding: "API", service: "tech-study-lab-api" }]` |
+| `ACCESS_ISSUER` | var（api） | Cloudflare Access JWT の issuer 検証（§3.1） | 未設定（両 Access 設定なし＋loopback URL のみ bypass） | Cloudflare Access team domain の issuer。Issue #35 で設定 |
+| `ACCESS_AUDIENCE` | var（api） | Cloudflare Access JWT の audience 検証（§3.1） | 未設定（両 Access 設定なし＋loopback URL のみ bypass） | API 用 Access application の AUD。Issue #35 で設定 |
+| `API` | Service Binding（web） | Server loader（§3.1・§8.4） | なし（URL フォールバック） | `services: [{ binding: "API", service: "tech-study-lab-api", entrypoint: "InternalApi" }]` |
 | `API_BASE_URL` | env（web / Server 専用） | Server loader のローカルフォールバック（§8.4） | `http://localhost:8787` | 設定しない（Service Binding必須。欠落時はfail-fast） |
 | `NEXT_PUBLIC_API_BASE_URL` | ビルド時 env（web / Client） | Client hook（§8.4） | `http://localhost:8787` | api Worker の公開 URL |
 
@@ -1466,8 +1538,9 @@ topic frontmatter の `order` も同様に表示順（0 以上の整数、小さ
 
 1. `pnpm install`
 2. `pnpm --filter @tsl/api db:migrate:local`（初回・スキーマ変更時）
-3. content sync のローカル実行（初回・content 変更時。§10.8）
-4. `pnpm --filter @tsl/api dev`（`:8787`）と `pnpm --filter @tsl/web dev`（`:3000`）を並走
+3. `pnpm --filter @tsl/api content:sync`（初回・content 変更時。ローカル D1 への問題キャッシュ同期。§10.8）
+4. `pnpm --filter @tsl/api db:seed:dev`（任意。固定ユーザーの解答ログ・SRS 状態を開発用データへ再投入。§10.8）
+5. `pnpm --filter @tsl/api dev`（`:8787`）と `pnpm --filter @tsl/web dev`（`:3000`）を並走
 
 ### 12.4 本番デプロイ手順（順序が仕様）
 

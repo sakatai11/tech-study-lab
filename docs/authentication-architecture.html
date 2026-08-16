@@ -1,0 +1,1460 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="tech-study-lab の Cloudflare Access 認証、API JWT 検証、Service Binding による内部通信を説明する技術ドキュメント"
+    />
+    <title>tech-study-lab 認証アーキテクチャ</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --paper: #f7f9fc;
+        --surface: #ffffff;
+        --ink: #162033;
+        --ink-soft: #455168;
+        --muted: #6f7a90;
+        --line: #d9e0eb;
+        --line-strong: #b8c4d7;
+        --edge: #6d4aff;
+        --edge-soft: #f0edff;
+        --web: #007c91;
+        --web-soft: #e6f7f9;
+        --api: #176b3a;
+        --api-soft: #e8f7ee;
+        --data: #a34b00;
+        --data-soft: #fff1e5;
+        --danger: #b42318;
+        --danger-soft: #fff0ee;
+        --code: #101827;
+        --code-ink: #dce7f7;
+        --shadow: 0 18px 45px rgba(28, 43, 70, 0.1);
+        --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+        --sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Hiragino Sans",
+          "Yu Gothic UI", "Yu Gothic", Meiryo, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          linear-gradient(rgba(22, 32, 51, 0.035) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(22, 32, 51, 0.035) 1px, transparent 1px),
+          var(--paper);
+        background-size: 28px 28px;
+        font-family: var(--sans);
+        font-size: 16px;
+        line-height: 1.75;
+      }
+
+      a {
+        color: #3156c8;
+        text-underline-offset: 0.18em;
+      }
+
+      a:hover {
+        color: #19388f;
+      }
+
+      a:focus-visible,
+      button:focus-visible {
+        outline: 3px solid rgba(109, 74, 255, 0.35);
+        outline-offset: 3px;
+      }
+
+      code {
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        padding: 0.12em 0.38em;
+        background: #f0f3f8;
+        font-family: var(--mono);
+        font-size: 0.88em;
+      }
+
+      .page {
+        width: min(1180px, calc(100% - 40px));
+        margin: 0 auto;
+        padding: 34px 0 96px;
+      }
+
+      .hero {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid var(--line-strong);
+        border-radius: 18px;
+        padding: 50px clamp(24px, 5vw, 64px) 44px;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+
+      .hero::before {
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 8px;
+        background: linear-gradient(
+          180deg,
+          var(--edge) 0 25%,
+          var(--web) 25% 50%,
+          var(--api) 50% 75%,
+          var(--data) 75% 100%
+        );
+        content: "";
+      }
+
+      .eyebrow,
+      .section-label,
+      .status-label {
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .eyebrow {
+        margin: 0 0 14px;
+        color: var(--edge);
+      }
+
+      h1,
+      h2,
+      h3 {
+        line-height: 1.35;
+        text-wrap: balance;
+      }
+
+      h1 {
+        max-width: 820px;
+        margin: 0;
+        font-size: clamp(34px, 6vw, 66px);
+        font-weight: 850;
+        letter-spacing: -0.055em;
+      }
+
+      .hero-lead {
+        max-width: 820px;
+        margin: 20px 0 0;
+        color: var(--ink-soft);
+        font-size: clamp(17px, 2vw, 20px);
+      }
+
+      .hero-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 28px;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        min-height: 30px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 4px 11px;
+        background: #f8faff;
+        color: var(--ink-soft);
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+
+      .document-nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 22px 0 0;
+      }
+
+      .document-nav a {
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        padding: 6px 10px;
+        background: var(--surface);
+        color: var(--ink-soft);
+        font-family: var(--mono);
+        font-size: 12px;
+        text-decoration: none;
+      }
+
+      .document-nav a:hover {
+        border-color: var(--edge);
+        color: var(--edge);
+      }
+
+      .status-strip {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1px;
+        overflow: hidden;
+        margin-top: 24px;
+        border: 1px solid var(--line-strong);
+        border-radius: 14px;
+        background: var(--line);
+        box-shadow: var(--shadow);
+      }
+
+      .status-item {
+        min-height: 128px;
+        padding: 22px;
+        background: var(--surface);
+      }
+
+      .status-label {
+        color: var(--muted);
+      }
+
+      .status-value {
+        margin: 8px 0 3px;
+        font-size: 18px;
+        font-weight: 800;
+      }
+
+      .status-item p:last-child {
+        margin: 0;
+        color: var(--ink-soft);
+        font-size: 14px;
+      }
+
+      main > section {
+        margin-top: 70px;
+        scroll-margin-top: 20px;
+      }
+
+      .section-label {
+        margin: 0 0 8px;
+        color: var(--edge);
+      }
+
+      h2 {
+        margin: 0 0 14px;
+        font-size: clamp(26px, 4vw, 40px);
+        letter-spacing: -0.035em;
+      }
+
+      .section-lead {
+        max-width: 840px;
+        margin: 0 0 25px;
+        color: var(--ink-soft);
+        font-size: 17px;
+      }
+
+      h3 {
+        margin: 0 0 10px;
+        font-size: 19px;
+      }
+
+      .principles {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .principle,
+      .panel,
+      .callout {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--surface);
+      }
+
+      .principle {
+        position: relative;
+        overflow: hidden;
+        min-height: 170px;
+        padding: 22px 22px 20px 28px;
+      }
+
+      .principle::before {
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 5px;
+        background: var(--rail, var(--edge));
+        content: "";
+      }
+
+      .principle p {
+        margin: 0;
+        color: var(--ink-soft);
+      }
+
+      .principle.edge {
+        --rail: var(--edge);
+      }
+
+      .principle.web {
+        --rail: var(--web);
+      }
+
+      .principle.api {
+        --rail: var(--api);
+      }
+
+      .principle.data {
+        --rail: var(--data);
+      }
+
+      .trust-map {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .trust-node {
+        min-height: 166px;
+        border: 1px solid var(--line);
+        border-top: 5px solid var(--node-color);
+        border-radius: 12px;
+        padding: 18px;
+        background: var(--node-bg);
+      }
+
+      .trust-node.edge {
+        --node-color: var(--edge);
+        --node-bg: var(--edge-soft);
+      }
+
+      .trust-node.web {
+        --node-color: var(--web);
+        --node-bg: var(--web-soft);
+      }
+
+      .trust-node.api {
+        --node-color: var(--api);
+        --node-bg: var(--api-soft);
+      }
+
+      .trust-node.data {
+        --node-color: var(--data);
+        --node-bg: var(--data-soft);
+      }
+
+      .trust-node .node-id {
+        color: var(--node-color);
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .trust-node h3 {
+        margin-top: 5px;
+      }
+
+      .trust-node p {
+        margin: 0;
+        color: var(--ink-soft);
+        font-size: 14px;
+      }
+
+      .diagram {
+        overflow: hidden;
+        border: 1px solid var(--line-strong);
+        border-radius: 14px;
+        background: var(--surface);
+        box-shadow: 0 10px 30px rgba(28, 43, 70, 0.07);
+      }
+
+      .diagram-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        min-height: 48px;
+        border-bottom: 1px solid var(--line);
+        padding: 8px 12px 8px 18px;
+        background: #f2f5fa;
+      }
+
+      .diagram-title {
+        font-family: var(--mono);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .diagram-tools {
+        display: flex;
+        gap: 6px;
+      }
+
+      .diagram-tools button {
+        min-width: 35px;
+        min-height: 31px;
+        border: 1px solid var(--line-strong);
+        border-radius: 6px;
+        background: var(--surface);
+        color: var(--ink-soft);
+        font-family: var(--mono);
+        cursor: pointer;
+      }
+
+      .diagram-scroll {
+        overflow: auto;
+        padding: 22px;
+      }
+
+      pre.mermaid {
+        min-width: 680px;
+        margin: 0;
+        background: transparent;
+        font-family: var(--sans);
+        text-align: center;
+      }
+
+      .sequence-grid {
+        display: grid;
+        gap: 28px;
+      }
+
+      .sequence-grid > article {
+        min-width: 0;
+      }
+
+      .sequence-note {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 12px;
+        margin-top: 13px;
+        color: var(--ink-soft);
+        font-size: 14px;
+      }
+
+      .sequence-note strong {
+        display: grid;
+        width: 27px;
+        height: 27px;
+        place-items: center;
+        border-radius: 50%;
+        background: var(--ink);
+        color: #fff;
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+
+      .sequence-note p {
+        margin: 0;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--surface);
+      }
+
+      table {
+        width: 100%;
+        min-width: 760px;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid var(--line);
+        padding: 13px 15px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #f2f5fa;
+        color: var(--ink-soft);
+        font-family: var(--mono);
+        font-size: 12px;
+        letter-spacing: 0.03em;
+      }
+
+      tbody tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .route-public,
+      .route-access,
+      .route-internal,
+      .route-local {
+        white-space: nowrap;
+        font-weight: 800;
+      }
+
+      .route-public {
+        color: var(--web);
+      }
+
+      .route-access {
+        color: var(--edge);
+      }
+
+      .route-internal {
+        color: var(--api);
+      }
+
+      .route-local {
+        color: var(--data);
+      }
+
+      .validation-chain {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        counter-reset: validation;
+      }
+
+      .validation-step {
+        position: relative;
+        min-height: 165px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 45px 18px 18px;
+        background: var(--surface);
+        counter-increment: validation;
+      }
+
+      .validation-step::before {
+        position: absolute;
+        top: 15px;
+        left: 17px;
+        color: var(--edge);
+        content: "0" counter(validation);
+        font-family: var(--mono);
+        font-size: 14px;
+        font-weight: 900;
+      }
+
+      .validation-step p {
+        margin: 0;
+        color: var(--ink-soft);
+        font-size: 14px;
+      }
+
+      .callout {
+        margin-top: 18px;
+        padding: 18px 20px;
+      }
+
+      .callout.warning {
+        border-color: #efb7b0;
+        background: var(--danger-soft);
+      }
+
+      .callout.success {
+        border-color: #9fd3b4;
+        background: var(--api-soft);
+      }
+
+      .callout strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .callout p {
+        margin: 0;
+        color: var(--ink-soft);
+      }
+
+      .config-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .panel {
+        padding: 22px;
+      }
+
+      .panel p,
+      .panel ul {
+        color: var(--ink-soft);
+      }
+
+      .panel ul {
+        margin: 10px 0 0;
+        padding-left: 20px;
+      }
+
+      .code-block {
+        overflow-x: auto;
+        margin: 15px 0 0;
+        border: 1px solid #2d3b50;
+        border-radius: 10px;
+        padding: 17px;
+        background: var(--code);
+        color: var(--code-ink);
+        font-family: var(--mono);
+        font-size: 13px;
+        line-height: 1.65;
+        white-space: pre;
+      }
+
+      .decision-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .decision {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 20px;
+        background: var(--surface);
+      }
+
+      .decision.adopted {
+        border-top: 5px solid var(--api);
+      }
+
+      .decision.rejected {
+        border-top: 5px solid var(--danger);
+      }
+
+      .decision p {
+        margin: 8px 0 0;
+        color: var(--ink-soft);
+      }
+
+      .issue-line {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0;
+        overflow: hidden;
+        border: 1px solid var(--line-strong);
+        border-radius: 14px;
+        background: var(--surface);
+      }
+
+      .issue {
+        position: relative;
+        padding: 24px 22px;
+      }
+
+      .issue + .issue {
+        border-left: 1px solid var(--line);
+      }
+
+      .issue-number {
+        color: var(--edge);
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .issue p {
+        margin: 7px 0 0;
+        color: var(--ink-soft);
+        font-size: 14px;
+      }
+
+      footer {
+        margin-top: 72px;
+        border-top: 1px solid var(--line-strong);
+        padding-top: 22px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      @media (max-width: 900px) {
+        .status-strip,
+        .trust-map,
+        .validation-chain,
+        .issue-line {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .issue + .issue {
+          border-left: 0;
+          border-top: 1px solid var(--line);
+        }
+
+        .issue:nth-child(2) {
+          border-top: 0;
+          border-left: 1px solid var(--line);
+        }
+      }
+
+      @media (max-width: 680px) {
+        .page {
+          width: min(100% - 24px, 1180px);
+          padding-top: 12px;
+        }
+
+        .hero {
+          border-radius: 12px;
+          padding: 35px 22px 31px 28px;
+        }
+
+        .status-strip,
+        .principles,
+        .trust-map,
+        .validation-chain,
+        .config-grid,
+        .decision-grid,
+        .issue-line {
+          grid-template-columns: 1fr;
+        }
+
+        .status-item,
+        .issue {
+          min-height: 0;
+        }
+
+        .issue:nth-child(2),
+        .issue + .issue {
+          border-top: 1px solid var(--line);
+          border-left: 0;
+        }
+
+        main > section {
+          margin-top: 54px;
+        }
+
+        .diagram-header {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+      }
+
+      @media print {
+        body {
+          background: #fff;
+        }
+
+        .page {
+          width: 100%;
+          padding: 0;
+        }
+
+        .hero,
+        .diagram,
+        .status-strip {
+          box-shadow: none;
+        }
+
+        .diagram-tools,
+        .document-nav {
+          display: none;
+        }
+
+        main > section {
+          break-inside: avoid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <p class="eyebrow">Authentication / Authorization / Trust Boundary</p>
+        <h1>認証を「入口」ではなく、信頼経路として設計する</h1>
+        <p class="hero-lead">
+          tech-study-lab の単一ユーザーMVPでは、Cloudflare Accessが利用者を認証し、API
+          WorkerがJWTを再検証します。Server loaderは公開HTTPを通らず、privateなService
+          Bindingを使います。この文書は、その責務分担と通信順序を1枚で追えるようにまとめたものです。
+        </p>
+        <div class="hero-meta" aria-label="ドキュメント情報">
+          <span class="chip">status: target architecture</span>
+          <span class="chip">updated: 2026-08-14</span>
+          <span class="chip">scope: single-user MVP</span>
+          <span class="chip">primary source: docs/design.md</span>
+        </div>
+        <nav class="document-nav" aria-label="関連ドキュメント">
+          <a href="./design.md">設計一次ソース</a>
+          <a href="./frontend-architecture.html">フロントエンド</a>
+          <a href="./backend-architecture.html">バックエンド</a>
+          <a href="./api-spec.html">API契約</a>
+        </nav>
+      </header>
+
+      <div class="status-strip" aria-label="実装状態">
+        <article class="status-item">
+          <span class="status-label">API boundary</span>
+          <p class="status-value">実装済み / PR #126</p>
+          <p>Access JWT検証、固定401、private entrypoint、ブラウザcredentials。</p>
+        </article>
+        <article class="status-item">
+          <span class="status-label">Web routes</span>
+          <p class="status-value">予定 / Issue #127</p>
+          <p><code>/</code>を公開トップ、<code>/home</code>を認証後ダッシュボードへ変更。</p>
+        </article>
+        <article class="status-item">
+          <span class="status-label">Production config</span>
+          <p class="status-value">未実施 / Issue #35</p>
+          <p>Access Application・Policy・hostname・production varsを設定して実機検証。</p>
+        </article>
+      </div>
+
+      <main>
+        <section id="summary">
+          <p class="section-label">01 / Contract</p>
+          <h2>この方式が守る4つの原則</h2>
+          <p class="section-lead">
+            「ログイン済みらしい」という曖昧な状態を信用せず、経路ごとに誰が何を保証するかを固定します。
+          </p>
+          <div class="principles">
+            <article class="principle edge">
+              <h3>利用者の認証はAccess</h3>
+              <p>
+                アプリ独自のログインフォームやパスワードを持ちません。Cloudflare Accessの認証画面とPolicyで、許可された利用者だけを保護対象へ通します。
+              </p>
+            </article>
+            <article class="principle web">
+              <h3>公開トップはユーザーデータを読まない</h3>
+              <p>
+                <code>/</code>は未認証で表示できる説明ページです。ログインCTAは<code>/home</code>へ進み、必要ならAccessが認証画面へ転送します。
+              </p>
+            </article>
+            <article class="principle api">
+              <h3>APIはAccessヘッダーを鵜呑みにしない</h3>
+              <p>
+                API Worker自身がJWTの署名・issuer・audienceを検証します。検証成功後にだけ<code>userContext</code>が固定ユーザーを注入します。
+              </p>
+            </article>
+            <article class="principle data">
+              <h3>内部通信は公開HTTPと分離する</h3>
+              <p>
+                Web WorkerのServer loaderはnamed <code>InternalApi</code> Service Bindingを使用します。内部経路を偽装可能なHTTPヘッダーで表現しません。
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section id="boundary">
+          <p class="section-label">02 / Trust map</p>
+          <h2>4層の信頼境界</h2>
+          <p class="section-lead">
+            認証情報は各層を自由に通過しません。Cloudflare edgeの認証、Web Workerの画面責務、API
+            Workerの認可、D1のユーザーデータを分離します。
+          </p>
+          <div class="trust-map" aria-label="信頼境界の構成要素">
+            <article class="trust-node edge">
+              <span class="node-id">EDGE.01</span>
+              <h3>Cloudflare Access</h3>
+              <p>利用者を認証し、Policyを評価して、認証済みリクエストへAccess JWTを付与します。</p>
+            </article>
+            <article class="trust-node web">
+              <span class="node-id">WEB.02</span>
+              <h3>Web Worker</h3>
+              <p>公開トップと認証後画面を描画し、Server loaderからprivate bindingを呼びます。</p>
+            </article>
+            <article class="trust-node api">
+              <span class="node-id">API.03</span>
+              <h3>API Worker</h3>
+              <p>公開経路ではJWTを検証し、内部経路ではnamed entrypointの能力を信頼します。</p>
+            </article>
+            <article class="trust-node data">
+              <span class="node-id">DATA.04</span>
+              <h3>D1</h3>
+              <p>固定<code>user_id</code>に紐づく解答ログ、SRS状態、閲覧ログを保持します。</p>
+            </article>
+          </div>
+
+          <div class="diagram" style="margin-top: 20px">
+            <div class="diagram-header">
+              <span class="diagram-title">trust-boundary-overview.mmd</span>
+              <div class="diagram-tools" aria-label="図の拡大縮小">
+                <button type="button" data-zoom-action="out" aria-label="縮小">−</button>
+                <button type="button" data-zoom-action="reset" aria-label="等倍">1:1</button>
+                <button type="button" data-zoom-action="in" aria-label="拡大">＋</button>
+              </div>
+            </div>
+            <div class="diagram-scroll">
+              <pre class="mermaid">
+flowchart LR
+    U["利用者 / Browser"]
+    A["Cloudflare Access\n認証 + Policy"]
+    W["Web Worker\n/ と /home"]
+    P["API Worker\npublic entrypoint"]
+    I["API Worker\nInternalApi entrypoint"]
+    D[("D1\nuser data")]
+
+    U -->|"公開 GET /"| W
+    U -->|"GET /home"| A
+    A -->|"認証成功後 /home"| W
+    U -->|"credentialed browser API"| A
+    A -->|"Cf-Access-Jwt-Assertion"| P
+    W -->|"named Service Binding"| I
+    P -->|"verified userContext"| D
+    I -->|"trusted userContext"| D
+
+    classDef edge fill:#f0edff,stroke:#6d4aff,color:#162033,stroke-width:2px;
+    classDef web fill:#e6f7f9,stroke:#007c91,color:#162033,stroke-width:2px;
+    classDef api fill:#e8f7ee,stroke:#176b3a,color:#162033,stroke-width:2px;
+    classDef data fill:#fff1e5,stroke:#a34b00,color:#162033,stroke-width:2px;
+    class A edge;
+    class U,W web;
+    class P,I api;
+    class D data;
+              </pre>
+            </div>
+          </div>
+        </section>
+
+        <section id="sequences">
+          <p class="section-label">03 / Sequence diagrams</p>
+          <h2>通信を4つのシーケンスで追う</h2>
+          <p class="section-lead">
+            画面ログイン、ブラウザAPI、Server loader、拒否経路は同じ認証処理ではありません。混同を避けるため別々に示します。
+          </p>
+
+          <div class="sequence-grid">
+            <article>
+              <div class="diagram">
+                <div class="diagram-header">
+                  <span class="diagram-title">sequence-01-login-to-home.mmd</span>
+                  <div class="diagram-tools" aria-label="図の拡大縮小">
+                    <button type="button" data-zoom-action="out" aria-label="縮小">−</button>
+                    <button type="button" data-zoom-action="reset" aria-label="等倍">1:1</button>
+                    <button type="button" data-zoom-action="in" aria-label="拡大">＋</button>
+                  </div>
+                </div>
+                <div class="diagram-scroll">
+                  <pre class="mermaid">
+sequenceDiagram
+    autonumber
+    actor User as 利用者
+    participant Browser as Browser
+    participant Web as Web Worker
+    participant Access as Cloudflare Access
+    participant IdP as IdP / OTP
+
+    User->>Browser: 公開トップ / を開く
+    Browser->>Web: GET /
+    Web-->>Browser: 公開トップ + ログインCTA
+    User->>Browser: 「ログイン」クリック
+    Browser->>Access: GET /home
+    alt Access sessionなし
+        Access-->>Browser: 認証画面へredirect
+        Browser->>IdP: 認証する
+        IdP-->>Access: identity確認
+        Access-->>Browser: CF_Authorization発行 + /homeへredirect
+    else sessionあり
+        Access-->>Browser: /homeへ通過
+    end
+    Browser->>Web: GET /home
+    Web-->>Browser: ダッシュボードshell
+                  </pre>
+                </div>
+              </div>
+              <div class="sequence-note">
+                <strong>1</strong>
+                <p>
+                  <code>/</code>にはユーザーデータを置きません。ログインCTAの実体は<code>/home</code>への通常リンクで、認証の要否と戻り先はAccessが管理します。
+                </p>
+              </div>
+            </article>
+
+            <article>
+              <div class="diagram">
+                <div class="diagram-header">
+                  <span class="diagram-title">sequence-02-browser-api.mmd</span>
+                  <div class="diagram-tools" aria-label="図の拡大縮小">
+                    <button type="button" data-zoom-action="out" aria-label="縮小">−</button>
+                    <button type="button" data-zoom-action="reset" aria-label="等倍">1:1</button>
+                    <button type="button" data-zoom-action="in" aria-label="拡大">＋</button>
+                  </div>
+                </div>
+                <div class="diagram-scroll">
+                  <pre class="mermaid">
+sequenceDiagram
+    autonumber
+    actor User as 利用者
+    participant Browser as Browser Client hook
+    participant Access as Cloudflare Access
+    participant API as API Worker public
+    participant JWKS as Access JWKS
+    participant Context as userContext
+    participant D1 as D1
+
+    User->>Browser: 解答・閲覧を操作
+    Browser->>Access: POST /answers または /lesson-views<br/>credentials: include
+    Access->>Access: session cookie + Policy評価
+    Access->>API: Cf-Access-Jwt-Assertion付きで転送
+    API->>JWKS: 公開鍵を取得 / cache
+    JWKS-->>API: signing keys
+    API->>API: signature + issuer + audience検証
+    API->>Context: 検証成功後にnext()
+    Context->>Context: FIXED_USER_IDを注入
+    Context->>D1: 固定ユーザーとして読み書き
+    D1-->>Browser: API response
+                  </pre>
+                </div>
+              </div>
+              <div class="sequence-note">
+                <strong>2</strong>
+                <p>
+                  Accessを通過した事実だけでなく、API Workerが<code>Cf-Access-Jwt-Assertion</code>を再検証します。JWTの本文をdecodeしただけでは認可しません。
+                </p>
+              </div>
+            </article>
+
+            <article>
+              <div class="diagram">
+                <div class="diagram-header">
+                  <span class="diagram-title">sequence-03-server-loader.mmd</span>
+                  <div class="diagram-tools" aria-label="図の拡大縮小">
+                    <button type="button" data-zoom-action="out" aria-label="縮小">−</button>
+                    <button type="button" data-zoom-action="reset" aria-label="等倍">1:1</button>
+                    <button type="button" data-zoom-action="in" aria-label="拡大">＋</button>
+                  </div>
+                </div>
+                <div class="diagram-scroll">
+                  <pre class="mermaid">
+sequenceDiagram
+    autonumber
+    actor User as 認証済み利用者
+    participant Web as Web Worker /home or /review
+    participant Loader as Server loader
+    participant Binding as API Service Binding
+    participant Internal as InternalApi entrypoint
+    participant Context as userContext
+    participant D1 as D1
+
+    User->>Web: GET /home または /review
+    Web->>Loader: RSCを実行
+    Loader->>Binding: env.API.fetch(request)
+    Note over Binding,Internal: public Internetを通らない<br/>entrypoint: InternalApi
+    Binding->>Internal: private invocation
+    Internal->>Context: shared user routesへ委譲
+    Context->>Context: FIXED_USER_IDを注入
+    Context->>D1: due-count / review queue取得
+    D1-->>Loader: typed Hono response
+    Loader-->>User: Suspense領域をstream
+                  </pre>
+                </div>
+              </div>
+              <div class="sequence-note">
+                <strong>3</strong>
+                <p>
+                  内部呼び出しはJWTや秘密ヘッダーを作りません。Service Binding自体がCloudflare上の能力であり、named entrypointを公開HTTPから分離します。
+                </p>
+              </div>
+            </article>
+
+            <article>
+              <div class="diagram">
+                <div class="diagram-header">
+                  <span class="diagram-title">sequence-04-rejected-request.mmd</span>
+                  <div class="diagram-tools" aria-label="図の拡大縮小">
+                    <button type="button" data-zoom-action="out" aria-label="縮小">−</button>
+                    <button type="button" data-zoom-action="reset" aria-label="等倍">1:1</button>
+                    <button type="button" data-zoom-action="in" aria-label="拡大">＋</button>
+                  </div>
+                </div>
+                <div class="diagram-scroll">
+                  <pre class="mermaid">
+sequenceDiagram
+    autonumber
+    actor Attacker as 未認証HTTP client
+    participant API as API Worker public
+    participant Boundary as accessBoundary
+    participant Context as userContext
+    participant D1 as D1
+
+    Attacker->>API: POST /answers<br/>Access JWTなし / 無効
+    API->>Boundary: request
+    Boundary->>Boundary: config・token・署名・iss・audを確認
+    Boundary-->>Attacker: 401 UNAUTHORIZED
+    Note over Context,D1: 到達しない<br/>userId未注入・DB変更なし
+                  </pre>
+                </div>
+              </div>
+              <div class="sequence-note">
+                <strong>4</strong>
+                <p>
+                  認証失敗の詳細は外へ出しません。missing・malformed・expired・署名不一致・issuer/audience不一致を同じ固定401へ正規化します。
+                </p>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section id="routes">
+          <p class="section-label">04 / Route policy</p>
+          <h2>経路ごとの認証ルール</h2>
+          <p class="section-lead">
+            「アプリ全体を一律に保護」ではなく、公開トップ、認証後画面、公開API、内部API、health、ローカル開発を明示的に分けます。
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>経路</th>
+                  <th>分類</th>
+                  <th>認証・認可</th>
+                  <th>ユーザーデータ</th>
+                  <th>状態</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>GET /</code></td>
+                  <td class="route-public">PUBLIC</td>
+                  <td>不要</td>
+                  <td>取得しない</td>
+                  <td>Issue #127で変更予定</td>
+                </tr>
+                <tr>
+                  <td><code>GET /home</code>・<code>/review</code>等</td>
+                  <td class="route-access">ACCESS</td>
+                  <td>Cloudflare Access session + Policy</td>
+                  <td>Server loaderから取得</td>
+                  <td><code>/home</code>はIssue #127</td>
+                </tr>
+                <tr>
+                  <td><code>POST /answers</code>・<code>/lesson-views</code></td>
+                  <td class="route-access">ACCESS + JWT</td>
+                  <td>edge認証 + API WorkerでJWT検証</td>
+                  <td>読み書きあり</td>
+                  <td>PR #126</td>
+                </tr>
+                <tr>
+                  <td><code>GET /dashboard/due-count</code>等</td>
+                  <td class="route-internal">INTERNAL</td>
+                  <td>named Service Binding <code>InternalApi</code></td>
+                  <td>読み取りあり</td>
+                  <td>PR #126</td>
+                </tr>
+                <tr>
+                  <td><code>GET /health</code></td>
+                  <td class="route-public">PUBLIC</td>
+                  <td>不要</td>
+                  <td>なし</td>
+                  <td>公開維持</td>
+                </tr>
+                <tr>
+                  <td><code>localhost</code> / loopback</td>
+                  <td class="route-local">LOCAL ONLY</td>
+                  <td>Access設定が両方ない場合だけbypass</td>
+                  <td>ローカルD1</td>
+                  <td>設定済み・設定不足・非loopbackではfail closed</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="jwt">
+          <p class="section-label">05 / JWT verification</p>
+          <h2>Access JWTを検証してからuserContextへ渡す</h2>
+          <p class="section-lead">
+            API Workerの検証は4段階です。どれか1つでも失敗したら、固定ユーザーIDを作らずに終了します。
+          </p>
+          <div class="validation-chain">
+            <article class="validation-step">
+              <h3>設定</h3>
+              <p><code>ACCESS_ISSUER</code>と<code>ACCESS_AUDIENCE</code>が揃っているか確認。</p>
+            </article>
+            <article class="validation-step">
+              <h3>トークン</h3>
+              <p><code>Cf-Access-Jwt-Assertion</code>が存在するか確認。cookie本文は検証元にしない。</p>
+            </article>
+            <article class="validation-step">
+              <h3>署名</h3>
+              <p>信頼するissuerから導出したAccess JWKSでJWT署名を検証。</p>
+            </article>
+            <article class="validation-step">
+              <h3>claims</h3>
+              <p>issuerを完全一致、audienceを対象ApplicationのAUDと照合。</p>
+            </article>
+          </div>
+          <div class="callout warning">
+            <strong>単一ユーザーの保証はAccess Policy側にもある</strong>
+            <p>
+              APIはJWTのidentity claimを複数ユーザーIDへ変換しません。許可主体を単一ユーザーに絞る責務はIssue
+              #35で設定するCloudflare Access Policyが持ち、APIは認証成功後に固定<code>user-local-001</code>を注入します。
+            </p>
+          </div>
+        </section>
+
+        <section id="cors">
+          <p class="section-label">06 / CORS & cookies</p>
+          <h2>Access edgeとWorker内CORSは別の責務</h2>
+          <div class="config-grid">
+            <article class="panel">
+              <h3>Cloudflare Access edge</h3>
+              <ul>
+                <li>保護対象のweb/API hostnameを定義する</li>
+                <li>未認証利用者へ認証画面を返す</li>
+                <li>preflightをWorkerへ転送するか同等の応答を返す</li>
+                <li>credentialed cookieが本番hostnameで送信できる構成にする</li>
+              </ul>
+            </article>
+            <article class="panel">
+              <h3>API Worker CORS</h3>
+              <ul>
+                <li><code>WEB_ORIGIN</code>と完全一致するoriginだけを許可</li>
+                <li><code>credentials: true</code>を返す</li>
+                <li><code>GET / POST / OPTIONS</code>と<code>Content-Type</code>を許可</li>
+                <li>Workerへ届いたOPTIONSは204で終了し、D1へ到達させない</li>
+              </ul>
+            </article>
+          </div>
+          <div class="callout success">
+            <strong>推奨: webとAPIを同一siteに寄せる</strong>
+            <p>
+              cross-site cookie制約を減らすため、本番では同一zoneの明示的なhostnameまたはpath routingを優先します。具体的なhostname・cookie・preflightの組み合わせはIssue #35で実機確認します。
+            </p>
+          </div>
+        </section>
+
+        <section id="configuration">
+          <p class="section-label">07 / Configuration</p>
+          <h2>必要な設定とコード上の接点</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>設定</th>
+                  <th>所有</th>
+                  <th>用途</th>
+                  <th>秘密情報か</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>ACCESS_ISSUER</code></td>
+                  <td>API Worker var</td>
+                  <td>Access team domainのissuer完全一致検証</td>
+                  <td>いいえ</td>
+                </tr>
+                <tr>
+                  <td><code>ACCESS_AUDIENCE</code></td>
+                  <td>API Worker var</td>
+                  <td>Access Application AUD検証</td>
+                  <td>いいえ</td>
+                </tr>
+                <tr>
+                  <td><code>WEB_ORIGIN</code></td>
+                  <td>API Worker var</td>
+                  <td>CORSで許可するweb origin</td>
+                  <td>いいえ</td>
+                </tr>
+                <tr>
+                  <td><code>NEXT_PUBLIC_API_BASE_URL</code></td>
+                  <td>Web build env</td>
+                  <td>Browser clientが呼ぶAccess保護API URL</td>
+                  <td>いいえ</td>
+                </tr>
+                <tr>
+                  <td><code>API</code></td>
+                  <td>Web Service Binding</td>
+                  <td>Server loader → <code>InternalApi</code></td>
+                  <td>Cloudflare capability</td>
+                </tr>
+                <tr>
+                  <td>Access Application / Policy</td>
+                  <td>Cloudflare Zero Trust</td>
+                  <td>利用者・hostname・session・preflightの制御</td>
+                  <td>管理設定</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="config-grid" style="margin-top: 16px">
+            <article class="panel">
+              <h3>Service Binding</h3>
+              <p>Web WorkerはAPI Workerのnamed entrypointを指定します。</p>
+              <pre class="code-block">{
+  "services": [{
+    "binding": "API",
+    "service": "tech-study-lab-api",
+    "entrypoint": "InternalApi"
+  }]
+}</pre>
+            </article>
+            <article class="panel">
+              <h3>固定401契約</h3>
+              <p>JWT失敗理由をレスポンスへ含めません。</p>
+              <pre class="code-block">HTTP/1.1 401 Unauthorized
+
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Unauthorized"
+  }
+}</pre>
+            </article>
+          </div>
+        </section>
+
+        <section id="decisions">
+          <p class="section-label">08 / Decisions</p>
+          <h2>採用した方式と採用しなかった方式</h2>
+          <div class="decision-grid">
+            <article class="decision adopted">
+              <h3>採用: Access + API JWT検証 + Service Binding</h3>
+              <p>
+                利用者認証、originでの検証、内部Worker通信を別々の仕組みで保証します。アプリ独自の認証UIを持たず、公開HTTPと内部経路を明確に分離できます。
+              </p>
+            </article>
+            <article class="decision rejected">
+              <h3>不採用: Web proxyだけでAPIを隠す</h3>
+              <p>
+                proxy自体が公開HTTPならcurlやbotも呼べます。Origin・Referer・User-Agentやブラウザ配布済みsecretは利用者の真正性を保証しません。Accessを併用すると不要な中継層になります。
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section id="failures">
+          <p class="section-label">09 / Failure behavior</p>
+          <h2>失敗した場所から原因を切り分ける</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>観測される状態</th>
+                  <th>主な原因</th>
+                  <th>データ保護</th>
+                  <th>確認箇所</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Access認証画面へredirect</td>
+                  <td>sessionなし・期限切れ・Policy未許可</td>
+                  <td>Workerへ未到達</td>
+                  <td>Access Application / Policy</td>
+                </tr>
+                <tr>
+                  <td>CORS error / preflight失敗</td>
+                  <td>Access edgeまたは<code>WEB_ORIGIN</code>不一致</td>
+                  <td>本リクエスト未実行</td>
+                  <td>Access CORS設定・Worker CORS</td>
+                </tr>
+                <tr>
+                  <td>固定401 JSON</td>
+                  <td>Access vars・token・署名・issuer・audience不正</td>
+                  <td><code>userContext</code>とD1へ未到達</td>
+                  <td>API Worker vars・JWT検証</td>
+                </tr>
+                <tr>
+                  <td>Server loaderがfail-fast</td>
+                  <td>本番Service Binding未設定</td>
+                  <td>公開URLへfallbackしない</td>
+                  <td>Web Worker <code>API</code> binding</td>
+                </tr>
+                <tr>
+                  <td>localhostのみ認証なしで成功</td>
+                  <td>Access設定が両方未設定の明示的なloopback開発経路</td>
+                  <td>ローカルD1のみ</td>
+                  <td>request URL hostname</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="delivery">
+          <p class="section-label">10 / Delivery map</p>
+          <h2>3つのIssueで責務を分ける</h2>
+          <p class="section-lead">
+            コード上の境界、画面ルート、本番インフラを別々に完成させます。どれか1つだけでは利用者がログインして安全に学習する経路は完成しません。
+          </p>
+          <div class="issue-line">
+            <article class="issue">
+              <span class="issue-number">ISSUE #112 / PR #126</span>
+              <h3>APIアクセス境界</h3>
+              <p>JWT検証、固定401、loopback限定、InternalApi、credentials。コード実装とテスト。</p>
+            </article>
+            <article class="issue">
+              <span class="issue-number">ISSUE #127</span>
+              <h3>公開トップと/home</h3>
+              <p><code>/</code>を公開トップへ、既存ダッシュボードを<code>/home</code>へ移動。内部リンクを同期。</p>
+            </article>
+            <article class="issue">
+              <span class="issue-number">ISSUE #35</span>
+              <h3>本番Access設定</h3>
+              <p>Application、単一ユーザーPolicy、hostname、vars、preflight、cookie、dry-runと実機確認。</p>
+            </article>
+          </div>
+        </section>
+      </main>
+
+      <footer>
+        <p>
+          このHTMLは認証方式の読み取り用補助資料です。仕様判断が競合する場合は
+          <a href="./design.md"><code>docs/design.md</code></a>を優先します。
+        </p>
+      </footer>
+    </div>
+
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: "base",
+        securityLevel: "strict",
+        sequence: {
+          actorMargin: 44,
+          diagramMarginX: 24,
+          diagramMarginY: 16,
+          messageMargin: 30,
+          mirrorActors: false,
+          width: 155,
+        },
+        themeVariables: {
+          fontFamily:
+            'Inter, -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif',
+          primaryColor: "#e8f7ee",
+          primaryBorderColor: "#176b3a",
+          primaryTextColor: "#162033",
+          secondaryColor: "#e6f7f9",
+          tertiaryColor: "#f0edff",
+          lineColor: "#637087",
+          actorBkg: "#ffffff",
+          actorBorder: "#6d4aff",
+          actorTextColor: "#162033",
+          signalColor: "#455168",
+          signalTextColor: "#162033",
+          noteBkgColor: "#fff1e5",
+          noteBorderColor: "#a34b00",
+          noteTextColor: "#162033",
+          labelBoxBkgColor: "#f2f5fa",
+          labelBoxBorderColor: "#b8c4d7",
+          labelTextColor: "#162033",
+          loopTextColor: "#162033",
+        },
+      });
+
+      await mermaid.run({ querySelector: ".mermaid" });
+
+      document.querySelectorAll(".diagram").forEach(function (diagram) {
+        var scale = 1;
+        var svg = diagram.querySelector(".mermaid svg");
+        if (!svg) return;
+
+        function applyScale(nextScale) {
+          scale = Math.min(2, Math.max(0.6, nextScale));
+          svg.style.width = Math.round(scale * 100) + "%";
+          svg.style.maxWidth = "none";
+          svg.style.height = "auto";
+        }
+
+        diagram.querySelectorAll("[data-zoom-action]").forEach(function (button) {
+          button.addEventListener("click", function () {
+            var action = button.getAttribute("data-zoom-action");
+            if (action === "in") applyScale(scale + 0.2);
+            if (action === "out") applyScale(scale - 0.2);
+            if (action === "reset") applyScale(1);
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
