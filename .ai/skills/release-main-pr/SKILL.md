@@ -67,7 +67,11 @@ description: developからmainへのリリースPRを安全に作成し、完了
 
 closing keywordは自動close対象の箇条書きだけに書く。要確認候補、概要、PR一覧には書かない。
 
-`gh pr create`の直前に、タイトル、本文全文、正確な自動close対象の番号一覧を提示し、明示的なユーザー承認を得る。承認前はPRを作成しない。承認後に、承認済みの本文全文だけを安全な一時ファイルへ書き込む。`body_file=$(mktemp "${TMPDIR:-/tmp}/release-main-pr.XXXXXX")`で一意なファイルを作り、`trap 'rm -f "$body_file"' EXIT`で削除を予約してから、`gh pr create --base main --head develop --title "chore: merge develop into main" --body-file "$body_file"`を非対話で実行する。`body_file`の作成、承認済み本文の書き込み、`EXIT` trapの登録、`gh pr create`は、変数とtrapの有効範囲を保つため、一つのshell invocation内でこの順に実行する。
+`gh pr create`の直前に、タイトル、本文全文、正確な自動close対象の番号一覧を提示し、明示的なユーザー承認を得る。承認前はPRを作成しない。承認後は次の順で実行する。
+
+1. `body_file=$(mktemp "${TMPDIR:-/tmp}/release-main-pr.XXXXXX")`で一意なファイルを作り、返された正確なパスを保持する。
+2. 現在のランタイムのパッチ編集またはファイル書き込み機能を使い、承認済み本文全文をリテラルデータとしてそのパスへ書く。shellのheredoc、`echo`、`printf`、リダイレクトで本文を書かない。書き込み後にファイルを読み、承認済み本文と完全一致することを確認する。不一致ならPRを作成せず一時ファイルを削除する。
+3. 検証済みの一時パスだけを引用符付きで`body_file`へ設定し、`trap 'rm -f "$body_file"' EXIT`の登録と`gh pr create --base main --head develop --title "chore: merge develop into main" --body-file "$body_file"`を一つのshell invocation内でこの順に非対話実行する。
 
 作成後にPR URLを報告し、GitHub上のmergeable状態とCI状態を確認する。マージ不能またはCI未完了・失敗なら、その状態を報告して人間の判断を待つ。
 
