@@ -385,6 +385,32 @@ check_agent_contract "scope expansion is the only stop trigger" '停止してユ
 check_absent_contract "legacy standard-budget stop policy stays removed" '到達したら自律的な継続を止め、状況・残課題・継続の選択肢を報告して判断を仰ぐ' "$SKILL"
 check_agent_contract "claude wrapper remains required" '.ai/scripts/run-claude-review.sh' .ai/agents/claude-review-normalizer.md
 
+# ---- Issue #131: develop -> main release PR skill contracts ----
+RELEASE_MAIN_PR_SKILL=.ai/skills/release-main-pr/SKILL.md
+
+if [ "$(readlink .claude/skills/release-main-pr)" != '../../.ai/skills/release-main-pr' ] ||
+  [ "$(readlink .agents/skills/release-main-pr)" != '../../.ai/skills/release-main-pr' ]; then
+  printf '%s\n' 'release-main-pr discovery links are invalid' >&2
+  exit 1
+fi
+
+check_agent_contract "release skill requires GitHub auth" '`gh auth status`' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill requires a clean worktree" '`git status --short`が空' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill fetches remote release refs" '`git fetch origin main develop`' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill checks duplicate PRs" '`base=main`かつ`head=develop`のopen PR' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill rejects an empty remote diff" '`origin/main..origin/develop`が空でない' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill reconstructs remote release range" '`origin/main...origin/develop`' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill only accepts exact refs candidates" '正確な`refs #N`トークン' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill requires every close proof" '全条件を満たすIssueだけを自動close対象にする' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill separates uncertain candidates" '## 要確認候補（closing keywordなし）' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill states empty close state" '<対象がなければ「なし」>' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill states empty uncertain state" '<候補がなければ「なし」>' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill requires pre-create approval" '明示的なユーザー承認を得る。承認前はPRを作成しない。' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill checks post-create mergeability" 'GitHub上のmergeable状態とCI状態を確認する' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill forbids PR merging" '`gh pr merge`' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill forbids direct Issue closure" '`gh issue close`' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill forbids auto-merge" 'auto-mergeの有効化' "$RELEASE_MAIN_PR_SKILL"
+
 # ---- Issue #128: 通常Issueのマージ後照合 ----
 WEEKLY_RETRO_PROMPT=.ai/automations/weekly-retro-refine/prompt.md
 WEEKLY_RETRO_RENDERER=.ai/automations/weekly-retro-refine/scripts/render-report.mjs

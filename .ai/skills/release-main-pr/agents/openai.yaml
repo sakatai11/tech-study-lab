@@ -1,0 +1,4 @@
+interface:
+  display_name: "Main Release PR"
+  short_description: "developからmainへのリリースPRを安全に作成"
+  default_prompt: "Use $release-main-pr to create a safe develop-to-main release pull request."
