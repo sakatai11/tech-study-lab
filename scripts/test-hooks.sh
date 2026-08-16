@@ -413,9 +413,10 @@ check_agent_contract "release skill separates uncertain candidates" '## 要確�
 check_agent_contract "release skill states empty close state" '<対象がなければ「なし」>' "$RELEASE_MAIN_PR_SKILL"
 check_agent_contract "release skill states empty uncertain state" '<候補がなければ「なし」>' "$RELEASE_MAIN_PR_SKILL"
 check_agent_contract "release skill requires pre-create approval" '明示的なユーザー承認を得る。承認前はPRを作成しない。' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill creates an approved body in a safe temporary file" '`body_file=$(mktemp "${TMPDIR:-/tmp}/release-main-pr.XXXXXX.md")`' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill uses a portable final-suffix mktemp template" '`body_file=$(mktemp "${TMPDIR:-/tmp}/release-main-pr.XXXXXX")`' "$RELEASE_MAIN_PR_SKILL"
 check_agent_contract "release skill cleans up its PR body file" '`trap '\''rm -f "$body_file"'\'' EXIT`' "$RELEASE_MAIN_PR_SKILL"
 check_agent_contract "release skill creates PR with explicit non-interactive inputs" '`gh pr create --base main --head develop --title "chore: merge develop into main" --body-file "$body_file"`' "$RELEASE_MAIN_PR_SKILL"
+check_agent_contract "release skill keeps its temporary body lifecycle in one shell invocation" '`body_file`の作成、承認済み本文の書き込み、`EXIT` trapの登録、`gh pr create`は、変数とtrapの有効範囲を保つため、一つのshell invocation内でこの順に実行する。' "$RELEASE_MAIN_PR_SKILL"
 check_agent_contract "release skill checks post-create mergeability" 'GitHub上のmergeable状態とCI状態を確認する' "$RELEASE_MAIN_PR_SKILL"
 
 release_summary_section=$(extract_section "$RELEASE_MAIN_PR_SKILL" '## 概要' '## 含まれるPR')
