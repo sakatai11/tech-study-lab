@@ -24,7 +24,7 @@ const viewModel = (overrides: Partial<ReviewViewModel> = {}): ReviewViewModel =>
   hasMore: false,
   previews: [],
   questions: [],
-  resultHomeHref: '/',
+  resultHomeHref: '/home',
   resultHomeLabel: 'ホームへ',
   title: '今日の復習',
   ...overrides,
@@ -44,7 +44,7 @@ describe('ReviewUserContent', () => {
     expect(screen.getByText('今日は復習済みです')).toBeTruthy()
     expect(screen.getByRole('link', { name: 'ホームへ' })).toHaveProperty(
       'href',
-      'http://localhost:3000/',
+      'http://localhost:3000/home',
     )
   })
 

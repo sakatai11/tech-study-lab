@@ -30,7 +30,7 @@ export function AppShell({ children, currentNavigation }: AppShellProps) {
           <DueCountBadge className="absolute right-2 top-0 grid size-4 place-items-center rounded-full bg-red font-mono text-[9px] font-bold tabular-nums text-white" />
         }
         navigationHrefs={{
-          dashboard: '/',
+          dashboard: '/home',
           learn: learnHref,
           quiz: quizHref,
           review: '/review',

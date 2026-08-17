@@ -38,7 +38,7 @@ export default function ReviewError({
             </Button>
             <Link
               className="inline-flex min-h-11 items-center justify-center rounded-xl border-2 border-border px-4 py-2.5 font-bold text-ink transition-colors hover:bg-well"
-              href="/"
+              href="/home"
             >
               ホームへ
             </Link>
