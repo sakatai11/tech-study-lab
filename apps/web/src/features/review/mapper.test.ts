@@ -47,6 +47,7 @@ describe('reviewQueueToViewModel', () => {
     })
     expect(viewModel.explanations).toEqual({ [firstQuestion.id]: '理由' })
     expect(viewModel.questions[0]).not.toHaveProperty('answerIndex')
+    expect(viewModel.resultHomeHref).toBe('/home')
   })
 
   it('preserves the API dueAt order for questions and previews', () => {

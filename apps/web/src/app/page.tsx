@@ -1,210 +1,111 @@
 import Link from 'next/link'
-import type { CSSProperties } from 'react'
-import { Suspense } from 'react'
 
+import { ThemeToggle } from '@/components/theme-toggle'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
-import { ProgressBar } from '@/components/ui/progress-bar'
 import { TermCrumb } from '@/components/ui/term-crumb'
-import { DashboardDueCard } from '@/features/dashboard/server/components/dashboard-due-card'
-import { DashboardDueCardFallback } from '@/features/dashboard/server/components/dashboard-due-card-fallback'
-import { loadDashboardStatic } from '@/features/dashboard/server/load-dashboard'
-import { AppShell } from './_components/app-shell'
 
-const stats = [
-  { label: '正答率 · 直近7日', value: '78', unit: '%', icon: '✓', tone: 'green' },
-  { label: '基盤コンポーネント', value: '4', unit: '種', icon: '⌘', tone: 'purple' },
-  { label: '連続学習ストリーク', value: '12', unit: '日', icon: '↗', tone: 'orange' },
+const learningSteps = [
+  {
+    command: 'content.read()',
+    description: 'セキュリティ、フレームワーク、アーキテクチャを読み、設計の理由まで理解する。',
+    label: '教材を読む',
+  },
+  {
+    command: 'quiz.verify()',
+    description: '4択で理解を確かめ、解説で判断の根拠を結び直す。',
+    label: '4択で確かめる',
+  },
+  {
+    command: 'srs.review()',
+    description: '忘れかけた知識を適切な間隔で復習し、次の実装で使える状態にする。',
+    label: 'SRSで復習する',
+  },
 ] as const
 
-const domains = [
-  { label: 'Security', value: 42, color: 'green' },
-  { label: 'Frontend', value: 68, color: 'blue' },
-  { label: 'Backend', value: 31, color: 'purple' },
-  { label: 'Architecture', value: 18, color: 'orange' },
-] as const
-
-const heatmap = Array.from({ length: 26 * 7 }, (_, index) => ({
-  id: `sample-day-${index}`,
-  index,
-  level: (index * 7 + Math.floor(index / 4)) % 5,
-}))
-
-const heatmapClasses = ['bg-heat-0', 'bg-heat-1', 'bg-heat-2', 'bg-heat-3', 'bg-heat-4'] as const
-
-const statToneClasses = {
-  blue: 'bg-blue-bg text-blue',
-  green: 'bg-green-bg text-green',
-  purple: 'bg-purple-bg text-purple',
-  orange: 'bg-orange-bg text-orange',
-} as const
-
-function revealStyle(index: number): CSSProperties {
-  return { '--reveal-index': index } as CSSProperties
-}
-
-export default function Home() {
-  const { continueHref } = loadDashboardStatic()
-
+export default function ProductTopPage() {
   return (
-    <AppShell currentNavigation="dashboard">
-      <div className="flex flex-col gap-5">
-        <section
-          className="reveal flex flex-wrap items-start justify-between gap-4 px-1 pt-1"
-          style={revealStyle(0)}
-        >
-          <div>
-            <TermCrumb command="status" />
-            <h1 className="mb-0 mt-2 text-balance text-3xl font-black text-ink sm:text-4xl">
-              開発者のための学習ワークベンチ
-            </h1>
-            <p className="mb-0 mt-2 max-w-2xl text-pretty text-mute">
-              今日の復習を片付けてから、新しい教材へ進みましょう。
-            </p>
-          </div>
-          <Link
-            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-green px-4 py-2.5 font-bold text-white shadow-[0_4px_0_var(--green-shade)] transition-transform hover:brightness-110 active:translate-y-1 active:shadow-none"
-            href="/review"
-          >
-            復習を始める
+    <main className="min-h-dvh bg-bg px-4 py-4 sm:px-6 sm:py-6">
+      <div className="mx-auto max-w-6xl">
+        <header className="flex min-h-11 items-center justify-between gap-4 border-b-2 border-border pb-4">
+          <Link className="min-w-0 font-black text-ink" href="/">
+            tech-study-lab
           </Link>
-        </section>
-
-        <section aria-label="学習サマリー" className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-          <Suspense fallback={<DashboardDueCardFallback />}>
-            <DashboardDueCard />
-          </Suspense>
-          {stats.map((stat, index) => (
-            <Card className="reveal p-4" key={stat.label} style={revealStyle(index + 1)}>
-              <span
-                aria-hidden="true"
-                className={`grid size-10 place-items-center rounded-xl font-mono text-lg ${statToneClasses[stat.tone]}`}
-              >
-                {stat.icon}
-              </span>
-              <p className="mb-0 mt-4 font-mono text-2xl font-black tabular-nums text-ink">
-                {stat.value}
-                <span className="ml-1 text-sm text-mute">{stat.unit}</span>
-              </p>
-              <p className="mb-0 text-pretty text-sm text-mute">{stat.label}</p>
-            </Card>
-          ))}
-        </section>
-
-        <Card className="reveal p-5 sm:p-6" style={revealStyle(5)}>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="m-0 text-balance text-lg font-black text-ink">
-                学習コントリビューション
-              </h2>
-              <p className="mb-0 mt-1 text-pretty text-sm text-mute">
-                静的見本 · 実際の解答ログはまだ接続していません
-              </p>
-            </div>
-            <Badge className="tabular-nums">12 day streak</Badge>
-          </div>
-          <div
-            aria-label="直近26週・182日間の学習コントリビューション見本"
-            className="heatmap-grid mt-5 grid grid-flow-col grid-rows-7 gap-1"
-            role="img"
-          >
-            {heatmap.map((cell) => (
-              <span
-                aria-hidden="true"
-                className={`heatmap-cell rounded-sm ${heatmapClasses[cell.level]}`}
-                key={cell.id}
-                style={{ '--heatmap-index': cell.index } as CSSProperties}
-              />
-            ))}
-          </div>
-          <div className="mt-4 flex items-center justify-between gap-4 font-mono text-xs text-faint">
-            <span>Less</span>
-            <div aria-hidden="true" className="flex gap-1">
-              {heatmapClasses.map((className) => (
-                <span className={`size-3 rounded-sm ${className}`} key={className} />
-              ))}
-            </div>
-            <span>More</span>
-          </div>
-        </Card>
-
-        <div className="grid gap-5 xl:grid-cols-2">
-          <Card className="reveal p-5 sm:p-6" style={revealStyle(6)}>
-            <h2 className="m-0 text-balance text-lg font-black text-ink">領域別の習得状況</h2>
-            <p className="mb-0 mt-1 text-pretty text-sm text-mute">
-              表示用サンプル。学習データには接続していません。
-            </p>
-            <div className="mt-5 flex flex-col gap-5">
-              {domains.map((domain) => (
-                <div key={domain.label}>
-                  <div className="mb-2 flex items-center justify-between gap-3">
-                    <span className="font-semibold text-ink-2">{domain.label}</span>
-                    <span className="font-mono font-bold tabular-nums text-ink">
-                      {domain.value}%
-                    </span>
-                  </div>
-                  <ProgressBar
-                    color={domain.color}
-                    label={`${domain.label} の習得状況`}
-                    value={domain.value}
-                  />
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          <Card className="reveal p-5 sm:p-6" style={revealStyle(7)}>
-            <h2 className="m-0 text-balance text-lg font-black text-ink">設計システムの状態</h2>
-            <p className="mb-0 mt-1 text-pretty text-sm text-mute">
-              基盤で提供するUI語彙を明示しています。
-            </p>
-            <div className="mt-5 flex flex-wrap gap-2">
-              <Badge keycap="UI">Card</Badge>
-              <Badge keycap="CTA">Button</Badge>
-              <Badge keycap="1">Badge</Badge>
-              <Badge keycap="%">ProgressBar</Badge>
-            </div>
-            <div className="mt-6 border-t-2 border-border pt-5">
-              <p className="m-0 font-mono text-xs font-bold text-green">
-                &gt;_ design-system --check
-              </p>
-              <p className="mb-0 mt-2 text-pretty text-sm leading-6 text-ink-2">
-                dark/light tokens, responsive navigation, focus-visible, and safe-area support are
-                ready.
-              </p>
-              <Badge className="mt-4 border-green bg-green-bg text-green">
-                exit 0 · foundation ready
-              </Badge>
-            </div>
-          </Card>
-        </div>
-
-        <Card className="reveal border-green p-5 sm:p-6" style={revealStyle(8)}>
-          <div className="flex flex-wrap items-center gap-4">
-            <span
-              aria-hidden="true"
-              className="grid size-12 place-items-center rounded-2xl bg-green-bg font-mono text-xl text-green"
-            >
-              ▤
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="m-0 font-mono text-xs font-bold text-green">NEXT VERTICAL SLICE</p>
-              <h2 className="mb-0 mt-1 text-balance text-xl font-black text-ink">
-                教材 → 演習 → SRS の実データ連携
-              </h2>
-              <p className="mb-0 mt-1 text-pretty text-sm text-mute">
-                この画面は、将来の機能を載せるための静的な基盤です。
-              </p>
-            </div>
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
             <Link
               className="inline-flex min-h-11 items-center justify-center rounded-xl bg-green px-4 py-2.5 font-bold text-white shadow-[0_4px_0_var(--green-shade)] transition-transform hover:brightness-110 active:translate-y-1 active:shadow-none"
-              href={continueHref}
+              href="/home"
             >
-              続きから
+              ログイン
             </Link>
           </div>
-        </Card>
+        </header>
+
+        <section className="grid gap-8 py-12 lg:grid-cols-2 lg:items-center lg:py-20">
+          <div>
+            <TermCrumb command="lab.boot --for individual-developers" />
+            <Badge className="mt-5 border-green bg-green-bg text-green">
+              AI-DRIVEN LEARNING LAB
+            </Badge>
+            <h1 className="mb-0 mt-5 max-w-3xl text-balance text-4xl font-black leading-tight text-ink sm:text-5xl">
+              実装で使える知識を、学習ループで定着させる。
+            </h1>
+            <p className="mb-0 mt-5 max-w-2xl text-pretty text-lg leading-8 text-ink-2">
+              tech-study-lab
+              は、個人エンジニアがセキュリティ、フレームワーク、アーキテクチャを読み、確かめ、復習するための学習環境です。
+            </p>
+            <div className="mt-7 flex flex-wrap items-center gap-4">
+              <Link
+                className="inline-flex min-h-11 items-center justify-center rounded-xl bg-green px-5 py-3 font-bold text-white shadow-[0_4px_0_var(--green-shade)] transition-transform hover:brightness-110 active:translate-y-1 active:shadow-none"
+                href="/home"
+              >
+                ログインして学習を始める →
+              </Link>
+              <p className="m-0 text-pretty text-sm text-mute">ログイン情報の入力はありません</p>
+            </div>
+          </div>
+
+          <Card className="overflow-hidden border-green">
+            <div className="flex items-center justify-between gap-3 border-b-2 border-border bg-well px-4 py-3">
+              <span className="font-mono text-xs font-bold text-green">learning-pipeline.ts</span>
+              <span className="font-mono text-xs text-faint">ready</span>
+            </div>
+            <ol className="m-0 list-none divide-y-2 divide-border p-0">
+              {learningSteps.map((step, index) => (
+                <li className="grid gap-3 p-5 sm:grid-cols-2" key={step.command}>
+                  <span className="font-mono text-sm font-bold tabular-nums text-green">
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
+                  <div>
+                    <p className="m-0 font-mono text-xs font-bold text-green">
+                      &gt; {step.command}
+                    </p>
+                    <h2 className="mb-0 mt-2 text-balance text-xl font-black text-ink">
+                      {step.label}
+                    </h2>
+                    <p className="mb-0 mt-2 text-pretty leading-7 text-mute">{step.description}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </Card>
+        </section>
+
+        <section aria-labelledby="domains-heading" className="border-t-2 border-border py-8">
+          <p className="m-0 font-mono text-xs font-bold text-green">LAB DOMAINS</p>
+          <h2 className="mb-0 mt-2 text-balance text-2xl font-black text-ink" id="domains-heading">
+            学んだことを、次の設計と実装へ。
+          </h2>
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            {['Security', 'Frontend / Backend', 'Architecture'].map((domain) => (
+              <Card className="p-4" key={domain}>
+                <p className="m-0 font-mono text-sm font-bold text-ink">{domain}</p>
+              </Card>
+            ))}
+          </div>
+        </section>
       </div>
-    </AppShell>
+    </main>
   )
 }

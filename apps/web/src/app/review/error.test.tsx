@@ -24,7 +24,7 @@ describe('ReviewError', () => {
     expect(reset).toHaveBeenCalledOnce()
     expect(screen.getByRole('link', { name: 'ホームへ' })).toHaveProperty(
       'href',
-      'http://localhost:3000/',
+      'http://localhost:3000/home',
     )
   })
 })

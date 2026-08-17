@@ -32,7 +32,7 @@ export async function ReviewUserContent() {
         </p>
         <Link
           className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-green px-4 py-2.5 font-bold text-white shadow-[0_4px_0_var(--green-shade)] transition-transform hover:brightness-110 active:translate-y-1 active:shadow-none"
-          href="/"
+          href="/home"
         >
           ホームへ
         </Link>

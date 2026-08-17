@@ -32,7 +32,7 @@ export function reviewQueueToViewModel(
     explanations: Object.fromEntries(
       joinedItems.map((item) => [item.question.id, item.question.explanation]),
     ),
-    resultHomeHref: '/',
+    resultHomeHref: '/home',
     resultHomeLabel: 'ホームへ',
     hasMore: queue.hasMore,
     batchKey: joinedItems.map((item) => `${item.question.id}:${item.dueAt}`).join('|'),

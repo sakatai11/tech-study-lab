@@ -17,7 +17,7 @@ export function loadDashboardStatic(): DashboardStaticViewModel {
     : undefined
 
   return {
-    continueHref: learnHref ?? '/',
+    continueHref: learnHref ?? '/home',
     learnHref,
     quizHref: firstLesson ? `/quiz/${firstLesson.lesson}` : undefined,
   }
