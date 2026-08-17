@@ -12,9 +12,30 @@ import { loadDashboardStatic } from '@/features/dashboard/server/load-dashboard'
 import { AppShell } from '../_components/app-shell'
 
 const stats = [
-  { label: '正答率 · 直近7日', value: '78', unit: '%', icon: '✓', tone: 'green' },
-  { label: '基盤コンポーネント', value: '4', unit: '種', icon: '⌘', tone: 'purple' },
-  { label: '連続学習ストリーク', value: '12', unit: '日', icon: '↗', tone: 'orange' },
+  {
+    label: '正答率 · 直近7日',
+    value: '78',
+    unit: '%',
+    icon: '✓',
+    tone: 'green',
+    isSample: true,
+  },
+  {
+    label: '基盤コンポーネント',
+    value: '4',
+    unit: '種',
+    icon: '⌘',
+    tone: 'purple',
+    isSample: false,
+  },
+  {
+    label: '連続学習ストリーク',
+    value: '12',
+    unit: '日',
+    icon: '↗',
+    tone: 'orange',
+    isSample: true,
+  },
 ] as const
 
 const domains = [
@@ -87,6 +108,7 @@ export default function HomePage() {
                 <span className="ml-1 text-sm text-mute">{stat.unit}</span>
               </p>
               <p className="mb-0 text-pretty text-sm text-mute">{stat.label}</p>
+              {stat.isSample ? <Badge className="mt-2">表示用サンプル</Badge> : null}
             </Card>
           ))}
         </section>

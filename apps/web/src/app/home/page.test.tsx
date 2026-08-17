@@ -42,6 +42,7 @@ describe('HomePage', () => {
     expect(appShell).toHaveBeenCalledWith('dashboard')
     expect(screen.getByRole('heading', { name: '開発者のための学習ワークベンチ' })).toBeTruthy()
     expect(screen.getByText('due-card')).toBeTruthy()
+    expect(screen.getAllByText('表示用サンプル')).toHaveLength(2)
     expect(screen.getByRole('link', { name: '復習を始める' })).toHaveProperty(
       'href',
       'http://localhost:3000/review',
