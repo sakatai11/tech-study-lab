@@ -56,6 +56,124 @@ function requiredFindingsResolved(findings) {
     .every((finding) => finding.status === 'resolved')
 }
 
+const allowedReviewPolicies = new Set(['always', 'risk-based', 'never'])
+const requiredRiskRuleIds = new Set([
+  'ER-1',
+  'ER-2',
+  'ER-3',
+  'ER-4',
+  'ER-5',
+  'ER-6',
+  'ER-7',
+  'ER-8',
+  'ER-9',
+])
+
+function requireDecisionEvidence(evidence) {
+  if (typeof evidence !== 'string' || evidence.trim().length === 0) {
+    throw new Error('external review decision requires evidence')
+  }
+  return evidence.trim()
+}
+
+function decideExternalReview({
+  policy,
+  head,
+  evidence,
+  matchedRequiredRules = [],
+  lowRiskOnly = false,
+  userExplicitNever = false,
+  externalReviewStarted = false,
+  externalRequiredFinding = false,
+}) {
+  const decisionEvidence = requireDecisionEvidence(evidence)
+  if (policy === 'always') {
+    return {
+      status: 'required',
+      decisionHead: head,
+      ruleIds: ['POLICY-ALWAYS'],
+      evidence: decisionEvidence,
+    }
+  }
+  if (policy === 'never') {
+    if (!userExplicitNever) throw new Error('never policy requires explicit user choice')
+    return {
+      status: 'not-required-by-policy',
+      decisionHead: head,
+      ruleIds: ['POLICY-NEVER'],
+      evidence: decisionEvidence,
+    }
+  }
+  if (policy !== 'risk-based') throw new Error('unknown review policy')
+  if (!matchedRequiredRules.every((ruleId) => requiredRiskRuleIds.has(ruleId))) {
+    throw new Error('invalid required review rule')
+  }
+
+  const ruleIds = [...matchedRequiredRules]
+  if (externalReviewStarted || externalRequiredFinding) ruleIds.push('ER-8')
+  if (ruleIds.length > 0) {
+    return {
+      status: 'required',
+      decisionHead: head,
+      ruleIds: [...new Set(ruleIds)],
+      evidence: decisionEvidence,
+    }
+  }
+  if (lowRiskOnly) {
+    return {
+      status: 'not-required-by-policy',
+      decisionHead: head,
+      ruleIds: ['LR-1'],
+      evidence: decisionEvidence,
+    }
+  }
+  return {
+    status: 'required',
+    decisionHead: head,
+    ruleIds: ['ER-9'],
+    evidence: decisionEvidence,
+  }
+}
+
+function hasExactRuleIds(actual, expected) {
+  return (
+    actual.length === expected.length &&
+    new Set(actual).size === actual.length &&
+    expected.every((ruleId) => actual.includes(ruleId))
+  )
+}
+
+function hasValidExternalReviewDecision(state) {
+  const decision = state.externalReviewDecision
+  if (!decision || decision.decisionHead !== state.head) return false
+  if (!allowedReviewPolicies.has(state.reviewPolicy)) return false
+  if (!Array.isArray(decision.ruleIds) || decision.ruleIds.length === 0) return false
+  if (typeof decision.evidence !== 'string' || decision.evidence.trim().length === 0) return false
+  if (new Set(decision.ruleIds).size !== decision.ruleIds.length) return false
+
+  if (decision.status === 'required') {
+    if (state.reviewPolicy === 'always') {
+      return hasExactRuleIds(decision.ruleIds, ['POLICY-ALWAYS'])
+    }
+    return (
+      state.reviewPolicy === 'risk-based' &&
+      decision.ruleIds.every((ruleId) => requiredRiskRuleIds.has(ruleId))
+    )
+  }
+  if (decision.status !== 'not-required-by-policy') return false
+  if (state.reviewPolicy === 'risk-based') {
+    return hasExactRuleIds(decision.ruleIds, ['LR-1'])
+  }
+  return state.reviewPolicy === 'never' && hasExactRuleIds(decision.ruleIds, ['POLICY-NEVER'])
+}
+
+function externalRequirementSatisfied(state) {
+  if (!hasValidExternalReviewDecision(state)) return false
+  const decision = state.externalReviewDecision
+  if (decision.status === 'not-required-by-policy') return true
+  return state.verification.external === 'approve' && state.verification.externalHead === state.head
+}
+
 function recordVerification(state, lane, result, findingResults = []) {
   if (!completed.has(result)) return state
   const byId = new Map(findingResults.map((finding) => [finding.id, finding]))
@@ -82,18 +200,22 @@ function recordVerification(state, lane, result, findingResults = []) {
       [`${lane}Head`]: state.head,
     },
   }
-  const bothApproved =
+  const verificationPathComplete =
     next.verification.internal === 'approve' &&
     next.verification.internalHead === next.head &&
-    next.verification.external === 'approve' &&
-    next.verification.externalHead === next.head
-  return bothApproved && requiredFindingsResolved(findings)
+    externalRequirementSatisfied(next)
+  return verificationPathComplete && requiredFindingsResolved(findings)
     ? { ...next, reviewedHead: next.head }
     : next
 }
 
 function canStartExternalVerification(state) {
-  return state.verification.internal === 'approve' && state.verification.internalHead === state.head
+  return (
+    hasValidExternalReviewDecision(state) &&
+    state.externalReviewDecision?.status === 'required' &&
+    state.verification.internal === 'approve' &&
+    state.verification.internalHead === state.head
+  )
 }
 
 function classifyVerificationFinding(kind) {
@@ -134,10 +256,25 @@ function validateChunkCoverage(original, chunks, crossCuttingReview) {
   return true
 }
 
+const decisionEvidence = {
+  always: 'The always policy requires an external review.',
+  lowRiskDocs: 'Every hunk is non-executable documentation and no ER rule applies.',
+  executable: 'The change modifies executable behavior covered by ER-1.',
+  uncertain: 'The impact cannot be classified confidently, so ER-9 applies.',
+  continuity: 'External review already started in this run, so ER-8 applies.',
+  explicitNever: 'The user explicitly selected the never policy for this skill run.',
+}
+
 const baseState = {
   issue: 124,
   head: 'head-1',
   reviewedHead: undefined,
+  reviewPolicy: 'always',
+  externalReviewDecision: decideExternalReview({
+    policy: 'always',
+    head: 'head-1',
+    evidence: decisionEvidence.always,
+  }),
   findings: [],
   verification: {
     internal: undefined,
@@ -206,6 +343,307 @@ const cases = [
       return canStartExternalVerification({ ...internallyApproved, head: 'head-2' })
     },
     expected: false,
+  },
+  {
+    name: 'risk-based low-risk documentation records an explicit non-required decision',
+    run: () =>
+      decideExternalReview({
+        policy: 'risk-based',
+        head: 'head-1',
+        evidence: decisionEvidence.lowRiskDocs,
+        lowRiskOnly: true,
+      }),
+    expected: {
+      status: 'not-required-by-policy',
+      decisionHead: 'head-1',
+      ruleIds: ['LR-1'],
+      evidence: decisionEvidence.lowRiskDocs,
+    },
+  },
+  {
+    name: 'risk-based executable changes require external review',
+    run: () =>
+      decideExternalReview({
+        policy: 'risk-based',
+        head: 'head-1',
+        evidence: decisionEvidence.executable,
+        matchedRequiredRules: ['ER-1'],
+      }),
+    expected: {
+      status: 'required',
+      decisionHead: 'head-1',
+      ruleIds: ['ER-1'],
+      evidence: decisionEvidence.executable,
+    },
+  },
+  {
+    name: 'uncertain risk classification requires external review',
+    run: () =>
+      decideExternalReview({
+        policy: 'risk-based',
+        head: 'head-1',
+        evidence: decisionEvidence.uncertain,
+      }),
+    expected: {
+      status: 'required',
+      decisionHead: 'head-1',
+      ruleIds: ['ER-9'],
+      evidence: decisionEvidence.uncertain,
+    },
+  },
+  {
+    name: 'external discovery continuity keeps verification required',
+    run: () =>
+      decideExternalReview({
+        policy: 'risk-based',
+        head: 'head-2',
+        evidence: decisionEvidence.continuity,
+        lowRiskOnly: true,
+        externalReviewStarted: true,
+      }),
+    expected: {
+      status: 'required',
+      decisionHead: 'head-2',
+      ruleIds: ['ER-8'],
+      evidence: decisionEvidence.continuity,
+    },
+  },
+  {
+    name: 'every external review decision requires concrete evidence',
+    run: () => decideExternalReview({ policy: 'always', head: 'head-1' }),
+    error: 'external review decision requires evidence',
+  },
+  {
+    name: 'never policy requires explicit user choice',
+    run: () =>
+      decideExternalReview({
+        policy: 'never',
+        head: 'head-1',
+        evidence: decisionEvidence.explicitNever,
+      }),
+    error: 'never policy requires explicit user choice',
+  },
+  {
+    name: 'explicit never policy records a distinct non-required decision',
+    run: () =>
+      decideExternalReview({
+        policy: 'never',
+        head: 'head-1',
+        evidence: decisionEvidence.explicitNever,
+        userExplicitNever: true,
+      }),
+    expected: {
+      status: 'not-required-by-policy',
+      decisionHead: 'head-1',
+      ruleIds: ['POLICY-NEVER'],
+      evidence: decisionEvidence.explicitNever,
+    },
+  },
+  {
+    name: 'current non-required decision completes with internal approval',
+    run: () => {
+      const state = {
+        ...baseState,
+        reviewPolicy: 'risk-based',
+        externalReviewDecision: decideExternalReview({
+          policy: 'risk-based',
+          head: 'head-1',
+          evidence: decisionEvidence.lowRiskDocs,
+          lowRiskOnly: true,
+        }),
+      }
+      return recordVerification(state, 'internal', 'approve')
+    },
+    expected: { reviewedHead: 'head-1', external: undefined },
+    assert: (actual, expected) => {
+      assert.equal(actual.reviewedHead, expected.reviewedHead)
+      assert.equal(actual.verification.external, expected.external)
+    },
+  },
+  {
+    name: 'non-required decision never starts external verification',
+    run: () => {
+      const state = {
+        ...baseState,
+        reviewPolicy: 'risk-based',
+        externalReviewDecision: decideExternalReview({
+          policy: 'risk-based',
+          head: 'head-1',
+          evidence: decisionEvidence.lowRiskDocs,
+          lowRiskOnly: true,
+        }),
+      }
+      return canStartExternalVerification(recordVerification(state, 'internal', 'approve'))
+    },
+    expected: false,
+  },
+  {
+    name: 'explicit never policy completes with internal approval and a current decision',
+    run: () => {
+      const state = {
+        ...baseState,
+        reviewPolicy: 'never',
+        externalReviewDecision: decideExternalReview({
+          policy: 'never',
+          head: 'head-1',
+          evidence: decisionEvidence.explicitNever,
+          userExplicitNever: true,
+        }),
+      }
+      return recordVerification(state, 'internal', 'approve')
+    },
+    expected: { reviewedHead: 'head-1', external: undefined },
+    assert: (actual, expected) => {
+      assert.equal(actual.reviewedHead, expected.reviewedHead)
+      assert.equal(actual.verification.external, expected.external)
+    },
+  },
+  {
+    name: 'stale non-required decision does not update the boundary',
+    run: () => {
+      const state = {
+        ...baseState,
+        head: 'head-2',
+        reviewPolicy: 'risk-based',
+        externalReviewDecision: decideExternalReview({
+          policy: 'risk-based',
+          head: 'head-1',
+          evidence: decisionEvidence.lowRiskDocs,
+          lowRiskOnly: true,
+        }),
+      }
+      return recordVerification(state, 'internal', 'approve')
+    },
+    expected: { reviewedHead: undefined },
+    assert: (actual, expected) => {
+      assert.equal(actual.reviewedHead, expected.reviewedHead)
+    },
+  },
+  {
+    name: 'unsubstantiated non-required decision does not update the boundary',
+    run: () =>
+      recordVerification(
+        {
+          ...baseState,
+          reviewPolicy: 'risk-based',
+          externalReviewDecision: {
+            status: 'not-required-by-policy',
+            decisionHead: 'head-1',
+            ruleIds: [],
+          },
+        },
+        'internal',
+        'approve',
+      ),
+    expected: { reviewedHead: undefined },
+    assert: (actual, expected) => {
+      assert.equal(actual.reviewedHead, expected.reviewedHead)
+    },
+  },
+  {
+    name: 'non-required decision without evidence does not update the boundary',
+    run: () =>
+      recordVerification(
+        {
+          ...baseState,
+          reviewPolicy: 'risk-based',
+          externalReviewDecision: {
+            status: 'not-required-by-policy',
+            decisionHead: 'head-1',
+            ruleIds: ['LR-1'],
+          },
+        },
+        'internal',
+        'approve',
+      ),
+    expected: { reviewedHead: undefined },
+    assert: (actual, expected) => {
+      assert.equal(actual.reviewedHead, expected.reviewedHead)
+    },
+  },
+  {
+    name: 'contradictory low-risk and required rules do not update the boundary',
+    run: () =>
+      recordVerification(
+        {
+          ...baseState,
+          reviewPolicy: 'risk-based',
+          externalReviewDecision: {
+            status: 'not-required-by-policy',
+            decisionHead: 'head-1',
+            ruleIds: ['LR-1', 'ER-1'],
+            evidence: decisionEvidence.lowRiskDocs,
+          },
+        },
+        'internal',
+        'approve',
+      ),
+    expected: { reviewedHead: undefined },
+    assert: (actual, expected) => {
+      assert.equal(actual.reviewedHead, expected.reviewedHead)
+    },
+  },
+  {
+    name: 'unknown review policy does not update the boundary',
+    run: () =>
+      recordVerification(
+        {
+          ...baseState,
+          reviewPolicy: 'sometimes',
+          externalReviewDecision: {
+            status: 'not-required-by-policy',
+            decisionHead: 'head-1',
+            ruleIds: ['LR-1'],
+            evidence: decisionEvidence.lowRiskDocs,
+          },
+        },
+        'internal',
+        'approve',
+      ),
+    expected: { reviewedHead: undefined },
+    assert: (actual, expected) => {
+      assert.equal(actual.reviewedHead, expected.reviewedHead)
+    },
+  },
+  {
+    name: 'required decision without evidence does not update the boundary',
+    run: () => {
+      const state = {
+        ...baseState,
+        externalReviewDecision: {
+          status: 'required',
+          decisionHead: 'head-1',
+          ruleIds: ['POLICY-ALWAYS'],
+        },
+      }
+      const internal = recordVerification(state, 'internal', 'approve')
+      return recordVerification(internal, 'external', 'approve')
+    },
+    expected: { reviewedHead: undefined },
+    assert: (actual, expected) => {
+      assert.equal(actual.reviewedHead, expected.reviewedHead)
+    },
+  },
+  {
+    name: 'required decision with an unknown rule does not update the boundary',
+    run: () => {
+      const state = {
+        ...baseState,
+        reviewPolicy: 'risk-based',
+        externalReviewDecision: {
+          status: 'required',
+          decisionHead: 'head-1',
+          ruleIds: ['ER-99'],
+          evidence: 'An unknown rule was recorded.',
+        },
+      }
+      const internal = recordVerification(state, 'internal', 'approve')
+      return recordVerification(internal, 'external', 'approve')
+    },
+    expected: { reviewedHead: undefined },
+    assert: (actual, expected) => {
+      assert.equal(actual.reviewedHead, expected.reviewedHead)
+    },
   },
   {
     name: 'zero findings update the boundary only after both approvals',

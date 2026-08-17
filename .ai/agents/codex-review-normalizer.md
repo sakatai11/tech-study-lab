@@ -16,7 +16,7 @@ tools: Read, Grep, Glob
 
 オーケストレーターが直接 `codex login status` を確認した後、`codex exec review` を直接実行・継続監視して得た、要約済み結果とレビュー用ブリーフを受け取る。このエージェントは CLI を起動・停止・認証確認・外部送信せず、raw stdout/stderrも受け取らない。
 
-ブリーフには `targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage` / `committedRange` が必要である。`verification` では Finding台帳、修正要約、修正コミット範囲も確認する。不足・矛盾は推測で補完せず「判定: error」とする。
+ブリーフには `targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage` / `committedRange` / `reviewPolicy` / `externalReviewDecision` / `decisionHead` が必要である。`verification` では Finding台帳、修正要約、修正コミット範囲も確認する。不足・矛盾は推測で補完せず「判定: error」とする。
 
 `.ai/review-guidelines.md` の `spec-compliance-first` で結果を正規化し、design.md の該当章を照合する。CLI結果由来は `[codex]`、自分の照合で追加した指摘は `[codex-review-normalizer]` とする。範囲外の妥当な問題は「別issue候補（範囲外）」へ分離し、verificationの新規Findingは共通定義の限定された分類だけを current loop に入れる。
 
