@@ -19,6 +19,13 @@
 - 認証済みでも API/DNS/接続エラーが出る場合は、対象の読み取りコマンドだけを正規の承認・権限昇格経路で再実行するか、Codex App の接続済みコネクタを使う。通信失敗を未認証と報告しない。
 - GitHubコネクタの認証と `gh` / 別モデルレビュー用CLI（Codex CLI・Claude CLI）の認証は共有されない。これらのCLIはGitHubコネクタで代替できないため、CLI自身の認証状態を上記の二段階で確認する。
 
+### 認証preflightと承認の分離
+
+- 別モデルCLIの認証preflightは、そのCLIを実行する可能性が確定した時点で1回だけ行う。`reviewPolicy: always`はフェーズ0、`risk-based`は`externalReviewDecision: required`となった時点、`never`は実施しない。
+- Sandbox外の同じ状態確認でも未認証と確認できた場合だけ、ユーザーへCLIのログイン操作を依頼する。Sandbox承認、Keychain不可視、通信失敗、CLI不存在を「ユーザー認証が必要」と表現しない。
+- 認証済みならCLI名・バージョン・確認コマンド・時刻・`authReady: true`だけを`<scratchpad>/review-mode-<N>.md`へ記録し、同一スキル実行中は再利用する。トークン、アカウント識別子、認証出力の全文は記録しない。CLIがauth errorを返した、CLI実体が変わった、または別スキル実行になった場合だけ再確認する。
+- ランタイムのコマンド実行承認、CLIログイン、private内容の外部送信同意は別の判断である。どれか1つを他の承認として代用しない。ランタイムがセッション限定・対象コマンド限定の承認再利用を提供する場合だけ、同一スキル実行のread-onlyレビューに利用してよい。永続的またはCLI全体を許可する広い承認規則は作らない。
+
 ## Claude CLI レビューの認証情報
 
 - Claude CLI で認証確認またはレビューを実行する場合は、`claude` を直接起動せず、`.ai/scripts/run-claude-review.sh` を使う。この wrapper は同じプロセスで `.ai/scripts/load-secrets.sh` を source し、macOS Keychain の `AI_CLAUDE_CODE_OAUTH_TOKEN` / `claude` から取得した値を `CLAUDE_CODE_OAUTH_TOKEN` として環境経由で Claude CLI にだけ引き継ぐ。
@@ -55,7 +62,7 @@
 
 ## 別モデルCLIレビューのモデル方針
 
-コミット済み差分の独立レビューは、**ホストランタイムとは別のモデルのCLI**で実行する。使用するCLIと正規化エージェントはホストで決まる。ホストと同じ提供元のCLIを別モデルレビューに使ってはならない（「独立した第二の目」が成立しなくなる）。
+レビュー方針で外部レビューが必須となったコミット済み差分は、**ホストランタイムとは別のモデルのCLI**で独立レビューする。使用するCLIと正規化エージェントはホストで決まる。ホストと同じ提供元のCLIを別モデルレビューに使ってはならない（「独立した第二の目」が成立しなくなる）。
 
 `<effective-base>` は推測や論理ベース名の直書きで代用せず、CLI起動前にオーケストレーターが `git merge-base <base> HEAD` で算出する。終了コードが非0、出力が空または複数行、もしくは `git rev-parse --verify <effective-base>^{commit}` が失敗した場合は「判定: error」とし、別モデルCLIを実行しない。検証済みの単一commit SHAだけを、以下の両経路の `<effective-base>` に渡す。
 

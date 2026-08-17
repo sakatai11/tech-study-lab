@@ -20,12 +20,13 @@ description: 決定済みの実装方針に従ってコードを実装するエ�
 
 1. 方針書を読み、変更対象ファイルと作業順を確認する。
 2. 実装する。新規ロジック（特に SRS・純粋関数）には Vitest テストを併せて書く。
-3. 自己検証を必ず実行する:
+3. 変更ファイルと影響packageに絞った自己検証を必ず実行する。対象packageに対応するscriptがある場合は`pnpm --filter <package> <script>`を使い、なければ安全に実行できるリポジトリ全体のコマンドへフォールバックする:
    ```bash
-   pnpm typecheck
-   pnpm biome check .
-   pnpm test
+   pnpm biome check <変更ファイルを列挙>
+   pnpm --filter <変更package> typecheck
+   pnpm --filter <変更package> test
    ```
+   リポジトリ全体の正式な`pnpm typecheck` / `pnpm lint` / `pnpm test`はフェーズ4の`test-fixer`が担うため、ここで同じ全ゲートを重複実行する必要はない。
 4. 失敗があれば最大3周まで修正して再実行する。同じ失敗が2回続いたら根本原因を分析し、別の解決策を試す。収束しなければログと残課題を報告する。
 
 ## 禁止事項
@@ -45,9 +46,9 @@ description: 決定済みの実装方針に従ってコードを実装するエ�
 |---|---|
 
 ### 自己検証結果
-- typecheck: pass/fail
-- biome: pass/fail
-- test: pass/fail（件数）
+- scoped typecheck: pass/fail/未実行（理由）
+- scoped biome: pass/fail
+- scoped test: pass/fail/未実行（件数・理由）
 
 ### 方針からの逸脱・未解決事項
 （なければ「なし」）

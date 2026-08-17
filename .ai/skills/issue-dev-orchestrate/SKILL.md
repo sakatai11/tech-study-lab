@@ -1,6 +1,6 @@
 ---
 name: issue-dev-orchestrate
-description: GitHub issue に登録された仕様を起点に「調査→方針決定→実装→レビュー→テスト→fix」を一気通貫で実行する issue 駆動開発パイプライン。「issue #N を実装して」「/issue-dev-orchestrate N」などで起動。実装はランタイムのネイティブエージェントで行う。
+description: GitHub issue に登録された仕様を起点に「調査→方針決定→実装→レビュー→テスト→fix」を一気通貫で実行する issue 駆動開発パイプライン。「issue #N を実装して」「/issue-dev-orchestrate N」などで起動。実装担当と外部レビュー要否をリスクと作業特性から決定する。
 ---
 
 # Issue 駆動開発パイプライン
@@ -15,7 +15,9 @@ GitHub issue に登録された仕様を、**レビュー済み・品質ゲー�
 完了条件は次の4つ、ならびにスパイクまたはフェーズ分割を伴う作業では5つ目の条件が満たされた状態である。
 
 - 未コミット変更がない
-- `develop..HEAD` のすべてのコミットが、current HEADに対するinternal・別モデルCLIの両方のverification `approve` と、required Finding全件 `resolved` から成る有効なverification経路を通過している（Findingが0件でも両approve後に成立する）
+- `develop..HEAD` のすべてのコミットが、current HEADに対するinternal verification `approve`、required Finding全件 `resolved`、およびレビュー方針に応じた次のどちらかから成る有効なverification経路を通過している
+  - 外部レビュー必須: 別モデルCLI verificationも`approve`
+  - 外部レビュー不要: current HEADに対する`externalReviewDecision: not-required-by-policy`が、適用した`reviewPolicy`・判定規則・根拠とともに記録済み
 - 最新のローカル品質ゲート（typecheck / lint / test）が通過し、PR CI の品質ゲート（typecheck / lint / test / build）も通過している
 - `develop` 向けPRが作成され、そのURLをユーザーへ報告している
 - スパイクまたはフェーズ分割を伴う作業では、明示された関連Issue・撤回／置換PRの状態照合が完了し、現在Issueと明示的に関連するphase Issueに追跡可能な記録がある
@@ -30,7 +32,7 @@ GitHub issue に登録された仕様を、**レビュー済み・品質ゲー�
 
 1. **コミット**: `developer` と `test-fixer` はコミットしない。何を1コミットにまとめるかは常にオーケストレーターが決める。
 2. **レビュー境界の管理**: どのコミット範囲がレビュー済みかを追跡し、**未レビューのコードをレビュー済みとして扱わない**。
-3. **外部送信の同意取得**: private なコードを外部サービスへ送る操作の直前に、ユーザーの明示同意を取る。
+3. **外部送信の同意管理**: private なコードを外部サービスへ送る前に、ユーザーの明示同意を取り、同一実行内で再利用できる範囲と再同意条件を管理する。
 
 ### レビュー用ブリーフの契約
 
@@ -69,7 +71,7 @@ verification のブリーフには、issue固有の Finding台帳、修正要約
 
 ### 外部送信
 
-- private な内容を外部へ送る直前に、**何が送られるかを具体的に列挙して**明示同意を取る。過去の同意・スキル文書・`AGENTS.md` で代用しない。
+- private な内容を外部へ送る前に、**何が送られるかを具体的に列挙して**明示同意を取る。別実行・承認範囲外の過去同意、スキル文書、`AGENTS.md`で代用しない。同一実行・同一承認範囲の記録済み同意だけを再利用できる。
 - **ホストランタイムと同じ提供元のCLIをレビュアーにしない**（独立した第二の目が成立しない）。
 - 権限・Sandbox の迂回フラグ（`--dangerously-*` 等）を使わない。
 
@@ -77,7 +79,7 @@ verification のブリーフには、issue固有の Finding台帳、修正要約
 
 - **なぜdiscoveryとverificationを分けるか**: discoveryは `develop...HEAD` の累積差分からFindingを漏れなく集め、verificationは台帳に対応付けた修正範囲で解消状態を確認する。初回発見と修正確認を混ぜず、未解消Findingや未レビューのHEADを境界更新しないためである。
 - **なぜオーケストレーターだけがコミットするか**: 実装者と品質修正者がそれぞれコミットすると、レビュー境界とコミット境界がずれ、増分レビューの前提が崩れる。
-- **なぜ別モデルCLIを併用するか**: `reviewer` はホストランタイムと同じモデルで動くため、ホストが見落とした種類の誤りは同じように見落としやすい。別モデルCLIはホストと異なる提供元のモデルで、かつ仕様準拠を最優先の観点として差分を読むため、`reviewer`（正確性を最優先）と補完関係になる。
+- **なぜ別モデルCLIを併用するか**: `reviewer` はホストランタイムと同じモデルで動くため、ホストが見落とした種類の誤りは同じように見落としやすい。別モデルCLIはホストと異なる提供元のモデルで、かつ仕様準拠を最優先の観点として差分を読むため、`reviewer`（正確性を最優先）と補完関係になる。`always`または`risk-based`で必須と判定した場合は、この独立性を省略しない。
 - **なぜホストでレビュアーを切り替えるか**: チームにはホストランタイムが Claude Code の人と Codex の人がいる。使用エージェントを固定すると、片方のホストではレビュアーがホストと同系統のモデルになり「独立した第二の目」が成立しない。
 - **なぜ外部送信同意をレビュー直前に取るか**: 何が送られるかはコードが存在して初めて具体的に示せる。実装前の同意では対象を提示できない。
 - **なぜ同意が差分だけでは足りないか**: レビュアーCLIはリポジトリ読み取り権限を持ち、`CLAUDE.md` / `AGENTS.md` を自動で読み込み、規約や design.md の該当章、差分の周辺コードも参照する。差分に現れないファイルも送信されうる。
@@ -94,19 +96,22 @@ Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runt
 
 ## フェーズ0: 準備
 
-**達成状態**: issue の内容を把握し、`develop` から切った作業ブランチ上にいて、別モデルCLIと正規化エージェントが決まっている。
+**達成状態**: issue の内容を把握し、`develop` から切った作業ブランチ上にいて、レビュー方針、別モデルCLIと正規化エージェントが決まっている。
 
 - issue は認証済みの `gh` CLI で取得する（Codex AppでGitHubコネクタが接続済みならそれでもよい）。
 - ブランチ名は `AGENTS.md`「ブランチ戦略」の命名規則に従う。種別は issue のラベル・タイトル・本文から判断し、**迷う場合は `feature`** とする。
 - 最新の `origin/develop` を取り込んだ `develop` から切る。`develop` がローカル・リモートともに存在しない初回だけ新規作成し、その旨を報告する。
 - **別モデルCLIと正規化エージェントはホストランタイムから一意に決まる**（選択制ではない）。`.ai/runtime-compatibility.md`「別モデルCLIレビューのモデル方針」の表に従う。ホストが判定できない場合は推測せず停止して確認する。
+- `reviewPolicy`は`always` / `risk-based` / `never`のいずれかとする。ユーザー指定がなければ`always`とする。`never`はユーザーが明示した場合だけ選べる。`risk-based`ではフェーズ5・6で`.ai/cross-model-reviewer-common.md`の判定規則を適用する。
 
 | ホストランタイム | 正規化エージェント | 送信先（`egressDestination`） |
 |---|---|---|
 | Claude Code | `codex-review-normalizer` | `openai` |
 | Codex（App / CLI） | `claude-review-normalizer` | `anthropic` |
 
-一時ブリーフと記録には `.claude/logs/briefs/`（gitignore 対象、以後 `<scratchpad>` と表記）を使う。決定したレビュアー名と送信先を `<scratchpad>/review-mode-<N>.md` に記録する。
+一時ブリーフと記録には `.claude/logs/briefs/`（gitignore 対象、以後 `<scratchpad>` と表記）を使う。`reviewPolicy`、決定したレビュアー名と送信先を `<scratchpad>/review-mode-<N>.md` に記録し、フェーズ2で`executionOwner`を追記する。
+
+`reviewPolicy: always`では、この時点で別モデルCLIの存在と認証状態をpreflightする。`risk-based`では外部レビューが必須と判定された時点まで、`never`では全工程でpreflightを行わない。preflight・認証状態の再利用・ユーザーへログインを依頼できる条件は`.ai/runtime-compatibility.md`に従う。
 
 外部送信の同意はここでは取らない（フェーズ5で取る）。
 
@@ -115,6 +120,12 @@ Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runt
 **長文ブリーフを起動プロンプトに直接インラインで貼らない。** ブリーフは `<scratchpad>` のファイルへ書き、起動プロンプトはそのパスを指すポインタに留める。理由は背景の該当項目にある。
 
 Claude Code は `subagent_type`、Codex は `.codex/agents/<name>.toml` のカスタムエージェントを指定する。種別指定ができない場合のみ、プロンプトで `.ai/agents/<name>.md` を全文読むよう明記する。
+
+## 実装担当の選択
+
+フェーズ2で`executionOwner: developer | orchestrator`を決め、理由を方針書へ記録する。複数領域にまたがる変更、設計判断を伴う変更、または実装コンテキストを分離する価値がある変更は`developer`へ委譲する。局所的・機械的で、方針と対象ファイルが確定し、委譲の準備コストが実装を上回る変更は`orchestrator`が担当してよい。
+
+`orchestrator`が実装する場合も`.ai/agents/developer.md`を全文読み、同じガードレール・禁止事項・報告契約に従う。実装担当にかかわらず、コミットはオーケストレーターだけが行い、internal reviewは別の`reviewer`エージェントへ委譲して自己レビューで代替しない。
 
 ## フェーズ1: 調査
 
@@ -128,13 +139,13 @@ Claude Code は `subagent_type`、Codex は `.codex/agents/<name>.toml` のカ�
 
 - 調査レポートの推奨案を基本とする。方針が拮抗している、または「要確認事項」が実装内容を左右する場合のみユーザーに確認し、それ以外は推奨案で進む。
 - **design.md との乖離が報告された場合は、実装より先に `docs/design.md` を更新する**（仕様駆動開発の原則）。
-- 決定した方針、別モデルCLI、正規化エージェント名を issue にコメントで記録する。外部送信同意の原文は転載しない。
+- 決定した方針、`executionOwner`、`reviewPolicy`、別モデルCLI、正規化エージェント名を issue にコメントで記録する。外部送信同意の原文は転載しない。
 
 ## フェーズ3: 実装
 
 **達成状態**: 方針書どおりの実装ができている（未コミットでよい）。
 
-`developer` エージェントへ委譲する。実装対象がバックエンドかフロントエンドかで実装者を切り替えない。
+フェーズ2で決めた`executionOwner`が`developer`なら`developer`エージェントへ委譲し、`orchestrator`ならオーケストレーター自身が実装する。実装対象がバックエンドかフロントエンドかだけを理由に担当を切り替えない。
 
 ## フェーズ4: 品質ゲートと初期実装コミット
 
@@ -146,24 +157,31 @@ Claude Code は `subagent_type`、Codex は `.codex/agents/<name>.toml` のカ�
 
 ## フェーズ5: discovery と Finding台帳
 
-**達成状態**: `develop...HEAD` の全累積差分を internal reviewer と別モデルCLIが discovery として読み、結果がFinding台帳に統合されている。
+**達成状態**: `develop...HEAD` の全累積差分を internal reviewer が discovery として読み、外部レビュー必須の場合は別モデルCLI結果も含めてFinding台帳に統合されている。不要の場合はcurrent HEADに対する判定記録がある。
+
+### 外部レビュー要否の決定
+
+- `always`は`externalReviewDecision: required`、`never`は`externalReviewDecision: not-required-by-policy`とする。`never`にはユーザーの明示指定を根拠として記録する。
+- `risk-based`ではinternal discoveryを先に実行し、累積差分・issue・実装方針・internal reviewerの指摘と確認事項を`.ai/cross-model-reviewer-common.md`の規則に照らす。必須条件が1つでも該当する、または判定に確信が持てなければ`required`とする。明示された低リスク条件をすべて満たす場合だけ`not-required-by-policy`とする。
+- `reviewPolicy`、`externalReviewDecision`、規則ID、根拠、判定対象HEADを`<scratchpad>/review-mode-<N>.md`とレビューブリーフへ記録する。判定HEADがcurrent HEADと異なる場合は無効とし、再判定する。
+- 一度`required`と判定した、または別モデルCLIを開始したHEADを、CLIのtimeout・認証・通信・同意不足・実行失敗を理由に自動で`not-required-by-policy`へ変更しない。方針変更にはユーザーの明示判断が必要であり、保証低下を完了報告へ記載する。
 
 ### 外部送信の明示同意（レビュー実行の直前）
 
-**送信対象はコミット済み差分だけではない。** 次の3種をすべて列挙して同意を取る。
+外部レビューが`required`の場合だけ、最初のCLI実行直前に同意を取る。**送信対象はコミット済み差分だけではない。** 次の3種をすべて列挙する。
 
 1. `committed-diff` — privateのコミット済み差分（対象issue・ブランチ・base・コミット範囲を明示）
 2. `brief-context` — 実装方針の要約・受け入れ条件・issue の内容
 3. `repository-reads` — レビュアーがリポジトリから読み取るファイル（差分に現れないものも含む）
 
-同意の原文・時刻・対象と、`reviewMode: cross-model-cli` / `normalizerAgent` / `egressDestination` / `externalEgressApproved` / `approvedScope` を `<scratchpad>/review-mode-<N>.md` に記録する。**送信先が変われば同意も取り直す。**
+同意の原文・時刻・対象と、`reviewMode: cross-model-cli` / `normalizerAgent` / `egressDestination` / `externalEgressApproved` / `approvedScope` / `approvalValidity: current-skill-run`を `<scratchpad>/review-mode-<N>.md` に記録する。同一実行のverificationでは、送信先・issue・branch・effective base・承認済みパス・データ種別・repository reads・read-only能力がすべて承認範囲内なら同意を再利用できる。送信先変更、範囲拡大、新しい機密カテゴリ、実行能力の拡大、または別実行では同意を取り直す。
 
-同意取得後、スコープ契約、対象issue・実装方針、base・ブランチ・現在の差分範囲に加え、`reviewMode` / `normalizerAgent` / `egressDestination` / `externalEgressApproved` / `approvedScope` / 同意の原文・時刻を1つのレビューブリーフファイルへ統合する。internal reviewer と別モデルCLI、正規化エージェントへ、同じレビューブリーフファイルの読み取り可能なパスを渡す。`review-mode-<N>.md` だけを渡して済ませない。Claude CLI にはレビュー指示でこのパスを明示して `Read` させ、Codex CLI には同じファイルの全文を `developer_instructions` で渡す。これにより、各主体が同じスコープ契約と同意記録を自力で検証できる状態にする。
+同意取得後、スコープ契約、対象issue・実装方針、base・ブランチ・現在の差分範囲に加え、`reviewMode` / `normalizerAgent` / `egressDestination` / `externalEgressApproved` / `approvedScope` / 同意の原文・時刻を1つのレビューブリーフファイルへ統合する。別モデルCLIと正規化エージェントへ同じレビューブリーフファイルの読み取り可能なパスを渡す。internal reviewerへ渡したスコープ契約とも一致させる。`review-mode-<N>.md` だけを渡して済ませない。Claude CLI にはレビュー指示でこのパスを明示して `Read` させ、Codex CLI には同じファイルの全文を `developer_instructions` で渡す。これにより、外部レビュー主体が同じスコープ契約と同意記録を自力で検証できる状態にする。
 
 ### Discovery の実行
 
-- `reviewer` と別モデルCLIは、どちらも `develop...HEAD` の**全累積差分**を `reviewStage: discovery` で読む。internal reviewer はサブエージェントへ委譲できるが、**別モデルCLIはサブエージェントから起動しない**。オーケストレーターが継続セッションで直接起動・監視する。Codexホストは Claude CLI、Claude Codeホストは Codex CLIを使う。
-- discovery では internal reviewer と別モデルCLIを並列に開始してよい。CLIのモデル、read-only、Keychain wrapper、外部送信同意、認証確認は `.ai/cross-model-reviewer-common.md` と各エージェント定義に従う。
+- `reviewer` は常に、別モデルCLIは`externalReviewDecision: required`の場合だけ、`develop...HEAD` の**全累積差分**を `reviewStage: discovery` で読む。internal reviewer はサブエージェントへ委譲できるが、**別モデルCLIはサブエージェントから起動しない**。オーケストレーターが継続セッションで直接起動・監視する。Codexホストは Claude CLI、Claude Codeホストは Codex CLIを使う。
+- `always`ではinternal reviewerと別モデルCLIを並列に開始してよい。`risk-based`ではinternal discoveryと要否判定を完了してから、必要な場合だけCLIを開始する。CLIのモデル、read-only、Keychain wrapper、外部送信同意、認証確認は `.ai/cross-model-reviewer-common.md` と各エージェント定義に従う。
 - 生存中の無出力は `running` とする。5分で停止しない。10分で進捗通知し、20分で一度だけ終了して `timeout` とする。raw stdout/stderrを永続化しない。timeout、失敗、未取得はFinding状態とレビュー境界を更新しない。
 - **レビュープロファイルを必ず分ける**（定義は `.ai/review-guidelines.md`）。`reviewer` に `accuracy-first`、別モデルCLIと正規化エージェントに `spec-compliance-first`。同じ優先順で読ませると同じ見落とし方をする。
 - ブリーフには、**各レビュー主体が同意の網羅性とレビュー範囲の正しさを自力で検証できるだけの情報**を渡す。上記レビュー用ブリーフ契約の `targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage` / `committedRange` を internal reviewer、別モデルCLI、正規化エージェントへ同じ内容で渡す。不足したままレビューを開始しない。
@@ -173,7 +191,7 @@ Claude Code は `subagent_type`、Codex は `.codex/agents/<name>.toml` のカ�
 
 - private リポジトリで CodeRabbit App の自動レビューが有効、または無効と確認できない場合は、PRを作成する前に、送信先が CodeRabbit であることと `committed-diff` / `brief-context` / `repository-reads` を列挙して明示同意を取得する。同意の原文・時刻・対象と `reviewMode: coderabbit-app` / `egressDestination: coderabbit` / `externalEgressApproved: true` / `approvedScope` を `<scratchpad>/review-mode-<N>.md` に記録する。別モデルCLIの送信先に対する同意で代用しない。
 - 上記条件で同意を取得・記録できない場合は、自動レビューが無効と確認できるまでPRを作成しない。外部状態の変更などにより明示同意なしに取得された自動Appレビューを統合しない。
-- PR作成後に同意済みのAppレビューが得られた場合は追加の指摘として統合に含める。ただし**補助であり、有効なレビュー経路ではない**。Appレビューの有無にかかわらず別モデルCLIレビューを省略しない。
+- PR作成後に同意済みのAppレビューが得られた場合は追加の指摘として統合に含める。ただし**補助であり、有効なレビュー経路ではない**。`externalReviewDecision: required`の別モデルCLIレビューをAppレビューで代替しない。
 - 単発起動が必要なら `@coderabbitai review` をPRにコメントする直前に、投稿について別途ユーザー承認を得る。自動レビューの外部送信同意を、GitHub上への投稿承認として代用しない。
 
 ### 結果の統合とFinding台帳
@@ -192,29 +210,30 @@ Claude Code は `subagent_type`、Codex は `.codex/agents/<name>.toml` のカ�
 
 ### レビュー境界の記録
 
-discovery は発見段階であり、レビュー済み境界を更新しない。`last-reviewed-head-<N>.txt` を更新できるのは、後続のverificationで internal と別モデルCLIがともに `approve` し、required Finding（must-fix / should-fix）が全件 `resolved` となったcurrent HEADだけである。Findingが0件では両approve後に更新できる。`partial` / `unresolved`、`request-changes`、別モデルCLIのtimeout・失敗・未取得では更新しない。第二のinternal reviewerを実レビューの代替や境界更新の根拠にしない。
+discovery は発見段階であり、レビュー済み境界を更新しない。`last-reviewed-head-<N>.txt` を更新できるのは、後続のverificationでinternalが`approve`し、required Finding（must-fix / should-fix）が全件`resolved`となり、同じcurrent HEADに対して外部レビューが`required`なら別モデルCLIも`approve`、`not-required-by-policy`なら判定記録が有効な場合だけである。Findingが0件でもこの経路を省略しない。`partial` / `unresolved`、`request-changes`、必須CLIのtimeout・失敗・未取得では更新しない。第二のinternal reviewerを実レビューの代替や境界更新の根拠にしない。
 
 ## フェーズ6: 修正・品質ゲート・verification
 
 **達成状態**: Finding台帳の must-fix / should-fix が修正コミットに対応付けられ、各Findingがverificationで判定済みになっている。
 
 - fix 対象は**対象範囲内の** Finding台帳にある must-fix / should-fix と、今回変更に起因する test-fixer の残課題（nit、「別issue候補（範囲外）」、確認事項は含めない）。修正担当へ台帳を渡し、修正内容・修正コミットをFindingへ対応付ける。**Findingが0件なら修正・品質ゲート・周回コミットだけをskipし、verificationはskipしない。**
-- fix 対象がある場合、修正は `developer`、品質ゲートは `test-fixer` へ委譲する。**当該周回の変更ファイル一覧を確定してブリーフに明記し**、test-fixer はその範囲だけを対象にする。対象外の修正が必要ならスコープを推測で広げず、理由と候補を報告させる。通過後、その一覧のファイルだけを1コミットにする。未コミット変更が残る間はverificationへ進まない。
-- verification はFindingの有無にかかわらず、current HEADに対する Finding台帳、修正要約、修正コミット範囲を必須ブリーフにする。まず internal reviewer を `reviewStage: verification` で実行し、**current HEAD が approve の場合だけ**別モデルCLI verification をオーケストレーターが直接実行・監視する。両方のapprove後だけフェーズ7へ進む。internal approve前に別モデルverificationを実行してはならない。
+- fix 対象がある場合、修正はフェーズ2で決めた`executionOwner`、品質ゲートは`test-fixer`へ委譲する。**当該周回の変更ファイル一覧を確定してブリーフに明記し**、test-fixer はその範囲だけを対象にする。対象外の修正が必要ならスコープを推測で広げず、理由と候補を報告させる。通過後、その一覧のファイルだけを1コミットにする。未コミット変更が残る間はverificationへ進まない。
+- verification はFindingの有無にかかわらず、current HEADに対する Finding台帳、修正要約、修正コミット範囲を必須ブリーフにする。HEADが変わったら外部レビュー要否を再判定する。ただし、同一実行で別モデルCLI discoveryを実施した、または別モデル由来のrequired Findingがある場合はverificationも`required`とする。
+- まず internal reviewer を `reviewStage: verification` で実行する。**current HEAD が approve の場合だけ**、外部レビューが`required`なら別モデルCLI verificationをオーケストレーターが直接実行・監視し、両方のapprove後にフェーズ7へ進む。`not-required-by-policy`ならcurrent HEADに対する有効な判定記録とinternal approveで進める。internal approve前に別モデルverificationを実行してはならない。
 - verification の各Findingは `resolved` / `partial` / `unresolved` で判定する。current loopへ追加できる新規Findingは、修正起因回帰、明確な受け入れ条件未達、重大なsecurity/data destructionだけである。独立改善は別Issue候補または追加改善として残し、判定件数・修正対象に含めない。
-- verificationでも**新しい明示同意を実行直前に取り直す**（`approvedScope` の3種すべてを再掲）。初回や過去の同意を再利用しない。CLI timeout・失敗・未取得ならFinding・境界は更新せず、未取得として停止・報告する。
+- verificationでは外部送信対象を再計算し、承認済み`approvedScope`内なら同一実行の同意を再利用する。範囲外なら3種を再掲して新しい同意を取る。必須CLIのtimeout・失敗・未取得ならFinding・境界は更新せず、未取得として停止・報告する。
 - PR作成済みでAppレビューも参照する場合は、**PRの最新HEADに対する**レビューだけを取り込む。古いHEADのレビューを再レビュー済みとして扱わない。
 
 レビュー境界の更新条件はフェーズ5と同じ。
 
 ## フェーズ7: 完了
 
-**達成状態**: 作業ツリーがクリーンで、コミット列がレビュー済みで、ローカル品質ゲート（typecheck / lint / test）とPR CI（typecheck / lint / test / build）が通過し、`develop` 向けPRが作成され、ユーザーへ報告済み。スパイクまたはフェーズ分割を伴う作業では、関連Issue・撤回／置換PRの状態照合も記録済み。
+**達成状態**: 作業ツリーがクリーンで、コミット列が選択したレビュー方針の有効なverification経路を通過し、ローカル品質ゲート（typecheck / lint / test）とPR CI（typecheck / lint / test / build）が通過し、`develop` 向けPRが作成され、ユーザーへ報告済み。スパイクまたはフェーズ分割を伴う作業では、関連Issue・撤回／置換PRの状態照合も記録済み。
 
 - **このフェーズで追加コミットは作らない。** 最終確認として作業ツリー・コミット列・ローカル品質ゲート・PR CI の状態を確かめるだけ。
 - push とPR作成はユーザー承認を得てから行う。既にPRを作成済みなら再作成しない。
 - PR作成には利用可能なら `pr-creator` skill を使い、なければ `.github/pull_request_template.md` に従う。**ベースブランチは `develop`**。
-- 完了報告に含めるもの: 実装サマリ／コミット履歴／使用した別モデルCLI・正規化エージェント名・送信先／レビュー結果（未取得ならその理由）／別issue候補（範囲外）と切り出し案／Appレビューを取得した場合はその結果／ローカル品質ゲート（typecheck / lint / test）の結果／PR CI（typecheck / lint / test / build）の結果／作業ブランチ名／PR URL。
+- 完了報告に含めるもの: 実装サマリ／`executionOwner`と選定理由／コミット履歴／`reviewPolicy`・current HEADの`externalReviewDecision`・規則IDと根拠／使用した別モデルCLI・正規化エージェント名・送信先（未実行ならその旨）／レビュー結果（未取得ならその理由）／別issue候補（範囲外）と切り出し案／Appレビューを取得した場合はその結果／ローカル品質ゲート（typecheck / lint / test）の結果／PR CI（typecheck / lint / test / build）の結果／作業ブランチ名／PR URL。
 
 ### スパイクまたはフェーズ分割時の関連状態照合
 
@@ -233,6 +252,6 @@ discovery は発見段階であり、レビュー済み境界を更新しない�
 
 ## 中断・失敗時の原則
 
-- 標準運用予算（Appレビュー待機10分／修正周回2周／エージェント側の品質ゲート3周）は進捗管理の目安であり、到達だけでは自律的な継続を止めず、継続確認も求めない。current issueの既存`acceptanceCriteria`と`inScopeFiles`内で、verificationが許すcurrent-loop Finding（修正起因回帰、明確な受け入れ条件未達、重大なsecurity/data destruction）を解消する周回は自動継続する。停止してユーザー判断を求めるのは重大なスコープ変更が必要な場合だけであり、少なくとも`acceptanceCriteria`の追加・変更、`inScopeFiles`または対象機能の実質的拡張、破壊的操作、新しい権限または外部調整が必要な場合を含む。外部送信の実行直前の明示同意は別の不変条件であり、各回必ず取得する。
+- 標準運用予算（Appレビュー待機10分／修正周回2周／エージェント側の品質ゲート3周）は進捗管理の目安であり、到達だけでは自律的な継続を止めず、継続確認も求めない。current issueの既存`acceptanceCriteria`と`inScopeFiles`内で、verificationが許すcurrent-loop Finding（修正起因回帰、明確な受け入れ条件未達、重大なsecurity/data destruction）を解消する周回は自動継続する。停止してユーザー判断を求めるのは重大なスコープ変更が必要な場合だけであり、少なくとも`acceptanceCriteria`の追加・変更、`inScopeFiles`または対象機能の実質的拡張、破壊的操作、新しい権限または外部調整が必要な場合を含む。外部送信には実行直前時点で有効な明示同意が必要だが、同一実行・同一承認範囲では記録済み同意を再利用できる。
 - 同じ操作が2回失敗したら、繰り返さず原因を分析して代替アプローチを取る。
 - どのフェーズで停止しても、現在のブランチ・完了済みフェーズ・残作業を報告する。
