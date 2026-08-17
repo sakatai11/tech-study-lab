@@ -62,7 +62,9 @@ export default function ProductTopPage() {
               >
                 ログインして学習を始める →
               </Link>
-              <p className="m-0 text-pretty text-sm text-mute">ログイン情報の入力はありません</p>
+              <p className="m-0 text-pretty text-sm text-mute">
+                アプリ独自のアカウント登録は不要です
+              </p>
             </div>
           </div>
 
