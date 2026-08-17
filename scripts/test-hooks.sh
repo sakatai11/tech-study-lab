@@ -182,6 +182,7 @@ check_agent_contract "orchestrator brief defines out-of-scope policy" '`outOfSco
 check_agent_contract "orchestrator brief defines committed range" '`committedRange`' "$SKILL"
 check_agent_contract "all review actors receive the same scope" 'internal reviewer、別モデルCLI、正規化エージェントへ同じ内容で渡す' "$SKILL"
 check_agent_contract "both reviewer types receive one full brief path" '同じレビューブリーフファイルの読み取り可能なパスを渡す' "$SKILL"
+check_agent_contract "integrated review brief includes policy decision and head" '`reviewPolicy` / `externalReviewDecision` / 規則ID / 具体的根拠 / `decisionHead`' "$SKILL"
 check_agent_contract "review mode record alone is insufficient" '`review-mode-<N>.md` だけを渡して済ませない' "$SKILL"
 check_agent_contract "full brief includes consent record" '`reviewMode` / `normalizerAgent` / `egressDestination` / `externalEgressApproved` / `approvedScope` / 同意の原文・時刻' "$SKILL"
 check_agent_contract "out-of-scope candidates stay out of fix loop" 'nit、「別issue候補（範囲外）」、確認事項は含めない' "$SKILL"

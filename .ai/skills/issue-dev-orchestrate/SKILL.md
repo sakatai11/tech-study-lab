@@ -176,7 +176,7 @@ Claude Code は `subagent_type`、Codex は `.codex/agents/<name>.toml` のカ�
 
 同意の原文・時刻・対象と、`reviewMode: cross-model-cli` / `normalizerAgent` / `egressDestination` / `externalEgressApproved` / `approvedScope` / `approvalValidity: current-skill-run`を `<scratchpad>/review-mode-<N>.md` に記録する。同一実行のverificationでは、送信先・issue・branch・effective base・承認済みパス・データ種別・repository reads・read-only能力がすべて承認範囲内なら同意を再利用できる。送信先変更、範囲拡大、新しい機密カテゴリ、実行能力の拡大、または別実行では同意を取り直す。
 
-同意取得後、スコープ契約、対象issue・実装方針、base・ブランチ・現在の差分範囲に加え、`reviewMode` / `normalizerAgent` / `egressDestination` / `externalEgressApproved` / `approvedScope` / 同意の原文・時刻を1つのレビューブリーフファイルへ統合する。別モデルCLIと正規化エージェントへ同じレビューブリーフファイルの読み取り可能なパスを渡す。internal reviewerへ渡したスコープ契約とも一致させる。`review-mode-<N>.md` だけを渡して済ませない。Claude CLI にはレビュー指示でこのパスを明示して `Read` させ、Codex CLI には同じファイルの全文を `developer_instructions` で渡す。これにより、外部レビュー主体が同じスコープ契約と同意記録を自力で検証できる状態にする。
+同意取得後、スコープ契約、対象issue・実装方針、base・ブランチ・現在の差分範囲に加え、`reviewPolicy` / `externalReviewDecision` / 規則ID / 具体的根拠 / `decisionHead` / `reviewMode` / `normalizerAgent` / `egressDestination` / `externalEgressApproved` / `approvedScope` / 同意の原文・時刻を1つのレビューブリーフファイルへ統合する。別モデルCLIと正規化エージェントへ同じレビューブリーフファイルの読み取り可能なパスを渡す。internal reviewerへ渡したスコープ契約および判定情報とも一致させる。`review-mode-<N>.md` だけを渡して済ませない。Claude CLI にはレビュー指示でこのパスを明示して `Read` させ、Codex CLI には同じファイルの全文を `developer_instructions` で渡す。これにより、外部レビュー主体が同じスコープ契約・判定情報・同意記録を自力で検証できる状態にする。
 
 ### Discovery の実行
 
@@ -184,7 +184,7 @@ Claude Code は `subagent_type`、Codex は `.codex/agents/<name>.toml` のカ�
 - `always`ではinternal reviewerと別モデルCLIを並列に開始してよい。`risk-based`ではinternal discoveryと要否判定を完了してから、必要な場合だけCLIを開始する。CLIのモデル、read-only、Keychain wrapper、外部送信同意、認証確認は `.ai/cross-model-reviewer-common.md` と各エージェント定義に従う。
 - 生存中の無出力は `running` とする。5分で停止しない。10分で進捗通知し、20分で一度だけ終了して `timeout` とする。raw stdout/stderrを永続化しない。timeout、失敗、未取得はFinding状態とレビュー境界を更新しない。
 - **レビュープロファイルを必ず分ける**（定義は `.ai/review-guidelines.md`）。`reviewer` に `accuracy-first`、別モデルCLIと正規化エージェントに `spec-compliance-first`。同じ優先順で読ませると同じ見落とし方をする。
-- ブリーフには、**各レビュー主体が同意の網羅性とレビュー範囲の正しさを自力で検証できるだけの情報**を渡す。上記レビュー用ブリーフ契約の `targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage` / `committedRange` を internal reviewer、別モデルCLI、正規化エージェントへ同じ内容で渡す。不足したままレビューを開始しない。
+- ブリーフには、**各レビュー主体が同意の網羅性とレビュー範囲の正しさを自力で検証できるだけの情報**を渡す。上記レビュー用ブリーフ契約の `targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage` / `committedRange` / `reviewPolicy` / `externalReviewDecision` / 規則ID / 具体的根拠 / `decisionHead` を internal reviewer、別モデルCLI、正規化エージェントへ同じ内容で渡す。不足したままレビューを開始しない。
 - `wrong-host-agent` はホストと送信先の対応を再照合して正しいCLIを選び直す。`external-egress-confirmation-required` は不足した対象を具体的に報告し、同意を取得・記録するまでCLIを再実行しない。timeout、認証・通信・実行エラーは、第二のinternal reviewerを代替レビューとして起動せず、レビュー未取得として停止・報告する。
 
 ### CodeRabbit App（補助・任意）
