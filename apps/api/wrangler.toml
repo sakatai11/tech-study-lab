@@ -9,5 +9,21 @@ database_name = "tech-study-lab"
 database_id = "REPLACE_WITH_REAL_D1_ID"
 migrations_dir = "drizzle/migrations"
 
+[[ratelimits]]
+name = "ANSWERS_RATE_LIMITER"
+namespace_id = "11301"
+
+  [ratelimits.simple]
+  limit = 60
+  period = 60
+
+[[ratelimits]]
+name = "LESSON_VIEWS_RATE_LIMITER"
+namespace_id = "11302"
+
+  [ratelimits.simple]
+  limit = 30
+  period = 60
+
 [vars]
 WEB_ORIGIN = "http://localhost:3000"

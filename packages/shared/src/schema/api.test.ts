@@ -5,6 +5,8 @@ import {
   dueCountResponseSchema,
   lessonViewRequestSchema,
   lessonViewResponseSchema,
+  rateLimitUnavailableErrorResponseSchema,
+  rateLimitedErrorResponseSchema,
   reviewQueueResponseSchema,
 } from './api'
 
@@ -149,6 +151,32 @@ describe('lessonViewResponseSchema', () => {
 
   it('recorded false を拒否する', () => {
     expect(lessonViewResponseSchema.safeParse({ recorded: false }).success).toBe(false)
+  })
+})
+
+describe('persistent write rate-limit error response schemas', () => {
+  it('accepts the reusable 429 error contract', () => {
+    expect(
+      rateLimitedErrorResponseSchema.safeParse({
+        error: { code: 'RATE_LIMITED', message: 'Too Many Requests' },
+      }).success,
+    ).toBe(true)
+  })
+
+  it('rejects a non-contract 429 error code', () => {
+    expect(
+      rateLimitedErrorResponseSchema.safeParse({
+        error: { code: 'INTERNAL', message: 'Too Many Requests' },
+      }).success,
+    ).toBe(false)
+  })
+
+  it('accepts the reusable limiter-unavailable 503 error contract', () => {
+    expect(
+      rateLimitUnavailableErrorResponseSchema.safeParse({
+        error: { code: 'RATE_LIMIT_UNAVAILABLE', message: 'Rate limit unavailable' },
+      }).success,
+    ).toBe(true)
   })
 })
 

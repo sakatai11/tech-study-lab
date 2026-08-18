@@ -241,8 +241,8 @@ SM-2 の計算式（`packages/shared/src/srs/sm2.ts`）の周辺で、実装時�
 
 HTTP 入出力、Zod スキーマの実装状況、後続エンドポイントの planned 状態は [API 契約カタログ](./api-spec.html) を参照する。本節は画面から要請される API の高水準な一次仕様として維持する。
 
-- `POST /answers` — 1 問解答の記録 → SRS 更新。リクエスト `{ questionId, selectedIndex, responseTimeMs? }`、レスポンス `{ isCorrect, correctIndex }`。正誤判定は API が D1 の `questions`（4.4）を照合して行う権威側（7.2）
-- `POST /lesson-views` — 教材の閲覧を記録。strict なリクエスト `{ lessonId }` を受け、middleware が注入した `userId` のみを使用して `lesson_views` へ記録し、`201 { recorded: true }` を返す。クライアントは `userId` を送らない。重複排除、配送保証、lesson の存在確認はこの最小ログでは行わない。
+- `POST /answers` — 1 問解答の記録 → SRS 更新。リクエスト `{ questionId, selectedIndex, responseTimeMs? }`、レスポンス `{ isCorrect, correctIndex }`。正誤判定は API が D1 の `questions`（4.4）を照合して行う権威側（7.2）。検証済みの middleware 注入 `userId` ごとに、この endpoint 専用の 60 秒固定窓で 60 回までを受理する（§10.3.1）。
+- `POST /lesson-views` — 教材の閲覧を記録。strict なリクエスト `{ lessonId }` を受け、middleware が注入した `userId` のみを使用して `lesson_views` へ記録し、`201 { recorded: true }` を返す。クライアントは `userId` を送らない。重複排除、配送保証、lesson の存在確認はこの最小ログでは行わない。検証済みの middleware 注入 `userId` ごとに、この endpoint 専用の 60 秒固定窓で 30 回までを受理する（§10.3.1）。
 - `GET /review/queue` — due 問題の `question_id` ＋ SRS メタと、次バッチの有無 `hasMore` を返す（本文はフロントがビルド時データから解決）。APIが`dueAt`昇順・最大20件を保証する（§4.5）
 - `GET /dashboard/due-count` — ダッシュボードの due 件数
 - `GET /domains` — 4 領域それぞれの習得率（習得済み問題数 / 全問題数）・トピック数・レッスン数を返す（`/domains`・ダッシュボードの領域別カードで共用）
@@ -1164,6 +1164,7 @@ Walking Skeleton の中核となる 1 リクエストの処理フロー：
 ```
 zValidator（shared の answerRequestSchema で入力検証）
   → userId を context から取得（§10.4 の middleware が注入済み）
+  → 永続書き込み用 Rate Limiting binding を確認（§10.3.1）
   → services/answer-service の submitAnswer(deps, input)
       1. questions（content 同期キャッシュ §4.4）から answerIndex を取得
          → 無ければ QuestionNotFoundError
@@ -1272,6 +1273,21 @@ export function createAnswerDeps(db: DrizzleD1Database): AnswerDeps {
 
 `GET /review/queue`・`GET /dashboard/due-count` も同型（route → `review-service` → `review-repository`）。due 判定は `dueAt <= now` を SQL の where 句で行い、`isDue`（sm2）と意味を一致させる。
 
+### 10.3.1 永続書き込みのレート制限と観測
+
+`POST /answers` と `POST /lesson-views` は、正規の連続解答・教材再表示を禁止せず、認証済みリクエストによる無制限の D1 書き込みだけを抑制する。Wrangler に endpoint ごとに別の Cloudflare Workers Rate Limiting binding を定義し、route は `zValidator` と `userContext` の後、service / repository / D1 書き込みの前に binding を確認する。public entrypoint と Service Binding の named internal entrypoint は同じ route を再利用するため、どちらの経路にもこの確認が適用される。
+
+| endpoint | binding | key | fixed window | 受理上限 | 根拠 |
+| --- | --- | --- | --- | --- | --- |
+| `POST /answers` | `ANSWERS_RATE_LIMITER` | `userId:POST /answers` | 60 秒 | 60 | 通常の Quiz / Review の再試行と複数解答を許容しながら、answer log と SRS 更新の過剰書き込みを抑える |
+| `POST /lesson-views` | `LESSON_VIEWS_RATE_LIMITER` | `userId:POST /lesson-views` | 60 秒 | 30 | 教材画面の通常の再表示を許容しながら、fire-and-forget の閲覧ログ連打を抑える |
+
+- key は検証済みの `userContext.userId` と安定した endpoint 識別子から構成する。IP アドレス、`CF-Connecting-IP`、クライアント指定 header・body の識別子は使用しない。
+- binding が `{ success: false }` を返した場合、共通の `{ error: { code, message } }` envelope で `429 { error: { code: 'RATE_LIMITED', message: 'Too Many Requests' } }` と `Retry-After: 60` を返す。この場合 service を呼ばず、`answer_logs`、`lesson_views`、`srs_states` を変更しない。
+- binding の呼び出しが例外になる、または実行環境で利用できない場合は、保護を可用性より優先して fail closed とする。共通 envelope の `503 { error: { code: 'RATE_LIMIT_UNAVAILABLE', message: 'Rate limit unavailable' } }` を返し、service / D1 path を呼ばない。
+- Workers Rate Limiting は Cloudflare location（PoP）ごとの制限であり、同じ key でも location 間でカウンタを共有しない。カウンタは非同期更新のため eventually consistent な abuse reduction であり、グローバルに厳密な quota や課金用の台帳として扱わない。
+- 429、limiter failure、成功した永続書き込みには、`event`・`endpoint`・`writeUnit` だけを含む PII-free の構造化 Worker log を出す。運用者は Workers Logs の event 別件数（rate-limited / limiter failure / persistent write）と D1 dashboard の `answer_logs` / `lesson_views` / `srs_states` の書き込み・容量メトリクスを同じ時間帯で突合する。Analytics Engine は既存の制約だけではログが不足すると判断されたときに別 issue で追加する。
+
 ### 10.4 user_id の権威的注入（middleware）
 
 §7.2 の「API が固定 `user_id` を権威的に注入する」を Hono middleware として実体化する。
@@ -1300,6 +1316,8 @@ export const userContext = createMiddleware<AppEnv>(async (c, next) => {
 // env.ts
 export type Bindings = {
   DB: D1Database
+  ANSWERS_RATE_LIMITER: RateLimit
+  LESSON_VIEWS_RATE_LIMITER: RateLimit
   WEB_ORIGIN: string  // CORS 許可オリジン（wrangler.toml の vars で環境ごとに設定）
   ACCESS_ISSUER?: string  // Cloudflare Access JWT の完全一致 issuer（本番のみ必須）
   ACCESS_AUDIENCE?: string  // Cloudflare Access application の AUD（本番のみ必須）
@@ -1370,6 +1388,7 @@ export const dueCountResponseSchema = z.object({
 - service は **HTTP を知らないドメインエラー**（`services/errors.ts` の `QuestionNotFoundError` 等）を throw する。
 - route 層の `app.onError` がドメインエラーを HTTP ステータスへ写像し、レスポンス形を `{ error: { code, message } }` に統一する。未知のエラーは 500（`INTERNAL`）とし、詳細メッセージを外に漏らさない。
 - Hono や middleware が意図して throw した `HTTPException` は、例外が持つステータスとレスポンスを保持する。未知の例外として 500 に上書きしない。
+- レート制限の 429 と limiter failure の 503 も shared の error response schema を使い、route から type-safe に返す。前者には `Retry-After: 60` を必ず付ける（§10.3.1）。
 
 ```typescript
 // index.ts（抜粋）
@@ -1422,9 +1441,11 @@ app.onError((err, c) => {
 | --- | --- | --- |
 | SRS（`sm2`） | 純粋関数の単体テスト（**実装済み**） | Node |
 | service | deps をインメモリ fake に差し替えた単体テスト。採点の正誤・SRS 遷移の呼び出し・エラー系（問題未存在）を重点 | Node |
+| 永続書き込みの rate limit | platform limiter interface を固定時計の fake に差し替えた単体テスト。N-1 / N / N+1、次 fixed window の reset、key の endpoint 分離、binding failure を重点 | Node |
 | route + dal | `@cloudflare/vitest-pool-workers`（ローカル D1 に対する実クエリ）で happy path を最低 1 本（`POST /answers` の貫通） | workerd |
 
 - service の deps を「フラットな関数の束」（§10.3）にしているのはこのため。fake は素朴なオブジェクトリテラルで書け、モックライブラリを要しない。
+- rate limiter も Workers binding を小さい interface に隔離し、route integration では deny / throw fake を渡して 429 / 503 時の D1 無変更を確認する。実 platform の PoP-local な eventual consistency 自体をローカル test の正確な quota と取り違えない。
 
 ```typescript
 // services/answer-service.test.ts（fake deps の例）
