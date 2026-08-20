@@ -1422,7 +1422,7 @@ app.onError((err, c) => {
 - 検証済みデータから upsert SQL（`INSERT ... ON CONFLICT(question_id) DO UPDATE`）を生成し、`wrangler d1 execute tech-study-lab --local|--remote --file <generated-sql>` の固定引数で流す。`content:sync` は `--local` 固定、`content:sync:remote` は `--remote` 固定とし、CLI はこのいずれかの完全一致モード以外（任意引数・追加引数を含む）を SQL 生成・Wrangler 実行の前に拒否する。**冪等**（何度実行しても同じ結果）にする。
 - 固定ユーザー行（`users`）の seed も同スクリプトで行う（`user-context.ts` の `FIXED_USER_ID` と同じ値）。
 - content から削除された問題は**物理削除しない**（`answer_logs`・`srs_states` が参照するため）。出題対象からは自然に外れる（フロントのバンドルに含まれず、due queue の join でも解決されない）。整理が必要になったら論理削除フラグを検討する。
-- 実行タイミング：ローカル開発では手動、本番はデプロイフロー（CI）に組み込む。`content:sync:remote` は外部 D1 を変更するため、実行ごとに対象データベース・生成 SQL・実行順を確認し、明示的な承認を得てから実行する。
+- 実行タイミング：現在の MVP は §12.4 の手動フローで実行する。`content:sync:remote` は外部 D1 を変更するため、実行ごとに対象データベース・生成 SQL・実行順を確認し、明示的な承認を得てから実行する。Walking Skeleton の本番確認後に CI 化を検討する場合も、remote D1 の変更または deploy の前に、保護された production 環境での明示的な承認ゲートを必須とする。
 
 #### ローカル動的開発 seed
 
@@ -1577,12 +1577,12 @@ topic frontmatter の `order` も同様に表示順（0 以上の整数、小さ
 
 1. **マイグレーション適用**：`pnpm --filter @tsl/api exec wrangler d1 migrations apply tech-study-lab --remote`
 2. **content sync**：`pnpm --filter @tsl/api content:sync:remote`（`content/` → D1 upsert。§10.8）
-3. **api デプロイ**：`pnpm --filter @tsl/api run deploy --var WEB_ORIGIN:<web-public-url> --var ACCESS_ISSUER:<access-issuer> --var ACCESS_AUDIENCE:<access-audience>`。3 値はこの deploy 実行時だけ明示指定し、Git や `.env` には保存しない。`pnpm deploy` は pnpm 自身のコマンドと衝突するため、package script は必ず `run deploy` で起動し、引数前に追加の `--` を置かない。
+3. **api デプロイ**：`pnpm --filter @tsl/api run deploy --var WEB_ORIGIN:<web-public-url> --var ACCESS_ISSUER:<access-issuer> --var ACCESS_AUDIENCE:<access-audience>`。3 値は**毎回すべて**この deploy 実行時だけ明示指定し、Git や `.env` には保存しない。値を省いた bare deploy は禁止する。Wrangler がローカルまたは不完全な vars へ置き換えると、Access は fail closed となり、CORS も失敗し得る。`pnpm deploy` は pnpm 自身のコマンドと衝突するため、package script は必ず `run deploy` で起動し、引数前に追加の `--` を置かない。
 4. **web デプロイ**：`NEXT_PUBLIC_API_BASE_URL=<api-public-url> pnpm --filter @tsl/web run deploy`。`NEXT_PUBLIC_API_BASE_URL` は OpenNext build 時に必要であり、API の公開 URL を使う。
 
 順序の根拠：**スキーマ → データ → API → 画面** の順なら、各ステップの完了時点で稼働中の旧バージョンが壊れない（マイグレーションが追加中心の後方互換であることが前提。§12.6）。
 
-- MVP は**手動実行**とする。Walking Skeleton 貫通後に GitHub Actions による main ブランチ自動デプロイへ移行する（PR ゲート CI ＝型・lint・test・build は §5 のとおり先行整備）。
+- MVP は**手動実行**とする。Walking Skeleton の本番確認後に GitHub Actions による main ブランチ自動デプロイを検討する。将来の CI でも、remote D1 mutation または deploy の前に保護された production 環境の明示的な承認ゲートを置く（PR ゲート CI ＝型・lint・test・buildは §5 のとおり先行整備）。
 - 各ステップの成功を確認するまで後続ステップへ進まない。失敗時はそこで停止し、後続の migration/content sync/API/Web deploy を実行しない。復旧が必要な場合は、稼働中の既知の Worker version を確認してから、対象と影響を明示した承認を得てロールバックする。
 
 ### 12.5 content 更新の運用ルール

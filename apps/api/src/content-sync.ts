@@ -19,7 +19,8 @@ export type ContentSyncPayload = {
 
 export type ContentSyncExecutionMode = 'local' | 'remote'
 
-const CONTENT_SYNC_D1_DATABASE_NAME = 'tech-study-lab'
+export const CONTENT_SYNC_D1_DATABASE_NAME = 'tech-study-lab'
+export const CONTENT_SYNC_REMOTE_CONFIRMATION_PHRASE = 'SYNC REMOTE CONTENT tech-study-lab'
 
 function parseMarkdownFile({ relativePath, source }: ContentSourceFile): ParsedContentSourceFile {
   try {
@@ -52,7 +53,7 @@ function sqlString(value: string): string {
 }
 
 /**
- * content から抽出・検証済みの最小ペイロードだけを、冪等なローカルD1同期SQLへ変換する。
+ * content から抽出・検証済みの最小ペイロードだけを、冪等なD1同期SQLへ変換する。
  */
 export function createContentSyncSql(payload: ContentSyncPayload, createdAt: number): string {
   if (!Number.isSafeInteger(createdAt) || createdAt < 0) {
@@ -81,8 +82,22 @@ export function parseContentSyncExecutionMode(args: readonly string[]): ContentS
   throw new Error('content sync requires exactly one of --local or --remote')
 }
 
+export function createContentSyncSqlSummary(payload: ContentSyncPayload): {
+  questionCount: number
+  statementCount: number
+} {
+  return {
+    questionCount: payload.questions.length,
+    statementCount: payload.questions.length + 1,
+  }
+}
+
+export function isContentSyncRemoteConfirmation(confirmation: string): boolean {
+  return confirmation === CONTENT_SYNC_REMOTE_CONFIRMATION_PHRASE
+}
+
 /**
- * remote実行を混入させないため、wranglerへの引数をこの固定形に限定する。
+ * Wrangler の対象D1とlocal/remoteモードを固定し、正確に検証済みのモード以外を渡さない。
  */
 export function createLocalD1ExecuteArgs(filePath: string): readonly string[] {
   return ['d1', 'execute', CONTENT_SYNC_D1_DATABASE_NAME, '--local', '--file', filePath]
