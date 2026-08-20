@@ -13,7 +13,7 @@ export async function guardPersistentWriteRateLimit(
   c: Context<AppEnv>,
   rateLimit: PersistentWriteRateLimit,
   limiter: PlatformRateLimiter,
-): Promise<Response | undefined> {
+) {
   const result = await checkPersistentWriteRateLimit(limiter, c.get('userId'), rateLimit)
 
   if (result === 'limited') {
