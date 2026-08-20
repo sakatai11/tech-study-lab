@@ -5,9 +5,10 @@ import { HTTPException } from 'hono/http-exception'
 import type { AppEnv } from './env'
 import { type AccessTokenVerifier, createAccessBoundary } from './middleware/access-boundary'
 import { userContext } from './middleware/user-context'
-import { answersRoute } from './routes/answers'
+import type { PlatformRateLimiter } from './persistent-write-rate-limit'
+import { createAnswersRoute } from './routes/answers'
 import { dashboardRoute } from './routes/dashboard'
-import { lessonViewsRoute } from './routes/lesson-views'
+import { createLessonViewsRoute } from './routes/lesson-views'
 import { reviewRoute } from './routes/review'
 import { QuestionNotFoundError } from './services/errors'
 
@@ -40,17 +41,34 @@ export const apiErrorHandler: ErrorHandler<AppEnv> = (error, c) => {
   )
 }
 
-const userRoutes = new Hono<AppEnv>()
-  .route('/answers', answersRoute)
-  .route('/lesson-views', lessonViewsRoute)
-  .route('/review', reviewRoute)
-  .route('/dashboard', dashboardRoute)
-
-export function createInternalApiApp() {
-  return new Hono<AppEnv>().onError(apiErrorHandler).use('*', userContext).route('/', userRoutes)
+export type PersistentWriteRateLimiters = {
+  answers: PlatformRateLimiter
+  lessonViews: PlatformRateLimiter
 }
 
-export function createPublicApiApp(accessTokenVerifier?: AccessTokenVerifier) {
+type ApiAppOptions = {
+  rateLimiters?: PersistentWriteRateLimiters
+}
+
+function createUserRoutes({ rateLimiters }: ApiAppOptions = {}) {
+  return new Hono<AppEnv>()
+    .route('/answers', createAnswersRoute({ rateLimiter: rateLimiters?.answers }))
+    .route('/lesson-views', createLessonViewsRoute({ rateLimiter: rateLimiters?.lessonViews }))
+    .route('/review', reviewRoute)
+    .route('/dashboard', dashboardRoute)
+}
+
+export function createInternalApiApp(options?: ApiAppOptions) {
+  return new Hono<AppEnv>()
+    .onError(apiErrorHandler)
+    .use('*', userContext)
+    .route('/', createUserRoutes(options))
+}
+
+export function createPublicApiApp(
+  accessTokenVerifier?: AccessTokenVerifier,
+  options?: ApiAppOptions,
+) {
   return new Hono<AppEnv>()
     .onError(apiErrorHandler)
     .use(
@@ -65,7 +83,7 @@ export function createPublicApiApp(accessTokenVerifier?: AccessTokenVerifier) {
     .get('/health', (c) => c.json({ status: 'ok' as const }))
     .use('*', createAccessBoundary(accessTokenVerifier))
     .use('*', userContext)
-    .route('/', userRoutes)
+    .route('/', createUserRoutes(options))
 }
 
 const app = createPublicApiApp()

@@ -5,12 +5,28 @@ import { Hono } from 'hono'
 
 import { createLessonViewDeps } from '../dal/lesson-view-repository'
 import type { AppEnv } from '../env'
+import { logPersistentWriteEvent } from '../persistent-write-observability'
+import { type PlatformRateLimiter, persistentWriteRateLimits } from '../persistent-write-rate-limit'
+import { guardPersistentWriteRateLimit } from '../persistent-write-rate-limit-guard'
 import { recordLessonView } from '../services/lesson-view-service'
 
-export const lessonViewsRoute = new Hono<AppEnv>().post(
-  '/',
-  zValidator('json', lessonViewRequestSchema),
-  async (c) => {
+type LessonViewsRouteOptions = {
+  rateLimiter?: PlatformRateLimiter
+}
+
+export function createLessonViewsRoute({ rateLimiter }: LessonViewsRouteOptions = {}) {
+  return new Hono<AppEnv>().post('/', zValidator('json', lessonViewRequestSchema), async (c) => {
+    const rateLimit = persistentWriteRateLimits.lessonViews
+    const rateLimitResponse = await guardPersistentWriteRateLimit(
+      c,
+      rateLimit,
+      rateLimiter ?? c.env.LESSON_VIEWS_RATE_LIMITER,
+    )
+
+    if (rateLimitResponse) {
+      return rateLimitResponse
+    }
+
     const input = c.req.valid('json')
     await recordLessonView(createLessonViewDeps(drizzle(c.env.DB)), {
       userId: c.get('userId'),
@@ -18,6 +34,7 @@ export const lessonViewsRoute = new Hono<AppEnv>().post(
       now: Date.now(),
     })
 
+    logPersistentWriteEvent('persistent_write_succeeded', rateLimit)
     return c.json({ recorded: true } satisfies LessonViewResponse, 201)
-  },
-)
+  })
+}

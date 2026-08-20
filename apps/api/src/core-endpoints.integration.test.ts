@@ -8,6 +8,7 @@ import srsVersionMigration from '../drizzle/migrations/0001_add_srs_version.sql?
 import { createReviewDeps } from './dal/review-repository'
 import { FIXED_USER_ID } from './fixed-user'
 import { createInternalApiApp, createPublicApiApp } from './index'
+import type { PlatformRateLimiter } from './persistent-write-rate-limit'
 
 declare module 'cloudflare:test' {
   interface ProvidedEnv {
@@ -41,8 +42,22 @@ async function seedSrsState(
     .run()
 }
 
+const allowingLimiter: PlatformRateLimiter = {
+  async limit() {
+    return { success: true }
+  },
+}
+
+const allowingRateLimiters = {
+  answers: allowingLimiter,
+  lessonViews: allowingLimiter,
+}
+
 async function fetchInternal(path: string, init?: RequestInit): Promise<Response> {
-  return await createInternalApiApp().fetch(new Request(`https://api.internal${path}`, init), env)
+  return await createInternalApiApp({ rateLimiters: allowingRateLimiters }).fetch(
+    new Request(`https://api.internal${path}`, init),
+    env,
+  )
 }
 
 describe('core API endpoints', () => {
@@ -176,6 +191,99 @@ describe('core API endpoints', () => {
     })
   })
 
+  it.each([
+    {
+      entrypoint: 'internal',
+      endpoint: '/answers',
+      body: { questionId: 'question-1', selectedIndex: 0 },
+    },
+    { entrypoint: 'internal', endpoint: '/lesson-views', body: { lessonId: 'security-xss-01' } },
+    {
+      entrypoint: 'public',
+      endpoint: '/answers',
+      body: { questionId: 'question-1', selectedIndex: 0 },
+    },
+    { entrypoint: 'public', endpoint: '/lesson-views', body: { lessonId: 'security-xss-01' } },
+  ])(
+    'returns the shared 429 contract before a $entrypoint $endpoint D1 write',
+    async ({ entrypoint, endpoint, body }) => {
+      const deniedLimiter: PlatformRateLimiter = {
+        async limit() {
+          return { success: false }
+        },
+      }
+      const rateLimiters = { answers: deniedLimiter, lessonViews: deniedLimiter }
+      const request = new Request(`https://api.example.com${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          ...(entrypoint === 'public' ? { 'Cf-Access-Jwt-Assertion': 'valid-token' } : {}),
+        },
+        body: JSON.stringify(body),
+      })
+      const app =
+        entrypoint === 'public'
+          ? createPublicApiApp(async () => undefined, { rateLimiters })
+          : createInternalApiApp({ rateLimiters })
+      const bindings =
+        entrypoint === 'public'
+          ? {
+              ...env,
+              ACCESS_AUDIENCE: 'access-audience',
+              ACCESS_ISSUER: 'https://team.cloudflareaccess.com',
+              WEB_ORIGIN: 'https://web.example.com',
+            }
+          : env
+
+      const response = await app.fetch(request, bindings)
+
+      expect(response.status).toBe(429)
+      expect(response.headers.get('Retry-After')).toBe('60')
+      await expect(response.json()).resolves.toEqual({
+        error: { code: 'RATE_LIMITED', message: 'Too Many Requests' },
+      })
+      await expect(
+        env.DB.prepare(
+          'SELECT (SELECT COUNT(*) FROM answer_logs) AS answer_logs, (SELECT COUNT(*) FROM lesson_views) AS lesson_views, (SELECT COUNT(*) FROM srs_states) AS srs_states',
+        ).first(),
+      ).resolves.toEqual({ answer_logs: 0, lesson_views: 0, srs_states: 0 })
+    },
+  )
+
+  it.each([
+    { endpoint: '/answers', body: { questionId: 'question-1', selectedIndex: 0 } },
+    { endpoint: '/lesson-views', body: { lessonId: 'security-xss-01' } },
+  ])(
+    'fails closed without D1 changes when the limiter is unavailable for $endpoint',
+    async ({ endpoint, body }) => {
+      const unavailableLimiter: PlatformRateLimiter = {
+        async limit() {
+          throw new Error('limiter unavailable')
+        },
+      }
+      const response = await createInternalApiApp({
+        rateLimiters: { answers: unavailableLimiter, lessonViews: unavailableLimiter },
+      }).fetch(
+        new Request(`https://api.internal${endpoint}`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body),
+        }),
+        env,
+      )
+
+      expect(response.status).toBe(503)
+      await expect(response.json()).resolves.toEqual({
+        error: { code: 'RATE_LIMIT_UNAVAILABLE', message: 'Rate limit unavailable' },
+      })
+      await expect(
+        env.DB.prepare(
+          'SELECT (SELECT COUNT(*) FROM answer_logs) AS answer_logs, (SELECT COUNT(*) FROM lesson_views) AS lesson_views, (SELECT COUNT(*) FROM srs_states) AS srs_states',
+        ).first(),
+      ).resolves.toEqual({ answer_logs: 0, lesson_views: 0, srs_states: 0 })
+    },
+  )
+
   it('returns due items at the due boundary in order with a maximum of twenty items', async () => {
     const now = Date.now()
     await Promise.all(
@@ -222,7 +330,7 @@ describe('core API endpoints', () => {
   })
 
   it('allows an Access-verified public write and rejects unauthorized writes before D1 changes', async () => {
-    const app = createPublicApiApp(async () => undefined)
+    const app = createPublicApiApp(async () => undefined, { rateLimiters: allowingRateLimiters })
     const bindings = {
       ...env,
       ACCESS_AUDIENCE: 'access-audience',
