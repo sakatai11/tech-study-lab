@@ -17,6 +17,10 @@ export type ContentSyncPayload = {
   questions: ContentSyncQuestion[]
 }
 
+export type ContentSyncExecutionMode = 'local' | 'remote'
+
+const CONTENT_SYNC_D1_DATABASE_NAME = 'tech-study-lab'
+
 function parseMarkdownFile({ relativePath, source }: ContentSourceFile): ParsedContentSourceFile {
   try {
     const parsed = matter(source)
@@ -66,9 +70,24 @@ export function createContentSyncSql(payload: ContentSyncPayload, createdAt: num
   return `${statements.join(';\n')};`
 }
 
+export function parseContentSyncExecutionMode(args: readonly string[]): ContentSyncExecutionMode {
+  if (args.length === 1 && args[0] === '--local') {
+    return 'local'
+  }
+  if (args.length === 1 && args[0] === '--remote') {
+    return 'remote'
+  }
+
+  throw new Error('content sync requires exactly one of --local or --remote')
+}
+
 /**
  * remote実行を混入させないため、wranglerへの引数をこの固定形に限定する。
  */
 export function createLocalD1ExecuteArgs(filePath: string): readonly string[] {
-  return ['d1', 'execute', 'tech-study-lab', '--local', '--file', filePath]
+  return ['d1', 'execute', CONTENT_SYNC_D1_DATABASE_NAME, '--local', '--file', filePath]
+}
+
+export function createRemoteD1ExecuteArgs(filePath: string): readonly string[] {
+  return ['d1', 'execute', CONTENT_SYNC_D1_DATABASE_NAME, '--remote', '--file', filePath]
 }

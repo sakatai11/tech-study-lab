@@ -9,6 +9,8 @@ import {
   createContentSyncPayload,
   createContentSyncSql,
   createLocalD1ExecuteArgs,
+  createRemoteD1ExecuteArgs,
+  parseContentSyncExecutionMode,
 } from '../src/content-sync'
 import { FIXED_USER_ID } from '../src/fixed-user'
 
@@ -34,6 +36,7 @@ function collectContentFiles(contentRoot: string, directory = contentRoot): Cont
     })
 }
 
+const executionMode = parseContentSyncExecutionMode(process.argv.slice(2))
 const contentRoot = fileURLToPath(new URL('../../../content/', import.meta.url))
 const payload = createContentSyncPayload(collectContentFiles(contentRoot), FIXED_USER_ID)
 const sql = createContentSyncSql(payload, Date.now())
@@ -42,7 +45,11 @@ const sqlPath = join(temporaryDirectory, 'content-sync.sql')
 
 try {
   writeFileSync(sqlPath, sql, 'utf8')
-  const result = spawnSync('wrangler', createLocalD1ExecuteArgs(sqlPath), {
+  const wranglerArgs =
+    executionMode === 'local'
+      ? createLocalD1ExecuteArgs(sqlPath)
+      : createRemoteD1ExecuteArgs(sqlPath)
+  const result = spawnSync('wrangler', wranglerArgs, {
     shell: process.platform === 'win32',
     stdio: 'inherit',
   })

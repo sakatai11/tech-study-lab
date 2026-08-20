@@ -8,6 +8,8 @@ import {
   createContentSyncPayload,
   createContentSyncSql,
   createLocalD1ExecuteArgs,
+  createRemoteD1ExecuteArgs,
+  parseContentSyncExecutionMode,
 } from './content-sync'
 import { FIXED_USER_ID } from './fixed-user'
 
@@ -175,5 +177,37 @@ describe('createLocalD1ExecuteArgs', () => {
       '--file',
       '/tmp/content-sync.sql',
     ])
+  })
+})
+
+describe('createRemoteD1ExecuteArgs', () => {
+  it('uses the configured production database and remote-only wrangler command', () => {
+    expect(createRemoteD1ExecuteArgs('/tmp/content-sync.sql')).toEqual([
+      'd1',
+      'execute',
+      'tech-study-lab',
+      '--remote',
+      '--file',
+      '/tmp/content-sync.sql',
+    ])
+  })
+})
+
+describe('parseContentSyncExecutionMode', () => {
+  it.each([
+    { args: ['--local'], expected: 'local' },
+    { args: ['--remote'], expected: 'remote' },
+  ] as const)('accepts only the exact $expected mode arguments', ({ args, expected }) => {
+    expect(parseContentSyncExecutionMode(args)).toBe(expected)
+  })
+
+  it.each([
+    { args: [] },
+    { args: ['--unknown'] },
+    { args: ['--local', '--remote'] },
+    { args: ['--remote', '--local'] },
+    { args: ['--remote', '--file', '/tmp/other.sql'] },
+  ])('rejects unknown or extra arguments before execution: %j', ({ args }) => {
+    expect(() => parseContentSyncExecutionMode(args)).toThrow('exactly one of --local or --remote')
   })
 })
