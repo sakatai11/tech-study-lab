@@ -1,9 +1,13 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { logPersistentWriteEvent } from './persistent-write-observability'
 import { persistentWriteRateLimits } from './persistent-write-rate-limit'
 
 describe('logPersistentWriteEvent', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   it('emits a PII-free structured event for a successful answer write', () => {
     const info = vi.spyOn(console, 'info').mockImplementation(() => undefined)
 
@@ -16,6 +20,5 @@ describe('logPersistentWriteEvent', () => {
         writeUnit: 'answer_log_and_srs_state',
       }),
     )
-    info.mockRestore()
   })
 })
