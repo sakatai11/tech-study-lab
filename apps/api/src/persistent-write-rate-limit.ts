@@ -4,22 +4,16 @@ export type PlatformRateLimiter = {
 
 export type PersistentWriteRateLimit = {
   endpoint: 'POST /answers' | 'POST /lesson-views'
-  limit: number
-  windowSeconds: 60
   writeUnit: 'answer_log_and_srs_state' | 'lesson_view'
 }
 
 export const persistentWriteRateLimits = {
   answers: {
     endpoint: 'POST /answers',
-    limit: 60,
-    windowSeconds: 60,
     writeUnit: 'answer_log_and_srs_state',
   },
   lessonViews: {
     endpoint: 'POST /lesson-views',
-    limit: 30,
-    windowSeconds: 60,
     writeUnit: 'lesson_view',
   },
 } as const satisfies Record<string, PersistentWriteRateLimit>

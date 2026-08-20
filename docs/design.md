@@ -1441,11 +1441,12 @@ app.onError((err, c) => {
 | --- | --- | --- |
 | SRS（`sm2`） | 純粋関数の単体テスト（**実装済み**） | Node |
 | service | deps をインメモリ fake に差し替えた単体テスト。採点の正誤・SRS 遷移の呼び出し・エラー系（問題未存在）を重点 | Node |
-| 永続書き込みの rate limit | platform limiter interface を固定時計の fake に差し替えた単体テスト。N-1 / N / N+1、次 fixed window の reset、key の endpoint 分離、binding failure を重点 | Node |
+| 永続書き込みの rate limit | platform limiter interface を固定時計の fake に差し替えた単体テスト。Wrangler の enforcement 設定（binding 名・受理上限・window）は `wrangler.toml` を一次ソースとし、テストの境界 fixture はその値を明示する。N-1 / N / N+1、次 fixed window の reset、key の endpoint 分離、binding failure を重点 | Node |
 | route + dal | `@cloudflare/vitest-pool-workers`（ローカル D1 に対する実クエリ）で happy path を最低 1 本（`POST /answers` の貫通） | workerd |
 
 - service の deps を「フラットな関数の束」（§10.3）にしているのはこのため。fake は素朴なオブジェクトリテラルで書け、モックライブラリを要しない。
 - rate limiter も Workers binding を小さい interface に隔離し、route integration では deny / throw fake を渡して 429 / 503 時の D1 無変更を確認する。実 platform の PoP-local な eventual consistency 自体をローカル test の正確な quota と取り違えない。
+- 現在の `@cloudflare/vitest-pool-workers@0.8.0` は内部で Wrangler `4.0.0` を使い、`ratelimits` を未知の top-level field として扱うため、workerd integration test で実 Rate Limit binding の happy path を供給できない。この制限下では integration test の fake で route の 429 / 503 契約を検証する。production 用 Wrangler `4.103.0` による `pnpm --filter @tsl/api build` の dry-run を必須とし、その出力で `ANSWERS_RATE_LIMITER`（60 / 60 秒）と `LESSON_VIEWS_RATE_LIMITER`（30 / 60 秒）の両 binding が解決されることを確認する。
 
 ```typescript
 // services/answer-service.test.ts（fake deps の例）
@@ -1593,10 +1594,10 @@ content は「web のビルド時バンドル（§8.2）」と「D1 の `questio
 - 本番適用はデプロイ手順の先頭（§12.4 の①）。
 - **破壊的変更（列削除・型変更・NOT NULL 追加）は原則避け、追加中心**とする。やむを得ない場合は「新列追加 → データ移行 → 旧列削除」の多段リリースで行う。
 
-### 12.7 バックアップ・観測（当面の割り切り）
+### 12.7 バックアップ・観測（当面の運用）
 
 - **バックアップ**：教材・問題は Git にあるため、守る対象は D1 の動的データ（`answer_logs` / `srs_states` / `lesson_views`）のみ。当面は必要時に `wrangler d1 export` を手動実行し、マルチユーザー公開時に定期化（Cron 等）を検討する。
-- **観測**：Workers Logs（`console.error`。§10.6 の `onError` から出力）で足りるとする。構造化ログ・外部監視は公開時に再検討。
+- **観測**：§10.3.1 の rate limit / 永続書き込みでは、429・limiter failure・成功した永続書き込みごとに `event`・`endpoint`・`writeUnit` だけを含む PII-free の構造化 Worker log を出す。運用時は Workers Logs の event 別件数と D1 dashboard の `answer_logs` / `lesson_views` / `srs_states` の書き込み・容量メトリクスを同じ時間帯で突合する。`console.error` は §10.6 の未処理エラー出力に限る。Analytics Engine を含む外部監視は、既存のログと D1 メトリクスでは不足すると判断された場合に別 issue で検討する。
 
 ### 12.8 `cacheComponents` の適用条件と検証結果
 

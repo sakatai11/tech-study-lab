@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
 import {
-  type PersistentWriteRateLimit,
   type PlatformRateLimiter,
   checkPersistentWriteRateLimit,
   createPersistentWriteRateLimitKey,
@@ -10,6 +9,11 @@ import {
 
 type Clock = {
   now(): number
+}
+
+type FixedWindowBoundary = {
+  limit: number
+  windowSeconds: 60
 }
 
 class FixedClock implements Clock {
@@ -29,30 +33,41 @@ class FixedWindowRateLimiterFake implements PlatformRateLimiter {
   private readonly counts = new Map<string, number>()
 
   constructor(
-    private readonly rateLimit: PersistentWriteRateLimit,
+    private readonly boundary: FixedWindowBoundary,
     private readonly clock: Clock,
   ) {}
 
   async limit({ key }: { key: string }): Promise<{ success: boolean }> {
     this.keys.push(key)
-    const window = Math.floor(this.clock.now() / this.rateLimit.windowSeconds / 1_000)
+    const window = Math.floor(this.clock.now() / this.boundary.windowSeconds / 1_000)
     const countKey = `${window}:${key}`
     const count = (this.counts.get(countKey) ?? 0) + 1
     this.counts.set(countKey, count)
 
-    return { success: count <= this.rateLimit.limit }
+    return { success: count <= this.boundary.limit }
   }
 }
 
+const rateLimitBoundaryFixtures = [
+  {
+    rateLimit: persistentWriteRateLimits.answers,
+    boundary: { limit: 60, windowSeconds: 60 },
+  },
+  {
+    rateLimit: persistentWriteRateLimits.lessonViews,
+    boundary: { limit: 30, windowSeconds: 60 },
+  },
+] as const
+
 describe('persistent write rate limits', () => {
-  it.each([persistentWriteRateLimits.answers, persistentWriteRateLimits.lessonViews])(
-    '$endpoint allows N-1 and N requests, rejects N+1, then resets in the next window',
-    async (rateLimit) => {
+  it.each(rateLimitBoundaryFixtures)(
+    '$rateLimit.endpoint allows N-1 and N requests, rejects N+1, then resets in the next window',
+    async ({ rateLimit, boundary }) => {
       const clock = new FixedClock(0)
-      const limiter = new FixedWindowRateLimiterFake(rateLimit, clock)
+      const limiter = new FixedWindowRateLimiterFake(boundary, clock)
       const userId = 'user-1'
 
-      for (let request = 0; request < rateLimit.limit - 1; request += 1) {
+      for (let request = 0; request < boundary.limit - 1; request += 1) {
         await expect(checkPersistentWriteRateLimit(limiter, userId, rateLimit)).resolves.toBe(
           'allowed',
         )
@@ -65,7 +80,7 @@ describe('persistent write rate limits', () => {
         'limited',
       )
 
-      clock.advance(rateLimit.windowSeconds * 1_000)
+      clock.advance(boundary.windowSeconds * 1_000)
 
       await expect(checkPersistentWriteRateLimit(limiter, userId, rateLimit)).resolves.toBe(
         'allowed',
@@ -75,7 +90,10 @@ describe('persistent write rate limits', () => {
 
   it('uses a stable endpoint discriminator in the platform key', async () => {
     const clock = new FixedClock(0)
-    const answerLimiter = new FixedWindowRateLimiterFake(persistentWriteRateLimits.answers, clock)
+    const answerLimiter = new FixedWindowRateLimiterFake(
+      rateLimitBoundaryFixtures[0].boundary,
+      clock,
+    )
 
     await checkPersistentWriteRateLimit(answerLimiter, 'user-1', persistentWriteRateLimits.answers)
 
