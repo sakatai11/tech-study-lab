@@ -232,7 +232,8 @@ discovery は発見段階であり、レビュー済み境界を更新しない�
 
 - **このフェーズで追加コミットは作らない。** 最終確認として作業ツリー・コミット列・ローカル品質ゲート・PR CI の状態を確かめるだけ。
 - push とPR作成はユーザー承認を得てから行う。既にPRを作成済みなら再作成しない。
-- PR作成には利用可能なら `pr-creator` skill を使い、なければ `.github/pull_request_template.md` に従う。**ベースブランチは `develop`**。
+- 事前に `.github/pull_request_template.md` を読み、その構成に従ってPR本文を作成する。
+  PR作成には、`pr-creator` skill が利用可能ならそれを使い、利用できない場合はGitHubコネクタを使う。**ベースブランチは `develop`**。
 - 完了報告に含めるもの: 実装サマリ／`executionOwner`と選定理由／コミット履歴／`reviewPolicy`・current HEADの`externalReviewDecision`・規則IDと根拠／使用した別モデルCLI・正規化エージェント名・送信先（未実行ならその旨）／レビュー結果（未取得ならその理由）／別issue候補（範囲外）と切り出し案／Appレビューを取得した場合はその結果／ローカル品質ゲート（typecheck / lint / test）の結果／PR CI（typecheck / lint / test / build）の結果／作業ブランチ名／PR URL。
 
 ### スパイクまたはフェーズ分割時の関連状態照合
