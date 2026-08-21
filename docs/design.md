@@ -86,6 +86,7 @@ tech-study-lab/
 
 - web 側の wrangler 設定に `services: [{ "binding": "API", "service": "<API Worker 名>", "entrypoint": "InternalApi" }]` を宣言し、Server 側の `hc` には `getCloudflareContext().env.API.fetch` をカスタム `fetch` として渡す。
 - Service Binding 経由でも `hc<AppType>` の型安全 RPC はそのまま維持される（差し替わるのは fetch 実装のみで、パス・メソッド・型は不変。baseURL のホスト名はダミーでよい）。
+- web Worker の Next.js Cache Components / PPR が使う Incremental Cache は、API や D1 とは分離した専用 R2 bucket を `NEXT_INC_CACHE_R2_BUCKET` として bind する。時間ベース再検証は SQLite Durable Object の `NEXT_CACHE_DO_QUEUE` で処理し、`WORKER_SELF_REFERENCE` から同じ web Worker の再検証 entrypoint を呼ぶ。OpenNext の dummy cache / queue は本番で使用しない。
 
 #### 本番アクセス境界（Issue #112）
 
@@ -1415,14 +1416,14 @@ app.onError((err, c) => {
 
 ### 10.8 content → D1 同期スクリプト
 
-§4.2 の seed/upsert を `apps/api/scripts/sync-content.ts`（`pnpm --filter @tsl/api content:sync`）として実装する。パース・ペイロード生成・SQL 生成の純粋ロジックは `apps/api/src/content-sync.ts` に切り出し（§10.2）、`scripts/sync-content.ts` はそれを呼び出す Node CLI 部（`fs` 読み取り・`wrangler d1 execute` 実行）に徹する。
+§4.2 の seed/upsert を `apps/api/scripts/sync-content.ts` として実装する。ローカル同期は `pnpm --filter @tsl/api content:sync`、本番 D1 同期は `pnpm --filter @tsl/api content:sync:remote` を使う。パース・ペイロード生成・SQL 生成の純粋ロジックは `apps/api/src/content-sync.ts` に切り出し（§10.2）、`scripts/sync-content.ts` はそれを呼ぶ Node CLI 部（`fs` 読み取り・`wrangler d1 execute` 実行）に徹する。
 
 - **パース経路は §8.2 と共有**：`gray-matter` でパースし `packages/shared` の content Zod（`validatedMcqSchema` 含む）で検証する。フロントのビルド時バンドルと同じ検証を通った内容だけが D1 に入る。
 - 同期対象は `questions` テーブルの**最小フィールドのみ**（`question_id`, `answer_index`。§4.4）。本文・選択肢・解説は D1 に入れない。
-- 検証済みデータから upsert SQL（`INSERT ... ON CONFLICT(question_id) DO UPDATE`）を生成し、`wrangler d1 execute`（ローカルは `--local`、本番は `--remote`）で流す。**冪等**（何度実行しても同じ結果）にする。
+- 検証済みデータから upsert SQL（`INSERT ... ON CONFLICT(question_id) DO UPDATE`）を生成し、`wrangler d1 execute tech-study-lab --local|--remote --file <generated-sql>` の固定引数で流す。`content:sync` は `--local` 固定、`content:sync:remote` は `--remote` 固定とし、CLI はこのいずれかの完全一致モード以外（任意引数・追加引数を含む）を SQL 生成・Wrangler 実行の前に拒否する。**冪等**（何度実行しても同じ結果）にする。
 - 固定ユーザー行（`users`）の seed も同スクリプトで行う（`user-context.ts` の `FIXED_USER_ID` と同じ値）。
 - content から削除された問題は**物理削除しない**（`answer_logs`・`srs_states` が参照するため）。出題対象からは自然に外れる（フロントのバンドルに含まれず、due queue の join でも解決されない）。整理が必要になったら論理削除フラグを検討する。
-- 実行タイミング：ローカル開発では手動、本番はデプロイフロー（CI）に組み込む。
+- 実行タイミング：現在の MVP は §12.4 の手動フローで実行する。`content:sync:remote` は外部 D1 を変更するため、実行ごとに対象データベース・生成 SQL・実行順を確認し、明示的な承認を得てから実行する。Walking Skeleton の本番確認後に CI 化を検討する場合も、remote D1 の変更または deploy の前に、保護された production 環境での明示的な承認ゲートを必須とする。
 
 #### ローカル動的開発 seed
 
@@ -1554,12 +1555,15 @@ topic frontmatter の `order` も同様に表示順（0 以上の整数、小さ
 | `DB` | D1 バインディング（api） | dal（Drizzle） | `wrangler dev` のローカル D1 | `apps/api/wrangler.toml` の `d1_databases`（要実 ID。§12.4） |
 | `ANSWERS_RATE_LIMITER` | Rate Limiting バインディング（api） | `POST /answers` の永続書き込みガード（§10.3.1） | `apps/api/wrangler.toml` の `[[ratelimits]]`（`namespace_id = "11301"`、60 回 / 60 秒） | local と同じ top-level `[[ratelimits]]` を API Worker へデプロイ |
 | `LESSON_VIEWS_RATE_LIMITER` | Rate Limiting バインディング（api） | `POST /lesson-views` の永続書き込みガード（§10.3.1） | `apps/api/wrangler.toml` の `[[ratelimits]]`（`namespace_id = "11302"`、30 回 / 60 秒） | local と同じ top-level `[[ratelimits]]` を API Worker へデプロイ |
-| `WEB_ORIGIN` | var（api） | CORS 許可オリジン（§10.5） | `http://localhost:3000` | web Worker の公開 URL |
-| `ACCESS_ISSUER` | var（api） | Cloudflare Access JWT の issuer 検証（§3.1） | 未設定（両 Access 設定なし＋loopback URL のみ bypass） | Cloudflare Access team domain の issuer。Issue #35 で設定 |
-| `ACCESS_AUDIENCE` | var（api） | Cloudflare Access JWT の audience 検証（§3.1） | 未設定（両 Access 設定なし＋loopback URL のみ bypass） | API 用 Access application の AUD。Issue #35 で設定 |
+| `WEB_ORIGIN` | var（api） | CORS 許可オリジン（§10.5） | `http://localhost:3000` | API deploy 時に `--var WEB_ORIGIN:<web-public-url>` として明示指定 |
+| `ACCESS_ISSUER` | var（api） | Cloudflare Access JWT の issuer 検証（§3.1） | 未設定（両 Access 設定なし＋loopback URL のみ bypass） | API deploy 時に `--var ACCESS_ISSUER:<access-issuer>` として明示指定 |
+| `ACCESS_AUDIENCE` | var（api） | Cloudflare Access JWT の audience 検証（§3.1） | 未設定（両 Access 設定なし＋loopback URL のみ bypass） | API deploy 時に `--var ACCESS_AUDIENCE:<access-audience>` として明示指定 |
 | `API` | Service Binding（web） | Server loader（§3.1・§8.4） | なし（URL フォールバック） | `services: [{ binding: "API", service: "tech-study-lab-api", entrypoint: "InternalApi" }]` |
+| `NEXT_INC_CACHE_R2_BUCKET` | R2 バインディング（web） | OpenNext Incremental Cache（§12.8） | `opennextjs-cloudflare preview` のローカル R2 | `tech-study-lab-web-cache`。`opennextjs-cloudflare deploy` が build 済み cache を投入 |
+| `NEXT_CACHE_DO_QUEUE` | SQLite Durable Object バインディング（web） | OpenNext の時間ベース再検証 Queue（§12.8） | `opennextjs-cloudflare preview` のローカル DO | `DOQueueHandler`。初回 web deploy の migration で作成 |
+| `WORKER_SELF_REFERENCE` | Service Binding（web） | `DOQueueHandler` から web Worker への再検証要求（§12.8） | `tech-study-lab-web` のローカル自己参照 | `tech-study-lab-web` の自己参照 |
 | `API_BASE_URL` | env（web / Server 専用） | Server loader のローカルフォールバック（§8.4） | `http://localhost:8787` | 設定しない（Service Binding必須。欠落時はfail-fast） |
-| `NEXT_PUBLIC_API_BASE_URL` | ビルド時 env（web / Client） | Client hook（§8.4） | `http://localhost:8787` | api Worker の公開 URL |
+| `NEXT_PUBLIC_API_BASE_URL` | ビルド時 env（web / Client） | Client hook（§8.4） | `http://localhost:8787` | web の build/deploy 時に api Worker の公開 URL を環境変数として明示指定 |
 
 ### 12.3 ローカル開発手順
 
@@ -1571,16 +1575,19 @@ topic frontmatter の `order` も同様に表示順（0 以上の整数、小さ
 
 ### 12.4 本番デプロイ手順（順序が仕様）
 
-初回のみ：`wrangler d1 create tech-study-lab` を実行し、発行された `database_id` を `apps/api/wrangler.toml` に設定する。
+初回のみ：`wrangler d1 create tech-study-lab` を実行し、発行された非秘密の `database_id` を `apps/api/wrangler.toml` に設定して Git 管理する。外部リソースの作成・更新を伴うため、実行前に対象アカウント・D1・Worker・入力値を確認し、明示的な承認を得る。`WEB_ORIGIN`・`ACCESS_ISSUER`・`ACCESS_AUDIENCE` の production 値はリポジトリや `.env` に保存しない。
 
-1. **マイグレーション適用**：`wrangler d1 migrations apply tech-study-lab --remote`
-2. **content sync**：`content/` → D1 upsert（`--remote`。§10.8）
-3. **api デプロイ**：`pnpm --filter @tsl/api deploy`
-4. **web デプロイ**：OpenNext ビルド＋デプロイ
+デプロイ前に、API/public Web hostname と Cloudflare Access application / policy の対象を確認する。ブラウザと同じ `Origin` を指定した `OPTIONS`（`POST` と必要 header を含む）が、Access edge で遮断されず Worker の credentialed CORS 応答に到達するか、同等の正しい Access 応答を返すことを実機で確認する。Access cookie が Web と API の実際の hostname で送信されることも確認できるまで、以下を開始しない。
+
+1. **マイグレーション適用**：`pnpm --filter @tsl/api exec wrangler d1 migrations apply tech-study-lab --remote`
+2. **content sync**：`pnpm --filter @tsl/api content:sync:remote`（`content/` → D1 upsert。§10.8）
+3. **api デプロイ**：`pnpm --filter @tsl/api run deploy --var WEB_ORIGIN:<web-public-url> --var ACCESS_ISSUER:<access-issuer> --var ACCESS_AUDIENCE:<access-audience>`。3 値は**毎回すべて**この deploy 実行時だけ明示指定し、Git や `.env` には保存しない。値を省いた bare deploy は禁止する。Wrangler がローカルまたは不完全な vars へ置き換えると、Access は fail closed となり、CORS も失敗し得る。`pnpm deploy` は pnpm 自身のコマンドと衝突するため、package script は必ず `run deploy` で起動し、引数前に追加の `--` を置かない。
+4. **web デプロイ**：初回のみ専用 R2 bucket `tech-study-lab-web-cache` を作成し、`NEXT_INC_CACHE_R2_BUCKET`・`NEXT_CACHE_DO_QUEUE`・`WORKER_SELF_REFERENCE` の各 binding を確認する。その後 `NEXT_PUBLIC_API_BASE_URL=<api-public-url> pnpm --filter @tsl/web run deploy` を実行する。`NEXT_PUBLIC_API_BASE_URL` は OpenNext build 時に必要であり、API の公開 URL を使う。初回 deploy は `DOQueueHandler` の SQLite migration を適用する。`opennextjs-cloudflare deploy` は Worker の更新と build 済み Incremental Cache の R2 への投入を一体で行うため、`wrangler deploy` 単体へ置き換えない。
 
 順序の根拠：**スキーマ → データ → API → 画面** の順なら、各ステップの完了時点で稼働中の旧バージョンが壊れない（マイグレーションが追加中心の後方互換であることが前提。§12.6）。
 
-- MVP は**手動実行**とする。Walking Skeleton 貫通後に GitHub Actions による main ブランチ自動デプロイへ移行する（PR ゲート CI ＝型・lint・test・build は §5 のとおり先行整備）。
+- MVP は**手動実行**とする。Walking Skeleton の本番確認後に GitHub Actions による main ブランチ自動デプロイを検討する。将来の CI でも、remote D1 mutation または deploy の前に保護された production 環境の明示的な承認ゲートを置く（PR ゲート CI ＝型・lint・test・buildは §5 のとおり先行整備）。
+- 各ステップの成功を確認するまで後続ステップへ進まない。失敗時はそこで停止し、後続の migration/content sync/API/Web deploy を実行しない。復旧が必要な場合は、稼働中の既知の Worker version を確認してから、対象と影響を明示した承認を得てロールバックする。
 
 ### 12.5 content 更新の運用ルール
 
@@ -1605,6 +1612,8 @@ content は「web のビルド時バンドル（§8.2）」と「D1 の `questio
 
 `cacheComponents` は NextConfig のアプリケーション全体に効く top-level switch である。PPR streaming の対象を `/home`・`/review` に限定しても、**全 App Router route が Cache Components の build ルールを満たす必要がある**。`/` はユーザー固有データを読まない静的 RSC とする。有効化にあたって実際に必要だった対応は次のとおり（issue #93 の技術スパイクで確認）。
 
+本番の OpenNext runtime では `open-next.config.ts` に R2 Incremental Cache と Durable Object Queue を明示し、web Worker の `wrangler.jsonc` に `NEXT_INC_CACHE_R2_BUCKET`・`NEXT_CACHE_DO_QUEUE`・`WORKER_SELF_REFERENCE` を常設する。未設定時の既定値である dummy cache は読み書き時に失敗し、Cache Components が生成する RSC navigation / prefetch が完了しないため使用禁止とする。`'use cache'` の既定 profile は15分の時間ベース再検証を持つため Queue を省略できない。現状は `revalidateTag` / `revalidatePath` による on-demand revalidation を使わないため Tag Cache は追加しない。将来それらを導入する場合は、その変更と同時に対応する Tag Cache と cache purge を設計する。
+
 - `export const dynamic` / `export const dynamicParams` は併用不可。page-level の route segment config を置かない。
 - 動的セグメントを持つ content route（`/learn/...`・`/quiz/...`）は `generateStaticParams` で全 params を列挙し、page 本体に `'use cache'` を置く。両方が無いと `Uncached data was accessed outside of <Suspense>` で prerender が停止する。
 - 現在時刻（`Date.now()` / `new Date()`）は uncached data を読んだ後にしか参照できない。`loadReview` は既定引数での先行評価をやめ、queue 取得後に解決する。
@@ -1628,4 +1637,4 @@ content は「web のビルド時バンドル（§8.2）」と「D1 の `questio
 
 #### 残る制約
 
-現行 CI は `next build` のみであり、OpenNext preview のストリーミングを検知できない。**ビルド成功だけを回帰の根拠にしてはならない。** PPR の描画・streaming に関わる変更では、`opennextjs-cloudflare preview` での手動確認を併せて行う。上記 upstream issue は未 close のため、OpenNext / Next を更新した際は再確認する。
+現行 CI は `next build` のみであり、OpenNext preview のストリーミングや本番 R2 cache binding の欠落を検知できない。**ビルド成功だけを回帰の根拠にしてはならない。** PPR の描画・streaming または cache binding に関わる変更では、R2 binding を含む `opennextjs-cloudflare preview` で full GET と `?_rsc=...` navigation の両方を確認する。上記 upstream issue は未 close のため、OpenNext / Next を更新した際は再確認する。
