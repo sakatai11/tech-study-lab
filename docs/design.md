@@ -86,6 +86,7 @@ tech-study-lab/
 
 - web 側の wrangler 設定に `services: [{ "binding": "API", "service": "<API Worker 名>", "entrypoint": "InternalApi" }]` を宣言し、Server 側の `hc` には `getCloudflareContext().env.API.fetch` をカスタム `fetch` として渡す。
 - Service Binding 経由でも `hc<AppType>` の型安全 RPC はそのまま維持される（差し替わるのは fetch 実装のみで、パス・メソッド・型は不変。baseURL のホスト名はダミーでよい）。
+- web Worker の Next.js Cache Components / PPR が使う Incremental Cache は、API や D1 とは分離した専用 R2 bucket を `NEXT_INC_CACHE_R2_BUCKET` として bind する。OpenNext の dummy cache は本番で使用しない。
 
 #### 本番アクセス境界（Issue #112）
 
@@ -1558,6 +1559,7 @@ topic frontmatter の `order` も同様に表示順（0 以上の整数、小さ
 | `ACCESS_ISSUER` | var（api） | Cloudflare Access JWT の issuer 検証（§3.1） | 未設定（両 Access 設定なし＋loopback URL のみ bypass） | API deploy 時に `--var ACCESS_ISSUER:<access-issuer>` として明示指定 |
 | `ACCESS_AUDIENCE` | var（api） | Cloudflare Access JWT の audience 検証（§3.1） | 未設定（両 Access 設定なし＋loopback URL のみ bypass） | API deploy 時に `--var ACCESS_AUDIENCE:<access-audience>` として明示指定 |
 | `API` | Service Binding（web） | Server loader（§3.1・§8.4） | なし（URL フォールバック） | `services: [{ binding: "API", service: "tech-study-lab-api", entrypoint: "InternalApi" }]` |
+| `NEXT_INC_CACHE_R2_BUCKET` | R2 バインディング（web） | OpenNext Incremental Cache（§12.8） | `opennextjs-cloudflare preview` のローカル R2 | `tech-study-lab-web-cache`。`opennextjs-cloudflare deploy` が build 済み cache を投入 |
 | `API_BASE_URL` | env（web / Server 専用） | Server loader のローカルフォールバック（§8.4） | `http://localhost:8787` | 設定しない（Service Binding必須。欠落時はfail-fast） |
 | `NEXT_PUBLIC_API_BASE_URL` | ビルド時 env（web / Client） | Client hook（§8.4） | `http://localhost:8787` | web の build/deploy 時に api Worker の公開 URL を環境変数として明示指定 |
 
@@ -1578,7 +1580,7 @@ topic frontmatter の `order` も同様に表示順（0 以上の整数、小さ
 1. **マイグレーション適用**：`pnpm --filter @tsl/api exec wrangler d1 migrations apply tech-study-lab --remote`
 2. **content sync**：`pnpm --filter @tsl/api content:sync:remote`（`content/` → D1 upsert。§10.8）
 3. **api デプロイ**：`pnpm --filter @tsl/api run deploy --var WEB_ORIGIN:<web-public-url> --var ACCESS_ISSUER:<access-issuer> --var ACCESS_AUDIENCE:<access-audience>`。3 値は**毎回すべて**この deploy 実行時だけ明示指定し、Git や `.env` には保存しない。値を省いた bare deploy は禁止する。Wrangler がローカルまたは不完全な vars へ置き換えると、Access は fail closed となり、CORS も失敗し得る。`pnpm deploy` は pnpm 自身のコマンドと衝突するため、package script は必ず `run deploy` で起動し、引数前に追加の `--` を置かない。
-4. **web デプロイ**：`NEXT_PUBLIC_API_BASE_URL=<api-public-url> pnpm --filter @tsl/web run deploy`。`NEXT_PUBLIC_API_BASE_URL` は OpenNext build 時に必要であり、API の公開 URL を使う。
+4. **web デプロイ**：初回のみ専用 R2 bucket `tech-study-lab-web-cache` を作成し、`NEXT_INC_CACHE_R2_BUCKET` binding の存在を確認する。その後 `NEXT_PUBLIC_API_BASE_URL=<api-public-url> pnpm --filter @tsl/web run deploy` を実行する。`NEXT_PUBLIC_API_BASE_URL` は OpenNext build 時に必要であり、API の公開 URL を使う。`opennextjs-cloudflare deploy` は Worker の更新と build 済み Incremental Cache の R2 への投入を一体で行うため、`wrangler deploy` 単体へ置き換えない。
 
 順序の根拠：**スキーマ → データ → API → 画面** の順なら、各ステップの完了時点で稼働中の旧バージョンが壊れない（マイグレーションが追加中心の後方互換であることが前提。§12.6）。
 
@@ -1608,6 +1610,8 @@ content は「web のビルド時バンドル（§8.2）」と「D1 の `questio
 
 `cacheComponents` は NextConfig のアプリケーション全体に効く top-level switch である。PPR streaming の対象を `/home`・`/review` に限定しても、**全 App Router route が Cache Components の build ルールを満たす必要がある**。`/` はユーザー固有データを読まない静的 RSC とする。有効化にあたって実際に必要だった対応は次のとおり（issue #93 の技術スパイクで確認）。
 
+本番の OpenNext runtime では `open-next.config.ts` に R2 Incremental Cache を明示し、web Worker の `wrangler.jsonc` に `NEXT_INC_CACHE_R2_BUCKET` binding を常設する。未設定時の既定値である dummy cache は読み書き時に失敗し、Cache Components が生成する RSC navigation / prefetch が完了しないため使用禁止とする。現状は time-based / on-demand revalidation を使わないため Queue / Tag Cache は追加しない。将来 `revalidateTag`・`revalidatePath`・時間ベース再検証を導入する場合は、その変更と同時に対応する Tag Cache / Queue と self-reference binding を設計する。
+
 - `export const dynamic` / `export const dynamicParams` は併用不可。page-level の route segment config を置かない。
 - 動的セグメントを持つ content route（`/learn/...`・`/quiz/...`）は `generateStaticParams` で全 params を列挙し、page 本体に `'use cache'` を置く。両方が無いと `Uncached data was accessed outside of <Suspense>` で prerender が停止する。
 - 現在時刻（`Date.now()` / `new Date()`）は uncached data を読んだ後にしか参照できない。`loadReview` は既定引数での先行評価をやめ、queue 取得後に解決する。
@@ -1631,4 +1635,4 @@ content は「web のビルド時バンドル（§8.2）」と「D1 の `questio
 
 #### 残る制約
 
-現行 CI は `next build` のみであり、OpenNext preview のストリーミングを検知できない。**ビルド成功だけを回帰の根拠にしてはならない。** PPR の描画・streaming に関わる変更では、`opennextjs-cloudflare preview` での手動確認を併せて行う。上記 upstream issue は未 close のため、OpenNext / Next を更新した際は再確認する。
+現行 CI は `next build` のみであり、OpenNext preview のストリーミングや本番 R2 cache binding の欠落を検知できない。**ビルド成功だけを回帰の根拠にしてはならない。** PPR の描画・streaming または cache binding に関わる変更では、R2 binding を含む `opennextjs-cloudflare preview` で full GET と `?_rsc=...` navigation の両方を確認する。上記 upstream issue は未 close のため、OpenNext / Next を更新した際は再確認する。
