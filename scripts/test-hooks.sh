@@ -114,6 +114,7 @@ SKILL=.ai/skills/issue-dev-orchestrate/SKILL.md
 COMMON=.ai/cross-model-reviewer-common.md
 GUIDE=.ai/review-guidelines.md
 RUNTIME=.ai/runtime-compatibility.md
+AGENT_GUIDE=docs/ai-coding-agents.md
 
 # 正規化エージェント名から、外部CLIを実行・監視する主体だと誤認できないことを固定する。
 for old_path in \
@@ -350,6 +351,36 @@ check_agent_contract "invalid effective base blocks external CLI" '「判定: er
 check_agent_contract "codex toml effort" 'model_reasoning_effort = "high"' .codex/agents/codex-review-normalizer.toml
 check_agent_contract "claude toml effort" 'model_reasoning_effort = "high"' .codex/agents/claude-review-normalizer.toml
 check_agent_contract "communication is not authentication" '通信失敗を未認証と報告しない' "$RUNTIME"
+
+# ---- Codexサブエージェントの役割別モデル方針 ----
+check_agent_contract "developer uses Luna" 'model = "gpt-5.6-luna"' .codex/agents/developer.toml
+check_agent_contract "developer uses xhigh" 'model_reasoning_effort = "xhigh"' .codex/agents/developer.toml
+check_agent_contract "test fixer uses Luna" 'model = "gpt-5.6-luna"' .codex/agents/test-fixer.toml
+check_agent_contract "test fixer uses high" 'model_reasoning_effort = "high"' .codex/agents/test-fixer.toml
+check_agent_contract "investigator stays Terra medium" 'model = "gpt-5.6-terra"' .codex/agents/issue-investigator.toml
+check_agent_contract "investigator stays Terra medium" 'model_reasoning_effort = "medium"' .codex/agents/issue-investigator.toml
+check_agent_contract "reviewer stays Terra high" 'model = "gpt-5.6-terra"' .codex/agents/reviewer.toml
+check_agent_contract "reviewer stays Terra high" 'model_reasoning_effort = "high"' .codex/agents/reviewer.toml
+check_agent_contract "content author stays Terra medium" 'model = "gpt-5.6-terra"' .codex/agents/content-author.toml
+check_agent_contract "content author stays Terra medium" 'model_reasoning_effort = "medium"' .codex/agents/content-author.toml
+check_agent_contract "normalizers stay Luna high" 'model = "gpt-5.6-luna"' .codex/agents/codex-review-normalizer.toml
+check_agent_contract "normalizers stay Luna high" 'model_reasoning_effort = "high"' .codex/agents/codex-review-normalizer.toml
+check_agent_contract "normalizers stay Luna high" 'model = "gpt-5.6-luna"' .codex/agents/claude-review-normalizer.toml
+check_agent_contract "normalizers stay Luna high" 'model_reasoning_effort = "high"' .codex/agents/claude-review-normalizer.toml
+check_agent_contract "runtime documents developer policy" '| `developer` | `gpt-5.6-luna` | `xhigh` |' "$RUNTIME"
+check_agent_contract "runtime documents test fixer policy" '| `test-fixer` | `gpt-5.6-luna` | `high` |' "$RUNTIME"
+check_agent_contract "runtime documents investigator policy" '| `issue-investigator` | `gpt-5.6-terra` | `medium` |' "$RUNTIME"
+check_agent_contract "runtime documents reviewer policy" '| `reviewer` | `gpt-5.6-terra` | `high` |' "$RUNTIME"
+check_agent_contract "runtime documents content author policy" '| `content-author` | `gpt-5.6-terra` | `medium` |' "$RUNTIME"
+check_agent_contract "runtime documents normalizer policy" '| `codex-review-normalizer` / `claude-review-normalizer` | `gpt-5.6-luna` | `high` |' "$RUNTIME"
+check_agent_contract "runtime documents Luna scope" '`developer` と `test-fixer` でLunaを使うのは、方針・対象範囲・受け入れ条件が明確な実装と品質ゲート修正に限定する。' "$RUNTIME"
+check_agent_contract "runtime documents Sol escalation" '`gpt-5.6-sol` / `high` へ昇格する。' "$RUNTIME"
+check_agent_contract "guide documents developer policy" '`developer` は `gpt-5.6-luna` / `xhigh`' "$AGENT_GUIDE"
+check_agent_contract "guide documents test fixer policy" '`test-fixer` は `gpt-5.6-luna` / `high`' "$AGENT_GUIDE"
+check_agent_contract "guide documents Terra policies" '`issue-investigator` と `content-author` は `gpt-5.6-terra` / `medium`、`reviewer` は `gpt-5.6-terra` / `high`' "$AGENT_GUIDE"
+check_agent_contract "guide documents normalizer policy" '`codex-review-normalizer` と `claude-review-normalizer` は `gpt-5.6-luna` / `high`' "$AGENT_GUIDE"
+check_agent_contract "guide documents Luna scope" '`developer` と `test-fixer` でLunaを使うのは、決定済みの方針・対象範囲・受け入れ条件に従う実装と、変更起因の品質ゲート失敗の最小修正に限る。' "$AGENT_GUIDE"
+check_agent_contract "guide documents Sol escalation" '`gpt-5.6-sol` / `high` へ昇格する。' "$AGENT_GUIDE"
 
 # ---- エージェント起動フェーズの整合 ----
 check_agent_contract "reviewer runs in phase 5" 'issue-dev-orchestrate のレビュー段階で使用する' .ai/agents/reviewer.md

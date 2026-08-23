@@ -56,9 +56,16 @@
 
 `.codex/agents/*.toml` に登録するエージェント**自身**のモデル設定。別モデルCLIレビューで nested に呼ぶモデル（次節）とは別物である。
 
-- 通常の実装・レビュー・調査・教材執筆・テスト修正には `gpt-5.6-terra` を使う。`developer` と `reviewer` は `high`、その他は `medium` の reasoning effort を使う。
-- `codex-review-normalizer` / `claude-review-normalizer` エージェント自身（レビュー結果の正規化と `docs/design.md` 該当章の照合を担当）には `gpt-5.6-luna` と `high` reasoning effort を使う。照合には仕様の読み取りと判断が必要なため、正規化だけの作業より高い推論を割り当てる。
-- 難易度が高い実装またはセキュリティレビューに限り、該当TOMLの `model` を一時的に `gpt-5.6-sol`、`model_reasoning_effort` を `high` に変更する。作業後は標準設定へ戻す。素の `gpt-5.6` は ChatGPT アカウント認証では使えないため指定しない。
+| 役割 | 標準モデル | reasoning effort | 適用範囲 |
+| --- | --- | --- | --- |
+| `developer` | `gpt-5.6-luna` | `xhigh` | 決定済みの実装方針・対象範囲・受け入れ条件に沿う実装 |
+| `test-fixer` | `gpt-5.6-luna` | `high` | 変更起因の型チェック・Biome・テスト失敗の最小修正 |
+| `issue-investigator` | `gpt-5.6-terra` | `medium` | 調査と実装方針の作成 |
+| `reviewer` | `gpt-5.6-terra` | `high` | 正確性を優先する差分レビュー |
+| `content-author` | `gpt-5.6-terra` | `medium` | 教材・問題の執筆と改訂 |
+| `codex-review-normalizer` / `claude-review-normalizer` | `gpt-5.6-luna` | `high` | 別モデルCLIレビュー結果の正規化と仕様照合 |
+
+`developer` と `test-fixer` でLunaを使うのは、方針・対象範囲・受け入れ条件が明確な実装と品質ゲート修正に限定する。review normalizerは、上表のとおり別モデルCLIレビュー結果の正規化と仕様照合にLunaを使う。仕様が曖昧または矛盾している場合、複数領域をまたぐ設計判断が必要な場合、高難度の実装、またはセキュリティレビューでは、該当TOMLを未コミットのローカル上書きとして一時的に `gpt-5.6-sol` / `high` へ昇格する。品質ゲートの実行およびコミットの前に、役割ごとの標準設定へ復元する。素の `gpt-5.6` は ChatGPT アカウント認証では使えないため指定しない。
 
 ## 別モデルCLIレビューのモデル方針
 
