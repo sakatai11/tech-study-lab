@@ -373,13 +373,13 @@ check_agent_contract "runtime documents investigator policy" '| `issue-investiga
 check_agent_contract "runtime documents reviewer policy" '| `reviewer` | `gpt-5.6-terra` | `high` |' "$RUNTIME"
 check_agent_contract "runtime documents content author policy" '| `content-author` | `gpt-5.6-terra` | `medium` |' "$RUNTIME"
 check_agent_contract "runtime documents normalizer policy" '| `codex-review-normalizer` / `claude-review-normalizer` | `gpt-5.6-luna` | `high` |' "$RUNTIME"
-check_agent_contract "runtime documents Luna scope" 'Lunaは、方針・対象範囲・受け入れ条件が明確な実装と品質ゲート修正に限定する。' "$RUNTIME"
+check_agent_contract "runtime documents Luna scope" '`developer` と `test-fixer` でLunaを使うのは、方針・対象範囲・受け入れ条件が明確な実装と品質ゲート修正に限定する。' "$RUNTIME"
 check_agent_contract "runtime documents Sol escalation" '`gpt-5.6-sol` / `high` へ昇格する。' "$RUNTIME"
 check_agent_contract "guide documents developer policy" '`developer` は `gpt-5.6-luna` / `xhigh`' "$AGENT_GUIDE"
 check_agent_contract "guide documents test fixer policy" '`test-fixer` は `gpt-5.6-luna` / `high`' "$AGENT_GUIDE"
 check_agent_contract "guide documents Terra policies" '`issue-investigator` と `content-author` は `gpt-5.6-terra` / `medium`、`reviewer` は `gpt-5.6-terra` / `high`' "$AGENT_GUIDE"
 check_agent_contract "guide documents normalizer policy" '`codex-review-normalizer` と `claude-review-normalizer` は `gpt-5.6-luna` / `high`' "$AGENT_GUIDE"
-check_agent_contract "guide documents Luna scope" 'Lunaの適用範囲は、決定済みの方針・対象範囲・受け入れ条件に従う実装と、変更起因の品質ゲート失敗の最小修正に限る。' "$AGENT_GUIDE"
+check_agent_contract "guide documents Luna scope" '`developer` と `test-fixer` でLunaを使うのは、決定済みの方針・対象範囲・受け入れ条件に従う実装と、変更起因の品質ゲート失敗の最小修正に限る。' "$AGENT_GUIDE"
 check_agent_contract "guide documents Sol escalation" '`gpt-5.6-sol` / `high` へ昇格する。' "$AGENT_GUIDE"
 
 # ---- エージェント起動フェーズの整合 ----
