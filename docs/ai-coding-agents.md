@@ -88,7 +88,9 @@ Claude Codeは `.claude/agents/<name>.md` のシンボリックリンクを介�
 
 Codexは `.codex/agents/<name>.toml` でカスタムエージェントを登録する。TOMLには少なくとも `name`、`description`、`developer_instructions` を定義し、`developer_instructions` から対応する `.ai/agents/<name>.md` を読む。
 
-標準モデルは `gpt-5.6-terra`。`developer` と `reviewer` は high reasoning effort、その他は medium とする。CodeRabbit結果の正規化だけは `gpt-5.6-luna` / low とする。難易度の高い実装またはセキュリティレビュー時だけ、対象エージェントを一時的に `gpt-5.6` / high へ上げ、完了後に標準設定へ戻す。
+役割ごとの標準モデルは次のとおりとする。`developer` は `gpt-5.6-luna` / `xhigh`、`test-fixer` は `gpt-5.6-luna` / `high`、`issue-investigator` と `content-author` は `gpt-5.6-terra` / `medium`、`reviewer` は `gpt-5.6-terra` / `high`、`codex-review-normalizer` と `claude-review-normalizer` は `gpt-5.6-luna` / `high` を使う。
+
+Lunaの適用範囲は、決定済みの方針・対象範囲・受け入れ条件に従う実装と、変更起因の品質ゲート失敗の最小修正に限る。仕様の曖昧さ・矛盾、複数領域にまたがる設計判断、高難度実装、またはセキュリティレビューが必要な場合は、該当エージェントを一時的に `gpt-5.6-sol` / `high` へ昇格する。完了後は役割ごとの標準設定へ戻す。素の `gpt-5.6` は指定しない。
 
 Codex環境でカスタム種別を指定できない場合は、通常のサブエージェントに `.ai/agents/<name>.md` を全文読むよう指示して代替する。
 
