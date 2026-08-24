@@ -135,6 +135,75 @@ function decideExternalReview({
   }
 }
 
+function authPreflightRequired({ policy, phase, externalReviewDecision }) {
+  if (policy === 'always') return phase === 'phase-0'
+  if (policy === 'risk-based') {
+    return phase === 'external-review-decision' && externalReviewDecision === 'required'
+  }
+  if (policy === 'never') return false
+  throw new Error('unknown review policy')
+}
+
+function sameCliIdentity(left, right) {
+  return (
+    left?.cliName === right.cliName &&
+    left?.version === right.version &&
+    left?.checkCommand === right.checkCommand
+  )
+}
+
+function decideAuthPreflight({
+  policy,
+  phase,
+  externalReviewDecision,
+  skillRunId,
+  cli,
+  currentAuth,
+  authError = false,
+}) {
+  if (!authPreflightRequired({ policy, phase, externalReviewDecision })) {
+    return { action: 'skip' }
+  }
+  if (
+    !authError &&
+    currentAuth?.authReady === true &&
+    currentAuth.skillRunId === skillRunId &&
+    sameCliIdentity(currentAuth, cli)
+  ) {
+    return { action: 'reuse' }
+  }
+  return { action: 'run-preflight' }
+}
+
+function serializeAuthReadyRecord({ cli, checkedAt, authReady }) {
+  if (authReady !== true) throw new Error('only ready authentication can be persisted')
+  return {
+    cliName: cli.cliName,
+    version: cli.version,
+    checkCommand: cli.checkCommand,
+    checkedAt,
+    authReady: true,
+  }
+}
+
+function applyAuthCheckResult({ skillRunId, cli, checkedAt, result }) {
+  if (result === 'sandbox-unauthenticated') {
+    return { action: 'recheck-outside-sandbox', loginRequested: false }
+  }
+  if (result === 'outside-sandbox-unauthenticated') {
+    return { action: 'request-login', loginRequested: true }
+  }
+  if (result !== 'authenticated') throw new Error('unknown authentication result')
+
+  const persistedRecord = serializeAuthReadyRecord({ cli, checkedAt, authReady: true })
+  return {
+    action: 'ready',
+    loginRequested: false,
+    authState: { skillRunId, ...persistedRecord },
+    persistedRecord,
+  }
+}
+
 function hasExactRuleIds(actual, expected) {
   return (
     actual.length === expected.length &&
@@ -284,6 +353,19 @@ const baseState = {
   },
 }
 
+const claudeCli = {
+  cliName: 'Claude CLI',
+  version: '1.2.3',
+  checkCommand: '.ai/scripts/run-claude-review.sh auth status',
+}
+
+const readyAuth = applyAuthCheckResult({
+  skillRunId: 'run-1',
+  cli: claudeCli,
+  checkedAt: '2026-08-24T00:00:00Z',
+  result: 'authenticated',
+}).authState
+
 function createRequiredFindingState() {
   return addDiscoveryFinding(baseState, {
     source: '[reviewer]',
@@ -294,6 +376,176 @@ function createRequiredFindingState() {
 }
 
 const cases = [
+  {
+    name: 'always requires auth preflight in phase zero',
+    run: () =>
+      decideAuthPreflight({
+        policy: 'always',
+        phase: 'phase-0',
+        skillRunId: 'run-1',
+        cli: claudeCli,
+      }),
+    expected: { action: 'run-preflight' },
+  },
+  {
+    name: 'always does not repeat auth preflight outside phase zero',
+    run: () =>
+      decideAuthPreflight({
+        policy: 'always',
+        phase: 'external-review-decision',
+        externalReviewDecision: 'required',
+        skillRunId: 'run-1',
+        cli: claudeCli,
+      }),
+    expected: { action: 'skip' },
+  },
+  {
+    name: 'risk-based requires auth preflight only for a required external review',
+    run: () => [
+      decideAuthPreflight({
+        policy: 'risk-based',
+        phase: 'external-review-decision',
+        externalReviewDecision: 'required',
+        skillRunId: 'run-1',
+        cli: claudeCli,
+      }).action,
+      decideAuthPreflight({
+        policy: 'risk-based',
+        phase: 'external-review-decision',
+        externalReviewDecision: 'not-required-by-policy',
+        skillRunId: 'run-1',
+        cli: claudeCli,
+      }).action,
+    ],
+    expected: ['run-preflight', 'skip'],
+  },
+  {
+    name: 'never does not require auth preflight',
+    run: () =>
+      decideAuthPreflight({
+        policy: 'never',
+        phase: 'phase-0',
+        skillRunId: 'run-1',
+        cli: claudeCli,
+      }),
+    expected: { action: 'skip' },
+  },
+  {
+    name: 'ready authentication is reused once within the same skill run',
+    run: () => {
+      const actions = [
+        decideAuthPreflight({
+          policy: 'always',
+          phase: 'phase-0',
+          skillRunId: 'run-1',
+          cli: claudeCli,
+        }).action,
+        decideAuthPreflight({
+          policy: 'always',
+          phase: 'phase-0',
+          skillRunId: 'run-1',
+          cli: claudeCli,
+          currentAuth: readyAuth,
+        }).action,
+      ]
+      return {
+        actions,
+        preflightRuns: actions.filter((action) => action === 'run-preflight').length,
+      }
+    },
+    expected: { actions: ['run-preflight', 'reuse'], preflightRuns: 1 },
+  },
+  {
+    name: 'auth error, CLI identity changes, and a new skill run require rechecking',
+    run: () => [
+      decideAuthPreflight({
+        policy: 'always',
+        phase: 'phase-0',
+        skillRunId: 'run-1',
+        cli: claudeCli,
+        currentAuth: readyAuth,
+        authError: true,
+      }).action,
+      decideAuthPreflight({
+        policy: 'always',
+        phase: 'phase-0',
+        skillRunId: 'run-1',
+        cli: { ...claudeCli, cliName: 'Other CLI' },
+        currentAuth: readyAuth,
+      }).action,
+      decideAuthPreflight({
+        policy: 'always',
+        phase: 'phase-0',
+        skillRunId: 'run-1',
+        cli: { ...claudeCli, version: '2.0.0' },
+        currentAuth: readyAuth,
+      }).action,
+      decideAuthPreflight({
+        policy: 'always',
+        phase: 'phase-0',
+        skillRunId: 'run-2',
+        cli: claudeCli,
+        currentAuth: readyAuth,
+      }).action,
+    ],
+    expected: ['run-preflight', 'run-preflight', 'run-preflight', 'run-preflight'],
+  },
+  {
+    name: 'sandbox unauthenticated result requires an outside-sandbox recheck before login',
+    run: () =>
+      applyAuthCheckResult({
+        skillRunId: 'run-1',
+        cli: claudeCli,
+        checkedAt: '2026-08-24T00:00:00Z',
+        result: 'sandbox-unauthenticated',
+      }),
+    expected: { action: 'recheck-outside-sandbox', loginRequested: false },
+  },
+  {
+    name: 'outside-sandbox unauthenticated result requests login',
+    run: () =>
+      applyAuthCheckResult({
+        skillRunId: 'run-1',
+        cli: claudeCli,
+        checkedAt: '2026-08-24T00:00:00Z',
+        result: 'outside-sandbox-unauthenticated',
+      }),
+    expected: { action: 'request-login', loginRequested: true },
+  },
+  {
+    name: 'persisted auth record contains only allowlisted metadata',
+    run: () => {
+      const result = applyAuthCheckResult({
+        skillRunId: 'run-secret',
+        cli: {
+          ...claudeCli,
+          token: 'token-must-not-persist',
+          accountId: 'account-must-not-persist',
+          stdout: 'raw-output-must-not-persist',
+          stderr: 'raw-error-must-not-persist',
+        },
+        checkedAt: '2026-08-24T00:00:00Z',
+        result: 'authenticated',
+      })
+      return {
+        keys: Object.keys(result.persistedRecord).sort(),
+        serialized: JSON.stringify(result.persistedRecord),
+      }
+    },
+    expected: {
+      keys: ['authReady', 'checkCommand', 'checkedAt', 'cliName', 'version'],
+      serialized:
+        '{"cliName":"Claude CLI","version":"1.2.3","checkCommand":".ai/scripts/run-claude-review.sh auth status","checkedAt":"2026-08-24T00:00:00Z","authReady":true}',
+    },
+    assert: (actual, expected) => {
+      assert.deepEqual(actual.keys, expected.keys)
+      assert.equal(actual.serialized, expected.serialized)
+      assert.doesNotMatch(actual.serialized, /token-must-not-persist/)
+      assert.doesNotMatch(actual.serialized, /account-must-not-persist/)
+      assert.doesNotMatch(actual.serialized, /raw-(output|error)-must-not-persist/)
+      assert.doesNotMatch(actual.serialized, /run-secret/)
+    },
+  },
   {
     name: 'discovery uses the complete cumulative range',
     run: () => ({ stage: 'discovery', range: 'develop...HEAD' }),
