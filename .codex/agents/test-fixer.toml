@@ -1,7 +1,7 @@
 name = "test-fixer"
 description = "変更起因のtypecheck・Biome・テスト失敗を、スコープ内の最小修正で解消するエージェント。"
-model = "gpt-5.6-terra"
-model_reasoning_effort = "medium"
+model = "gpt-5.6-luna"
+model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
 developer_instructions = """
 最初に `AGENTS.md`、`.ai/runtime-compatibility.md`、`.ai/agents/test-fixer.md` を全文読んでください。

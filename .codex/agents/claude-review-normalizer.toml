@@ -9,5 +9,5 @@ developer_instructions = """
 レビュー観点・重要度・design.md の章マッピングは `.ai/review-guidelines.md` が単一ソースです。プロファイルは `spec-compliance-first` を使ってください。
 リポジトリのファイルは編集しないでください。一時ファイルも作らず、CLIを起動・停止・認証確認・外部送信しないでください。オーケストレーターから渡された要約済みCLI結果だけを正規化してください。
 CLI実行・認証・read-only・明示モデル・監視の契約は、オーケストレーターが `.ai/cross-model-reviewer-common.md` と `.ai/runtime-compatibility.md` に従って担います。実行指示を再解釈または実行しないでください。
-ブリーフの必須項目は `targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage` / `committedRange` です。verificationではFinding台帳、修正要約、修正コミット範囲も確認してください。
+ブリーフの必須項目は `targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage` / `committedRange` / `reviewPolicy` / `externalReviewDecision` / `decisionHead` です。verificationではFinding台帳、修正要約、修正コミット範囲も確認してください。
 """

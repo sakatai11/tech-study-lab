@@ -86,6 +86,7 @@ tech-study-lab/
 
 - web 側の wrangler 設定に `services: [{ "binding": "API", "service": "<API Worker 名>", "entrypoint": "InternalApi" }]` を宣言し、Server 側の `hc` には `getCloudflareContext().env.API.fetch` をカスタム `fetch` として渡す。
 - Service Binding 経由でも `hc<AppType>` の型安全 RPC はそのまま維持される（差し替わるのは fetch 実装のみで、パス・メソッド・型は不変。baseURL のホスト名はダミーでよい）。
+- web Worker の Next.js Cache Components / PPR が使う Incremental Cache は、API や D1 とは分離した専用 R2 bucket を `NEXT_INC_CACHE_R2_BUCKET` として bind する。時間ベース再検証は SQLite Durable Object の `NEXT_CACHE_DO_QUEUE` で処理し、`WORKER_SELF_REFERENCE` から同じ web Worker の再検証 entrypoint を呼ぶ。OpenNext の dummy cache / queue は本番で使用しない。
 
 #### 本番アクセス境界（Issue #112）
 
@@ -203,13 +204,14 @@ SM-2 の計算式（`packages/shared/src/srs/sm2.ts`）の周辺で、実装時�
 
 ## 7. フロントエンド画面構成
 
-`apps/web`（Next.js App Router）の画面・ルーティング設計。ビジュアルモックアップ（正式版：[`docs/mockups/DevPath Unified.html`](./mockups/DevPath%20Unified.html)。検討経緯は [`docs/mockups/README.md`](./mockups/README.md)）で確定した画面セットを正式スコープとする。Walking Skeleton（§6：セキュリティ > XSS > 教材1本 + 4択3問）は本章のうち `/`・`/learn/...`・`/quiz/...` を貫通させる最小構成であり、本章の画面数と Walking Skeleton の対象範囲は別物である。
+`apps/web`（Next.js App Router）の画面・ルーティング設計。ビジュアルモックアップ（正式版：[`docs/mockups/DevPath Unified.html`](./mockups/DevPath%20Unified.html)。検討経緯は [`docs/mockups/README.md`](./mockups/README.md)）で確定した画面セットを正式スコープとする。Walking Skeleton（§6：セキュリティ > XSS > 教材1本 + 4択3問）は本章のうち `/home`・`/learn/...`・`/quiz/...` を貫通させる最小構成であり、本章の画面数と Walking Skeleton の対象範囲は別物である。
 
 ### 7.1 ルート構成
 
 | ルート | 役割 | データ経路 | レンダリング／キャッシュ方針 | 主導線 |
 | --- | --- | --- | --- | --- |
-| `/` ダッシュボード | **今日の復習（due）が主役**。学習統計（正答率・学習時間・連続学習日数）・学習コントリビューション（草＝日次解答数ヒートマップ）・領域別習得状況・最近のアクティビティ・次のレッスン導線を併せ持つ | due 件数・統計値・草は API（Server loader → `hc`） | PPR streaming 対象。静的シェルと、due 件数・統計を読む非キャッシュのユーザー固有 async Server Component を `<Suspense>` で分離する（API 未接続のため実装は未着手） | 「復習を始める」→ `/review`、「続きから」→ `/learn/...` |
+| `/` 公開トップ | 個人開発者向けの AI 駆動ソフトウェア学習ラボを説明し、「教材を読む → 4択で確かめる → SRSで復習する」学習ループを示す。明確なログイン CTA から `/home` へ進む | なし。プロダクト説明だけを静的に表示する | 静的 RSC。`AppShell`・dashboard loader・API client・Service Binding・due-count Client hook/provider を import せず、ユーザー固有データを読まない | 「ログインして学習を始める」→ `/home` |
+| `/home` ダッシュボード | **今日の復習（due）が主役**。学習統計（正答率・学習時間・連続学習日数）・学習コントリビューション（草＝日次解答数ヒートマップ）・領域別習得状況・最近のアクティビティ・次のレッスン導線を併せ持つ | due 件数・統計値・草は API（Server loader → `hc`） | PPR streaming 対象。静的 shell と、due 件数 API を読む非キャッシュのユーザー固有 async Server Component を `<Suspense>` で分離（実装済み）。統計・草の API 統合は未実装 | 「復習を始める」→ `/review`、「続きから」→ `/learn/...` |
 | `/domains` スキルツリー | カリキュラムを `devpath tree` 風の**ディレクトリツリー**で俯瞰する（§8.7）。レッスンごとに done ✓ / current ▶（進捗バー・START）/ locked 🔒 を表示し、クリアで次ノードが解放。コンテンツ未整備の領域はツリー下部に `content/<domain>/ [locked]` として表示し非活性 | 領域別集計は API（`GET /domains`） | 未実装。画面実装時は静的シェルと非キャッシュのユーザー固有領域を分離する。PPR streaming 対象への追加は別途判断する | done 行 → `/learn/[domain]/[topic]`、current 行 → 教材本文 |
 | `/learn/[domain]/[topic]` レッスン一覧 | トピック内のレッスン一覧（初期は XSS 1本） | ビルド時バンドル済み content（RSC） | `generateStaticParams` と `'use cache'` で全件を build 時に prerender。PPR streaming 対象外 | 各レッスンへ |
 | `/learn/[domain]/[topic]/[lesson]` 教材本文 | Markdown 本文表示 | ビルド時バンドル済み content（RSC。本文の初期取得・描画にはAPI不要）・閲覧記録のみAPI（最小Client recorder） | `generateStaticParams` と `'use cache'` で全件を build 時に prerender。PPR streaming 対象外 | 「問題を解く →」`/quiz/[lesson]` |
@@ -225,12 +227,13 @@ SM-2 の計算式（`packages/shared/src/srs/sm2.ts`）の周辺で、実装時�
 - **Quiz 表示コンポーネント**：問題・解説・intro 内容・結果導線を表示 props で受け取り、画面フェーズと問題送りを管理する再利用可能な Client Component として設計する。`/quiz`（レッスン全問）・`/review`（due 問題）・「間違えた問題だけ」（`wrongOnly`）では、Server loader / mapper が組み立てる ViewModel と表示 props の供給元だけを差し替える。解答 mutation と通信 state は共通の Client hook が担当する。
 - **問題なしの扱い**：`QuizInteractive` は `questions` が空の場合に「出題できる問題がありません」を明示表示し、開始 CTA は表示しない。設定済みの戻り先（`resultHomeHref` / `resultHomeLabel`）は維持する。
 - **Review の空キュー判定**：`/review` は mapper 後の joined 表示件数と API の `hasMore` を Server Component で判定する。joined 表示件数 0・`hasMore: false` は通常の「今日は復習済みです」カード、joined 表示件数 0・`hasMore: true` は bundled content と保存済み review state の不整合として error boundary へ送る。joined 表示件数が 1 以上なら `hasMore` の値を問わず `ReviewRunner` を表示する（§4.5・§9.2）。
-- **結果サマリの動線（出し分け）**：`/quiz` は学習の前進が目的 → 「次のレッスンへ」。`/review` は due 消化が目的 → 「ホームへ」（残があれば継続）。両者で「間違えた問題だけ復習」を提供。
+- **結果サマリの動線（出し分け）**：`/quiz` は学習の前進が目的 → 「次のレッスンへ」。`/review` は due 消化が目的 → 「ホームへ」（`/home`、残があれば継続）。両者で「間違えた問題だけ復習」を提供。
 - **イントロ・演習・結果の状態遷移（URL は変えない）**：演習・復習とも 1 ルート内で `intro → exercise → result` のクライアント状態遷移を持つ（別 URL に切らない。モックの実装モデルに一致）。`intro` は開始前の確認（対象レッスンの概要／due 件数・滞留日数のプレビュー）に専念し、`exercise` は 1 問ずつ即時採点、`result` はスコア・問題ごとの正誤一覧・出し分けアクションを表示する。初回データ（問題・解説、`/review` は due queue）は Server loader で ViewModel 化して props で渡し、状態遷移そのものは Client Component が持つ（§8.5・§9.4 の `QuizInteractive` と同じ設計）。結果表示は `/quiz` と `/review` で共通コンポーネントとして再利用する。
 - **ID 設計**：`lessonId` / `questionId` は**グローバル一意**。学習導線は階層 URL（`/learn/...`）、演習・復習はフラット URL（`/quiz/[lesson]`・`/review`）。
-- **レイアウト（サイドバー / ボトムタブ）**：PC は左サイドバー（ロゴ＋テーマトグル＋ダッシュボード／教材／演習／復習（due件数バッジ）／アナリティクス／スキルツリー）、本文は右側 1 カラム。SP は上部アプリバー（ロゴ＋ストリーク表示＋テーマトグル）＋下部固定タブバー（**ホーム／教材／演習／復習（dueバッジ）／ツリーの5項目**）。「演習」「復習」ナビ項目は直前に扱っていたレッスン（未着手なら先頭レッスン）を対象とする簡易ヒューリスティックで遷移先を決定する（MVP は XSS 1本のため実質固定）。SP のタブバーはスペース都合で 5 項目に絞り、「アナリティクス（`/analytics`）」へはダッシュボードの「すべて表示」リンクから遷移する。「設定」は将来の公開機能（認証等、§1 スコープ外）向けで、MVP ではナビに置かない。
-- **ユーザー**：ログイン UI なし。API（Hono）側が固定 `user_id` を権威的に注入する。将来公開時は「固定値を返す関数」を「認証から `user_id` を引く関数」に差し替えるだけで、画面・API 契約は不変。
-- **`cacheComponents` / PPR**：`cacheComponents` は NextConfig のアプリケーション全体に効く top-level switch であり、有効化済みである。**PPR streaming の対象は `/` と `/review` のみ**とするが、この限定は他の App Router route を Cache Components の build ルールから除外しない（§12.8）。`/review` は静的シェルを先に返し、`<Suspense fallback={<ReviewQueueFallback />}>` の内側でユーザー固有データを読む async Server Component をストリーミング分離する。due 件数・統計・review queue は API が `user_id` を権威的に注入し、web の共有キャッシュキーに `user_id` を含められないため、`'use cache'`・`cacheLife`・`cacheTag`・`revalidateTag` を使わない。共有キャッシュによるユーザー間データ混入を防ぐためであり、解答後の鮮度回復は既存方針どおり Client Component の `router.refresh()` で行う。`/domains`・`/analytics` は未実装であり、画面実装時に同じ静的シェル／非キャッシュ動的領域の分離を適用する予定だが、PPR streaming 対象への追加は別途判断する。
+- **レイアウト（サイドバー / ボトムタブ）**：`/home` 以下の学習画面では、PC は左サイドバー（ロゴ＋テーマトグル＋ダッシュボード／教材／演習／復習（due件数バッジ）／アナリティクス／スキルツリー）、本文は右側 1 カラム。SP は上部アプリバー（ロゴ＋ストリーク表示＋テーマトグル）＋下部固定タブバー（**ホーム／教材／演習／復習（dueバッジ）／ツリーの5項目**）。ダッシュボード／ホームのナビゲーション先は `/home` とする。「演習」「復習」ナビ項目は直前に扱っていたレッスン（未着手なら先頭レッスン）を対象とする簡易ヒューリスティックで遷移先を決定する（MVP は XSS 1本のため実質固定）。SP のタブバーはスペース都合で 5 項目に絞り、「アナリティクス（`/analytics`）」へはダッシュボードの「すべて表示」リンクから遷移する。「設定」は将来の公開機能（認証等、§1 スコープ外）向けで、MVP ではナビに置かない。
+- **公開・認証境界**：`/` は公開の静的プロダクト入口である。`/home` とユーザー向け学習ルート（`/learn/...`・`/quiz/...`・`/review`・将来の `/domains`・`/analytics`）は本番で Cloudflare Access により保護する。この issue ではアプリ内のログイン・セッションを実装せず、公開トップの「ログインして学習を始める」は `/home` へリンクするだけとする。Cloudflare Access Application/Policy と route pattern（`/` は公開、`/home` とユーザー向け route は保護）の設定・デプロイ後検証は Issue #35 の責務である。
+- **ユーザー**：アプリ管理のログイン UI・セッションは持たない。API（Hono）側が固定 `user_id` を権威的に注入する。将来公開時は「固定値を返す関数」を「認証から `user_id` を引く関数」に差し替えるだけで、画面・API 契約は不変。
+- **`cacheComponents` / PPR**：`cacheComponents` は NextConfig のアプリケーション全体に効く top-level switch であり、有効化済みである。**PPR streaming の対象は `/home` と `/review` のみ**とするが、この限定は他の App Router route を Cache Components の build ルールから除外しない（§12.8）。`/` はユーザー固有データを読まない静的 RSC とする。`/home` と `/review` は静的 shell の内側でユーザー固有データを `<Suspense>` によりストリーミング分離する。`/review` は `<Suspense fallback={<ReviewQueueFallback />}>` の内側で async Server Component を読む。due 件数・統計・review queue は API が `user_id` を権威的に注入し、web の共有キャッシュキーに `user_id` を含められないため、`'use cache'`・`cacheLife`・`cacheTag`・`revalidateTag` を使わない。共有キャッシュによるユーザー間データ混入を防ぐためであり、解答後の鮮度回復は既存方針どおり Client Component の `router.refresh()` で行う。`/domains`・`/analytics` は未実装であり、画面実装時に同じ静的シェル／非キャッシュ動的領域の分離を適用する予定だが、PPR streaming 対象への追加は別途判断する。
 - **スタイリング**：Tailwind CSS ＋ Dev-Native Neo Flat × Terminal デザインシステム（ダークファースト）。詳細トークン・コンポーネント文法・ゲーミフィケーション表現の実装区分は §8.7。
 
 ### 7.3 画面構成から要請される API（参考）
@@ -239,8 +242,8 @@ SM-2 の計算式（`packages/shared/src/srs/sm2.ts`）の周辺で、実装時�
 
 HTTP 入出力、Zod スキーマの実装状況、後続エンドポイントの planned 状態は [API 契約カタログ](./api-spec.html) を参照する。本節は画面から要請される API の高水準な一次仕様として維持する。
 
-- `POST /answers` — 1 問解答の記録 → SRS 更新。リクエスト `{ questionId, selectedIndex, responseTimeMs? }`、レスポンス `{ isCorrect, correctIndex }`。正誤判定は API が D1 の `questions`（4.4）を照合して行う権威側（7.2）
-- `POST /lesson-views` — 教材の閲覧を記録。strict なリクエスト `{ lessonId }` を受け、middleware が注入した `userId` のみを使用して `lesson_views` へ記録し、`201 { recorded: true }` を返す。クライアントは `userId` を送らない。重複排除、配送保証、lesson の存在確認はこの最小ログでは行わない。
+- `POST /answers` — 1 問解答の記録 → SRS 更新。リクエスト `{ questionId, selectedIndex, responseTimeMs? }`、レスポンス `{ isCorrect, correctIndex }`。正誤判定は API が D1 の `questions`（4.4）を照合して行う権威側（7.2）。検証済みの middleware 注入 `userId` ごとに、この endpoint 専用の 60 秒固定窓で 60 回までを受理する（§10.3.1）。
+- `POST /lesson-views` — 教材の閲覧を記録。strict なリクエスト `{ lessonId }` を受け、middleware が注入した `userId` のみを使用して `lesson_views` へ記録し、`201 { recorded: true }` を返す。クライアントは `userId` を送らない。重複排除、配送保証、lesson の存在確認はこの最小ログでは行わない。検証済みの middleware 注入 `userId` ごとに、この endpoint 専用の 60 秒固定窓で 30 回までを受理する（§10.3.1）。
 - `GET /review/queue` — due 問題の `question_id` ＋ SRS メタと、次バッチの有無 `hasMore` を返す（本文はフロントがビルド時データから解決）。APIが`dueAt`昇順・最大20件を保証する（§4.5）
 - `GET /dashboard/due-count` — ダッシュボードの due 件数
 - `GET /domains` — 4 領域それぞれの習得率（習得済み問題数 / 全問題数）・トピック数・レッスン数を返す（`/domains`・ダッシュボードの領域別カードで共用）
@@ -268,7 +271,8 @@ HTTP 入出力、Zod スキーマの実装状況、後続エンドポイント�
 apps/web/src/
 ├── app/                      # ルートのみ（page.tsx / layout.tsx）。薄く保つ
 │   ├── layout.tsx            # サイドバー（PC）/ ボトムタブ（SP）＋本文1カラム（§7.2）
-│   ├── page.tsx              # / ダッシュボード
+│   ├── page.tsx              # / 公開トップ（静的・APIなし）
+│   ├── home/page.tsx         # /home ダッシュボード（PPR、ユーザー固有領域は Suspense）
 │   ├── domains/              # スキルツリー（学習領域の俯瞰）
 │   ├── learn/[domain]/[topic]/...   # レッスン一覧・教材本文（RSC）
 │   ├── quiz/[lesson]/        # 演習（page が Server loader で初期化 → Client が intro/exercise/result 状態を持つ）
@@ -337,13 +341,13 @@ apps/web/src/
 
 ### 8.3 Server / Client コンポーネント境界
 
-- **教材・集計系（`/`・`/learn/...`・`/domains`・`/analytics`）= RSC**。ビルド時バンドル済みデータを読む。ダッシュボードの due 件数・統計値、`/domains` の習得率、`/analytics` の各集計のような初回表示に必要な集計値は Server loader から `hc` で読む。教材本文ページは、本文の初期取得・描画には **API 不要**であり、閲覧記録だけは最小Client recorderからAPIを呼ぶ。
+- **公開トップ・教材・集計系（`/`・`/home`・`/learn/...`・`/domains`・`/analytics`）= RSC**。`/` はプロダクト説明と `/home` への CTA だけを静的に描画し、Server loader・API・Service Binding・due-count hook/provider を使わない。`/home` のダッシュボード due 件数・統計値、`/domains` の習得率、`/analytics` の各集計のようなユーザー固有の初回表示値は Server loader から `hc` で読む。教材本文ページは、本文の初期取得・描画には **API 不要**であり、閲覧記録だけは最小Client recorderからAPIを呼ぶ。
 - **演習系（Quiz / Review）= Client Component**。イントロ・演習・結果の画面フェーズと現在問題を持ち、Client hook が返す採点結果・通信状態を表示へ反映するため。初回データは Server loader（`/quiz` は content、`/review` は due queue）で ViewModel 化し props で渡す（§9.2）。
 - **レイアウト / ヘッダー = Server**。
 - 実行場所はディレクトリ名ではなく import 境界で決まる。`apps/web/src/features/*/server` は `apps/web/src/app/**/page.tsx` など Server Component から import する限りサーバー側で実行される。誤用防止のため `import 'server-only'` を必須にする。
 - Server Actions は使わず、動的データは Hono API に一本化する。初回取得は Server loader、mutation は Client hook から `hc` で実行する。Server data の再取得は Client Component が `router.refresh()` で Server loader を再実行する（API 契約を `apps/api` に一本化し、RPC 型を素直に効かせる）。
   - **不採用の根拠**：変更系を Hono に一本化することで ①契約（`AppType`）と `user_id` 注入点（§7.2）を単一ソースに保てる、②Hono+Cloudflare の学習目的（§2）を素通りしない。Server Actions の利点（フォームのプログレッシブエンハンスメント等）は、即時採点の Client 主導 Quiz・変更系が `POST /answers` ほぼ一択の本アプリでは恩恵が小さい。重いフォームが必要になった時点で再検討する。
-- **キャッシュ方針**：`cacheComponents` を有効化済みである。`export const dynamic` と `export const dynamicParams` は Cache Components と併用できないため、**page-level の route segment config を置かない**。ユーザー固有データを読む Server loader は先頭で `connection()` を呼び、リクエスト時実行であることを宣言する（Cloudflare context の解決と現在時刻の読み取りは prerender 中に行えない）。PPR streaming の対象は `/` と `/review` のみであり、`/review` では静的シェルの内側に `<Suspense fallback={<ReviewQueueFallback />}>` を置く。fallback の後に、非キャッシュの `ReviewUserContent` がストリーミングされ、joined 表示件数と `hasMore` に応じて route error boundary、通常の空キュー、または表示可能な問題が1件以上ある場合のみ `ReviewRunner` を選ぶ（§7.1・§9.2・§9.4）。due 件数・統計・review queue には `'use cache'`・`cacheLife`・`cacheTag`・`revalidateTag` を使わない。API 側で権威的に注入する `user_id` が web の共有キャッシュキーに含まれず、共有キャッシュでユーザー間データが混入し得るためである。feature の `api/` adapter にキャッシュ方針を持ち込まず、解答後・画面復帰時の鮮度回復は Client 側の `router.refresh()` で RSC を再実行して担う。同一リクエスト内で複数の `<Suspense>` 境界が同じ queue を参照する場合は、React の `cache()`（リクエストスコープ）で loader を1回に畳む。これはユーザー横断の共有キャッシュではない。`/domains`・`/analytics` は未実装であり、実装時に同じ分離を適用するが、PPR streaming 対象に含めるかは別途判断する。
+- **キャッシュ方針**：`cacheComponents` を有効化済みである。`export const dynamic` と `export const dynamicParams` は Cache Components と併用できないため、**page-level の route segment config を置かない**。ユーザー固有データを読む Server loader は先頭で `connection()` を呼び、リクエスト時実行であることを宣言する（Cloudflare context の解決と現在時刻の読み取りは prerender 中に行えない）。PPR streaming の対象は `/home` と `/review` のみであり、`/home` は静的な dashboard composition の内側で due 件数を読む `DashboardDueCard` を `<Suspense>` に分離する。`/review` では静的シェルの内側に `<Suspense fallback={<ReviewQueueFallback />}>` を置く。fallback の後に、非キャッシュの `ReviewUserContent` がストリーミングされ、joined 表示件数と `hasMore` に応じて route error boundary、通常の空キュー、または表示可能な問題が1件以上ある場合のみ `ReviewRunner` を選ぶ（§7.1・§9.2・§9.4）。`/` は静的 RSC のままとする。due 件数・統計・review queue には `'use cache'`・`cacheLife`・`cacheTag`・`revalidateTag` を使わない。API 側で権威的に注入する `user_id` が web の共有キャッシュキーに含まれず、共有キャッシュでユーザー間データが混入し得るためである。feature の `api/` adapter にキャッシュ方針を持ち込まず、解答後・画面復帰時の鮮度回復は Client 側の `router.refresh()` で RSC を再実行して担う。同一リクエスト内で複数の `<Suspense>` 境界が同じ queue を参照する場合は、React の `cache()`（リクエストスコープ）で loader を1回に畳む。これはユーザー横断の共有キャッシュではない。`/domains`・`/analytics` は未実装であり、実装時に同じ分離を適用するが、PPR streaming 対象に含めるかは別途判断する。
 ### 8.4 `hc` クライアントの取り回し
 
 - `apps/api` が `AppType` をエクスポート → `apps/web` は `hc<AppType>` で型安全クライアントを生成（既存 `apps/api/src/client.ts` のファクトリを利用。Service Binding の fetch を渡せるよう、ファクトリは `hc` の第2引数（`fetch` オプション等）を受け取れる形に拡張する）。
@@ -1161,6 +1165,7 @@ Walking Skeleton の中核となる 1 リクエストの処理フロー：
 ```
 zValidator（shared の answerRequestSchema で入力検証）
   → userId を context から取得（§10.4 の middleware が注入済み）
+  → 永続書き込み用 Rate Limiting binding を確認（§10.3.1）
   → services/answer-service の submitAnswer(deps, input)
       1. questions（content 同期キャッシュ §4.4）から answerIndex を取得
          → 無ければ QuestionNotFoundError
@@ -1269,6 +1274,21 @@ export function createAnswerDeps(db: DrizzleD1Database): AnswerDeps {
 
 `GET /review/queue`・`GET /dashboard/due-count` も同型（route → `review-service` → `review-repository`）。due 判定は `dueAt <= now` を SQL の where 句で行い、`isDue`（sm2）と意味を一致させる。
 
+### 10.3.1 永続書き込みのレート制限と観測
+
+`POST /answers` と `POST /lesson-views` は、正規の連続解答・教材再表示を禁止せず、認証済みリクエストによる無制限の D1 書き込みだけを抑制する。Wrangler に endpoint ごとに別の Cloudflare Workers Rate Limiting binding を定義し、route は `zValidator` と `userContext` の後、service / repository / D1 書き込みの前に binding を確認する。public entrypoint と Service Binding の named internal entrypoint は同じ route を再利用するため、どちらの経路にもこの確認が適用される。
+
+| endpoint | binding | key | fixed window | 受理上限 | 根拠 |
+| --- | --- | --- | --- | --- | --- |
+| `POST /answers` | `ANSWERS_RATE_LIMITER` | `userId:POST /answers` | 60 秒 | 60 | 通常の Quiz / Review の再試行と複数解答を許容しながら、answer log と SRS 更新の過剰書き込みを抑える |
+| `POST /lesson-views` | `LESSON_VIEWS_RATE_LIMITER` | `userId:POST /lesson-views` | 60 秒 | 30 | 教材画面の通常の再表示を許容しながら、fire-and-forget の閲覧ログ連打を抑える |
+
+- key は検証済みの `userContext.userId` と安定した endpoint 識別子から構成する。IP アドレス、`CF-Connecting-IP`、クライアント指定 header・body の識別子は使用しない。
+- binding が `{ success: false }` を返した場合、共通の `{ error: { code, message } }` envelope で `429 { error: { code: 'RATE_LIMITED', message: 'Too Many Requests' } }` と `Retry-After: 60` を返す。この場合 service を呼ばず、`answer_logs`、`lesson_views`、`srs_states` を変更しない。
+- binding の呼び出しが例外になる、または実行環境で利用できない場合は、保護を可用性より優先して fail closed とする。共通 envelope の `503 { error: { code: 'RATE_LIMIT_UNAVAILABLE', message: 'Rate limit unavailable' } }` を返し、service / D1 path を呼ばない。
+- Workers Rate Limiting は Cloudflare location（PoP）ごとの制限であり、同じ key でも location 間でカウンタを共有しない。カウンタは非同期更新のため eventually consistent な abuse reduction であり、グローバルに厳密な quota や課金用の台帳として扱わない。
+- 429、limiter failure、成功した永続書き込みには、`event`・`endpoint`・`writeUnit` だけを含む PII-free の構造化 Worker log を出す。運用者は Workers Logs の event 別件数（rate-limited / limiter failure / persistent write）と D1 dashboard の `answer_logs` / `lesson_views` / `srs_states` の書き込み・容量メトリクスを同じ時間帯で突合する。Analytics Engine は既存の制約だけではログが不足すると判断されたときに別 issue で追加する。
+
 ### 10.4 user_id の権威的注入（middleware）
 
 §7.2 の「API が固定 `user_id` を権威的に注入する」を Hono middleware として実体化する。
@@ -1297,6 +1317,8 @@ export const userContext = createMiddleware<AppEnv>(async (c, next) => {
 // env.ts
 export type Bindings = {
   DB: D1Database
+  ANSWERS_RATE_LIMITER: RateLimit
+  LESSON_VIEWS_RATE_LIMITER: RateLimit
   WEB_ORIGIN: string  // CORS 許可オリジン（wrangler.toml の vars で環境ごとに設定）
   ACCESS_ISSUER?: string  // Cloudflare Access JWT の完全一致 issuer（本番のみ必須）
   ACCESS_AUDIENCE?: string  // Cloudflare Access application の AUD（本番のみ必須）
@@ -1367,6 +1389,7 @@ export const dueCountResponseSchema = z.object({
 - service は **HTTP を知らないドメインエラー**（`services/errors.ts` の `QuestionNotFoundError` 等）を throw する。
 - route 層の `app.onError` がドメインエラーを HTTP ステータスへ写像し、レスポンス形を `{ error: { code, message } }` に統一する。未知のエラーは 500（`INTERNAL`）とし、詳細メッセージを外に漏らさない。
 - Hono や middleware が意図して throw した `HTTPException` は、例外が持つステータスとレスポンスを保持する。未知の例外として 500 に上書きしない。
+- レート制限の 429 と limiter failure の 503 も shared の error response schema を使い、route から type-safe に返す。前者には `Retry-After: 60` を必ず付ける（§10.3.1）。
 
 ```typescript
 // index.ts（抜粋）
@@ -1393,14 +1416,14 @@ app.onError((err, c) => {
 
 ### 10.8 content → D1 同期スクリプト
 
-§4.2 の seed/upsert を `apps/api/scripts/sync-content.ts`（`pnpm --filter @tsl/api content:sync`）として実装する。パース・ペイロード生成・SQL 生成の純粋ロジックは `apps/api/src/content-sync.ts` に切り出し（§10.2）、`scripts/sync-content.ts` はそれを呼び出す Node CLI 部（`fs` 読み取り・`wrangler d1 execute` 実行）に徹する。
+§4.2 の seed/upsert を `apps/api/scripts/sync-content.ts` として実装する。ローカル同期は `pnpm --filter @tsl/api content:sync`、本番 D1 同期は `pnpm --filter @tsl/api content:sync:remote` を使う。パース・ペイロード生成・SQL 生成の純粋ロジックは `apps/api/src/content-sync.ts` に切り出し（§10.2）、`scripts/sync-content.ts` はそれを呼ぶ Node CLI 部（`fs` 読み取り・`wrangler d1 execute` 実行）に徹する。
 
 - **パース経路は §8.2 と共有**：`gray-matter` でパースし `packages/shared` の content Zod（`validatedMcqSchema` 含む）で検証する。フロントのビルド時バンドルと同じ検証を通った内容だけが D1 に入る。
 - 同期対象は `questions` テーブルの**最小フィールドのみ**（`question_id`, `answer_index`。§4.4）。本文・選択肢・解説は D1 に入れない。
-- 検証済みデータから upsert SQL（`INSERT ... ON CONFLICT(question_id) DO UPDATE`）を生成し、`wrangler d1 execute`（ローカルは `--local`、本番は `--remote`）で流す。**冪等**（何度実行しても同じ結果）にする。
+- 検証済みデータから upsert SQL（`INSERT ... ON CONFLICT(question_id) DO UPDATE`）を生成し、`wrangler d1 execute tech-study-lab --local|--remote --file <generated-sql>` の固定引数で流す。`content:sync` は `--local` 固定、`content:sync:remote` は `--remote` 固定とし、CLI はこのいずれかの完全一致モード以外（任意引数・追加引数を含む）を SQL 生成・Wrangler 実行の前に拒否する。**冪等**（何度実行しても同じ結果）にする。
 - 固定ユーザー行（`users`）の seed も同スクリプトで行う（`user-context.ts` の `FIXED_USER_ID` と同じ値）。
 - content から削除された問題は**物理削除しない**（`answer_logs`・`srs_states` が参照するため）。出題対象からは自然に外れる（フロントのバンドルに含まれず、due queue の join でも解決されない）。整理が必要になったら論理削除フラグを検討する。
-- 実行タイミング：ローカル開発では手動、本番はデプロイフロー（CI）に組み込む。
+- 実行タイミング：現在の MVP は §12.4 の手動フローで実行する。`content:sync:remote` は外部 D1 を変更するため、実行ごとに対象データベース・生成 SQL・実行順を確認し、明示的な承認を得てから実行する。Walking Skeleton の本番確認後に CI 化を検討する場合も、remote D1 の変更または deploy の前に、保護された production 環境での明示的な承認ゲートを必須とする。
 
 #### ローカル動的開発 seed
 
@@ -1419,9 +1442,12 @@ app.onError((err, c) => {
 | --- | --- | --- |
 | SRS（`sm2`） | 純粋関数の単体テスト（**実装済み**） | Node |
 | service | deps をインメモリ fake に差し替えた単体テスト。採点の正誤・SRS 遷移の呼び出し・エラー系（問題未存在）を重点 | Node |
+| 永続書き込みの rate limit | platform limiter interface を固定時計の fake に差し替えた単体テスト。Wrangler の enforcement 設定（binding 名・受理上限・window）は `wrangler.toml` を一次ソースとし、テストの境界 fixture はその値を明示する。N-1 / N / N+1、次 fixed window の reset、key の endpoint 分離、binding failure を重点 | Node |
 | route + dal | `@cloudflare/vitest-pool-workers`（ローカル D1 に対する実クエリ）で happy path を最低 1 本（`POST /answers` の貫通） | workerd |
 
 - service の deps を「フラットな関数の束」（§10.3）にしているのはこのため。fake は素朴なオブジェクトリテラルで書け、モックライブラリを要しない。
+- rate limiter も Workers binding を小さい interface に隔離し、route integration では deny / throw fake を渡して 429 / 503 時の D1 無変更を確認する。実 platform の PoP-local な eventual consistency 自体をローカル test の正確な quota と取り違えない。
+- 現在の `@cloudflare/vitest-pool-workers@0.8.0` は内部で Wrangler `4.0.0` を使い、`ratelimits` を未知の top-level field として扱うため、workerd integration test で実 Rate Limit binding の happy path を供給できない。この制限下では integration test の fake で route の 429 / 503 契約を検証する。production 用 Wrangler `4.103.0` による `pnpm --filter @tsl/api build` の dry-run を必須とし、その出力で `ANSWERS_RATE_LIMITER`（60 / 60 秒）と `LESSON_VIEWS_RATE_LIMITER`（30 / 60 秒）の両 binding が解決されることを確認する。
 
 ```typescript
 // services/answer-service.test.ts（fake deps の例）
@@ -1527,12 +1553,17 @@ topic frontmatter の `order` も同様に表示順（0 以上の整数、小さ
 | 名前 | 種別 | 参照箇所 | local | production |
 | --- | --- | --- | --- | --- |
 | `DB` | D1 バインディング（api） | dal（Drizzle） | `wrangler dev` のローカル D1 | `apps/api/wrangler.toml` の `d1_databases`（要実 ID。§12.4） |
-| `WEB_ORIGIN` | var（api） | CORS 許可オリジン（§10.5） | `http://localhost:3000` | web Worker の公開 URL |
-| `ACCESS_ISSUER` | var（api） | Cloudflare Access JWT の issuer 検証（§3.1） | 未設定（両 Access 設定なし＋loopback URL のみ bypass） | Cloudflare Access team domain の issuer。Issue #35 で設定 |
-| `ACCESS_AUDIENCE` | var（api） | Cloudflare Access JWT の audience 検証（§3.1） | 未設定（両 Access 設定なし＋loopback URL のみ bypass） | API 用 Access application の AUD。Issue #35 で設定 |
+| `ANSWERS_RATE_LIMITER` | Rate Limiting バインディング（api） | `POST /answers` の永続書き込みガード（§10.3.1） | `apps/api/wrangler.toml` の `[[ratelimits]]`（`namespace_id = "11301"`、60 回 / 60 秒） | local と同じ top-level `[[ratelimits]]` を API Worker へデプロイ |
+| `LESSON_VIEWS_RATE_LIMITER` | Rate Limiting バインディング（api） | `POST /lesson-views` の永続書き込みガード（§10.3.1） | `apps/api/wrangler.toml` の `[[ratelimits]]`（`namespace_id = "11302"`、30 回 / 60 秒） | local と同じ top-level `[[ratelimits]]` を API Worker へデプロイ |
+| `WEB_ORIGIN` | var（api） | CORS 許可オリジン（§10.5） | `http://localhost:3000` | API deploy 時に `--var WEB_ORIGIN:<web-public-url>` として明示指定 |
+| `ACCESS_ISSUER` | var（api） | Cloudflare Access JWT の issuer 検証（§3.1） | 未設定（両 Access 設定なし＋loopback URL のみ bypass） | API deploy 時に `--var ACCESS_ISSUER:<access-issuer>` として明示指定 |
+| `ACCESS_AUDIENCE` | var（api） | Cloudflare Access JWT の audience 検証（§3.1） | 未設定（両 Access 設定なし＋loopback URL のみ bypass） | API deploy 時に `--var ACCESS_AUDIENCE:<access-audience>` として明示指定 |
 | `API` | Service Binding（web） | Server loader（§3.1・§8.4） | なし（URL フォールバック） | `services: [{ binding: "API", service: "tech-study-lab-api", entrypoint: "InternalApi" }]` |
+| `NEXT_INC_CACHE_R2_BUCKET` | R2 バインディング（web） | OpenNext Incremental Cache（§12.8） | `opennextjs-cloudflare preview` のローカル R2 | `tech-study-lab-web-cache`。`opennextjs-cloudflare deploy` が build 済み cache を投入 |
+| `NEXT_CACHE_DO_QUEUE` | SQLite Durable Object バインディング（web） | OpenNext の時間ベース再検証 Queue（§12.8） | `opennextjs-cloudflare preview` のローカル DO | `DOQueueHandler`。初回 web deploy の migration で作成 |
+| `WORKER_SELF_REFERENCE` | Service Binding（web） | `DOQueueHandler` から web Worker への再検証要求（§12.8） | `tech-study-lab-web` のローカル自己参照 | `tech-study-lab-web` の自己参照 |
 | `API_BASE_URL` | env（web / Server 専用） | Server loader のローカルフォールバック（§8.4） | `http://localhost:8787` | 設定しない（Service Binding必須。欠落時はfail-fast） |
-| `NEXT_PUBLIC_API_BASE_URL` | ビルド時 env（web / Client） | Client hook（§8.4） | `http://localhost:8787` | api Worker の公開 URL |
+| `NEXT_PUBLIC_API_BASE_URL` | ビルド時 env（web / Client） | Client hook（§8.4） | `http://localhost:8787` | web の build/deploy 時に api Worker の公開 URL を環境変数として明示指定 |
 
 ### 12.3 ローカル開発手順
 
@@ -1544,16 +1575,19 @@ topic frontmatter の `order` も同様に表示順（0 以上の整数、小さ
 
 ### 12.4 本番デプロイ手順（順序が仕様）
 
-初回のみ：`wrangler d1 create tech-study-lab` を実行し、発行された `database_id` を `apps/api/wrangler.toml` に設定する。
+初回のみ：`wrangler d1 create tech-study-lab` を実行し、発行された非秘密の `database_id` を `apps/api/wrangler.toml` に設定して Git 管理する。外部リソースの作成・更新を伴うため、実行前に対象アカウント・D1・Worker・入力値を確認し、明示的な承認を得る。`WEB_ORIGIN`・`ACCESS_ISSUER`・`ACCESS_AUDIENCE` の production 値はリポジトリや `.env` に保存しない。
 
-1. **マイグレーション適用**：`wrangler d1 migrations apply tech-study-lab --remote`
-2. **content sync**：`content/` → D1 upsert（`--remote`。§10.8）
-3. **api デプロイ**：`pnpm --filter @tsl/api deploy`
-4. **web デプロイ**：OpenNext ビルド＋デプロイ
+デプロイ前に、API/public Web hostname と Cloudflare Access application / policy の対象を確認する。ブラウザと同じ `Origin` を指定した `OPTIONS`（`POST` と必要 header を含む）が、Access edge で遮断されず Worker の credentialed CORS 応答に到達するか、同等の正しい Access 応答を返すことを実機で確認する。Access cookie が Web と API の実際の hostname で送信されることも確認できるまで、以下を開始しない。
+
+1. **マイグレーション適用**：`pnpm --filter @tsl/api exec wrangler d1 migrations apply tech-study-lab --remote`
+2. **content sync**：`pnpm --filter @tsl/api content:sync:remote`（`content/` → D1 upsert。§10.8）
+3. **api デプロイ**：`pnpm --filter @tsl/api run deploy --var WEB_ORIGIN:<web-public-url> --var ACCESS_ISSUER:<access-issuer> --var ACCESS_AUDIENCE:<access-audience>`。3 値は**毎回すべて**この deploy 実行時だけ明示指定し、Git や `.env` には保存しない。値を省いた bare deploy は禁止する。Wrangler がローカルまたは不完全な vars へ置き換えると、Access は fail closed となり、CORS も失敗し得る。`pnpm deploy` は pnpm 自身のコマンドと衝突するため、package script は必ず `run deploy` で起動し、引数前に追加の `--` を置かない。
+4. **web デプロイ**：初回のみ専用 R2 bucket `tech-study-lab-web-cache` を作成し、`NEXT_INC_CACHE_R2_BUCKET`・`NEXT_CACHE_DO_QUEUE`・`WORKER_SELF_REFERENCE` の各 binding を確認する。その後 `NEXT_PUBLIC_API_BASE_URL=<api-public-url> pnpm --filter @tsl/web run deploy` を実行する。`NEXT_PUBLIC_API_BASE_URL` は OpenNext build 時に必要であり、API の公開 URL を使う。初回 deploy は `DOQueueHandler` の SQLite migration を適用する。`opennextjs-cloudflare deploy` は Worker の更新と build 済み Incremental Cache の R2 への投入を一体で行うため、`wrangler deploy` 単体へ置き換えない。
 
 順序の根拠：**スキーマ → データ → API → 画面** の順なら、各ステップの完了時点で稼働中の旧バージョンが壊れない（マイグレーションが追加中心の後方互換であることが前提。§12.6）。
 
-- MVP は**手動実行**とする。Walking Skeleton 貫通後に GitHub Actions による main ブランチ自動デプロイへ移行する（PR ゲート CI ＝型・lint・test・build は §5 のとおり先行整備）。
+- MVP は**手動実行**とする。Walking Skeleton の本番確認後に GitHub Actions による main ブランチ自動デプロイを検討する。将来の CI でも、remote D1 mutation または deploy の前に保護された production 環境の明示的な承認ゲートを置く（PR ゲート CI ＝型・lint・test・buildは §5 のとおり先行整備）。
+- 各ステップの成功を確認するまで後続ステップへ進まない。失敗時はそこで停止し、後続の migration/content sync/API/Web deploy を実行しない。復旧が必要な場合は、稼働中の既知の Worker version を確認してから、対象と影響を明示した承認を得てロールバックする。
 
 ### 12.5 content 更新の運用ルール
 
@@ -1569,14 +1603,16 @@ content は「web のビルド時バンドル（§8.2）」と「D1 の `questio
 - 本番適用はデプロイ手順の先頭（§12.4 の①）。
 - **破壊的変更（列削除・型変更・NOT NULL 追加）は原則避け、追加中心**とする。やむを得ない場合は「新列追加 → データ移行 → 旧列削除」の多段リリースで行う。
 
-### 12.7 バックアップ・観測（当面の割り切り）
+### 12.7 バックアップ・観測（当面の運用）
 
 - **バックアップ**：教材・問題は Git にあるため、守る対象は D1 の動的データ（`answer_logs` / `srs_states` / `lesson_views`）のみ。当面は必要時に `wrangler d1 export` を手動実行し、マルチユーザー公開時に定期化（Cron 等）を検討する。
-- **観測**：Workers Logs（`console.error`。§10.6 の `onError` から出力）で足りるとする。構造化ログ・外部監視は公開時に再検討。
+- **観測**：§10.3.1 の rate limit / 永続書き込みでは、429・limiter failure・成功した永続書き込みごとに `event`・`endpoint`・`writeUnit` だけを含む PII-free の構造化 Worker log を出す。運用時は Workers Logs の event 別件数と D1 dashboard の `answer_logs` / `lesson_views` / `srs_states` の書き込み・容量メトリクスを同じ時間帯で突合する。`console.error` は §10.6 の未処理エラー出力に限る。Analytics Engine を含む外部監視は、既存のログと D1 メトリクスでは不足すると判断された場合に別 issue で検討する。
 
 ### 12.8 `cacheComponents` の適用条件と検証結果
 
-`cacheComponents` は NextConfig のアプリケーション全体に効く top-level switch である。PPR streaming の対象を `/`・`/review` に限定しても、**全 App Router route が Cache Components の build ルールを満たす必要がある**。有効化にあたって実際に必要だった対応は次のとおり（issue #93 の技術スパイクで確認）。
+`cacheComponents` は NextConfig のアプリケーション全体に効く top-level switch である。PPR streaming の対象を `/home`・`/review` に限定しても、**全 App Router route が Cache Components の build ルールを満たす必要がある**。`/` はユーザー固有データを読まない静的 RSC とする。有効化にあたって実際に必要だった対応は次のとおり（issue #93 の技術スパイクで確認）。
+
+本番の OpenNext runtime では `open-next.config.ts` に R2 Incremental Cache と Durable Object Queue を明示し、web Worker の `wrangler.jsonc` に `NEXT_INC_CACHE_R2_BUCKET`・`NEXT_CACHE_DO_QUEUE`・`WORKER_SELF_REFERENCE` を常設する。未設定時の既定値である dummy cache は読み書き時に失敗し、Cache Components が生成する RSC navigation / prefetch が完了しないため使用禁止とする。`'use cache'` の既定 profile は15分の時間ベース再検証を持つため Queue を省略できない。現状は `revalidateTag` / `revalidatePath` による on-demand revalidation を使わないため Tag Cache は追加しない。将来それらを導入する場合は、その変更と同時に対応する Tag Cache と cache purge を設計する。
 
 - `export const dynamic` / `export const dynamicParams` は併用不可。page-level の route segment config を置かない。
 - 動的セグメントを持つ content route（`/learn/...`・`/quiz/...`）は `generateStaticParams` で全 params を列挙し、page 本体に `'use cache'` を置く。両方が無いと `Uncached data was accessed outside of <Suspense>` で prerender が停止する。
@@ -1601,4 +1637,4 @@ content は「web のビルド時バンドル（§8.2）」と「D1 の `questio
 
 #### 残る制約
 
-現行 CI は `next build` のみであり、OpenNext preview のストリーミングを検知できない。**ビルド成功だけを回帰の根拠にしてはならない。** PPR の描画・streaming に関わる変更では、`opennextjs-cloudflare preview` での手動確認を併せて行う。上記 upstream issue は未 close のため、OpenNext / Next を更新した際は再確認する。
+現行 CI は `next build` のみであり、OpenNext preview のストリーミングや本番 R2 cache binding の欠落を検知できない。**ビルド成功だけを回帰の根拠にしてはならない。** PPR の描画・streaming または cache binding に関わる変更では、R2 binding を含む `opennextjs-cloudflare preview` で full GET と `?_rsc=...` navigation の両方を確認する。上記 upstream issue は未 close のため、OpenNext / Next を更新した際は再確認する。

@@ -15,7 +15,8 @@
     "build": "wrangler deploy --dry-run --outdir dist",
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply tech-study-lab --local",
-    "content:sync": "tsx scripts/sync-content.ts",
+    "content:sync": "tsx scripts/sync-content.ts --local",
+    "content:sync:remote": "tsx scripts/sync-content.ts --remote",
     "db:seed:dev": "tsx scripts/seed-dev.ts"
   },
   "dependencies": {

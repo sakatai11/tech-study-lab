@@ -35,6 +35,24 @@ export const lessonViewResponseSchema = z.object({
 })
 export type LessonViewResponse = z.infer<typeof lessonViewResponseSchema>
 
+export const rateLimitedErrorResponseSchema = z.object({
+  error: z.object({
+    code: z.literal('RATE_LIMITED'),
+    message: z.literal('Too Many Requests'),
+  }),
+})
+export type RateLimitedErrorResponse = z.infer<typeof rateLimitedErrorResponseSchema>
+
+export const rateLimitUnavailableErrorResponseSchema = z.object({
+  error: z.object({
+    code: z.literal('RATE_LIMIT_UNAVAILABLE'),
+    message: z.literal('Rate limit unavailable'),
+  }),
+})
+export type RateLimitUnavailableErrorResponse = z.infer<
+  typeof rateLimitUnavailableErrorResponseSchema
+>
+
 export const reviewQueueResponseSchema = z.object({
   hasMore: z.boolean(),
   items: z

@@ -541,8 +541,9 @@
           <li>
             <code>cacheComponents</code> は有効化済み。<code>dynamic</code> /
             <code>dynamicParams</code> の route segment config は併用できないため置かない。
-            PPR streaming の対象は <code>/</code> と <code>/review</code> のみで、後者では
-            静的シェルに <code>ReviewQueueFallback</code> を表示してから、queue 完了後は
+            <code>/</code> は API・Service Binding・ユーザー固有 hook を読まない静的な公開トップです。
+            PPR streaming の対象は <code>/home</code> と <code>/review</code> のみで、前者は
+            <code>DashboardDueCard</code>、後者は静的シェルに <code>ReviewQueueFallback</code> を表示してから、queue 完了後は
             <code>ReviewUserContent</code> が joined 表示件数と <code>hasMore</code> に応じて
             route error boundary、空キュー、または1件以上の場合だけ
             <code>ReviewRunner</code> を選ぶ。
@@ -550,7 +551,7 @@
         </ul>
         <div class="note">
           <strong>Cache Components / PPR 方針</strong><br />
-          due 件数・ダッシュボード統計・review queue は API が <code>user_id</code> を
+          <code>/home</code> の due 件数・ダッシュボード統計・<code>/review</code> の queue は API が <code>user_id</code> を
           権威的に注入する一方、web の共有キャッシュキーには含まれません。したがって
           <code>'use cache'</code>・<code>cacheLife</code>・<code>cacheTag</code>・
           <code>revalidateTag</code> は使わず、Suspense による分離だけを行います。解答後は
@@ -560,6 +561,11 @@
           <code>/learn/...</code> と <code>/quiz/...</code> は content 由来の prerender を維持し、
           PPR streaming の対象外です（<code>generateStaticParams</code> と
           <code>'use cache'</code> で全件を build 時に生成します）。
+        </div>
+        <div class="note">
+          <strong>公開・Access 境界</strong><br />
+          <code>/</code> は公開のプロダクト入口で、明確な「ログインして学習を始める」CTA から <code>/home</code> へ遷移します。アプリ管理のログイン・セッションは追加しません。
+          本番の Cloudflare Access Application/Policy では <code>/</code> を公開し、<code>/home</code> と <code>/learn/...</code>・<code>/quiz/...</code>・<code>/review</code>・将来のユーザー向け route を保護します。route pattern の設定とデプロイ後検証は Issue #35 の責務です。
         </div>
         <div class="note">
           <strong>検証結果と残る制約</strong><br />
@@ -620,6 +626,38 @@
             しない。
           </li>
         </ul>
+      </section>
+
+      <section>
+        <h2>公開トップと学習ルート</h2>
+        <p>
+          <code>/</code> は静的なプロダクト説明だけを返します。認証済みの学習体験は
+          <code>/home</code> から始まり、既存の dashboard shell・due card・統計・学習導線を維持します。
+        </p>
+        <div class="diagram">
+          <div class="diagram-toolbar" aria-label="公開トップと学習ルートの図操作">
+            <button type="button" data-zoom-action="in">拡大</button>
+            <button type="button" data-zoom-action="out">縮小</button>
+            <button type="button" data-zoom-action="reset">リセット</button>
+          </div>
+          <pre class="mermaid">
+flowchart LR
+  classDef public fill:#f6f8fa,stroke:#d1d5db,color:#1f2328;
+  classDef user fill:#eef6ff,stroke:#93c5fd,color:#1f2328;
+  classDef dynamic fill:#ecfdf5,stroke:#86efac,color:#1f2328;
+
+  top["/\n公開・静的 product top\nAPI / Service Binding なし"]:::public
+  cta["ログインして学習を始める CTA"]:::public
+  home["/home\ndashboard shell\nPPR"]:::user
+  due["DashboardDueCard\n非キャッシュ user data"]:::dynamic
+  review["/review\nPPR"]:::user
+  learning["/learn/...・/quiz/...\ncontent prerender"]:::user
+
+  top --&gt; cta --&gt; home
+  home --&gt; due
+  home --&gt; review
+  home --&gt; learning</pre>
+        </div>
       </section>
 
       <section>
@@ -835,6 +873,12 @@ flowchart LR
 
       <section>
         <h2>ディレクトリの役割</h2>
+        <pre><code>apps/web/src/app/
+├── page.tsx                   # / 公開トップ（静的・APIなし）
+├── home/page.tsx              # /home dashboard（PPR）
+├── review/                    # /review（PPR）
+├── learn/[domain]/[topic]/... # content prerender
+└── quiz/[lesson]/             # content prerender + Client state</code></pre>
         <pre><code>features/quiz/
 ├── client/
 │   ├── components/       # Client Components・表示操作 state

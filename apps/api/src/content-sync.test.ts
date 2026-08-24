@@ -4,10 +4,15 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 import {
+  CONTENT_SYNC_REMOTE_CONFIRMATION_PHRASE,
   type ContentSourceFile,
   createContentSyncPayload,
   createContentSyncSql,
+  createContentSyncSqlSummary,
   createLocalD1ExecuteArgs,
+  createRemoteD1ExecuteArgs,
+  isContentSyncRemoteConfirmation,
+  parseContentSyncExecutionMode,
 } from './content-sync'
 import { FIXED_USER_ID } from './fixed-user'
 
@@ -175,5 +180,66 @@ describe('createLocalD1ExecuteArgs', () => {
       '--file',
       '/tmp/content-sync.sql',
     ])
+  })
+})
+
+describe('createRemoteD1ExecuteArgs', () => {
+  it('uses the configured production database and remote-only wrangler command', () => {
+    expect(createRemoteD1ExecuteArgs('/tmp/content-sync.sql')).toEqual([
+      'd1',
+      'execute',
+      'tech-study-lab',
+      '--remote',
+      '--file',
+      '/tmp/content-sync.sql',
+    ])
+  })
+})
+
+describe('parseContentSyncExecutionMode', () => {
+  it.each([
+    { args: ['--local'], expected: 'local' },
+    { args: ['--remote'], expected: 'remote' },
+  ] as const)('accepts only the exact $expected mode arguments', ({ args, expected }) => {
+    expect(parseContentSyncExecutionMode(args)).toBe(expected)
+  })
+
+  it.each([
+    { args: [] },
+    { args: ['--unknown'] },
+    { args: ['--local', '--remote'] },
+    { args: ['--remote', '--local'] },
+    { args: ['--remote', '--file', '/tmp/other.sql'] },
+  ])('rejects unknown or extra arguments before execution: %j', ({ args }) => {
+    expect(() => parseContentSyncExecutionMode(args)).toThrow('exactly one of --local or --remote')
+  })
+})
+
+describe('createContentSyncSqlSummary', () => {
+  it('reports deterministic question and SQL statement counts', () => {
+    expect(
+      createContentSyncSqlSummary({
+        userId: FIXED_USER_ID,
+        questions: [
+          { questionId: 'security-xss-01-q1', answerIndex: 0 },
+          { questionId: 'security-xss-01-q2', answerIndex: 2 },
+        ],
+      }),
+    ).toEqual({ questionCount: 2, statementCount: 3 })
+  })
+})
+
+describe('isContentSyncRemoteConfirmation', () => {
+  it('accepts only the exact fixed confirmation phrase', () => {
+    expect(isContentSyncRemoteConfirmation(CONTENT_SYNC_REMOTE_CONFIRMATION_PHRASE)).toBe(true)
+  })
+
+  it.each([
+    '',
+    'SYNC tech-study-lab',
+    `${CONTENT_SYNC_REMOTE_CONFIRMATION_PHRASE} `,
+    ` ${CONTENT_SYNC_REMOTE_CONFIRMATION_PHRASE}`,
+  ])('rejects a non-exact confirmation phrase: %j', (confirmation) => {
+    expect(isContentSyncRemoteConfirmation(confirmation)).toBe(false)
   })
 })
