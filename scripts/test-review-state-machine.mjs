@@ -136,9 +136,14 @@ function decideExternalReview({
 }
 
 function authPreflightRequired({ policy, phase, externalReviewDecision }) {
-  if (policy === 'always') return phase === 'phase-0'
+  if (policy === 'always') {
+    return phase === 'phase-0' || phase === 'external-review-execution'
+  }
   if (policy === 'risk-based') {
-    return phase === 'external-review-decision' && externalReviewDecision === 'required'
+    return (
+      externalReviewDecision === 'required' &&
+      (phase === 'external-review-decision' || phase === 'external-review-execution')
+    )
   }
   if (policy === 'never') return false
   throw new Error('unknown review policy')
@@ -192,6 +197,12 @@ function applyAuthCheckResult({ skillRunId, cli, checkedAt, result }) {
   }
   if (result === 'outside-sandbox-unauthenticated') {
     return { action: 'request-login', loginRequested: true }
+  }
+  if (result === 'connection-error') {
+    return { action: 'report-transport-failure', loginRequested: false }
+  }
+  if (result === 'cli-not-found') {
+    return { action: 'report-cli-missing', loginRequested: false }
   }
   if (result !== 'authenticated') throw new Error('unknown authentication result')
 
@@ -388,16 +399,17 @@ const cases = [
     expected: { action: 'run-preflight' },
   },
   {
-    name: 'always does not repeat auth preflight outside phase zero',
+    name: 'always reuses ready authentication during external review execution',
     run: () =>
       decideAuthPreflight({
         policy: 'always',
-        phase: 'external-review-decision',
+        phase: 'external-review-execution',
         externalReviewDecision: 'required',
         skillRunId: 'run-1',
         cli: claudeCli,
+        currentAuth: readyAuth,
       }),
-    expected: { action: 'skip' },
+    expected: { action: 'reuse' },
   },
   {
     name: 'risk-based requires auth preflight only for a required external review',
@@ -460,7 +472,7 @@ const cases = [
     run: () => [
       decideAuthPreflight({
         policy: 'always',
-        phase: 'phase-0',
+        phase: 'external-review-execution',
         skillRunId: 'run-1',
         cli: claudeCli,
         currentAuth: readyAuth,
@@ -498,6 +510,19 @@ const cases = [
     expected: ['run-preflight', 'run-preflight', 'run-preflight', 'run-preflight', 'run-preflight'],
   },
   {
+    name: 'never does not recheck after an auth error',
+    run: () =>
+      decideAuthPreflight({
+        policy: 'never',
+        phase: 'external-review-execution',
+        skillRunId: 'run-1',
+        cli: claudeCli,
+        currentAuth: readyAuth,
+        authError: true,
+      }),
+    expected: { action: 'skip' },
+  },
+  {
     name: 'sandbox unauthenticated result requires an outside-sandbox recheck before login',
     run: () =>
       applyAuthCheckResult({
@@ -518,6 +543,27 @@ const cases = [
         result: 'outside-sandbox-unauthenticated',
       }),
     expected: { action: 'request-login', loginRequested: true },
+  },
+  {
+    name: 'connection failure and missing CLI are not reported as login requirements',
+    run: () => [
+      applyAuthCheckResult({
+        skillRunId: 'run-1',
+        cli: claudeCli,
+        checkedAt: '2026-08-24T00:00:00Z',
+        result: 'connection-error',
+      }),
+      applyAuthCheckResult({
+        skillRunId: 'run-1',
+        cli: claudeCli,
+        checkedAt: '2026-08-24T00:00:00Z',
+        result: 'cli-not-found',
+      }),
+    ],
+    expected: [
+      { action: 'report-transport-failure', loginRequested: false },
+      { action: 'report-cli-missing', loginRequested: false },
+    ],
   },
   {
     name: 'persisted auth record contains only allowlisted metadata',
