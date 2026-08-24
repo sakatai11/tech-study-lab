@@ -145,7 +145,9 @@ D1 側（動的データ）:
 
 D1 側（content 同期キャッシュ。4.2 の seed/upsert 対象）:
 
-- `questions`: `{ question_id, answer_index }`（`content/` の `answerIndex` を同期。本文・選択肢・解説は持たず、正誤判定に必要な最小フィールドのみ保持。7.2「正誤判定はAPIが権威」の照合元）
+- `questions`: `{ question_id, answer_index, domain, topic, lesson_id, is_active }`（`content/` の正答と集計用メタデータを同期。本文・選択肢・解説は持たず、正誤判定と `GET /domains` の集計に必要な最小フィールドのみ保持。`is_active` は直近の content sync に含まれる問題だけを `1` とし、過去の解答ログ・SRS状態を壊さないため問題行は物理削除しない）
+
+content sync は、現在の content に含まれる問題の metadata と `answer_index` を先に冪等 upsert し、最後に1回の `UPDATE questions SET is_active = CASE ... END` で現在の問題集合を確定する。同期途中で全件を inactive に倒さないため、upsert 失敗時は直前の active 集合を維持する。現在の問題集合が空の場合も、最終 UPDATE により全行を inactive とする。`GET /domains` は `is_active = 1` の問題だけを対象にし、対象ユーザーの `srs_states.interval_days >= 21` を習得済みとして集計する。
 
 ### 4.5 出題ルール（SRS 運用仕様）
 
@@ -1419,10 +1421,10 @@ app.onError((err, c) => {
 §4.2 の seed/upsert を `apps/api/scripts/sync-content.ts` として実装する。ローカル同期は `pnpm --filter @tsl/api content:sync`、本番 D1 同期は `pnpm --filter @tsl/api content:sync:remote` を使う。パース・ペイロード生成・SQL 生成の純粋ロジックは `apps/api/src/content-sync.ts` に切り出し（§10.2）、`scripts/sync-content.ts` はそれを呼ぶ Node CLI 部（`fs` 読み取り・`wrangler d1 execute` 実行）に徹する。
 
 - **パース経路は §8.2 と共有**：`gray-matter` でパースし `packages/shared` の content Zod（`validatedMcqSchema` 含む）で検証する。フロントのビルド時バンドルと同じ検証を通った内容だけが D1 に入る。
-- 同期対象は `questions` テーブルの**最小フィールドのみ**（`question_id`, `answer_index`。§4.4）。本文・選択肢・解説は D1 に入れない。
+- 同期対象は `questions` テーブルの**最小フィールドのみ**（`question_id`, `answer_index`, `domain`, `topic`, `lesson_id`, `is_active`。§4.4）。本文・選択肢・解説は D1 に入れない。
 - 検証済みデータから upsert SQL（`INSERT ... ON CONFLICT(question_id) DO UPDATE`）を生成し、`wrangler d1 execute tech-study-lab --local|--remote --file <generated-sql>` の固定引数で流す。`content:sync` は `--local` 固定、`content:sync:remote` は `--remote` 固定とし、CLI はこのいずれかの完全一致モード以外（任意引数・追加引数を含む）を SQL 生成・Wrangler 実行の前に拒否する。**冪等**（何度実行しても同じ結果）にする。
 - 固定ユーザー行（`users`）の seed も同スクリプトで行う（`user-context.ts` の `FIXED_USER_ID` と同じ値）。
-- content から削除された問題は**物理削除しない**（`answer_logs`・`srs_states` が参照するため）。出題対象からは自然に外れる（フロントのバンドルに含まれず、due queue の join でも解決されない）。整理が必要になったら論理削除フラグを検討する。
+- content から削除された問題は**物理削除しない**（`answer_logs`・`srs_states` が参照するため）。同期の最後に `is_active = 0` とし、`GET /domains` の集計対象から外す。出題対象からも自然に外れる（フロントのバンドルに含まれず、due queue の join でも解決されない）。
 - 実行タイミング：現在の MVP は §12.4 の手動フローで実行する。`content:sync:remote` は外部 D1 を変更するため、実行ごとに対象データベース・生成 SQL・実行順を確認し、明示的な承認を得てから実行する。Walking Skeleton の本番確認後に CI 化を検討する場合も、remote D1 の変更または deploy の前に、保護された production 環境での明示的な承認ゲートを必須とする。
 
 #### ローカル動的開発 seed

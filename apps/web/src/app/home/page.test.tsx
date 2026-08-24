@@ -20,6 +20,10 @@ vi.mock('@/features/dashboard/server/components/dashboard-due-card', () => ({
   DashboardDueCard: () => <p>due-card</p>,
 }))
 
+vi.mock('@/features/domains/server/components/dashboard-domains', () => ({
+  DashboardDomains: () => <p>domains-card</p>,
+}))
+
 vi.mock('@/features/dashboard/server/load-dashboard', () => ({
   loadDashboardStatic: () => ({
     continueHref: '/learn/security/xss/preventing-xss',

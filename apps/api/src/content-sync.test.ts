@@ -70,9 +70,27 @@ describe('createContentSyncPayload', () => {
     expect(createContentSyncPayload(xssContentFiles(), FIXED_USER_ID)).toEqual({
       userId: FIXED_USER_ID,
       questions: [
-        { questionId: 'security-xss-01-q1', answerIndex: 0 },
-        { questionId: 'security-xss-01-q2', answerIndex: 2 },
-        { questionId: 'security-xss-01-q3', answerIndex: 2 },
+        {
+          questionId: 'security-xss-01-q1',
+          answerIndex: 0,
+          domain: 'security',
+          topic: 'xss',
+          lessonId: 'security-xss-01',
+        },
+        {
+          questionId: 'security-xss-01-q2',
+          answerIndex: 2,
+          domain: 'security',
+          topic: 'xss',
+          lessonId: 'security-xss-01',
+        },
+        {
+          questionId: 'security-xss-01-q3',
+          answerIndex: 2,
+          domain: 'security',
+          topic: 'xss',
+          lessonId: 'security-xss-01',
+        },
       ],
     })
   })
@@ -151,22 +169,41 @@ describe('createContentSyncPayload', () => {
 })
 
 describe('createContentSyncSql', () => {
-  it('creates only idempotent users and questions upserts', () => {
+  it('upserts current metadata and finalizes active membership in one update', () => {
     const sql = createContentSyncSql(
       {
         userId: FIXED_USER_ID,
-        questions: [{ questionId: 'security-xss-01-q1', answerIndex: 2 }],
+        questions: [
+          {
+            questionId: 'security-xss-01-q1',
+            answerIndex: 2,
+            domain: 'security',
+            topic: 'xss',
+            lessonId: 'security-xss-01',
+          },
+        ],
       },
       1_700_000_000_000,
     )
 
     expect(sql).toContain('INSERT INTO users (id, created_at)')
     expect(sql).toContain('ON CONFLICT(id) DO NOTHING')
-    expect(sql).toContain('INSERT INTO questions (question_id, answer_index)')
     expect(sql).toContain(
-      'ON CONFLICT(question_id) DO UPDATE SET answer_index = excluded.answer_index',
+      'INSERT INTO questions (question_id, answer_index, domain, topic, lesson_id, is_active)',
+    )
+    expect(sql).toContain(
+      'ON CONFLICT(question_id) DO UPDATE SET answer_index = excluded.answer_index, domain = excluded.domain, topic = excluded.topic, lesson_id = excluded.lesson_id, is_active = excluded.is_active',
+    )
+    expect(sql).toContain(
+      "UPDATE questions SET is_active = CASE WHEN question_id IN ('security-xss-01-q1') THEN 1 ELSE 0 END",
     )
     expect(sql).not.toContain('DELETE')
+  })
+
+  it('marks all existing questions inactive when the current content set is empty', () => {
+    expect(
+      createContentSyncSql({ userId: FIXED_USER_ID, questions: [] }, 1_700_000_000_000),
+    ).toContain('UPDATE questions SET is_active = 0')
   })
 })
 
@@ -221,11 +258,23 @@ describe('createContentSyncSqlSummary', () => {
       createContentSyncSqlSummary({
         userId: FIXED_USER_ID,
         questions: [
-          { questionId: 'security-xss-01-q1', answerIndex: 0 },
-          { questionId: 'security-xss-01-q2', answerIndex: 2 },
+          {
+            questionId: 'security-xss-01-q1',
+            answerIndex: 0,
+            domain: 'security',
+            topic: 'xss',
+            lessonId: 'security-xss-01',
+          },
+          {
+            questionId: 'security-xss-01-q2',
+            answerIndex: 2,
+            domain: 'security',
+            topic: 'xss',
+            lessonId: 'security-xss-01',
+          },
         ],
       }),
-    ).toEqual({ questionCount: 2, statementCount: 3 })
+    ).toEqual({ questionCount: 2, statementCount: 4 })
   })
 })
 

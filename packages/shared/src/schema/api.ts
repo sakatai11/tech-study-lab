@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { domainKeySchema } from './content'
+
 /**
  * apps/api の入出力契約。
  * zValidator / route返り値(satisfies) / フロント(z.infer) の3経路で共有する
@@ -71,3 +73,21 @@ export const dueCountResponseSchema = z.object({
   dueCount: z.number().int().nonnegative(),
 })
 export type DueCountResponse = z.infer<typeof dueCountResponseSchema>
+
+export const domainSummarySchema = z.object({
+  domain: domainKeySchema,
+  masteredQuestionCount: z.number().int().nonnegative(),
+  totalQuestionCount: z.number().int().nonnegative(),
+  masteryRate: z.number().int().min(0).max(100),
+  topicCount: z.number().int().nonnegative(),
+  lessonCount: z.number().int().nonnegative(),
+})
+export type DomainSummary = z.infer<typeof domainSummarySchema>
+
+export const domainsResponseSchema = z.object({
+  domains: z.array(domainSummarySchema).length(4),
+})
+export type DomainsResponse = z.infer<typeof domainsResponseSchema>
+
+export const domainsRequestSchema = z.object({}).strict()
+export type DomainsRequest = z.infer<typeof domainsRequestSchema>

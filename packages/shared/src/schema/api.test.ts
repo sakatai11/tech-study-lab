@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   answerRequestSchema,
   answerResponseSchema,
+  domainSummarySchema,
+  domainsResponseSchema,
   dueCountResponseSchema,
   lessonViewRequestSchema,
   lessonViewResponseSchema,
@@ -265,5 +267,51 @@ describe('dueCountResponseSchema', () => {
         dueCount: -1,
       }).success,
     ).toBe(false)
+  })
+})
+
+describe('domainSummarySchema', () => {
+  it('accepts a bounded domain summary', () => {
+    expect(
+      domainSummarySchema.safeParse({
+        domain: 'security',
+        masteredQuestionCount: 1,
+        totalQuestionCount: 2,
+        masteryRate: 50,
+        topicCount: 1,
+        lessonCount: 1,
+      }).success,
+    ).toBe(true)
+  })
+
+  it('rejects a mastery rate outside 0..100 or non-integer counts', () => {
+    expect(
+      domainSummarySchema.safeParse({
+        domain: 'security',
+        masteredQuestionCount: 1.5,
+        totalQuestionCount: 2,
+        masteryRate: 101,
+        topicCount: 1,
+        lessonCount: 1,
+      }).success,
+    ).toBe(false)
+  })
+})
+
+describe('domainsResponseSchema', () => {
+  it('requires exactly four domain summaries', () => {
+    const summary = {
+      domain: 'security' as const,
+      masteredQuestionCount: 0,
+      totalQuestionCount: 0,
+      masteryRate: 0,
+      topicCount: 0,
+      lessonCount: 0,
+    }
+
+    expect(
+      domainsResponseSchema.safeParse({ domains: [summary, summary, summary, summary] }).success,
+    ).toBe(true)
+    expect(domainsResponseSchema.safeParse({ domains: [summary] }).success).toBe(false)
   })
 })
