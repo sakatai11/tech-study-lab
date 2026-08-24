@@ -76,7 +76,7 @@ export function createContentSyncSql(payload: ContentSyncPayload, createdAt: num
     `INSERT INTO users (id, created_at) VALUES (${sqlString(payload.userId)}, ${createdAt}) ON CONFLICT(id) DO NOTHING`,
     ...payload.questions.map(
       (question) =>
-        `INSERT INTO questions (question_id, answer_index, domain, topic, lesson_id, is_active) VALUES (${sqlString(question.questionId)}, ${question.answerIndex}, ${sqlString(question.domain)}, ${sqlString(question.topic)}, ${sqlString(question.lessonId)}, 1) ON CONFLICT(question_id) DO UPDATE SET answer_index = excluded.answer_index, domain = excluded.domain, topic = excluded.topic, lesson_id = excluded.lesson_id, is_active = excluded.is_active`,
+        `INSERT INTO questions (question_id, answer_index, domain, topic, lesson_id, is_active) VALUES (${sqlString(question.questionId)}, ${question.answerIndex}, ${sqlString(question.domain)}, ${sqlString(question.topic)}, ${sqlString(question.lessonId)}, 0) ON CONFLICT(question_id) DO UPDATE SET answer_index = excluded.answer_index, domain = excluded.domain, topic = excluded.topic, lesson_id = excluded.lesson_id`,
     ),
     activeMembershipUpdate,
   ]

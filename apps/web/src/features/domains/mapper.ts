@@ -25,16 +25,3 @@ export function domainsToViewModel(
     }),
   }
 }
-
-export function emptyDomainsViewModel(): DomainsViewModel {
-  return domainsToViewModel({
-    domains: (Object.keys(DOMAIN_LABELS) as DomainKey[]).map((domain) => ({
-      domain,
-      masteredQuestionCount: 0,
-      totalQuestionCount: 0,
-      masteryRate: 0,
-      topicCount: 0,
-      lessonCount: 0,
-    })),
-  })
-}

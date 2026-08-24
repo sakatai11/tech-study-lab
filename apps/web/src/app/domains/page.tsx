@@ -6,13 +6,9 @@ import { loadDomains } from '@/features/domains/server/load-domains'
 import { AppShell } from '../_components/app-shell'
 
 async function DomainsUserContent() {
-  try {
-    const viewModel = await loadDomains()
+  const viewModel = await loadDomains()
 
-    return <DomainProgressSection viewModel={viewModel} />
-  } catch {
-    return <DomainProgressFallback />
-  }
+  return <DomainProgressSection viewModel={viewModel} />
 }
 
 export default function DomainsPage() {

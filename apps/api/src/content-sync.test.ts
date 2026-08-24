@@ -192,12 +192,42 @@ describe('createContentSyncSql', () => {
       'INSERT INTO questions (question_id, answer_index, domain, topic, lesson_id, is_active)',
     )
     expect(sql).toContain(
-      'ON CONFLICT(question_id) DO UPDATE SET answer_index = excluded.answer_index, domain = excluded.domain, topic = excluded.topic, lesson_id = excluded.lesson_id, is_active = excluded.is_active',
+      "VALUES ('security-xss-01-q1', 2, 'security', 'xss', 'security-xss-01', 0)",
     )
+    expect(sql).toContain(
+      'ON CONFLICT(question_id) DO UPDATE SET answer_index = excluded.answer_index, domain = excluded.domain, topic = excluded.topic, lesson_id = excluded.lesson_id',
+    )
+    expect(sql).not.toContain('is_active = excluded.is_active')
     expect(sql).toContain(
       "UPDATE questions SET is_active = CASE WHEN question_id IN ('security-xss-01-q1') THEN 1 ELSE 0 END",
     )
     expect(sql).not.toContain('DELETE')
+  })
+
+  it('keeps the previous active set unchanged until the final membership update', () => {
+    const sql = createContentSyncSql(
+      {
+        userId: FIXED_USER_ID,
+        questions: [
+          {
+            questionId: 'security-xss-01-q1',
+            answerIndex: 0,
+            domain: 'security',
+            topic: 'xss',
+            lessonId: 'security-xss-01',
+          },
+        ],
+      },
+      1_700_000_000_000,
+    )
+    const statements = sql.split(';\n')
+    const questionUpsert = statements.find((statement) =>
+      statement.startsWith('INSERT INTO questions'),
+    )
+
+    expect(questionUpsert).toContain("'security-xss-01', 0)")
+    expect(questionUpsert).not.toContain('is_active = excluded.is_active')
+    expect(statements.at(-1)).toContain('UPDATE questions SET is_active = CASE')
   })
 
   it('marks all existing questions inactive when the current content set is empty', () => {

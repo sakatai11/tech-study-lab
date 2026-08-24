@@ -4,7 +4,7 @@ import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import initialMigration from '../drizzle/migrations/0000_flowery_quasar.sql?raw'
 import srsVersionMigration from '../drizzle/migrations/0001_add_srs_version.sql?raw'
-import questionMetadataMigration from '../drizzle/migrations/0002_add_question_metadata.sql?raw'
+import questionMetadataMigration from '../drizzle/migrations/0002_nasty_guardsmen.sql?raw'
 
 import { createReviewDeps } from './dal/review-repository'
 import { FIXED_USER_ID } from './fixed-user'
@@ -93,7 +93,7 @@ describe('core API endpoints', () => {
       { name: '0000_flowery_quasar.sql', queries: migrationQueries(initialMigration) },
       { name: '0001_add_srs_version.sql', queries: migrationQueries(srsVersionMigration) },
       {
-        name: '0002_add_question_metadata.sql',
+        name: '0002_nasty_guardsmen.sql',
         queries: migrationQueries(questionMetadataMigration),
       },
     ])

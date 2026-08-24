@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { domainsToViewModel, emptyDomainsViewModel } from './mapper'
+import { domainsToViewModel } from './mapper'
 
 const response = {
   domains: [
@@ -56,10 +56,5 @@ describe('domainsToViewModel', () => {
       { ...response.domains[2], label: 'バックエンド', firstTopicHref: undefined },
       { ...response.domains[3], label: 'アーキテクチャ', firstTopicHref: undefined },
     ])
-  })
-
-  it('creates four zero-filled cards for an API fallback', () => {
-    expect(emptyDomainsViewModel().domains).toHaveLength(4)
-    expect(emptyDomainsViewModel().domains.every((domain) => domain.masteryRate === 0)).toBe(true)
   })
 })
