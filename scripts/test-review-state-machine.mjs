@@ -432,6 +432,37 @@ const cases = [
     expected: ['run-preflight', 'skip'],
   },
   {
+    name: 'risk-based external review execution reuses readiness and rechecks auth errors',
+    run: () => [
+      decideAuthPreflight({
+        policy: 'risk-based',
+        phase: 'external-review-execution',
+        externalReviewDecision: 'required',
+        skillRunId: 'run-1',
+        cli: claudeCli,
+        currentAuth: readyAuth,
+      }).action,
+      decideAuthPreflight({
+        policy: 'risk-based',
+        phase: 'external-review-execution',
+        externalReviewDecision: 'required',
+        skillRunId: 'run-1',
+        cli: claudeCli,
+        currentAuth: readyAuth,
+        authError: true,
+      }).action,
+      decideAuthPreflight({
+        policy: 'risk-based',
+        phase: 'external-review-execution',
+        externalReviewDecision: 'not-required-by-policy',
+        skillRunId: 'run-1',
+        cli: claudeCli,
+        currentAuth: readyAuth,
+      }).action,
+    ],
+    expected: ['reuse', 'run-preflight', 'skip'],
+  },
+  {
     name: 'never does not require auth preflight',
     run: () =>
       decideAuthPreflight({
