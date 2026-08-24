@@ -483,12 +483,19 @@ const cases = [
       decideAuthPreflight({
         policy: 'always',
         phase: 'phase-0',
+        skillRunId: 'run-1',
+        cli: { ...claudeCli, checkCommand: 'other auth status' },
+        currentAuth: readyAuth,
+      }).action,
+      decideAuthPreflight({
+        policy: 'always',
+        phase: 'phase-0',
         skillRunId: 'run-2',
         cli: claudeCli,
         currentAuth: readyAuth,
       }).action,
     ],
-    expected: ['run-preflight', 'run-preflight', 'run-preflight', 'run-preflight'],
+    expected: ['run-preflight', 'run-preflight', 'run-preflight', 'run-preflight', 'run-preflight'],
   },
   {
     name: 'sandbox unauthenticated result requires an outside-sandbox recheck before login',
