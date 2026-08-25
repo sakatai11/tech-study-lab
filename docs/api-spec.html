@@ -309,7 +309,7 @@
             <article class="rule"><h3>2つのentrypoint</h3><p>公開HTTPは <code>CORS → Access検証 → userContext → routes</code>。web Server loader が使う Service Binding の <code>InternalApi</code> は <code>userContext → routes</code> のみで、同じrouteを共有します。</p></article>
             <article class="rule"><h3>認証（公開entrypoint）</h3><p>Cloudflare Access の <code>Cf-Access-Jwt-Assertion</code> を Worker 側で検証します。未設定・欠落・不一致はすべて <a href="#errors">401 <code>UNAUTHORIZED</code></a>。loopback URL かつ Access 未設定のローカル開発のみ bypass します。</p></article>
             <article class="rule"><h3>エラー形式</h3><p>routeのエラーは原則 <code>{ error: { code, message } }</code>。ただし入力検証の400は現時点で <code>zValidator</code> の既定形式（<code>{ success: false, error: { issues, name } }</code>）です。</p></article>
-            <article class="rule"><h3>永続書き込みのレート制限</h3><p><code>POST /answers</code> は 60秒 / 60回、<code>POST /lesson-views</code> は 60秒 / 30回。超過は <span class="http">429</span> ＋ <code>Retry-After: 60</code>、limiter 自体が使えない場合は fail closed で <span class="http">503</span> です。</p></article>
+            <article class="rule"><h3>永続書き込みのレート制限</h3><p>設定上限は <code>POST /answers</code> が60秒あたり60回、<code>POST /lesson-views</code> が60秒あたり30回。超過時は <span class="http">429</span> ＋ <code>Retry-After: 60</code>、limiter 自体が使えない場合は fail closed で <span class="http">503</span> です。Cloudflare location（PoP）ごとのカウンタで eventually consistent な abuse reduction であり、<strong>厳密なグローバルquotaではありません</strong>（§10.3.1）。</p></article>
           </div>
         </section>
 
@@ -355,7 +355,7 @@
 
             <article class="errorcard">
               <h3><span class="http">429</span> <span class="code-label">RATE_LIMITED</span></h3>
-              <p>永続書き込み（<code>POST /answers</code> / <code>POST /lesson-views</code>）のみ。service を呼ばないため <code>answer_logs</code>・<code>lesson_views</code>・<code>srs_states</code> は変化しません。<code>Retry-After: 60</code> が必ず付きます。</p>
+              <p>永続書き込み（<code>POST /answers</code> / <code>POST /lesson-views</code>）のみ。service を呼ばないため <code>answer_logs</code>・<code>lesson_views</code>・<code>srs_states</code> は変化しません。<code>Retry-After: 60</code> が必ず付きます。設定上限を超えた全リクエストが429になる保証はなく（PoPごと・eventually consistent）、クライアントは429を<strong>受け取ったときに</strong>対処します。</p>
               <figure class="sample">
                 <figcaption><span class="wire danger">429 Too Many Requests</span><span class="meta">Retry-After: 60</span></figcaption>
                 <pre data-lang="json"><code>{
@@ -421,7 +421,7 @@
               <p class="summary">1問の解答をサーバーで採点・記録し、SRS状態を更新します。演習・復習・誤答のみ再挑戦で契約は共通です。</p>
               <div class="badges">
                 <span class="badge">認証: Access（公開entrypoint）</span>
-                <span class="badge rate">レート制限: 60秒 / 60回</span>
+                <span class="badge rate">レート制限: 60秒あたり60回（設定上限）</span>
                 <span class="badge">Zod: <code>answerRequestSchema</code> / <code>answerResponseSchema</code></span>
               </div>
 
@@ -555,7 +555,7 @@ const { isCorrect, correctIndex } = answerResponseSchema.parse(await response.js
   }
 }</code></pre>
                       </figure>
-                      <p class="note">60秒の固定窓で61回目以降。service を呼ばないため書き込みは発生しません。</p>
+                      <p class="note">60秒の固定窓で設定上限（60回）を超えたときに返します。カウンタはPoPごと・非同期更新のため、<strong>超過後のすべてのリクエストが必ず429になるとは限りません。</strong>429を返した場合は service を呼ばないため書き込みは発生しません。</p>
                     </div>
                     <div class="panel">
                       <figure class="sample">
@@ -592,7 +592,7 @@ const { isCorrect, correctIndex } = answerResponseSchema.parse(await response.js
               <p class="summary">教材本文を表示したことを、アナリティクス用の最小ログとして記録します。教材本文そのものはcontent由来の静的RSCであり、このAPIから取得しません。</p>
               <div class="badges">
                 <span class="badge">認証: Access（公開entrypoint）</span>
-                <span class="badge rate">レート制限: 60秒 / 30回</span>
+                <span class="badge rate">レート制限: 60秒あたり30回（設定上限）</span>
                 <span class="badge">Zod: <code>lessonViewRequestSchema</code> / <code>lessonViewResponseSchema</code></span>
               </div>
 
