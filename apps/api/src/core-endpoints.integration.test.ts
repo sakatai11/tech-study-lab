@@ -4,6 +4,7 @@ import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import initialMigration from '../drizzle/migrations/0000_flowery_quasar.sql?raw'
 import srsVersionMigration from '../drizzle/migrations/0001_add_srs_version.sql?raw'
+import questionMetadataMigration from '../drizzle/migrations/0002_nasty_guardsmen.sql?raw'
 
 import { createReviewDeps } from './dal/review-repository'
 import { FIXED_USER_ID } from './fixed-user'
@@ -24,9 +25,34 @@ function migrationQueries(sql: string): string[] {
     .filter((query) => query.length > 0)
 }
 
-async function seedQuestion(questionId: string, answerIndex: number): Promise<void> {
-  await env.DB.prepare('INSERT INTO questions (question_id, answer_index) VALUES (?, ?)')
-    .bind(questionId, answerIndex)
+async function seedQuestion(
+  questionId: string,
+  answerIndex: number,
+  metadata?: {
+    domain: string
+    topic: string
+    lessonId: string
+    isActive?: boolean
+  },
+): Promise<void> {
+  if (!metadata) {
+    await env.DB.prepare('INSERT INTO questions (question_id, answer_index) VALUES (?, ?)')
+      .bind(questionId, answerIndex)
+      .run()
+    return
+  }
+
+  await env.DB.prepare(
+    'INSERT INTO questions (question_id, answer_index, domain, topic, lesson_id, is_active) VALUES (?, ?, ?, ?, ?, ?)',
+  )
+    .bind(
+      questionId,
+      answerIndex,
+      metadata.domain,
+      metadata.topic,
+      metadata.lessonId,
+      metadata.isActive === false ? 0 : 1,
+    )
     .run()
 }
 
@@ -34,11 +60,12 @@ async function seedSrsState(
   questionId: string,
   dueAt: number,
   userId = FIXED_USER_ID,
+  intervalDays = 1,
 ): Promise<void> {
   await env.DB.prepare(
     'INSERT INTO srs_states (user_id, question_id, ease, interval_days, due_at, reps, lapses) VALUES (?, ?, ?, ?, ?, ?, ?)',
   )
-    .bind(userId, questionId, 2500, 1, dueAt, 1, 0)
+    .bind(userId, questionId, 2500, intervalDays, dueAt, 1, 0)
     .run()
 }
 
@@ -65,6 +92,10 @@ describe('core API endpoints', () => {
     await applyD1Migrations(env.DB, [
       { name: '0000_flowery_quasar.sql', queries: migrationQueries(initialMigration) },
       { name: '0001_add_srs_version.sql', queries: migrationQueries(srsVersionMigration) },
+      {
+        name: '0002_nasty_guardsmen.sql',
+        queries: migrationQueries(questionMetadataMigration),
+      },
     ])
   })
 
@@ -327,6 +358,101 @@ describe('core API endpoints', () => {
       ],
     })
     await expect(reviewDeps.countDueQuestions(FIXED_USER_ID, now)).resolves.toBe(2)
+  })
+
+  it('returns ordered four-domain summaries with active questions, mastery boundary, and user isolation', async () => {
+    await seedQuestion('security-1', 0, {
+      domain: 'security',
+      topic: 'xss',
+      lessonId: 'security-xss-01',
+    })
+    await seedQuestion('security-2', 0, {
+      domain: 'security',
+      topic: 'xss',
+      lessonId: 'security-xss-01',
+    })
+    await seedQuestion('security-3', 0, {
+      domain: 'security',
+      topic: 'csrf',
+      lessonId: 'security-csrf-01',
+      isActive: false,
+    })
+    await seedQuestion('backend-1', 0, {
+      domain: 'backend',
+      topic: 'api',
+      lessonId: 'backend-api-01',
+    })
+    await seedSrsState('security-1', 1_700_000_000_000, FIXED_USER_ID, 20)
+    await seedSrsState('security-2', 1_700_000_000_000, FIXED_USER_ID, 21)
+    await seedSrsState('security-2', 1_700_000_000_000, 'another-user', 99)
+    await seedSrsState('backend-1', 1_700_000_000_000, FIXED_USER_ID, 21)
+
+    const response = await fetchInternal('/domains')
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({
+      domains: [
+        {
+          domain: 'security',
+          masteredQuestionCount: 1,
+          totalQuestionCount: 2,
+          masteryRate: 50,
+          topicCount: 1,
+          lessonCount: 1,
+        },
+        {
+          domain: 'frontend',
+          masteredQuestionCount: 0,
+          totalQuestionCount: 0,
+          masteryRate: 0,
+          topicCount: 0,
+          lessonCount: 0,
+        },
+        {
+          domain: 'backend',
+          masteredQuestionCount: 1,
+          totalQuestionCount: 1,
+          masteryRate: 100,
+          topicCount: 1,
+          lessonCount: 1,
+        },
+        {
+          domain: 'architecture',
+          masteredQuestionCount: 0,
+          totalQuestionCount: 0,
+          masteryRate: 0,
+          topicCount: 0,
+          lessonCount: 0,
+        },
+      ],
+    })
+  })
+
+  it('keeps the domains route behind Access and maps repository failures to 500', async () => {
+    const publicResponse = await createPublicApiApp().fetch(
+      new Request('https://api.example.com/domains'),
+      {
+        ...env,
+        ACCESS_AUDIENCE: 'access-audience',
+        ACCESS_ISSUER: 'https://team.cloudflareaccess.com',
+        WEB_ORIGIN: 'https://web.example.com',
+      },
+    )
+    expect(publicResponse.status).toBe(401)
+
+    const failingDb = {
+      prepare() {
+        throw new Error('D1 query failed')
+      },
+    } as unknown as D1Database
+    const internalResponse = await createInternalApiApp().fetch(
+      new Request('https://api.internal/domains'),
+      { ...env, DB: failingDb },
+    )
+    expect(internalResponse.status).toBe(500)
+    await expect(internalResponse.json()).resolves.toEqual({
+      error: { code: 'INTERNAL', message: 'Internal Server Error' },
+    })
   })
 
   it('allows an Access-verified public write and rejects unauthorized writes before D1 changes', async () => {

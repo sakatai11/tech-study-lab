@@ -5,6 +5,7 @@ import { DAY_MS, initialSrs, reviewSrs } from '@tsl/shared'
 
 import initialMigration from '../drizzle/migrations/0000_flowery_quasar.sql?raw'
 import srsVersionMigration from '../drizzle/migrations/0001_add_srs_version.sql?raw'
+import questionMetadataMigration from '../drizzle/migrations/0002_nasty_guardsmen.sql?raw'
 
 import { createDevSeedSql } from './dev-seed'
 import { FIXED_USER_ID } from './fixed-user'
@@ -30,6 +31,10 @@ describe('local dynamic D1 development seed', () => {
     await applyD1Migrations(env.DB, [
       { name: '0000_flowery_quasar.sql', queries: migrationQueries(initialMigration) },
       { name: '0001_add_srs_version.sql', queries: migrationQueries(srsVersionMigration) },
+      {
+        name: '0002_nasty_guardsmen.sql',
+        queries: migrationQueries(questionMetadataMigration),
+      },
     ])
   })
 

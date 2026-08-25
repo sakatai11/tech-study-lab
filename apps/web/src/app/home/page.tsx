@@ -4,11 +4,12 @@ import { Suspense } from 'react'
 
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
-import { ProgressBar } from '@/components/ui/progress-bar'
 import { TermCrumb } from '@/components/ui/term-crumb'
 import { DashboardDueCard } from '@/features/dashboard/server/components/dashboard-due-card'
 import { DashboardDueCardFallback } from '@/features/dashboard/server/components/dashboard-due-card-fallback'
 import { loadDashboardStatic } from '@/features/dashboard/server/load-dashboard'
+import { DashboardDomains } from '@/features/domains/server/components/dashboard-domains'
+import { DomainProgressFallback } from '@/features/domains/server/components/domain-progress-fallback'
 import { AppShell } from '../_components/app-shell'
 
 const stats = [
@@ -36,13 +37,6 @@ const stats = [
     tone: 'orange',
     isSample: true,
   },
-] as const
-
-const domains = [
-  { label: 'Security', value: 42, color: 'green' },
-  { label: 'Frontend', value: 68, color: 'blue' },
-  { label: 'Backend', value: 31, color: 'purple' },
-  { label: 'Architecture', value: 18, color: 'orange' },
 ] as const
 
 const heatmap = Array.from({ length: 26 * 7 }, (_, index) => ({
@@ -151,29 +145,11 @@ export default function HomePage() {
         </Card>
 
         <div className="grid gap-5 xl:grid-cols-2">
-          <Card className="reveal p-5 sm:p-6" style={revealStyle(6)}>
-            <h2 className="m-0 text-balance text-lg font-black text-ink">領域別の習得状況</h2>
-            <p className="mb-0 mt-1 text-pretty text-sm text-mute">
-              表示用サンプル。学習データには接続していません。
-            </p>
-            <div className="mt-5 flex flex-col gap-5">
-              {domains.map((domain) => (
-                <div key={domain.label}>
-                  <div className="mb-2 flex items-center justify-between gap-3">
-                    <span className="font-semibold text-ink-2">{domain.label}</span>
-                    <span className="font-mono font-bold tabular-nums text-ink">
-                      {domain.value}%
-                    </span>
-                  </div>
-                  <ProgressBar
-                    color={domain.color}
-                    label={`${domain.label} の習得状況`}
-                    value={domain.value}
-                  />
-                </div>
-              ))}
-            </div>
-          </Card>
+          <div className="reveal xl:col-span-2" style={revealStyle(6)}>
+            <Suspense fallback={<DomainProgressFallback />}>
+              <DashboardDomains />
+            </Suspense>
+          </div>
 
           <Card className="reveal p-5 sm:p-6" style={revealStyle(7)}>
             <h2 className="m-0 text-balance text-lg font-black text-ink">設計システムの状態</h2>

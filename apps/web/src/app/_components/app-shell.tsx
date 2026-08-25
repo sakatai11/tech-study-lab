@@ -34,6 +34,7 @@ export function AppShell({ children, currentNavigation }: AppShellProps) {
           learn: learnHref,
           quiz: quizHref,
           review: '/review',
+          tree: '/domains',
         }}
       >
         {children}

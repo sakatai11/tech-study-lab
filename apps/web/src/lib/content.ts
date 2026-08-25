@@ -74,6 +74,15 @@ export function getTopicRouteParams(): { domain: string; topic: string }[] {
   return topicRouteParamsFrom(bundledContent.topics)
 }
 
+/** 領域カードの遷移先選択に使う、frontmatter の表示順付き topic route。 */
+export function getOrderedTopicRoutes(): { domain: string; topic: string; order: number }[] {
+  return bundledContent.topics.flatMap((entry) => {
+    const [domain] = entry.relativePath.split('/')
+
+    return domain ? [{ domain, topic: entry.topic, order: entry.order }] : []
+  })
+}
+
 /** `/quiz/[lesson]` の route params。 */
 export function getQuizRouteParams(): { lesson: string }[] {
   return bundledContent.lessons.map((lesson) => ({ lesson: lesson.lessonId }))

@@ -25,6 +25,12 @@ export const answerLogs = sqliteTable('answer_logs', {
 export const questions = sqliteTable('questions', {
   questionId: text('question_id').primaryKey(),
   answerIndex: integer('answer_index').notNull(),
+  // content の集計用 metadata。本文・選択肢・解説は保持しない。
+  domain: text('domain').notNull().default(''),
+  topic: text('topic').notNull().default(''),
+  lessonId: text('lesson_id').notNull().default(''),
+  // 直近 content sync に含まれる問題だけを active とする。
+  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(false),
 })
 
 // 問題ごとの SRS 状態（SM-2 パラメータ）。出題制御の中核。

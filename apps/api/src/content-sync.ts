@@ -1,6 +1,6 @@
 import matter from 'gray-matter'
 
-import { type ParsedContentSourceFile, createContentBundle } from '@tsl/shared'
+import { type DomainKey, type ParsedContentSourceFile, createContentBundle } from '@tsl/shared'
 
 export type ContentSourceFile = {
   relativePath: string
@@ -10,6 +10,9 @@ export type ContentSourceFile = {
 export type ContentSyncQuestion = {
   questionId: string
   answerIndex: number
+  domain: DomainKey
+  topic: string
+  lessonId: string
 }
 
 export type ContentSyncPayload = {
@@ -40,10 +43,15 @@ export function createContentSyncPayload(
   userId: string,
 ): ContentSyncPayload {
   const bundle = createContentBundle(files.map(parseMarkdownFile))
-  const questions: ContentSyncQuestion[] = bundle.questions.map((question) => ({
-    questionId: question.id,
-    answerIndex: question.answerIndex,
-  }))
+  const questions: ContentSyncQuestion[] = bundle.lessons.flatMap((lesson) =>
+    lesson.questions.map((question) => ({
+      questionId: question.id,
+      answerIndex: question.answerIndex,
+      domain: lesson.domain,
+      topic: lesson.topic,
+      lessonId: lesson.lessonId,
+    })),
+  )
 
   return { userId, questions }
 }
@@ -60,12 +68,17 @@ export function createContentSyncSql(payload: ContentSyncPayload, createdAt: num
     throw new Error('createdAt must be a nonnegative safe integer')
   }
 
+  const questionIds = payload.questions.map((question) => sqlString(question.questionId))
+  const activeMembershipUpdate = questionIds.length
+    ? `UPDATE questions SET is_active = CASE WHEN question_id IN (${questionIds.join(', ')}) THEN 1 ELSE 0 END`
+    : 'UPDATE questions SET is_active = 0'
   const statements = [
     `INSERT INTO users (id, created_at) VALUES (${sqlString(payload.userId)}, ${createdAt}) ON CONFLICT(id) DO NOTHING`,
     ...payload.questions.map(
       (question) =>
-        `INSERT INTO questions (question_id, answer_index) VALUES (${sqlString(question.questionId)}, ${question.answerIndex}) ON CONFLICT(question_id) DO UPDATE SET answer_index = excluded.answer_index`,
+        `INSERT INTO questions (question_id, answer_index, domain, topic, lesson_id, is_active) VALUES (${sqlString(question.questionId)}, ${question.answerIndex}, ${sqlString(question.domain)}, ${sqlString(question.topic)}, ${sqlString(question.lessonId)}, 0) ON CONFLICT(question_id) DO UPDATE SET answer_index = excluded.answer_index, domain = excluded.domain, topic = excluded.topic, lesson_id = excluded.lesson_id`,
     ),
+    activeMembershipUpdate,
   ]
 
   return `${statements.join(';\n')};`
@@ -88,7 +101,7 @@ export function createContentSyncSqlSummary(payload: ContentSyncPayload): {
 } {
   return {
     questionCount: payload.questions.length,
-    statementCount: payload.questions.length + 1,
+    statementCount: payload.questions.length + 2,
   }
 }
 
