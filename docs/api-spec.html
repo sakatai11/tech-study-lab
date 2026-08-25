@@ -197,6 +197,7 @@
       .tbd { margin: 0.9rem 0 0; padding: 0.85rem 1rem; border: 1px dashed #d8c99a; border-radius: 0.55rem; background: var(--planned-soft); color: #7a5300; font-size: 0.88rem; }
       .tbd strong { display: block; margin-bottom: 0.3rem; color: var(--planned); }
       .tbd ul { margin: 0.4rem 0 0; padding-left: 1.1rem; }
+      .tbd p { margin: 0.5rem 0 0; }
       .tbd li { margin: 0.15rem 0; }
 
       .legend { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin: 1rem 0 1.5rem; color: var(--muted); font-size: 0.88rem; }
@@ -919,6 +920,7 @@ const { dueCount } = dueCountResponseSchema.parse(await response.json())</code><
             <p><strong>後続Issueで必ず更新するもの</strong></p>
             <p>各APIの実装に着手するときは、返却値を共有Zodスキーマで確定し、このページの<strong>レスポンス例・フィールド表・実装状態</strong>も同じPRで更新します。APIのIF（URL、HTTPステータス、JSON形式、エラー形式）を実装だけで先に変えないでください。</p>
             <p>いずれも認証・エラー形式は Walking Skeleton のAPIと共通です（<a href="#errors">共通エラー応答</a>）。すべて読み取り専用のため、永続書き込みのレート制限（429 / 503）は対象外です。</p>
+            <p><strong>planned で未確定なのはレスポンスbodyだけです。</strong>URL・メソッド・成功ステータス・認証・エラー形式・返す値の意味（設計文書 §7.3）は確定済みで、実装Issueで決めるのはフィールド名・型・入れ子構造です。</p>
           </div>
           <div class="endpoint-list">
 
@@ -1091,7 +1093,7 @@ const { domains } = domainsResponseSchema.parse(await response.json())</code></p
             <article class="endpoint" id="analytics-heatmap">
               <header><span class="method get">GET</span><h3><code>/analytics/heatmap</code></h3><span class="status planned">planned</span></header>
               <p class="summary">直近26週の学習コントリビューション表示用に、日次解答数を返します。</p>
-              <div class="badges"><span class="badge">リクエスト: body・query なし</span><span class="badge">成功: <span class="http">200 OK</span></span><span class="badge">Zod（予定）: <code>analyticsHeatmapResponseSchema</code></span></div>
+              <div class="badges"><span class="badge">リクエスト: body・query なし</span><span class="badge">成功: <span class="http">200 OK</span></span><span class="badge">Zod（予定・名称も未確定）: <code>analyticsHeatmapResponseSchema</code></span></div>
               <section class="pane">
                 <h4>レスポンス</h4>
                 <div class="tbd">
@@ -1099,6 +1101,7 @@ const { domains } = domainsResponseSchema.parse(await response.json())</code></p
                   <ul>
                     <li>直近26週の日次解答数（<code>answer_logs</code> の日次集計）</li>
                   </ul>
+                  <p>このエンドポイントだけは、設計文書 §10.6 の予定スキーマ一覧に名前がありません。<code>analyticsHeatmapResponseSchema</code> は本ページ上の仮称です。</p>
                 </div>
               </section>
             </article>
