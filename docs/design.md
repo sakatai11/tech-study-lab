@@ -1125,7 +1125,7 @@ dal      ──→ @tsl/shared          # db 名前空間の Drizzle schema（im
 - クリーンアーキテクチャ流の ports/adapters ディレクトリ分離 → 「service が deps 型（interface）を定義し、dal が `import type` して実装する」という最小の依存逆転だけで同じ効果を得る
 - OpenAPI スキーマ生成 → `hc`（`AppType`）が型契約を担うため不要（§8.4）
 
-**スコープの段階性**：本章のコード例・ディレクトリ構成は Walking Skeleton 中核の 3 エンドポイント（§7.3 の `POST /answers`・`GET /review/queue`・`GET /dashboard/due-count`）を基準に確定する。§7.3 が挙げる残りのエンドポイント（`GET /domains`・`GET /analytics/*`・`GET /activity/recent`）は Walking Skeleton 貫通後に**同じ route → service → deps（dal 実装）の処理パターンで追加**する（§6 の「同じパターンの繰り返しで増やす」方針）。数エンドポイントの規模で抽象を増やすと、AI 駆動開発のレビュー可能性がむしろ下がる。層の責務と import 境界が守られていれば十分とする。
+**スコープの段階性**：本章のコード例・ディレクトリ構成は Walking Skeleton 中核の 3 エンドポイント（§7.3 の `POST /answers`・`GET /review/queue`・`GET /dashboard/due-count`）を基準に確定し、`GET /domains` も同じ route → service → deps（dal 実装）の処理パターンで追加済みである。§7.3 が挙げる残りの `GET /analytics/*`・`GET /activity/recent` も同じパターンで追加する（§6 の「同じパターンの繰り返しで増やす」方針）。数エンドポイントの規模で抽象を増やすと、AI 駆動開発のレビュー可能性がむしろ下がる。層の責務と import 境界が守られていれば十分とする。
 
 ### 10.2 ディレクトリ構成
 
@@ -1140,14 +1140,17 @@ apps/api/
 │   ├── routes/
 │   │   ├── answers.ts           # POST /answers
 │   │   ├── review.ts            # GET /review/queue
-│   │   └── dashboard.ts         # GET /dashboard/due-count
+│   │   ├── dashboard.ts         # GET /dashboard/due-count
+│   │   └── domains.ts           # GET /domains
 │   ├── services/
 │   │   ├── answer-service.ts    # 採点 → 記録 → SRS 更新のユースケース
 │   │   ├── review-service.ts    # due 問題の収集・件数集計
+│   │   ├── domains-service.ts   # 4領域の集計結果補完・習得率計算
 │   │   └── errors.ts            # ドメインエラー（QuestionNotFoundError 等）
 │   ├── dal/
 │   │   ├── answer-repository.ts # AnswerDeps 実装（questions 照合・srs 取得・batch 書き込み）
-│   │   └── review-repository.ts # ReviewDeps 実装（due queue・due count）
+│   │   ├── review-repository.ts # ReviewDeps 実装（due queue・due count）
+│   │   └── domains-repository.ts # DomainsDeps 実装（ユーザー別の領域集計）
 │   ├── content-sync.ts          # content → 同期ペイロード/SQL への純粋変換（gray-matter・shared のみに依存。§10.8）
 │   └── dev-seed.ts               # 固定ユーザー用の動的開発 seed の純粋モデル/SQL 変換（§10.8）
 └── scripts/
@@ -1155,7 +1158,7 @@ apps/api/
     └── seed-dev.ts               # `src/dev-seed.ts` の純粋関数を呼ぶローカル専用 Node CLI（§10.8）
 ```
 
-- 上記は Walking Skeleton 中核 3 エンドポイントの構成（§10.1）。§7.3 の後続エンドポイントは同じ route → service → deps（dal 実装）の処理パターンで追加する：`routes/domains.ts`・`routes/analytics.ts`・`routes/activity.ts`、対応する `services/*-service.ts` と `dal/*-repository.ts`、`index.ts` への `.route()` 追記。アナリティクスは集計クエリ主体（読み取りのみ）のため service 層は薄くなる見込み。
+- 上記は Walking Skeleton 中核 3 エンドポイントに、同じ処理パターンで実装済みの `GET /domains` を加えた構成（§10.1）。後続の analytics / activity は `routes/analytics.ts`・`routes/activity.ts`、対応する `services/*-service.ts` と `dal/*-repository.ts`、`index.ts` への `.route()` 追記で追加する。アナリティクスは集計クエリ主体（読み取りのみ）のため service 層は薄くなる見込み。
 - **dal はテーブル単位ではなくユースケース単位**で置く。「service が要求する deps 型」を 1 ファイルで実装する形にすると、service ⇔ dal の対応が 1:1 で追いやすく、テーブル単位 repository の細切れ合成（と、それを束ねる工数）を避けられる。テーブル単位の共有が必要になった時点で分割する。
 - **`src/content-sync.ts` は `gray-matter` と `packages/shared` のみに依存する純粋ロジック**（frontmatter パース・同期ペイロード生成・upsert SQL 生成）。`scripts/sync-content.ts` は Node の `fs` 読み取りと `wrangler d1 execute` 実行を担う CLI 部で、`content-sync.ts` の純粋関数を呼び出すだけに留める（routes・services・dal・middleware は import しない）。
 - **`src/dev-seed.ts` は content sync で検証済みの question ID を入力として、固定ユーザーの動的開発データを生成する純粋ロジック**にする。`scripts/seed-dev.ts` は content 読み取り・時刻取得・一時 SQL ファイル作成・Wrangler 実行だけを担い、任意の CLI 引数を転送しない。
@@ -1347,13 +1350,14 @@ const routes = app
   .route('/answers', answersRoute)
   .route('/review', reviewRoute)
   .route('/dashboard', dashboardRoute)
+  .route('/domains', domainsRoute)
 
 export type AppType = typeof routes
 export default app
 ```
 
 - **`hc` の型推論を保つため、ルート定義はメソッドチェーンで書く**。各サブルーターは `new Hono<AppEnv>().post(...)` のチェーンで定義・export し、`index.ts` では `.route()` のチェーンで合成する。チェーンを分断（`app.post(...)` を文として並べる等）すると `AppType` からエンドポイント型が消える。
-- パス設計は §7.3 の契約（`POST /answers`・`GET /review/queue`・`GET /dashboard/due-count`）をそのまま `.route()` のプレフィックス＋サブルーター内パスで構成する。後続の `GET /domains`・`GET /analytics/*`・`GET /activity/recent`（§10.1）も同じ要領で `.route('/domains', ...)` 等をチェーンに追記する。
+- パス設計は §7.3 の契約（`POST /answers`・`GET /review/queue`・`GET /dashboard/due-count`・`GET /domains`）をそのまま `.route()` のプレフィックス＋サブルーター内パスで構成する。後続の `GET /analytics/*`・`GET /activity/recent`（§10.1）も同じ要領でチェーンに追記する。
 - Access boundary は public entrypoint だけに置く。route・service・DAL は Access JWT を参照せず、`userContext` が実行済みであるという既存契約を保つ。internal entrypoint は同じ user route sub-app を `userContext` の後に mount することで、DTO・固定ユーザー挙動・Hono RPC 契約を public entrypoint と共有する。
 
 ### 10.6 バリデーション・DTO・エラー処理
@@ -1468,9 +1472,9 @@ const result = await submitAnswer(deps, {
 ### 10.10 既存コードとの差分（本章から発生する実装タスク）
 
 - `packages/shared/src/db/schema.ts`：`questions` テーブル（§4.4 の content 同期キャッシュ）を追加。`srs_states` に複合主キー `(user_id, question_id)` を追加。`answer_logs` に `response_time_ms`（任意列）を追加。`lesson_views` テーブル（§4.4。アナリティクス用）を追加
-- `packages/shared/src/schema/api.ts`：新設（§10.6）。Walking Skeleton 分（answer / reviewQueue / dueCount）を先行し、`responseTimeMs` 任意入力と後続エンドポイントのレスポンススキーマは各画面の実装時に追加
+- `packages/shared/src/schema/api.ts`：新設（§10.6）。Walking Skeleton 分（answer / reviewQueue / dueCount）と domains を実装済み。`responseTimeMs` 任意入力と analytics / activity のレスポンススキーマは各画面の実装時に追加
 - `apps/api/wrangler.toml`：`name` を `tech-study-lab-api` へ変更（web Worker と区別する。§3.1 の Service Binding が参照する `service` 名になる）。`vars` に `WEB_ORIGIN` を追加
-- `apps/api/src/`：`env.ts` / `middleware/` / `routes/` / `services/` / `dal/` を §10.2 の構成で新設し、`index.ts` をルート合成形へ書き換え。`/domains`・`/analytics/*`・`/activity/recent` 用の route/service/dal は Walking Skeleton 貫通後に同パターンで追加（§10.1）
+- `apps/api/src/`：`env.ts` / `middleware/` / `routes/` / `services/` / `dal/` を §10.2 の構成で新設し、`index.ts` をルート合成形へ書き換え。`/domains` 用の route/service/dal は同パターンで追加済み。`/analytics/*`・`/activity/recent` は後続で追加（§10.1）
 - `apps/api/scripts/sync-content.ts`：新設（§10.8。package.json の `content:sync` は定義済み）
 
 ### 10.11 将来拡張ポイント
