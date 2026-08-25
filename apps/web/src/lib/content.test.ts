@@ -6,6 +6,7 @@ import {
   getLessonContent,
   getLessonRouteParams,
   getLessonsByTopic,
+  getOrderedTopicRoutes,
   getQuestionById,
   getQuizRouteParams,
   getTopicContent,
@@ -70,6 +71,14 @@ describe('route params for generateStaticParams', () => {
     for (const { domain, topic } of params) {
       expect(getTopicContent(domain, topic)).toBeDefined()
     }
+  })
+
+  it('preserves topic frontmatter order for domain navigation', () => {
+    expect(getOrderedTopicRoutes()).toContainEqual({
+      domain: 'security',
+      topic: 'xss',
+      order: 0,
+    })
   })
 
   it('keeps a topic whose lessons are not written yet', () => {

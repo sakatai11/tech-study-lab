@@ -140,7 +140,7 @@ D1 側（動的データ）:
 
 - `users`: 将来公開用。初期は単一ユーザーでも user_id を持つ
 - `answer_logs`: `{ id, user_id, question_id, is_correct, answered_at, response_time_ms? }`（`response_time_ms` は §7 アナリティクス画面の「平均反応時間」向け。Quiz クライアントが選択肢表示から解答確定までを計測して送信する任意項目）
-- `srs_states`: `{ user_id, question_id, ease, interval, due_at, reps, lapses, version }`（SRSパラメータ。`version` は同時解答による更新消失を防ぐ楽観的ロック用。アルゴリズムは実装時に SM-2 ベースを想定）
+- `srs_states`: `{ user_id, question_id, ease, interval_days, due_at, reps, lapses, version }`（SRSパラメータ。`version` は同時解答による更新消失を防ぐ楽観的ロック用。アルゴリズムは実装時に SM-2 ベースを想定）
 - `lesson_views`: `{ id, user_id, lesson_id, viewed_at }`（アナリティクス画面の「学習時間」「最近のアクティビティ」向け。教材本文ページ表示時に fire-and-forget で記録する最小ログ。学習時間は「閲覧したレッスンの frontmatter 所要時間（例：約18分）の合計」＋「`answer_logs.response_time_ms` の合計」で近似する簡易集計とし、精緻な計測は行わない）
 
 D1 側（content 同期キャッシュ。4.2 の seed/upsert 対象）:
@@ -343,7 +343,7 @@ apps/web/src/
 
 ### 8.3 Server / Client コンポーネント境界
 
-- **公開トップ・教材・集計系（`/`・`/home`・`/learn/...`・`/domains`・`/analytics`）= RSC**。`/` はプロダクト説明と `/home` への CTA だけを静的に描画し、Server loader・API・Service Binding・due-count hook/provider を使わない。`/home` のダッシュボード due 件数・統計値、`/domains` の4領域カードの習得率、`/analytics` の各集計のようなユーザー固有の初回表示値は Server loader から `hc` で読む。`/domains` と `/home` の領域別表示は同じ ViewModel・カードコンポーネントを共有する。教材本文ページは、本文の初期取得・描画には **API 不要**であり、閲覧記録だけは最小Client recorderからAPIを呼ぶ。
+- **公開トップ・教材・集計系（`/`・`/home`・`/learn/...`・`/domains`・`/analytics`）= RSC**。`/` はプロダクト説明と `/home` への CTA だけを静的に描画し、Server loader・API・Service Binding・due-count hook/provider を使わない。`/home` は due 件数と領域別習得状況、`/domains` は4領域カードの習得率を Server loader から `hc` で読む。`/home` の統計値は現状静的表示であり、`/analytics` とともに集計 API の統合は未実装とする。`/domains` と `/home` の領域別表示は同じ ViewModel・カードコンポーネントを共有する。教材本文ページは、本文の初期取得・描画には **API 不要**であり、閲覧記録だけは最小Client recorderからAPIを呼ぶ。
 - **演習系（Quiz / Review）= Client Component**。イントロ・演習・結果の画面フェーズと現在問題を持ち、Client hook が返す採点結果・通信状態を表示へ反映するため。初回データは Server loader（`/quiz` は content、`/review` は due queue）で ViewModel 化し props で渡す（§9.2）。
 - **レイアウト / ヘッダー = Server**。
 - 実行場所はディレクトリ名ではなく import 境界で決まる。`apps/web/src/features/*/server` は `apps/web/src/app/**/page.tsx` など Server Component から import する限りサーバー側で実行される。誤用防止のため `import 'server-only'` を必須にする。

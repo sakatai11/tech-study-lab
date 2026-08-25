@@ -84,9 +84,20 @@ export const domainSummarySchema = z.object({
 })
 export type DomainSummary = z.infer<typeof domainSummarySchema>
 
-export const domainsResponseSchema = z.object({
-  domains: z.array(domainSummarySchema).length(4),
-})
+export const domainsResponseSchema = z
+  .object({
+    domains: z.array(domainSummarySchema).length(4),
+  })
+  .superRefine(({ domains }, context) => {
+    const uniqueDomains = new Set(domains.map(({ domain }) => domain))
+    if (uniqueDomains.size !== domains.length) {
+      context.addIssue({
+        code: 'custom',
+        path: ['domains'],
+        message: 'domains must contain each domain exactly once',
+      })
+    }
+  })
 export type DomainsResponse = z.infer<typeof domainsResponseSchema>
 
 export const domainsRequestSchema = z.object({}).strict()

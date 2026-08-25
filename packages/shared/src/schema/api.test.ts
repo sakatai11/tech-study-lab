@@ -300,7 +300,24 @@ describe('domainSummarySchema', () => {
 
 describe('domainsResponseSchema', () => {
   it('requires exactly four domain summaries', () => {
-    const summary = {
+    const summaryFor = (domain: 'security' | 'frontend' | 'backend' | 'architecture') => ({
+      domain,
+      masteredQuestionCount: 0,
+      totalQuestionCount: 0,
+      masteryRate: 0,
+      topicCount: 0,
+      lessonCount: 0,
+    })
+    const summaries = (['security', 'frontend', 'backend', 'architecture'] as const).map(summaryFor)
+
+    expect(domainsResponseSchema.safeParse({ domains: summaries }).success).toBe(true)
+    expect(domainsResponseSchema.safeParse({ domains: [summaryFor('security')] }).success).toBe(
+      false,
+    )
+  })
+
+  it('rejects duplicate domains even when four summaries are present', () => {
+    const duplicate = {
       domain: 'security' as const,
       masteredQuestionCount: 0,
       totalQuestionCount: 0,
@@ -310,8 +327,8 @@ describe('domainsResponseSchema', () => {
     }
 
     expect(
-      domainsResponseSchema.safeParse({ domains: [summary, summary, summary, summary] }).success,
-    ).toBe(true)
-    expect(domainsResponseSchema.safeParse({ domains: [summary] }).success).toBe(false)
+      domainsResponseSchema.safeParse({ domains: [duplicate, duplicate, duplicate, duplicate] })
+        .success,
+    ).toBe(false)
   })
 })

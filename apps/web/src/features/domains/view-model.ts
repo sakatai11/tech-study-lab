@@ -12,4 +12,5 @@ export type DomainsViewModel = {
 export type DomainTopicRoute = {
   domain: DomainKey
   topic: string
+  order: number
 }

@@ -6,16 +6,17 @@ export function domainsToViewModel(
   response: DomainsResponse,
   topicRoutes: readonly DomainTopicRoute[] = [],
 ): DomainsViewModel {
-  const firstTopicByDomain = new Map<DomainKey, string>()
+  const firstTopicByDomain = new Map<DomainKey, DomainTopicRoute>()
   for (const route of topicRoutes) {
-    if (!firstTopicByDomain.has(route.domain)) {
-      firstTopicByDomain.set(route.domain, route.topic)
+    const current = firstTopicByDomain.get(route.domain)
+    if (!current || route.order < current.order) {
+      firstTopicByDomain.set(route.domain, route)
     }
   }
 
   return {
     domains: response.domains.map((summary) => {
-      const firstTopic = firstTopicByDomain.get(summary.domain)
+      const firstTopic = firstTopicByDomain.get(summary.domain)?.topic
 
       return {
         ...summary,

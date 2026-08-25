@@ -40,17 +40,17 @@ const response = {
 }
 
 describe('domainsToViewModel', () => {
-  it('adds labels and links only the first available topic for each domain', () => {
+  it('adds labels and links the lowest-order topic for each domain', () => {
     expect(
       domainsToViewModel(response, [
-        { domain: 'security', topic: 'xss' },
-        { domain: 'security', topic: 'csrf' },
+        { domain: 'security', topic: 'xss', order: 2 },
+        { domain: 'security', topic: 'csrf', order: 1 },
       ]).domains,
     ).toEqual([
       {
         ...response.domains[0],
         label: 'セキュリティ',
-        firstTopicHref: '/learn/security/xss',
+        firstTopicHref: '/learn/security/csrf',
       },
       { ...response.domains[1], label: 'フロントエンド', firstTopicHref: undefined },
       { ...response.domains[2], label: 'バックエンド', firstTopicHref: undefined },
