@@ -242,7 +242,7 @@ SM-2 の計算式（`packages/shared/src/srs/sm2.ts`）の周辺で、実装時�
 
 `apps/api`（Hono）に以下を想定。本文はファイル一次ソースのため、API は ID・SRS メタ・集計値のみ返す。
 
-HTTP 入出力、Zod スキーマの実装状況、後続エンドポイントの planned 状態は [API 契約カタログ](./api-spec.html) を参照する。本節は画面から要請される API の高水準な一次仕様として維持する。
+HTTP 入出力、リクエスト・レスポンスの実例（JSON）、Zod スキーマの実装状況、後続エンドポイントの planned 状態は [API 仕様カタログ](./api-spec.html) を参照する。本節は画面から要請される API の高水準な一次仕様として維持する。
 
 - `POST /answers` — 1 問解答の記録 → SRS 更新。リクエスト `{ questionId, selectedIndex, responseTimeMs? }`、レスポンス `{ isCorrect, correctIndex }`。正誤判定は API が D1 の `questions`（4.4）を照合して行う権威側（7.2）。検証済みの middleware 注入 `userId` ごとに、この endpoint 専用の 60 秒固定窓で 60 回までを受理する（§10.3.1）。
 - `POST /lesson-views` — 教材の閲覧を記録。strict なリクエスト `{ lessonId }` を受け、middleware が注入した `userId` のみを使用して `lesson_views` へ記録し、`201 { recorded: true }` を返す。クライアントは `userId` を送らない。重複排除、配送保証、lesson の存在確認はこの最小ログでは行わない。検証済みの middleware 注入 `userId` ごとに、この endpoint 専用の 60 秒固定窓で 30 回までを受理する（§10.3.1）。
