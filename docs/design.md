@@ -1388,7 +1388,7 @@ export const dueCountResponseSchema = z.object({
 ```
 
 - `POST /answers` の入力は任意の反応時間を含める：`answerRequestSchema` に `responseTimeMs: z.number().int().nonnegative().optional()` を追加する（§7.3・§4.4。アナリティクスの平均反応時間用。未送信でも採点は成立する）。
-- 後続エンドポイント（§10.1）のレスポンススキーマ（`domainsResponseSchema`・`analyticsSummaryResponseSchema`・`analyticsWeeklyResponseSchema`・`mistakesResponseSchema`・`recentActivityResponseSchema`）も同じ `api.ts` に同じパターンで追加する。
+- `GET /domains` は `domainSummarySchema`（domain・習得済み/全問題数・整数の習得率・topic数・lesson数）と、4領域を包む `domainsResponseSchema` を同じ `api.ts` に実装済みである。後続の analytics / activity 用スキーマ（`analyticsSummaryResponseSchema`・`analyticsWeeklyResponseSchema`・`mistakesResponseSchema`・`recentActivityResponseSchema`）も各エンドポイントの実装時に同じパターンで追加する。
 
 **エラー処理の方針**：
 
