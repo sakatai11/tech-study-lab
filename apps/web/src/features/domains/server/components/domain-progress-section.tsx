@@ -1,3 +1,5 @@
+import 'server-only'
+
 import type { DomainsViewModel } from '../../view-model'
 import { DomainProgressCard } from './domain-progress-card'
 

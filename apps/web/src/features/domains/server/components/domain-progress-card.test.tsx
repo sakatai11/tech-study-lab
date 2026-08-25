@@ -24,6 +24,8 @@ describe('DomainProgressCard', () => {
   it('shows API mastery values and links to the current first topic', () => {
     render(<DomainProgressCard domain={security} />)
 
+    expect(screen.getByText('security')).toBeTruthy()
+    expect(screen.getAllByText('セキュリティ')).toHaveLength(1)
     expect(screen.getByRole('heading', { name: 'セキュリティ' })).toBeTruthy()
     expect(screen.getByText('50%')).toBeTruthy()
     expect(screen.getByText('1 / 2 問習得 · 1 topic · 1 lesson')).toBeTruthy()

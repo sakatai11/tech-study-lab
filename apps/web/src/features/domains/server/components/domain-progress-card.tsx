@@ -1,6 +1,8 @@
+import 'server-only'
+
 import Link from 'next/link'
 
-import { DOMAIN_LABELS, type DomainKey } from '@tsl/shared'
+import type { DomainKey } from '@tsl/shared'
 
 import { Card } from '@/components/ui/card'
 import { ProgressBar } from '@/components/ui/progress-bar'
@@ -22,7 +24,7 @@ export function DomainProgressCard({ domain }: { domain: DomainProgressViewModel
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="m-0 font-mono text-xs font-bold uppercase tracking-[0.16em] text-faint">
-            {DOMAIN_LABELS[domain.domain].label}
+            {domain.domain}
           </p>
           <h3 className="mb-0 mt-2 text-xl font-black text-ink">{domain.label}</h3>
         </div>
