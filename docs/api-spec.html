@@ -926,7 +926,7 @@ const { dueCount } = dueCountResponseSchema.parse(await response.json())</code><
 
             <article class="endpoint" id="domains">
               <header><span class="method get">GET</span><h3><code>/domains</code></h3><span class="status">implemented</span></header>
-              <p class="summary">4領域の習得率、トピック数、レッスン数を返し、スキルツリーとダッシュボードの領域別カードで共用します。content sync 済みで <code>is_active = 1</code> の問題だけを集計し、対象ユーザーの <code>interval_days &gt;= 21</code> を習得済みとします。</p>
+              <p class="summary">4領域の習得率、トピック数、レッスン数を返し、スキルツリー（<code>/domains</code>）の領域別カードで表示します。content sync 済みで <code>is_active = 1</code> の問題だけを集計し、対象ユーザーの <code>interval_days &gt;= 21</code> を習得済みとします。</p>
               <div class="badges">
                 <span class="badge">認証: Access（公開entrypoint）</span>
                 <span class="badge">レート制限: なし（読み取り）</span>
