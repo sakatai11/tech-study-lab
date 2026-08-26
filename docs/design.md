@@ -271,7 +271,8 @@ HTTP 入出力、リクエスト・レスポンスの実例（JSON）、Zod ス�
 
 ```
 apps/web/src/
-├── app/                      # ルートのみ（page.tsx / layout.tsx）。薄く保つ
+├── app/                      # ルート（page.tsx / layout.tsx）と、ルートが共有する composition layer。薄く保つ
+│   ├── _components/          # 全画面共通 shell と feature の表示部品を props 契約で合成する composition layer（app-shell.tsx）。private folder なので route にならない
 │   ├── layout.tsx            # サイドバー（PC）/ ボトムタブ（SP）＋本文1カラム（§7.2）
 │   ├── page.tsx              # / 公開トップ（静的・APIなし）
 │   ├── home/page.tsx         # /home ダッシュボード（PPR、ユーザー固有領域は Suspense）
@@ -304,7 +305,8 @@ apps/web/src/
 
 - **Quiz 表示コンポーネント**は `apps/web/src/features/quiz/client/components` に置く。問題・解説・intro 内容・結果導線を表示 props で受け取り、画面フェーズと問題送りを管理する再利用可能な Client Component とする。`/quiz`（レッスン全問）・`/review`（due 問題）・`wrongOnly`（間違えた問題だけ）は供給する ViewModel / 表示 props だけを差し替え、解答 mutation は `client/hooks` の共通 hook を通す（7.2 の方針を実体化）。
 - feature 内の実行環境固有処理は `client/`・`server/` に分ける。`client/components` は Client Component、`client/hooks` は mutation と通信 state、`server/` は page / Server Component から呼ぶ初回取得・join・ViewModel 化を担当する。両環境から使える `api/`・`mapper.ts`・`view-model.ts` は feature 直下に置き、client/server のどちらかへ重複配置しない。`server/` 配下には `import 'server-only'`、Client Component の入口には `'use client'` を置き、ディレクトリ名だけに境界の強制を任せない。
-- `features/*/server` は「page からしか呼ばれないから app 所有」ではなく、「feature の ViewModel を作るための Server 専用 loader」として feature 所有にする。`src/app` は URL・metadata・layout・route params の受け渡し、loader 呼び出し、feature component への ViewModel の props 渡しだけを担う。feature 固有の表示 UI、content/API DTO の取得、join、sort、filter、ViewModel 化は `features` に閉じ込める。例外として、複数 feature を横断して 1 ページ専用に合成するだけの処理は `app` 直下ではなく、必要になった時点で `features/<page-feature>/server` のようなページ feature として切り出す。
+- `features/*/server` は「page からしか呼ばれないから app 所有」ではなく、「feature の ViewModel を作るための Server 専用 loader」として feature 所有にする。`src/app` は URL・metadata・layout・route params の受け渡し、loader 呼び出し、feature component への ViewModel の props 渡しだけを担う。feature 固有の表示 UI、content/API DTO の取得、join、sort、filter、ViewModel 化は `features` に閉じ込める。例外として、複数 feature を横断して 1 ページ専用に**データ取得・join を伴う**合成をする処理は `app` 直下ではなく、必要になった時点で `features/<page-feature>/server` のようなページ feature として切り出す。データ join を持たず、全画面共通 shell と feature の表示部品を props 契約でつなぐだけの**表示合成**はこの例外の対象外であり、`app/_components/` に置く（`app-shell.tsx`）。
+- **`app/` と `features/` は別の軸で命名する。** `app/` の名前は **URL パス**（ユーザーから見た画面の場所）、`features/` の名前は**ドメイン概念名**（扱う対象）である。両者の名前は**一致しなくてよく、一致は要件でもない**。`/home` ↔ `features/dashboard` は、`GET /dashboard/due-count`・`apps/api` の `routes/dashboard.ts`・`NavigationSection` の `'dashboard'`・`components/dashboard-shell.tsx` と語彙を揃えるため feature 側を `home` に改名しない。`/learn/[domain]/[topic]/[lesson]` ↔ `features/lesson` も、URL は学習セクション、feature は扱うリソースを指す。`/quiz`・`/review`・`/domains` のように結果として一致する場合もある。route と feature は 1:1 でもない（`/home` は `features/dashboard` と `features/domains` を使う）。ナビゲーションの `NavigationSection`（`tree` = `/domains` など）は UI ラベル由来の別語彙であり、この 2 軸には含めない。
 - `apps/web` 側では `_DAL` / `dal` という名前を使わない。DB へ直接アクセスしないため、Data Access Layer は `apps/api` 側の Drizzle / D1 アクセス層として定義する。
 - 共通 UI は**必要になった時点で** `components/ui` に薄く切り出す（先回りして作らない）。
 
@@ -315,6 +317,7 @@ apps/web/src/
 | 層 | 責務 | import してよいもの | 禁止する依存・処理 |
 | --- | --- | --- | --- |
 | `app/**/page.tsx`・`layout.tsx` | URL、metadata、layout、route params、`notFound()`、loader 呼び出し、feature component への props 渡し | `features/*/server`、`features/*/client/components`、全画面共通 component | `lib/content`、feature の `api`・`mapper`・`client/hooks` の直接利用、DTO の join・sort・filter、feature 固有 UI の実装 |
+| `app/_components/**` | 学習ルートが共有する shell と feature の表示部品を props 契約で合成する composition layer。shell の組み立てと、そのために必要な loader 呼び出しに徹する。private folder であり route を持たない | `features/*/server`、`features/*/client/components`、全画面共通 component、`components/ui` | `lib/content`、feature の `api`・`mapper`・`client/hooks` の直接利用、DTO の join・sort・filter、feature 固有 UI の実装、1 ページ専用のデータ合成（→ `features/<page-feature>/server`）。公開トップ `/` はこの層を使わない（§7.1） |
 | `features/*/client/components` | Client Component。ViewModel の表示、画面フェーズ・現在問題・`wrongOnly`・キーボード操作などの表示操作 state | 同 feature の `client/hooks`・`view-model`、`components/ui`、props 契約が公開された再利用 component | `server`、content loader、API client の直接利用、DTO 変換 |
 | `features/*/client/hooks` | Browser API client の生成、mutation と、それに伴う `submitting`・`error`・API 由来の結果 state | 同 feature の `api`、`lib/api`、共有 DTO 型 | Server data の再取得、`server`、content loader、mapper、ViewModel の複製保持、画面レイアウト |
 | `features/*/server` | Server loaderと必要なServer Component。初回データ取得、複数データの join、mapper 呼び出し、ViewModel の返却 | 同 feature の `api`・`mapper`・`view-model`、`lib/api`・`lib/content`、Server専用ライブラリ、**子として描画するための** `client/components`（props 契約経由の合成。ロジックの取り込みではない） | `client/hooks`（mutation・通信 state ロジックの取り込み）、ブラウザ専用 API、Client state の複製 |

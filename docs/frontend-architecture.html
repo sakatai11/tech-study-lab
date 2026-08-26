@@ -625,6 +625,13 @@
             component の props 契約を境界にする。他 feature の内部層を直接 import
             しない。
           </li>
+          <li>
+            <code>app</code> の名前は URL パス、<code>features</code>
+            の名前はドメイン概念名で、両者は一致しなくてよい（<code>/home</code> ↔
+            <code>features/dashboard</code>、<code>/learn/...</code> ↔
+            <code>features/lesson</code>）。route と feature は 1:1
+            でもない。詳細は design.md §8.1。
+          </li>
         </ul>
       </section>
 
@@ -874,8 +881,10 @@ flowchart LR
       <section>
         <h2>ディレクトリの役割</h2>
         <pre><code>apps/web/src/app/
+├── _components/               # 共通 shell と feature の合成（route にならない）
 ├── page.tsx                   # / 公開トップ（静的・APIなし）
 ├── home/page.tsx              # /home dashboard（PPR）
+├── domains/                   # /domains スキルツリー
 ├── review/                    # /review（PPR）
 ├── learn/[domain]/[topic]/... # content prerender
 └── quiz/[lesson]/             # content prerender + Client state</code></pre>
@@ -905,6 +914,18 @@ flowchart LR
                 を呼び、ViewModel を component に渡す薄い入口。
               </td>
               <td>DTO変換、APIレスポンス処理、複雑なUI state。</td>
+            </tr>
+            <tr>
+              <td><code>apps/web/src/app/_components</code></td>
+              <td>
+                学習ルートが共有する shell と feature の表示部品を props
+                契約で合成する composition layer（<code>app-shell.tsx</code>）。private folder
+                なので route を持たない。
+              </td>
+              <td>
+                DTO の join・sort・filter、feature 固有 UI、1
+                ページ専用のデータ合成（<code>features/&lt;page-feature&gt;/server</code> へ）。
+              </td>
             </tr>
             <tr>
               <td><code>apps/web/src/features/*/client/components</code></td>
