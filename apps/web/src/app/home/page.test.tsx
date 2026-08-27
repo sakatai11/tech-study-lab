@@ -20,10 +20,6 @@ vi.mock('@/features/dashboard/server/components/dashboard-due-card', () => ({
   DashboardDueCard: () => <p>due-card</p>,
 }))
 
-vi.mock('@/features/domains/server/components/dashboard-domains', () => ({
-  DashboardDomains: () => <p>domains-card</p>,
-}))
-
 vi.mock('@/features/dashboard/server/load-dashboard', () => ({
   loadDashboardStatic: () => ({
     continueHref: '/learn/security/xss/preventing-xss',
@@ -45,6 +41,7 @@ describe('HomePage', () => {
 
     expect(appShell).toHaveBeenCalledWith('dashboard')
     expect(screen.getByRole('heading', { name: '開発者のための学習ワークベンチ' })).toBeTruthy()
+    expect(screen.queryByRole('heading', { name: '領域別の習得状況' })).toBeNull()
     expect(screen.getByText('due-card')).toBeTruthy()
     expect(screen.getAllByText('表示用サンプル')).toHaveLength(2)
     expect(screen.getByRole('link', { name: '復習を始める' })).toHaveProperty(

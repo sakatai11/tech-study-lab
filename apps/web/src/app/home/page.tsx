@@ -8,8 +8,6 @@ import { TermCrumb } from '@/components/ui/term-crumb'
 import { DashboardDueCard } from '@/features/dashboard/server/components/dashboard-due-card'
 import { DashboardDueCardFallback } from '@/features/dashboard/server/components/dashboard-due-card-fallback'
 import { loadDashboardStatic } from '@/features/dashboard/server/load-dashboard'
-import { DashboardDomains } from '@/features/domains/server/components/dashboard-domains'
-import { DomainProgressFallback } from '@/features/domains/server/components/domain-progress-fallback'
 import { AppShell } from '../_components/app-shell'
 
 const stats = [
@@ -144,40 +142,32 @@ export default function HomePage() {
           </div>
         </Card>
 
-        <div className="grid gap-5 xl:grid-cols-2">
-          <div className="reveal xl:col-span-2" style={revealStyle(6)}>
-            <Suspense fallback={<DomainProgressFallback />}>
-              <DashboardDomains />
-            </Suspense>
+        <Card className="reveal p-5 sm:p-6" style={revealStyle(6)}>
+          <h2 className="m-0 text-balance text-lg font-black text-ink">設計システムの状態</h2>
+          <p className="mb-0 mt-1 text-pretty text-sm text-mute">
+            基盤で提供するUI語彙を明示しています。
+          </p>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Badge keycap="UI">Card</Badge>
+            <Badge keycap="CTA">Button</Badge>
+            <Badge keycap="1">Badge</Badge>
+            <Badge keycap="%">ProgressBar</Badge>
           </div>
-
-          <Card className="reveal p-5 sm:p-6" style={revealStyle(7)}>
-            <h2 className="m-0 text-balance text-lg font-black text-ink">設計システムの状態</h2>
-            <p className="mb-0 mt-1 text-pretty text-sm text-mute">
-              基盤で提供するUI語彙を明示しています。
+          <div className="mt-6 border-t-2 border-border pt-5">
+            <p className="m-0 font-mono text-xs font-bold text-green">
+              &gt;_ design-system --check
             </p>
-            <div className="mt-5 flex flex-wrap gap-2">
-              <Badge keycap="UI">Card</Badge>
-              <Badge keycap="CTA">Button</Badge>
-              <Badge keycap="1">Badge</Badge>
-              <Badge keycap="%">ProgressBar</Badge>
-            </div>
-            <div className="mt-6 border-t-2 border-border pt-5">
-              <p className="m-0 font-mono text-xs font-bold text-green">
-                &gt;_ design-system --check
-              </p>
-              <p className="mb-0 mt-2 text-pretty text-sm leading-6 text-ink-2">
-                dark/light tokens, responsive navigation, focus-visible, and safe-area support are
-                ready.
-              </p>
-              <Badge className="mt-4 border-green bg-green-bg text-green">
-                exit 0 · foundation ready
-              </Badge>
-            </div>
-          </Card>
-        </div>
+            <p className="mb-0 mt-2 text-pretty text-sm leading-6 text-ink-2">
+              dark/light tokens, responsive navigation, focus-visible, and safe-area support are
+              ready.
+            </p>
+            <Badge className="mt-4 border-green bg-green-bg text-green">
+              exit 0 · foundation ready
+            </Badge>
+          </div>
+        </Card>
 
-        <Card className="reveal border-green p-5 sm:p-6" style={revealStyle(8)}>
+        <Card className="reveal border-green p-5 sm:p-6" style={revealStyle(7)}>
           <div className="flex flex-wrap items-center gap-4">
             <span
               aria-hidden="true"

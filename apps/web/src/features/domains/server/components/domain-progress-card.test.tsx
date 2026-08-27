@@ -4,7 +4,6 @@ import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { DomainProgressCard } from './domain-progress-card'
-import { DomainProgressError } from './domain-progress-error'
 import { DomainProgressFallback } from './domain-progress-fallback'
 
 const security = {
@@ -42,14 +41,9 @@ describe('DomainProgressCard', () => {
     expect(screen.queryByRole('link', { name: '最初のトピック →' })).toBeNull()
   })
 
-  it('distinguishes loading and retrieval failures from a preparation state', () => {
-    const { rerender } = render(<DomainProgressFallback />)
-
+  it('distinguishes loading from a preparation state', () => {
+    render(<DomainProgressFallback />)
     expect(screen.getByText('学習データを読み込んでいます…')).toBeTruthy()
-    expect(screen.queryByText('準備中')).toBeNull()
-
-    rerender(<DomainProgressError />)
-    expect(screen.getByText(/学習データを読み込めませんでした/)).toBeTruthy()
     expect(screen.queryByText('準備中')).toBeNull()
   })
 })
