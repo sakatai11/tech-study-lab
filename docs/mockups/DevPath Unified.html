@@ -430,21 +430,7 @@ function dashboardHTML() {
       <span class="mono" style="display:flex;align-items:center;gap:4px;font-size:10.5px;color:var(--faint)">Less ${[0,1,2,3,4].map(l => `<span style="width:10px;height:10px;border-radius:2.5px;background:var(--heat${l});display:inline-block"></span>`).join('')} More</span>
     </div>
   </section>
-  <div class="two-col" style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
-    <section ${rv('card', 'padding:22px')}>
-      <h2 style="margin:0;font-size:16px;font-weight:800;color:var(--ink)">領域別の習得状況</h2>
-      <div style="margin-top:18px;display:flex;flex-direction:column;gap:17px">
-        ${domains.map((d, i) => `
-        <button class="go" data-go="domains" style="border:0;background:transparent;padding:0;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:13px;text-align:left">
-          <span style="display:grid;place-items:center;width:40px;height:40px;flex:none;border-radius:12px;background:var(--well);border:2px solid var(--border);color:${d.color}">${d.icon}</span>
-          <div style="flex:1;min-width:0">
-            <div style="display:flex;justify-content:space-between;font-size:13.5px;margin-bottom:7px"><span style="font-weight:700;color:var(--ink-2)">${d.name}</span><span class="mono" style="font-weight:700;color:var(--ink)">${d.pct}%</span></div>
-            <div class="bar-track"><div class="bar-fill" style="--w:${d.pct}%;--i:${i};background:${d.color}"></div></div>
-          </div>
-        </button>`).join('')}
-      </div>
-    </section>
-    <section ${rv('card', 'padding:22px')}>
+  <section ${rv('card', 'padding:22px')}>
       <h2 style="margin:0;font-size:16px;font-weight:800;color:var(--ink)">実績</h2>
       <div style="margin-top:14px;display:flex;flex-wrap:wrap;gap:9px">
         ${achievements.map(a => `<span class="badge ${a.unlocked ? '' : 'locked'}" title="${a.desc}">${a.emoji} ${a.label}</span>`).join('')}
@@ -457,8 +443,7 @@ function dashboardHTML() {
           <div class="row-press go" data-go="reviewIntro"><span style="display:grid;place-items:center;width:32px;height:32px;flex:none;border-radius:10px;background:var(--purple-bg);color:var(--purple)">${icons.refresh}</span><div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:700;color:var(--ink-2)">SRSがキューを更新</div><div class="mono" style="font-size:11px;color:var(--faint)">3件が due · 1時間前</div></div></div>
         </div>
       </div>
-    </section>
-  </div>
+  </section>
   <section ${rv('card hero-cta', 'padding:20px 22px;display:flex;align-items:center;gap:18px;border-color:var(--green)')}>
     <span style="display:grid;place-items:center;width:52px;height:52px;flex:none;border-radius:15px;background:var(--green-bg);color:var(--green)">${icons.file}</span>
     <div style="flex:1"><div class="mono" style="font-size:11px;font-weight:700;color:var(--green);letter-spacing:.08em">NEXT LESSON</div><h3 style="margin:5px 0 0;font-size:18px;font-weight:800;color:var(--ink)">保存型XSSを理解する</h3><p style="margin:3px 0 0;font-size:13px;color:var(--mute)">教材本文 → 4択3問 · クリアで次ノードがアンロック</p></div>
