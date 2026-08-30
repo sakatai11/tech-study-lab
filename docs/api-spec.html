@@ -247,7 +247,7 @@
           <a href="#review-queue"><span class="verb get">GET</span>/review/queue</a>
           <a href="#due-count"><span class="verb get">GET</span>/dashboard/due-count</a>
           <a href="#health"><span class="verb get">GET</span>/health</a>
-          <h2>後続API</h2>
+          <h2>追加API</h2>
           <a href="#domains"><span class="verb get">GET</span>/domains</a>
           <a href="#analytics-summary"><span class="verb get">GET</span>/analytics/summary</a>
           <a href="#analytics-weekly"><span class="verb get">GET</span>/analytics/weekly</a>
@@ -913,14 +913,14 @@ const { dueCount } = dueCountResponseSchema.parse(await response.json())</code><
           </div>
         </section>
 
-        <section aria-labelledby="planned-title">
-          <h2 id="planned-title">Walking Skeleton 後に追加するAPI</h2>
+        <section aria-labelledby="additional-apis-title">
+          <h2 id="additional-apis-title">追加API</h2>
           <p class="legend"><span class="status">implemented · route / Zod実装済み</span><span class="status planned">planned · DTO未確定</span><span>実装済みのAPIは共有ZodスキーマとD1 integration testまで確定しています。planned は目的・成功ステータス・返す予定の値のみを先に共有し、フィールド名と型は各実装Issueで確定します。</span></p>
           <div class="callout">
             <p><strong>後続Issueで必ず更新するもの</strong></p>
             <p>各APIの実装に着手するときは、返却値を共有Zodスキーマで確定し、このページの<strong>レスポンス例・フィールド表・実装状態</strong>も同じPRで更新します。APIのIF（URL、HTTPステータス、JSON形式、エラー形式）を実装だけで先に変えないでください。</p>
-            <p>いずれも認証・エラー形式は Walking Skeleton のAPIと共通です（<a href="#errors">共通エラー応答</a>）。すべて読み取り専用のため、永続書き込みのレート制限（429 / 503）は対象外です。</p>
-            <p><strong>planned で未確定なのはレスポンスbodyだけです。</strong>URL・メソッド・成功ステータス・認証・エラー形式・返す値の意味（設計文書 §7.3）は確定済みで、実装Issueで決めるのはフィールド名・型・入れ子構造です。</p>
+            <p>この節のAPIはいずれも認証・エラー形式が Walking Skeleton のAPIと共通です（<a href="#errors">共通エラー応答</a>）。すべて読み取り専用のため、永続書き込みのレート制限（429 / 503）は対象外です。</p>
+            <p><strong>planned のAPIについて未確定なのはレスポンスbodyだけです。</strong>URL・メソッド・成功ステータス・認証・エラー形式・返す値の意味（設計文書 §7.3）は確定済みで、実装Issueで決めるのはフィールド名・型・入れ子構造です。<code>/domains</code> は実装済みで、レスポンス例とフィールド表も確定しています。</p>
           </div>
           <div class="endpoint-list">
 

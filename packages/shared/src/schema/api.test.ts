@@ -284,11 +284,22 @@ describe('domainSummarySchema', () => {
     ).toBe(true)
   })
 
-  it('rejects a mastery rate outside 0..100 or non-integer counts', () => {
+  it('rejects non-integer counts and out-of-range mastery rates independently', () => {
     expect(
       domainSummarySchema.safeParse({
         domain: 'security',
         masteredQuestionCount: 1.5,
+        totalQuestionCount: 2,
+        masteryRate: 50,
+        topicCount: 1,
+        lessonCount: 1,
+      }).success,
+    ).toBe(false)
+
+    expect(
+      domainSummarySchema.safeParse({
+        domain: 'security',
+        masteredQuestionCount: 1,
         totalQuestionCount: 2,
         masteryRate: 101,
         topicCount: 1,

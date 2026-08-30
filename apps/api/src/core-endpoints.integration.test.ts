@@ -2,6 +2,8 @@ import { SELF, applyD1Migrations, env } from 'cloudflare:test'
 import { drizzle } from 'drizzle-orm/d1'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
+import type { DomainKey } from '@tsl/shared'
+
 import initialMigration from '../drizzle/migrations/0000_flowery_quasar.sql?raw'
 import srsVersionMigration from '../drizzle/migrations/0001_add_srs_version.sql?raw'
 import questionMetadataMigration from '../drizzle/migrations/0002_nasty_guardsmen.sql?raw'
@@ -29,7 +31,7 @@ async function seedQuestion(
   questionId: string,
   answerIndex: number,
   metadata?: {
-    domain: string
+    domain: DomainKey
     topic: string
     lessonId: string
     isActive?: boolean

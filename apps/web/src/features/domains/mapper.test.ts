@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
+import type { DomainsResponse } from '@tsl/shared'
+
 import { domainsToViewModel } from './mapper'
 
 const response = {
@@ -37,7 +39,7 @@ const response = {
       lessonCount: 0,
     },
   ],
-}
+} satisfies DomainsResponse
 
 describe('domainsToViewModel', () => {
   it('adds labels and links the lowest-order topic for each domain', () => {
