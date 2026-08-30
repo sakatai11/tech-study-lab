@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "a4d58c5a-3c1f-4d32-8d6a-7bf7a4c7a001",
-  "prevId": "95ecf045-fedc-4d9f-854a-9f61be842e3c",
+  "id": "98b27161-2025-4ce9-8954-bd621f191212",
+  "prevId": "a4d58c5a-3c1f-4d32-8d6a-7bf7a4c7a001",
   "tables": {
     "answer_logs": {
       "name": "answer_logs",
@@ -110,6 +110,38 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "domain": {
+          "name": "domain",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "''"
+        },
+        "topic": {
+          "name": "topic",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "''"
+        },
+        "lesson_id": {
+          "name": "lesson_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "''"
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
         }
       },
       "indexes": {},

@@ -8,6 +8,7 @@ import { userContext } from './middleware/user-context'
 import type { PlatformRateLimiter } from './persistent-write-rate-limit'
 import { createAnswersRoute } from './routes/answers'
 import { dashboardRoute } from './routes/dashboard'
+import { domainsRoute } from './routes/domains'
 import { createLessonViewsRoute } from './routes/lesson-views'
 import { reviewRoute } from './routes/review'
 import { QuestionNotFoundError } from './services/errors'
@@ -56,6 +57,7 @@ function createUserRoutes({ rateLimiters }: ApiAppOptions = {}) {
     .route('/lesson-views', createLessonViewsRoute({ rateLimiter: rateLimiters?.lessonViews }))
     .route('/review', reviewRoute)
     .route('/dashboard', dashboardRoute)
+    .route('/domains', domainsRoute)
 }
 
 export function createInternalApiApp(options?: ApiAppOptions) {

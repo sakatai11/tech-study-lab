@@ -542,22 +542,24 @@
             <code>cacheComponents</code> は有効化済み。<code>dynamic</code> /
             <code>dynamicParams</code> の route segment config は併用できないため置かない。
             <code>/</code> は API・Service Binding・ユーザー固有 hook を読まない静的な公開トップです。
-            PPR streaming の対象は <code>/home</code> と <code>/review</code> のみで、前者は
-            <code>DashboardDueCard</code>、後者は静的シェルに <code>ReviewQueueFallback</code> を表示してから、queue 完了後は
+            PPR streaming の対象は <code>/home</code>・<code>/review</code>・<code>/domains</code> で、<code>/home</code> は
+            <code>DashboardDueCard</code>、<code>/review</code> は静的シェルに <code>ReviewQueueFallback</code> を表示してから、queue 完了後は
             <code>ReviewUserContent</code> が joined 表示件数と <code>hasMore</code> に応じて
             route error boundary、空キュー、または1件以上の場合だけ
-            <code>ReviewRunner</code> を選ぶ。
+            <code>ReviewRunner</code> を選ぶ。<code>/domains</code> は静的シェルの
+            <code>&lt;Suspense fallback={&lt;DomainProgressFallback /&gt;}&gt;</code> 内で、非キャッシュの
+            <code>loadDomains</code> が読む4領域カードをストリーミングし、取得失敗は専用の route error boundary で扱う。
           </li>
         </ul>
         <div class="note">
           <strong>Cache Components / PPR 方針</strong><br />
-          <code>/home</code> の due 件数・ダッシュボード統計・<code>/review</code> の queue は API が <code>user_id</code> を
+          <code>/home</code> の due 件数・ダッシュボード統計・<code>/review</code> の queue・<code>/domains</code> の集計は API が <code>user_id</code> を
           権威的に注入する一方、web の共有キャッシュキーには含まれません。したがって
           <code>'use cache'</code>・<code>cacheLife</code>・<code>cacheTag</code>・
           <code>revalidateTag</code> は使わず、Suspense による分離だけを行います。解答後は
           <code>router.refresh()</code> で Server loader を再実行します。未実装の
-          <code>/domains</code> と <code>/analytics</code> も、実装時に同じ静的シェルと
-          非キャッシュ動的領域の分離を適用しますが、PPR streaming 対象への追加は別途判断します。
+          <code>/analytics</code> は、実装時に静的シェルと非キャッシュ動的領域を分離し、
+          PPR streaming 対象への追加は別途判断します。
           <code>/learn/...</code> と <code>/quiz/...</code> は content 由来の prerender を維持し、
           PPR streaming の対象外です（<code>generateStaticParams</code> と
           <code>'use cache'</code> で全件を build 時に生成します）。
@@ -565,7 +567,7 @@
         <div class="note">
           <strong>公開・Access 境界</strong><br />
           <code>/</code> は公開のプロダクト入口で、明確な「ログインして学習を始める」CTA から <code>/home</code> へ遷移します。アプリ管理のログイン・セッションは追加しません。
-          本番の Cloudflare Access Application/Policy では <code>/</code> を公開し、<code>/home</code> と <code>/learn/...</code>・<code>/quiz/...</code>・<code>/review</code>・将来のユーザー向け route を保護します。route pattern の設定とデプロイ後検証は Issue #35 の責務です。
+          本番の Cloudflare Access Application/Policy では <code>/</code> を公開し、<code>/home</code> と <code>/learn/...</code>・<code>/quiz/...</code>・<code>/review</code>・<code>/domains</code>・将来のユーザー向け route を保護します。route pattern の設定とデプロイ後検証は Issue #35 の責務です。
         </div>
         <div class="note">
           <strong>検証結果と残る制約</strong><br />
@@ -625,6 +627,13 @@
             component の props 契約を境界にする。他 feature の内部層を直接 import
             しない。
           </li>
+          <li>
+            <code>app</code> の名前は URL パス、<code>features</code>
+            の名前はドメイン概念名で、両者は一致しなくてよい（<code>/home</code> ↔
+            <code>features/dashboard</code>、<code>/learn/...</code> ↔
+            <code>features/lesson</code>）。route と feature は 1:1
+            でもない。詳細は design.md §8.1。
+          </li>
         </ul>
       </section>
 
@@ -651,11 +660,15 @@ flowchart LR
   home["/home\ndashboard shell\nPPR"]:::user
   due["DashboardDueCard\n非キャッシュ user data"]:::dynamic
   review["/review\nPPR"]:::user
+  domains["/domains\n4領域カード shell\nPPR"]:::user
+  domainProgress["DomainProgressFallback → loadDomains\n非キャッシュ user data\nroute error boundary"]:::dynamic
   learning["/learn/...・/quiz/...\ncontent prerender"]:::user
 
   top --&gt; cta --&gt; home
   home --&gt; due
   home --&gt; review
+  home --&gt; domains
+  domains --&gt; domainProgress
   home --&gt; learning</pre>
         </div>
       </section>
@@ -874,8 +887,10 @@ flowchart LR
       <section>
         <h2>ディレクトリの役割</h2>
         <pre><code>apps/web/src/app/
+├── _components/               # 共通 shell と feature の合成（route にならない）
 ├── page.tsx                   # / 公開トップ（静的・APIなし）
 ├── home/page.tsx              # /home dashboard（PPR）
+├── domains/                   # /domains スキルツリー
 ├── review/                    # /review（PPR）
 ├── learn/[domain]/[topic]/... # content prerender
 └── quiz/[lesson]/             # content prerender + Client state</code></pre>
@@ -905,6 +920,18 @@ flowchart LR
                 を呼び、ViewModel を component に渡す薄い入口。
               </td>
               <td>DTO変換、APIレスポンス処理、複雑なUI state。</td>
+            </tr>
+            <tr>
+              <td><code>apps/web/src/app/_components</code></td>
+              <td>
+                <code>/</code> を除くすべての認証後ルートが共有する shell と feature
+                の表示部品を props 契約で合成する composition
+                layer（<code>app-shell.tsx</code>）。private folder なので route を持たない。
+              </td>
+              <td>
+                DTO の join・sort・filter、feature 固有 UI、1
+                ページ専用のデータ合成（<code>features/&lt;page-feature&gt;/server</code> へ）。
+              </td>
             </tr>
             <tr>
               <td><code>apps/web/src/features/*/client/components</code></td>

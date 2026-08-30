@@ -1,6 +1,6 @@
 import { DAY_MS, initialSrs, reviewSrs } from '@tsl/shared'
 
-import type { ContentSyncPayload } from './content-sync'
+import type { ContentSyncQuestion } from './content-sync'
 import { FIXED_USER_ID } from './fixed-user'
 
 type SeededAnswer = {
@@ -38,7 +38,13 @@ function answerLogSql({
  * content sync と同じ検証済みの question ID から、固定ユーザーの開発用動的データを作る。
  * ファイルI/O・時刻取得・Wrangler 実行を持たないため、決定的にテストできる。
  */
-export function createDevSeedSql(payload: ContentSyncPayload, seededAt: number): string {
+export function createDevSeedSql(
+  payload: {
+    userId: string
+    questions: Pick<ContentSyncQuestion, 'questionId' | 'answerIndex'>[]
+  },
+  seededAt: number,
+): string {
   if (!Number.isSafeInteger(seededAt) || seededAt < 0) {
     throw new Error('seededAt must be a nonnegative safe integer')
   }

@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="tech-study-lab のAPI契約。初学者向けの読み方と、実装時に参照するHTTP・Zod契約をまとめています。"
+      content="tech-study-lab のAPI仕様。エンドポイントごとにリクエスト・レスポンスの実例（JSON）とフィールド定義、エラー応答をまとめています。"
     />
-    <title>API 契約カタログ | tech-study-lab</title>
+    <title>API 仕様カタログ | tech-study-lab</title>
     <style>
       :root {
         color-scheme: light;
@@ -16,11 +16,29 @@
         --border: #d8e0e8;
         --canvas: #f4f7f9;
         --surface: #ffffff;
+        --subtle: #fbfcfd;
         --accent: #087e8b;
         --accent-soft: #e6f6f7;
         --planned: #9a6700;
         --planned-soft: #fff7db;
+        --get: #0b5fbd;
+        --post: #1f7a3d;
+        --ok: #0f7b4f;
+        --ok-soft: #e7f6ef;
+        --warn: #9a6700;
+        --warn-soft: #fff7db;
+        --danger: #b42318;
+        --danger-soft: #fdecea;
         --code: #17212b;
+        --code-ink: #dce7f7;
+        --code-line: #2b3846;
+        --json-key: #9fd0ff;
+        --json-string: #a8e6a1;
+        --json-number: #ffd493;
+        --json-atom: #d9b3ff;
+        --json-punct: #8ea3b8;
+        --json-comment: #7e8fa1;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
         --sidebar: 17rem;
       }
 
@@ -42,14 +60,14 @@
         border: 1px solid var(--border);
         border-radius: 0.25rem;
         background: #f7fafc;
-        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-family: var(--mono);
         font-size: 0.9em;
       }
 
       .shell {
         display: grid;
         grid-template-columns: var(--sidebar) minmax(0, 1fr);
-        max-width: 90rem;
+        max-width: 92rem;
         min-height: 100dvh;
         margin: 0 auto;
         background: var(--surface);
@@ -63,23 +81,27 @@
         overflow-y: auto;
         padding: 1.5rem 1rem 2rem;
         border-right: 1px solid var(--border);
-        background: #fbfcfd;
+        background: var(--subtle);
       }
       .brand { display: block; margin-bottom: 1.75rem; color: var(--ink); font-weight: 800; text-decoration: none; }
       .brand small { display: block; color: var(--accent); font-size: 0.75rem; font-weight: 700; }
       .sidebar h2 { margin: 1.25rem 0 0.45rem; color: var(--muted); font-size: 0.75rem; text-transform: uppercase; }
-      .sidebar a:not(.brand) { display: block; padding: 0.35rem 0.5rem; border-radius: 0.3rem; color: var(--muted); font-size: 0.875rem; text-decoration: none; }
+      .sidebar a:not(.brand) { display: flex; gap: 0.4rem; align-items: baseline; padding: 0.3rem 0.5rem; border-radius: 0.3rem; color: var(--muted); font-size: 0.85rem; text-decoration: none; }
       .sidebar a:not(.brand):hover, .sidebar a:not(.brand):focus-visible { color: var(--ink); background: var(--accent-soft); outline: none; }
+      .sidebar .verb { flex: none; min-width: 2.6rem; color: var(--muted); font-family: var(--mono); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.02em; }
+      .sidebar .verb.get { color: var(--get); }
+      .sidebar .verb.post { color: var(--post); }
 
-      main { min-width: 0; padding: 3.5rem clamp(1.25rem, 5vw, 5rem) 6rem; }
+      main { min-width: 0; padding: 3.5rem clamp(1.25rem, 4vw, 4rem) 6rem; }
       .eyebrow { margin: 0 0 0.5rem; color: var(--accent); font-size: 0.8rem; font-weight: 800; text-transform: uppercase; }
-      h1, h2, h3 { line-height: 1.25; text-wrap: balance; }
+      h1, h2, h3, h4 { line-height: 1.25; text-wrap: balance; }
       h1 { max-width: 18ch; margin: 0; font-size: clamp(2rem, 5vw, 3.5rem); }
       h2 { margin: 4rem 0 1rem; padding-top: 1.5rem; border-top: 1px solid var(--border); font-size: clamp(1.45rem, 3vw, 2rem); scroll-margin-top: 1rem; }
       h3 { margin: 0; font-size: 1.1rem; }
+      h4 { margin: 0; color: var(--muted); font-size: 0.78rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
       .lede { max-width: 46rem; margin: 1rem 0 0; color: var(--muted); font-size: 1.1rem; }
 
-      .callout, .endpoint, .quickstart { border: 1px solid var(--border); border-radius: 0.75rem; background: var(--surface); }
+      .callout, .endpoint, .quickstart, .errorcard { border: 1px solid var(--border); border-radius: 0.75rem; background: var(--surface); }
       .callout { max-width: 52rem; margin-top: 2rem; padding: 1.1rem 1.25rem; border-left: 0.35rem solid var(--accent); }
       .callout p { margin: 0.3rem 0; }
       .quickstart { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin-top: 1.5rem; padding: 1.25rem; }
@@ -87,27 +109,105 @@
       .quickstart p { margin: 0; color: var(--muted); font-size: 0.9rem; }
 
       .rules { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
-      .rule { padding: 1rem; border: 1px solid var(--border); border-radius: 0.6rem; background: #fbfcfd; }
-      .rule h3 { margin-bottom: 0.4rem; }
+      .rule { padding: 1rem; border: 1px solid var(--border); border-radius: 0.6rem; background: var(--subtle); }
+      .rule h3 { margin-bottom: 0.4rem; font-size: 1rem; }
       .rule p { margin: 0; color: var(--muted); font-size: 0.92rem; }
 
-      .endpoint-list { display: grid; gap: 1rem; }
+      .table-wrap { overflow-x: auto; margin: 1rem 0 0; border: 1px solid var(--border); border-radius: 0.6rem; }
+      table.grid { width: 100%; min-width: 34rem; border-collapse: collapse; font-size: 0.9rem; }
+      table.grid th, table.grid td { padding: 0.6rem 0.85rem; border-top: 1px solid var(--border); text-align: left; vertical-align: top; }
+      table.grid thead th { border-top: 0; background: var(--subtle); color: var(--muted); font-size: 0.78rem; font-weight: 800; letter-spacing: 0.04em; white-space: nowrap; }
+      table.grid td.nowrap, table.grid th.nowrap { white-space: nowrap; }
+      table.grid td .req { color: var(--danger); font-size: 0.8rem; font-weight: 800; }
+      table.grid td .opt { color: var(--muted); font-size: 0.8rem; font-weight: 700; }
+      .type { color: var(--post); font-family: var(--mono); font-size: 0.85rem; }
+
+      .verb-tag { display: inline-block; min-width: 3.2rem; padding: 0.1rem 0.4rem; border-radius: 0.25rem; background: var(--code); color: #fff; font-family: var(--mono); font-size: 0.72rem; font-weight: 800; text-align: center; }
+      .verb-tag.get { background: var(--get); }
+      .verb-tag.post { background: var(--post); }
+
+      .endpoint-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.25rem; }
       .endpoint { overflow: hidden; scroll-margin-top: 1rem; }
-      .endpoint > header { display: flex; flex-wrap: wrap; gap: 0.65rem; align-items: center; padding: 1.25rem 1.25rem 0.9rem; border-bottom: 1px solid var(--border); }
-      .endpoint .method { display: inline-block; min-width: 3.2rem; padding: 0.18rem 0.45rem; border-radius: 0.25rem; background: var(--code); color: #fff; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.8rem; font-weight: 800; text-align: center; }
+      .endpoint > header { display: flex; flex-wrap: wrap; gap: 0.65rem; align-items: center; padding: 1.25rem 1.25rem 0.9rem; border-bottom: 1px solid var(--border); background: var(--subtle); }
+      .endpoint .method { display: inline-block; min-width: 3.2rem; padding: 0.18rem 0.45rem; border-radius: 0.25rem; background: var(--code); color: #fff; font-family: var(--mono); font-size: 0.8rem; font-weight: 800; text-align: center; }
+      .endpoint .method.get { background: var(--get); }
+      .endpoint .method.post { background: var(--post); }
       .endpoint h3 code { border: 0; background: transparent; padding: 0; font-size: 1em; }
       .status { margin-left: auto; padding: 0.17rem 0.55rem; border-radius: 999px; background: var(--accent-soft); color: #075a64; font-size: 0.78rem; font-weight: 800; }
       .status.planned { background: var(--planned-soft); color: var(--planned); }
-      .endpoint > p { margin: 1rem 1.25rem; color: var(--muted); }
-      .contract { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
-      .contract th, .contract td { padding: 0.8rem 1.25rem; border-top: 1px solid var(--border); text-align: left; vertical-align: top; }
-      .contract th { width: 8rem; background: #fbfcfd; color: var(--muted); font-weight: 700; }
-      .contract td { color: var(--ink); }
-      .http { font-variant-numeric: tabular-nums; font-weight: 800; }
-      .detail { padding: 0 1.25rem 1.2rem; color: var(--muted); font-size: 0.9rem; }
-      .detail strong { color: var(--ink); }
-      .legend { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 1rem 0 1.5rem; color: var(--muted); font-size: 0.88rem; }
+      .endpoint > p.summary { margin: 1.1rem 1.25rem; color: var(--muted); }
+      .badges { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0 1.25rem 1.1rem; }
+      .badge { padding: 0.1rem 0.5rem; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--muted); font-size: 0.76rem; font-weight: 700; }
+      .badge.rate { border-color: #f0dfae; background: var(--warn-soft); color: var(--warn); }
 
+      .pane { padding: 0 1.25rem 1.25rem; }
+      .pane + .pane { border-top: 1px dashed var(--border); padding-top: 1.1rem; }
+      .pane > h4 { margin-bottom: 0.5rem; }
+      .pane p.note { margin: 0.7rem 0 0; color: var(--muted); font-size: 0.86rem; }
+      .pane p.note strong { color: var(--ink); }
+
+      .sample { margin: 1rem 0 0; border: 1px solid var(--border); border-radius: 0.55rem; overflow: hidden; }
+      .sample > figcaption { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; padding: 0.45rem 0.75rem; border-bottom: 1px solid var(--border); background: var(--subtle); font-size: 0.8rem; }
+      .sample .wire { font-family: var(--mono); font-weight: 800; font-variant-numeric: tabular-nums; }
+      .sample .wire.ok { color: var(--ok); }
+      .sample .wire.warn { color: var(--warn); }
+      .sample .wire.danger { color: var(--danger); }
+      .sample .meta { color: var(--muted); font-family: var(--mono); font-size: 0.76rem; }
+      .sample .copy { margin-left: auto; padding: 0.15rem 0.55rem; border: 1px solid var(--border); border-radius: 0.3rem; background: var(--surface); color: var(--muted); font: inherit; font-size: 0.76rem; font-weight: 700; cursor: pointer; }
+      .sample .copy:hover { color: var(--ink); background: var(--accent-soft); }
+      .sample pre { margin: 0; padding: 0.85rem 1rem; overflow-x: auto; background: var(--code); color: var(--code-ink); font-family: var(--mono); font-size: 0.82rem; line-height: 1.6; }
+      .sample pre code { padding: 0; border: 0; background: transparent; color: inherit; font-size: inherit; }
+      .tok.key { color: var(--json-key); }
+      .tok.string { color: var(--json-string); }
+      .tok.number { color: var(--json-number); }
+      .tok.atom { color: var(--json-atom); }
+      .tok.punct { color: var(--json-punct); }
+      .tok.comment { color: var(--json-comment); font-style: italic; }
+      .tok.cmd { color: var(--json-key); font-weight: 700; }
+      .tok.flag { color: var(--json-atom); }
+
+      .tabs { display: flex; flex-wrap: wrap; gap: 0.4rem; position: relative; margin-top: 0.6rem; }
+      .tabs > input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+      .tabs > label { padding: 0.2rem 0.7rem; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--muted); font-family: var(--mono); font-size: 0.78rem; font-weight: 800; font-variant-numeric: tabular-nums; cursor: pointer; }
+      .tabs > label:hover { background: var(--accent-soft); }
+      .tabs > input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 2px; }
+      .tabs > label.ok { color: var(--ok); }
+      .tabs > label.warn { color: var(--warn); }
+      .tabs > label.danger { color: var(--danger); }
+      .tabs > input:checked + label { color: #fff; background: var(--ink); border-color: var(--ink); }
+      .tabs > input:checked + label.ok { background: var(--ok); border-color: var(--ok); }
+      .tabs > input:checked + label.warn { background: var(--warn); border-color: var(--warn); }
+      .tabs > input:checked + label.danger { background: var(--danger); border-color: var(--danger); }
+      .tabs > .panels { flex: 1 0 100%; min-width: 0; }
+      .tabs > .panels > .panel { display: none; }
+      .tabs > input:nth-of-type(1):checked ~ .panels > .panel:nth-child(1),
+      .tabs > input:nth-of-type(2):checked ~ .panels > .panel:nth-child(2),
+      .tabs > input:nth-of-type(3):checked ~ .panels > .panel:nth-child(3),
+      .tabs > input:nth-of-type(4):checked ~ .panels > .panel:nth-child(4),
+      .tabs > input:nth-of-type(5):checked ~ .panels > .panel:nth-child(5),
+      .tabs > input:nth-of-type(6):checked ~ .panels > .panel:nth-child(6) { display: block; }
+
+      .errorcards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-top: 1rem; }
+      .errorcard { padding: 1rem 1.1rem 1.1rem; }
+      .errorcard h3 { display: flex; gap: 0.5rem; align-items: baseline; font-family: var(--mono); font-size: 0.95rem; }
+      .errorcard h3 .code-label { color: var(--muted); font-family: inherit; font-size: 0.82rem; font-weight: 700; }
+      .errorcard p { margin: 0.4rem 0 0; color: var(--muted); font-size: 0.88rem; }
+      .errorcard .sample { margin-top: 0.75rem; }
+
+      .tbd { margin: 0.9rem 0 0; padding: 0.85rem 1rem; border: 1px dashed #d8c99a; border-radius: 0.55rem; background: var(--planned-soft); color: #7a5300; font-size: 0.88rem; }
+      .tbd strong { display: block; margin-bottom: 0.3rem; color: var(--planned); }
+      .tbd ul { margin: 0.4rem 0 0; padding-left: 1.1rem; }
+      .tbd p { margin: 0.5rem 0 0; }
+      .tbd li { margin: 0.15rem 0; }
+
+      .legend { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin: 1rem 0 1.5rem; color: var(--muted); font-size: 0.88rem; }
+      .http { font-variant-numeric: tabular-nums; font-weight: 800; }
+      .detail { margin: 0; padding: 0 1.25rem 1.25rem; color: var(--muted); font-size: 0.88rem; }
+      .detail strong { color: var(--ink); }
+
+      @media (max-width: 1100px) {
+        .errorcards { grid-template-columns: minmax(0, 1fr); }
+      }
       @media (max-width: 850px) {
         .shell { display: block; }
         .sidebar { position: static; width: auto; height: auto; overflow: visible; border-right: 0; border-bottom: 1px solid var(--border); }
@@ -117,135 +217,1018 @@
         main { padding-top: 2.5rem; }
       }
       @media (max-width: 620px) {
-        .quickstart, .rules { grid-template-columns: 1fr; }
+        .quickstart, .rules { grid-template-columns: minmax(0, 1fr); }
         .endpoint > header { align-items: flex-start; }
         .status { margin-left: 0; }
-        .contract th, .contract td { display: block; width: 100%; }
-        .contract th { padding-bottom: 0.2rem; border-bottom: 0; }
-        .contract td { padding-top: 0.2rem; }
+      }
+      @media print {
+        .shell { display: block; }
+        .sidebar, .sample .copy { display: none; }
+        .tabs > label { display: none; }
+        .tabs > .panels > .panel { display: block !important; }
+        .sample pre { background: #fff; color: #000; border-top: 1px solid var(--border); }
+        .tok.key, .tok.string, .tok.number, .tok.atom, .tok.punct, .tok.cmd, .tok.flag { color: #000; }
       }
     </style>
   </head>
   <body>
     <div class="shell">
-      <aside class="sidebar" aria-label="API契約カタログの目次">
-        <a class="brand" href="#top"><small>tech-study-lab</small>API 契約カタログ</a>
+      <aside class="sidebar" aria-label="API仕様カタログの目次">
+        <a class="brand" href="#top"><small>tech-study-lab</small>API 仕様カタログ</a>
         <nav>
           <h2>はじめに</h2>
-          <a href="#how-to-read">読み方</a>
-          <a href="#rules">共通規約</a>
+          <a href="#how-to-read"><span class="verb">READ</span>読み方</a>
+          <a href="#overview"><span class="verb">LIST</span>エンドポイント一覧</a>
+          <a href="#rules"><span class="verb">RULE</span>共通規約</a>
+          <a href="#errors"><span class="verb">ERR</span>共通エラー応答</a>
           <h2>Walking Skeleton</h2>
-          <a href="#answers">POST /answers</a>
-          <a href="#lesson-views">POST /lesson-views</a>
-          <a href="#review-queue">GET /review/queue</a>
-          <a href="#due-count">GET /dashboard/due-count</a>
-          <h2>後続API</h2>
-          <a href="#domains">GET /domains</a>
-          <a href="#analytics-summary">GET /analytics/summary</a>
-          <a href="#analytics-weekly">GET /analytics/weekly</a>
-          <a href="#analytics-heatmap">GET /analytics/heatmap</a>
-          <a href="#analytics-mistakes">GET /analytics/mistakes</a>
-          <a href="#activity-recent">GET /activity/recent</a>
+          <a href="#answers"><span class="verb post">POST</span>/answers</a>
+          <a href="#lesson-views"><span class="verb post">POST</span>/lesson-views</a>
+          <a href="#review-queue"><span class="verb get">GET</span>/review/queue</a>
+          <a href="#due-count"><span class="verb get">GET</span>/dashboard/due-count</a>
+          <a href="#health"><span class="verb get">GET</span>/health</a>
+          <h2>追加API</h2>
+          <a href="#domains"><span class="verb get">GET</span>/domains</a>
+          <a href="#analytics-summary"><span class="verb get">GET</span>/analytics/summary</a>
+          <a href="#analytics-weekly"><span class="verb get">GET</span>/analytics/weekly</a>
+          <a href="#analytics-heatmap"><span class="verb get">GET</span>/analytics/heatmap</a>
+          <a href="#analytics-mistakes"><span class="verb get">GET</span>/analytics/mistakes</a>
+          <a href="#activity-recent"><span class="verb get">GET</span>/activity/recent</a>
         </nav>
       </aside>
 
       <main id="top">
-        <p class="eyebrow">Reference · API contracts</p>
-        <h1>実装前に確認する API 契約</h1>
-        <p class="lede">画面とAPIの境界を、Jr.には「何を送って何が返るか」が分かる形で、SeniorにはHTTP・Zod・実装状態をすぐ追える形で整理しています。</p>
+        <p class="eyebrow">Reference · API specification</p>
+        <h1>実装前に確認する API 仕様</h1>
+        <p class="lede">エンドポイントごとに「何を送ると、どんなJSONが返るか」を実例で示します。フィールド定義・成功応答・エラー応答・実装状態を、画面実装とAPI実装の両方から同じ形で参照できます。</p>
         <div class="callout">
           <p><strong>この文書の位置づけ</strong></p>
-          <p>画面構成とユースケースの一次ソースは <a href="./design.md#73-画面構成から要請される-api参考">設計文書 §7.3</a> です。このページはHTTP入出力と実装状況を参照しやすくするための契約カタログです。</p>
+          <p>画面構成とユースケースの一次ソースは <a href="./design.md#73-画面構成から要請される-api参考">設計文書 §7.3</a>、エラー方針は <a href="./design.md#106-バリデーションdtoエラー処理">§10.6</a>、レート制限は <a href="./design.md#1031-永続書き込みのレート制限と観測">§10.3.1</a> です。このページはHTTP入出力・レスポンス実例・実装状況を参照しやすくするための仕様カタログです。</p>
+          <p>掲載しているJSONは、共有Zodスキーマと route 実装から起こした<strong>代表例</strong>です。値そのものは固定ではありません（形と型が契約です）。</p>
         </div>
 
         <section id="how-to-read" aria-labelledby="how-to-read-title">
           <h2 id="how-to-read-title">最初に読むなら、この3点</h2>
           <div class="quickstart">
             <div><strong>1. 状態を見る</strong><p><code>implemented</code> はrouteと共有Zodスキーマの実装済み、<code>planned</code> はDTOが未確定です。</p></div>
-            <div><strong>2. 成功だけでなくエラーを見る</strong><p>入力不備、対象なし、内部エラーを先に把握すると、画面側の分岐を設計しやすくなります。</p></div>
-            <div><strong>3. Zodを正とする</strong><p>実装済みの契約は <code>packages/shared/src/schema/api.ts</code> をAPIとフロントで共有します。</p></div>
+            <div><strong>2. 成功だけでなくエラーを見る</strong><p>各エンドポイントのレスポンスはステータスコードのタブで切り替えられます。入力不備・対象なし・レート制限・内部エラーの実例を先に把握してください。</p></div>
+            <div><strong>3. Zodを正とする</strong><p>実装済みの契約は <code>packages/shared/src/schema/api.ts</code> をAPIとフロントで共有します。掲載例と食い違う場合はスキーマが正です。</p></div>
+          </div>
+        </section>
+
+        <section id="overview" aria-labelledby="overview-title">
+          <h2 id="overview-title">エンドポイント一覧</h2>
+          <p class="legend"><span class="status">implemented</span><span class="status planned">planned</span><span>ベースURLはローカル開発が <code>http://localhost:8787</code>、本番はAPI Workerの公開ホストです。パスにバージョンプレフィックスはありません。</span></p>
+          <div class="table-wrap">
+            <table class="grid">
+              <thead>
+                <tr><th class="nowrap">メソッド</th><th>パス</th><th>用途</th><th class="nowrap">成功</th><th class="nowrap">状態</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="nowrap"><span class="verb-tag post">POST</span></td><td class="nowrap"><a href="#answers"><code>/answers</code></a></td><td>1問の解答を採点・記録し、SRS状態を更新する</td><td class="nowrap http">200</td><td class="nowrap">implemented</td></tr>
+                <tr><td class="nowrap"><span class="verb-tag post">POST</span></td><td class="nowrap"><a href="#lesson-views"><code>/lesson-views</code></a></td><td>教材の閲覧を最小ログとして記録する</td><td class="nowrap http">201</td><td class="nowrap">implemented</td></tr>
+                <tr><td class="nowrap"><span class="verb-tag get">GET</span></td><td class="nowrap"><a href="#review-queue"><code>/review/queue</code></a></td><td>復習対象の問題IDとSRSメタを返す</td><td class="nowrap http">200</td><td class="nowrap">implemented</td></tr>
+                <tr><td class="nowrap"><span class="verb-tag get">GET</span></td><td class="nowrap"><a href="#due-count"><code>/dashboard/due-count</code></a></td><td>今すぐ復習できる問題数を返す</td><td class="nowrap http">200</td><td class="nowrap">implemented</td></tr>
+                <tr><td class="nowrap"><span class="verb-tag get">GET</span></td><td class="nowrap"><a href="#health"><code>/health</code></a></td><td>公開entrypointの疎通確認（Access検証の前段）</td><td class="nowrap http">200</td><td class="nowrap">implemented</td></tr>
+                <tr><td class="nowrap"><span class="verb-tag get">GET</span></td><td class="nowrap"><a href="#domains"><code>/domains</code></a></td><td>4領域の習得率・トピック数・レッスン数</td><td class="nowrap http">200</td><td class="nowrap">implemented</td></tr>
+                <tr><td class="nowrap"><span class="verb-tag get">GET</span></td><td class="nowrap"><a href="#analytics-summary"><code>/analytics/summary</code></a></td><td>総解答数・正答率・平均反応時間などの集計</td><td class="nowrap http">200</td><td class="nowrap">planned</td></tr>
+                <tr><td class="nowrap"><span class="verb-tag get">GET</span></td><td class="nowrap"><a href="#analytics-weekly"><code>/analytics/weekly</code></a></td><td>直近7日の解答数推移</td><td class="nowrap http">200</td><td class="nowrap">planned</td></tr>
+                <tr><td class="nowrap"><span class="verb-tag get">GET</span></td><td class="nowrap"><a href="#analytics-heatmap"><code>/analytics/heatmap</code></a></td><td>直近26週の日次解答数</td><td class="nowrap http">200</td><td class="nowrap">planned</td></tr>
+                <tr><td class="nowrap"><span class="verb-tag get">GET</span></td><td class="nowrap"><a href="#analytics-mistakes"><code>/analytics/mistakes</code></a></td><td>誤答率が高い問題の上位ランキング</td><td class="nowrap http">200</td><td class="nowrap">planned</td></tr>
+                <tr><td class="nowrap"><span class="verb-tag get">GET</span></td><td class="nowrap"><a href="#activity-recent"><code>/activity/recent</code></a></td><td>直近の学習イベント一覧</td><td class="nowrap http">200</td><td class="nowrap">planned</td></tr>
+              </tbody>
+            </table>
           </div>
         </section>
 
         <section id="rules" aria-labelledby="rules-title">
           <h2 id="rules-title">共通規約</h2>
           <div class="rules">
-            <article class="rule"><h3>パスと形式</h3><p>現時点ではAPIバージョンのプレフィックスはありません。リクエストとレスポンスはJSONで、本文のない <code>GET</code> にJSON bodyは送りません。</p></article>
+            <article class="rule"><h3>パスと形式</h3><p>現時点ではAPIバージョンのプレフィックスはありません。リクエストとレスポンスはJSON（<code>application/json</code>）で、本文のない <code>GET</code> にJSON bodyは送りません。</p></article>
             <article class="rule"><h3>ユーザーコンテキスト</h3><p>API middleware が固定の <code>user_id</code> を権威的に注入します。クライアントは <code>user_id</code> / <code>userId</code> を送らず、レスポンスにも含めません。</p></article>
-            <article class="rule"><h3>エラー形式</h3><p>routeのエラーは原則 <code>{ error: { code, message } }</code>。ただし、入力検証の400は現時点で <code>zValidator</code> の既定形式です。</p></article>
-            <article class="rule"><h3>実装状態</h3><p><code>implemented</code> はrouteと共有Zodスキーマが実装済みです。<code>planned</code> はレスポンスDTOとZodスキーマが未確定です。</p></article>
+            <article class="rule"><h3>2つのentrypoint</h3><p>公開HTTPは <code>CORS → Access検証 → userContext → routes</code>。web Server loader が使う Service Binding の <code>InternalApi</code> は <code>userContext → routes</code> のみで、同じrouteを共有します。</p></article>
+            <article class="rule"><h3>認証（公開entrypoint）</h3><p>Cloudflare Access の <code>Cf-Access-Jwt-Assertion</code> を Worker 側で検証します。未設定・欠落・不一致はすべて <a href="#errors">401 <code>UNAUTHORIZED</code></a>。loopback URL かつ Access 未設定のローカル開発のみ bypass します。</p></article>
+            <article class="rule"><h3>エラー形式</h3><p>routeのエラーは原則 <code>{ error: { code, message } }</code>。ただし入力検証の400は現時点で <code>zValidator</code> の既定形式（<code>{ success: false, error: { issues, name } }</code>）です。</p></article>
+            <article class="rule"><h3>永続書き込みのレート制限</h3><p>設定上限は <code>POST /answers</code> が60秒あたり60回、<code>POST /lesson-views</code> が60秒あたり30回。超過時は <span class="http">429</span> ＋ <code>Retry-After: 60</code>、limiter 自体が使えない場合は fail closed で <span class="http">503</span> です。Cloudflare location（PoP）ごとのカウンタで eventually consistent な abuse reduction であり、<strong>厳密なグローバルquotaではありません</strong>（§10.3.1）。</p></article>
+          </div>
+        </section>
+
+        <section id="errors" aria-labelledby="errors-title">
+          <h2 id="errors-title">共通エラー応答</h2>
+          <p class="legend"><span>各エンドポイントのレスポンスタブにも同じ形で掲載しています。ここは形式そのものの一覧です。</span></p>
+          <div class="errorcards">
+            <article class="errorcard">
+              <h3><span class="http">400</span> <span class="code-label">Bad Request（zValidator 既定）</span></h3>
+              <p>リクエストbodyがZodスキーマに合わない場合。<code>{ error: { code, message } }</code> ではなく <code>safeParse</code> の結果がそのまま返ります。strict なスキーマでは未知フィールドも <code>unrecognized_keys</code> で弾かれます。</p>
+              <figure class="sample">
+                <figcaption><span class="wire warn">400 Bad Request</span><span class="meta">application/json</span></figcaption>
+                <pre data-lang="json"><code>{
+  "success": false,
+  "error": {
+    "issues": [
+      {
+        "code": "unrecognized_keys",
+        "keys": ["userId"],
+        "path": [],
+        "message": "Unrecognized key(s) in object: 'userId'"
+      }
+    ],
+    "name": "ZodError"
+  }
+}</code></pre>
+              </figure>
+            </article>
+
+            <article class="errorcard">
+              <h3><span class="http">401</span> <span class="code-label">UNAUTHORIZED</span></h3>
+              <p>公開entrypointのAccess境界。設定不足・トークン欠落・署名/issuer/audienceの不一致をすべて同じ応答に潰し、失敗理由を外に出しません。Service Binding 経由の <code>InternalApi</code> では発生しません。</p>
+              <figure class="sample">
+                <figcaption><span class="wire danger">401 Unauthorized</span><span class="meta">application/json</span></figcaption>
+                <pre data-lang="json"><code>{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Unauthorized"
+  }
+}</code></pre>
+              </figure>
+            </article>
+
+            <article class="errorcard">
+              <h3><span class="http">429</span> <span class="code-label">RATE_LIMITED</span></h3>
+              <p>永続書き込み（<code>POST /answers</code> / <code>POST /lesson-views</code>）のみ。service を呼ばないため <code>answer_logs</code>・<code>lesson_views</code>・<code>srs_states</code> は変化しません。<code>Retry-After: 60</code> が必ず付きます。設定上限を超えた全リクエストが429になる保証はなく（PoPごと・eventually consistent）、クライアントは429を<strong>受け取ったときに</strong>対処します。</p>
+              <figure class="sample">
+                <figcaption><span class="wire danger">429 Too Many Requests</span><span class="meta">Retry-After: 60</span></figcaption>
+                <pre data-lang="json"><code>{
+  "error": {
+    "code": "RATE_LIMITED",
+    "message": "Too Many Requests"
+  }
+}</code></pre>
+              </figure>
+            </article>
+
+            <article class="errorcard">
+              <h3><span class="http">503</span> <span class="code-label">RATE_LIMIT_UNAVAILABLE</span></h3>
+              <p>レート制限 binding の呼び出しが失敗、または実行環境に無い場合。可用性より保護を優先して fail closed とし、service / D1 path を呼びません。</p>
+              <figure class="sample">
+                <figcaption><span class="wire danger">503 Service Unavailable</span><span class="meta">application/json</span></figcaption>
+                <pre data-lang="json"><code>{
+  "error": {
+    "code": "RATE_LIMIT_UNAVAILABLE",
+    "message": "Rate limit unavailable"
+  }
+}</code></pre>
+              </figure>
+            </article>
+
+            <article class="errorcard">
+              <h3><span class="http">500</span> <span class="code-label">INTERNAL</span></h3>
+              <p>未知の例外は <code>onError</code> がまとめて500へ写像し、詳細メッセージを外へ出しません（Workers Logs 側にのみ記録）。全エンドポイント共通です。</p>
+              <figure class="sample">
+                <figcaption><span class="wire danger">500 Internal Server Error</span><span class="meta">application/json</span></figcaption>
+                <pre data-lang="json"><code>{
+  "error": {
+    "code": "INTERNAL",
+    "message": "Internal Server Error"
+  }
+}</code></pre>
+              </figure>
+            </article>
+
+            <article class="errorcard">
+              <h3><span class="http">404</span> <span class="code-label">QUESTION_NOT_FOUND</span></h3>
+              <p><code>POST /answers</code> のみ。同期済みの <code>questions</code> に <code>questionId</code> が無い場合に、service のドメインエラーを route が写像します。</p>
+              <figure class="sample">
+                <figcaption><span class="wire danger">404 Not Found</span><span class="meta">application/json</span></figcaption>
+                <pre data-lang="json"><code>{
+  "error": {
+    "code": "QUESTION_NOT_FOUND",
+    "message": "Question not found: security-xss-01-q9"
+  }
+}</code></pre>
+              </figure>
+            </article>
           </div>
         </section>
 
         <section aria-labelledby="core-title">
           <h2 id="core-title">Walking Skeleton の中核API</h2>
-          <p class="legend"><span class="status">implemented · route / Zod実装済み</span><span>4 endpoint は共有Zodスキーマ、Hono route、D1 integration testまで実装済みです。</span></p>
+          <p class="legend"><span class="status">implemented · route / Zod実装済み</span><span>共有Zodスキーマ、Hono route、D1 integration test まで実装済みです。</span></p>
           <div class="endpoint-list">
+
             <article class="endpoint" id="answers">
-              <header><span class="method">POST</span><h3><code>/answers</code></h3><span class="status">implemented</span></header>
-              <p>1問の解答をサーバーで採点・記録し、SRS状態を更新します。演習・復習・誤答のみ再挑戦で契約は共通です。</p>
-              <table class="contract"><tbody>
-                <tr><th>リクエスト</th><td>JSON。<code>answerRequestSchema</code>: <code>questionId</code> は1文字以上、<code>selectedIndex</code> は0〜5の整数、<code>responseTimeMs</code> は任意の0以上の整数。</td></tr>
-                <tr><th>成功</th><td><span class="http">200 OK</span>。<code>answerResponseSchema</code>: <code>isCorrect: boolean</code>、<code>correctIndex: 0〜5の整数</code>。</td></tr>
-                <tr><th>エラー</th><td><span class="http">400</span> 入力不備。<span class="http">404</span> <code>QUESTION_NOT_FOUND</code>（同期済み <code>questions</code> に質問IDがない）。<span class="http">500</span> <code>INTERNAL</code>。</td></tr>
-                <tr><th>Zod</th><td>実装済み: <code>answerRequestSchema</code> / <code>answerResponseSchema</code></td></tr>
-              </tbody></table>
+              <header><span class="method post">POST</span><h3><code>/answers</code></h3><span class="status">implemented</span></header>
+              <p class="summary">1問の解答をサーバーで採点・記録し、SRS状態を更新します。演習・復習・誤答のみ再挑戦で契約は共通です。</p>
+              <div class="badges">
+                <span class="badge">認証: Access（公開entrypoint）</span>
+                <span class="badge rate">レート制限: 60秒あたり60回（設定上限）</span>
+                <span class="badge">Zod: <code>answerRequestSchema</code> / <code>answerResponseSchema</code></span>
+              </div>
+
+              <section class="pane">
+                <h4>リクエスト</h4>
+                <div class="table-wrap">
+                  <table class="grid">
+                    <thead><tr><th>フィールド</th><th class="nowrap">型</th><th class="nowrap">必須</th><th>制約・意味</th></tr></thead>
+                    <tbody>
+                      <tr><td class="nowrap"><code>questionId</code></td><td class="nowrap"><span class="type">string</span></td><td class="nowrap"><span class="req">必須</span></td><td>1文字以上。content 由来の問題ID。</td></tr>
+                      <tr><td class="nowrap"><code>selectedIndex</code></td><td class="nowrap"><span class="type">number</span></td><td class="nowrap"><span class="req">必須</span></td><td>0〜5の整数（<code>choices</code> は最大6）。</td></tr>
+                      <tr><td class="nowrap"><code>responseTimeMs</code></td><td class="nowrap"><span class="type">number</span></td><td class="nowrap"><span class="opt">任意</span></td><td>0以上の整数。未送信でも採点は成立します（平均反応時間の集計用）。</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="tabs">
+                  <input type="radio" name="req-answers" id="req-answers-json" checked /><label for="req-answers-json">JSON</label>
+                  <input type="radio" name="req-answers" id="req-answers-curl" /><label for="req-answers-curl">curl</label>
+                  <input type="radio" name="req-answers" id="req-answers-hc" /><label for="req-answers-hc">hc</label>
+                  <div class="panels">
+                    <div class="panel">
+                      <figure class="sample">
+                        <figcaption><span class="wire">POST /answers</span><span class="meta">application/json</span></figcaption>
+                        <pre data-lang="json"><code>{
+  "questionId": "security-xss-01-q2",
+  "selectedIndex": 2,
+  "responseTimeMs": 8200
+}</code></pre>
+                      </figure>
+                    </div>
+                    <div class="panel">
+                      <figure class="sample">
+                        <figcaption><span class="wire">ローカル開発</span><span class="meta">http://localhost:8787</span></figcaption>
+                        <pre data-lang="shell"><code>curl -i -X POST http://localhost:8787/answers \
+  -H 'Content-Type: application/json' \
+  -d '{"questionId":"security-xss-01-q2","selectedIndex":2,"responseTimeMs":8200}'</code></pre>
+                      </figure>
+                      <p class="note">本番の公開ホストへ直接叩く場合は Cloudflare Access の cookie / JWT が必要です（未添付は <a href="#errors">401</a>）。</p>
+                    </div>
+                    <div class="panel">
+                      <figure class="sample">
+                        <figcaption><span class="wire">型安全RPC</span><span class="meta">apps/web/src/features/quiz/api/quiz-api.ts</span></figcaption>
+                        <pre data-lang="ts"><code>const response = await client.answers.$post({
+  json: answerRequestSchema.parse(input),
+})
+const { isCorrect, correctIndex } = answerResponseSchema.parse(await response.json())</code></pre>
+                      </figure>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="pane">
+                <h4>レスポンス</h4>
+                <div class="table-wrap">
+                  <table class="grid">
+                    <thead><tr><th>フィールド</th><th class="nowrap">型</th><th>意味</th></tr></thead>
+                    <tbody>
+                      <tr><td class="nowrap"><code>isCorrect</code></td><td class="nowrap"><span class="type">boolean</span></td><td>APIが <code>questions.answer_index</code> と照合した採点結果。</td></tr>
+                      <tr><td class="nowrap"><code>correctIndex</code></td><td class="nowrap"><span class="type">number</span></td><td>0〜5の整数。解答後に解説を出すため、採点結果と同時に返します。</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="tabs">
+                  <input type="radio" name="res-answers" id="res-answers-200" checked /><label for="res-answers-200" class="ok">200</label>
+                  <input type="radio" name="res-answers" id="res-answers-400" /><label for="res-answers-400" class="warn">400</label>
+                  <input type="radio" name="res-answers" id="res-answers-404" /><label for="res-answers-404" class="danger">404</label>
+                  <input type="radio" name="res-answers" id="res-answers-429" /><label for="res-answers-429" class="danger">429</label>
+                  <input type="radio" name="res-answers" id="res-answers-503" /><label for="res-answers-503" class="danger">503</label>
+                  <input type="radio" name="res-answers" id="res-answers-500" /><label for="res-answers-500" class="danger">500</label>
+                  <div class="panels">
+                    <div class="panel">
+                      <figure class="sample">
+                        <figcaption><span class="wire ok">200 OK</span><span class="meta">正解のとき</span></figcaption>
+                        <pre data-lang="json"><code>{
+  "isCorrect": true,
+  "correctIndex": 2
+}</code></pre>
+                      </figure>
+                      <figure class="sample">
+                        <figcaption><span class="wire ok">200 OK</span><span class="meta">誤答のとき</span></figcaption>
+                        <pre data-lang="json"><code>{
+  "isCorrect": false,
+  "correctIndex": 2
+}</code></pre>
+                      </figure>
+                      <p class="note">誤答も <span class="http">200</span> です。<strong>採点結果はHTTPステータスではなく <code>isCorrect</code> で判定します。</strong>解答ログとSRS更新は同じ <code>db.batch()</code> で原子的に書かれます。</p>
+                    </div>
+                    <div class="panel">
+                      <figure class="sample">
+                        <figcaption><span class="wire warn">400 Bad Request</span><span class="meta">selectedIndex が範囲外</span></figcaption>
+                        <pre data-lang="json"><code>{
+  "success": false,
+  "error": {
+    "issues": [
+      {
+        "code": "too_big",
+        "maximum": 5,
+        "type": "number",
+        "inclusive": true,
+        "exact": false,
+        "message": "Number must be less than or equal to 5",
+        "path": ["selectedIndex"]
+      }
+    ],
+    "name": "ZodError"
+  }
+}</code></pre>
+                      </figure>
+                      <p class="note">strict なスキーマのため、<code>userId</code> など未知フィールドを含めても <span class="http">400</span> になります。</p>
+                    </div>
+                    <div class="panel">
+                      <figure class="sample">
+                        <figcaption><span class="wire danger">404 Not Found</span><span class="meta">QUESTION_NOT_FOUND</span></figcaption>
+                        <pre data-lang="json"><code>{
+  "error": {
+    "code": "QUESTION_NOT_FOUND",
+    "message": "Question not found: security-xss-01-q9"
+  }
+}</code></pre>
+                      </figure>
+                      <p class="note">content と D1 の同期がまだのときに起きます。解答ログとSRS状態は書き込まれません。</p>
+                    </div>
+                    <div class="panel">
+                      <figure class="sample">
+                        <figcaption><span class="wire danger">429 Too Many Requests</span><span class="meta">Retry-After: 60</span></figcaption>
+                        <pre data-lang="json"><code>{
+  "error": {
+    "code": "RATE_LIMITED",
+    "message": "Too Many Requests"
+  }
+}</code></pre>
+                      </figure>
+                      <p class="note">60秒の固定窓で設定上限（60回）を超えたときに返します。カウンタはPoPごと・非同期更新のため、<strong>超過後のすべてのリクエストが必ず429になるとは限りません。</strong>429を返した場合は service を呼ばないため書き込みは発生しません。</p>
+                    </div>
+                    <div class="panel">
+                      <figure class="sample">
+                        <figcaption><span class="wire danger">503 Service Unavailable</span><span class="meta">RATE_LIMIT_UNAVAILABLE</span></figcaption>
+                        <pre data-lang="json"><code>{
+  "error": {
+    "code": "RATE_LIMIT_UNAVAILABLE",
+    "message": "Rate limit unavailable"
+  }
+}</code></pre>
+                      </figure>
+                    </div>
+                    <div class="panel">
+                      <figure class="sample">
+                        <figcaption><span class="wire danger">500 Internal Server Error</span><span class="meta">INTERNAL</span></figcaption>
+                        <pre data-lang="json"><code>{
+  "error": {
+    "code": "INTERNAL",
+    "message": "Internal Server Error"
+  }
+}</code></pre>
+                      </figure>
+                    </div>
+                  </div>
+                </div>
+                <p class="note">公開entrypointではAccess検証に失敗すると route に到達せず <a href="#errors">401 <code>UNAUTHORIZED</code></a> を返します。</p>
+              </section>
+
               <p class="detail"><strong>なぜAPIで採点するか:</strong> クライアントに正解を持たせず、APIが <code>questions</code> の正解と照合するためです。</p>
             </article>
 
             <article class="endpoint" id="lesson-views">
-              <header><span class="method">POST</span><h3><code>/lesson-views</code></h3><span class="status">implemented</span></header>
-              <p>教材本文を表示したことを、アナリティクス用の最小ログとして記録します。教材本文そのものはcontent由来の静的RSCであり、このAPIから取得しません。</p>
-              <table class="contract"><tbody>
-                <tr><th>リクエスト</th><td>JSON。strict な <code>lessonViewRequestSchema</code>: <code>lessonId</code> は1文字以上の文字列。<code>userId</code> を含む未知のフィールドは拒否します。</td></tr>
-                <tr><th>成功</th><td><span class="http">201 Created</span>。<code>lessonViewResponseSchema</code>: <code>{ recorded: true }</code>。</td></tr>
-                <tr><th>エラー</th><td><span class="http">400</span> 入力不備。<span class="http">500</span> <code>INTERNAL</code>。</td></tr>
-                <tr><th>Zod</th><td>実装済み: <code>lessonViewRequestSchema</code> / <code>lessonViewResponseSchema</code></td></tr>
-              </tbody></table>
+              <header><span class="method post">POST</span><h3><code>/lesson-views</code></h3><span class="status">implemented</span></header>
+              <p class="summary">教材本文を表示したことを、アナリティクス用の最小ログとして記録します。教材本文そのものはcontent由来の静的RSCであり、このAPIから取得しません。</p>
+              <div class="badges">
+                <span class="badge">認証: Access（公開entrypoint）</span>
+                <span class="badge rate">レート制限: 60秒あたり30回（設定上限）</span>
+                <span class="badge">Zod: <code>lessonViewRequestSchema</code> / <code>lessonViewResponseSchema</code></span>
+              </div>
+
+              <section class="pane">
+                <h4>リクエスト</h4>
+                <div class="table-wrap">
+                  <table class="grid">
+                    <thead><tr><th>フィールド</th><th class="nowrap">型</th><th class="nowrap">必須</th><th>制約・意味</th></tr></thead>
+                    <tbody>
+                      <tr><td class="nowrap"><code>lessonId</code></td><td class="nowrap"><span class="type">string</span></td><td class="nowrap"><span class="req">必須</span></td><td>1文字以上。strict スキーマのため <code>userId</code> を含む未知のフィールドは拒否します。</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="tabs">
+                  <input type="radio" name="req-lesson-views" id="req-lesson-views-json" checked /><label for="req-lesson-views-json">JSON</label>
+                  <input type="radio" name="req-lesson-views" id="req-lesson-views-curl" /><label for="req-lesson-views-curl">curl</label>
+                  <input type="radio" name="req-lesson-views" id="req-lesson-views-hc" /><label for="req-lesson-views-hc">hc</label>
+                  <div class="panels">
+                    <div class="panel">
+                      <figure class="sample">
+                        <figcaption><span class="wire">POST /lesson-views</span><span class="meta">application/json</span></figcaption>
+                        <pre data-lang="json"><code>{
+  "lessonId": "security-xss-01"
+}</code></pre>
+                      </figure>
+                    </div>
+                    <div class="panel">
+                      <figure class="sample">
+                        <figcaption><span class="wire">ローカル開発</span><span class="meta">http://localhost:8787</span></figcaption>
+                        <pre data-lang="shell"><code>curl -i -X POST http://localhost:8787/lesson-views \
+  -H 'Content-Type: application/json' \
+  -d '{"lessonId":"security-xss-01"}'</code></pre>
+                      </figure>
+                    </div>
+                    <div class="panel">
+                      <figure class="sample">
+                        <figcaption><span class="wire">型安全RPC</span><span class="meta">apps/web/src/features/lesson/api/lesson-api.ts</span></figcaption>
+                        <pre data-lang="ts"><code>await client['lesson-views'].$post({
+  json: lessonViewRequestSchema.parse({ lessonId }),
+})</code></pre>
+                      </figure>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="pane">
+                <h4>レスポンス</h4>
+                <div class="table-wrap">
+                  <table class="grid">
+                    <thead><tr><th>フィールド</th><th class="nowrap">型</th><th>意味</th></tr></thead>
+                    <tbody>
+                      <tr><td class="nowrap"><code>recorded</code></td><td class="nowrap"><span class="type">true</span></td><td>リテラル <code>true</code> のみ。記録できた場合だけ返ります。</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="tabs">
+                  <input type="radio" name="res-lesson-views" id="res-lesson-views-201" checked /><label for="res-lesson-views-201" class="ok">201</label>
+                  <input type="radio" name="res-lesson-views" id="res-lesson-views-400" /><label for="res-lesson-views-400" class="warn">400</label>
+                  <input type="radio" name="res-lesson-views" id="res-lesson-views-429" /><label for="res-lesson-views-429" class="danger">429</label>
+                  <input type="radio" name="res-lesson-views" id="res-lesson-views-503" /><label for="res-lesson-views-503" class="danger">503</label>
+                  <input type="radio" name="res-lesson-views" id="res-lesson-views-500" /><label for="res-lesson-views-500" class="danger">500</label>
+                  <div class="panels">
+                    <div class="panel">
+                      <figure class="sample">
+                        <figcaption><span class="wire ok">201 Created</span><span class="meta">application/json</span></figcaption>
+                        <pre data-lang="json"><code>{
+  "recorded": true
+}</code></pre>
+                      </figure>
+                    </div>
+                    <div class="panel">
+                      <figure class="sample">
+                        <figcaption><span class="wire warn">400 Bad Request</span><span class="meta">クライアントが userId を送った場合</span></figcaption>
+                        <pre data-lang="json"><code>{
+  "success": false,
+  "error": {
+    "issues": [
+      {
+        "code": "unrecognized_keys",
+        "keys": ["userId"],
+        "path": [],
+        "message": "Unrecognized key(s) in object: 'userId'"
+      }
+    ],
+    "name": "ZodError"
+  }
+}</code></pre>
+                      </figure>
+                      <p class="note">この場合 <code>lesson_views</code> には1行も記録されません。</p>
+                    </div>
+                    <div class="panel">
+                      <figure class="sample">
+                        <figcaption><span class="wire danger">429 Too Many Requests</span><span class="meta">Retry-After: 60</span></figcaption>
+                        <pre data-lang="json"><code>{
+  "error": {
+    "code": "RATE_LIMITED",
+    "message": "Too Many Requests"
+  }
+}</code></pre>
+                      </figure>
+                    </div>
+                    <div class="panel">
+                      <figure class="sample">
+                        <figcaption><span class="wire danger">503 Service Unavailable</span><span class="meta">RATE_LIMIT_UNAVAILABLE</span></figcaption>
+                        <pre data-lang="json"><code>{
+  "error": {
+    "code": "RATE_LIMIT_UNAVAILABLE",
+    "message": "Rate limit unavailable"
+  }
+}</code></pre>
+                      </figure>
+                    </div>
+                    <div class="panel">
+                      <figure class="sample">
+                        <figcaption><span class="wire danger">500 Internal Server Error</span><span class="meta">INTERNAL</span></figcaption>
+                        <pre data-lang="json"><code>{
+  "error": {
+    "code": "INTERNAL",
+    "message": "Internal Server Error"
+  }
+}</code></pre>
+                      </figure>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
               <p class="detail"><strong>ユーザーコンテキスト:</strong> <code>userId</code> はmiddlewareが注入します。重複排除、配送保証、lessonの存在確認は行いません。Web側はmount後にfire-and-forgetで送信し、失敗をUIへ表示しません。</p>
             </article>
 
             <article class="endpoint" id="review-queue">
-              <header><span class="method">GET</span><h3><code>/review/queue</code></h3><span class="status">implemented</span></header>
-              <p>復習対象の問題IDとSRSメタデータを返します。本文・選択肢・解説はフロントエンドがcontentから解決します。</p>
-              <table class="contract"><tbody>
-                <tr><th>リクエスト</th><td>body・query parameterなし。</td></tr>
-                <tr><th>成功</th><td><span class="http">200 OK</span>。<code>reviewQueueResponseSchema</code>: <code>{ hasMore: boolean, items: Array&lt;{ questionId, dueAt }&gt; }</code>。<code>dueAt</code> はUnixエポックミリ秒の整数で、APIが昇順・最大20件を保証し、残バッチの有無を<code>hasMore</code>で返します。</td></tr>
-                <tr><th>エラー</th><td><span class="http">500</span> <code>INTERNAL</code>。</td></tr>
-                <tr><th>Zod</th><td>実装済み: <code>reviewQueueResponseSchema</code></td></tr>
-              </tbody></table>
+              <header><span class="method get">GET</span><h3><code>/review/queue</code></h3><span class="status">implemented</span></header>
+              <p class="summary">復習対象の問題IDとSRSメタデータを返します。本文・選択肢・解説はフロントエンドがcontentから解決します。</p>
+              <div class="badges">
+                <span class="badge">認証: Access（公開entrypoint）</span>
+                <span class="badge">レート制限: なし（読み取り）</span>
+                <span class="badge">Zod: <code>reviewQueueResponseSchema</code></span>
+              </div>
+
+              <section class="pane">
+                <h4>リクエスト</h4>
+                <p class="note">body・query parameter はありません。対象ユーザーは middleware が注入します。</p>
+                <div class="tabs">
+                  <input type="radio" name="req-review-queue" id="req-review-queue-curl" checked /><label for="req-review-queue-curl">curl</label>
+                  <input type="radio" name="req-review-queue" id="req-review-queue-hc" /><label for="req-review-queue-hc">hc</label>
+                  <div class="panels">
+                    <div class="panel">
+                      <figure class="sample">
+                        <figcaption><span class="wire">ローカル開発</span><span class="meta">http://localhost:8787</span></figcaption>
+                        <pre data-lang="shell"><code>curl -i http://localhost:8787/review/queue</code></pre>
+                      </figure>
+                    </div>
+                    <div class="panel">
+                      <figure class="sample">
+                        <figcaption><span class="wire">型安全RPC</span><span class="meta">apps/web/src/features/review/api/review-api.ts</span></figcaption>
+                        <pre data-lang="ts"><code>const response = await client.review.queue.$get()
+const { hasMore, items } = reviewQueueResponseSchema.parse(await response.json())</code></pre>
+                      </figure>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="pane">
+                <h4>レスポンス</h4>
+                <div class="table-wrap">
+                  <table class="grid">
+                    <thead><tr><th>フィールド</th><th class="nowrap">型</th><th>意味</th></tr></thead>
+                    <tbody>
+                      <tr><td class="nowrap"><code>hasMore</code></td><td class="nowrap"><span class="type">boolean</span></td><td>今回の最大20件に収まらない due がまだ残っているか。</td></tr>
+                      <tr><td class="nowrap"><code>items</code></td><td class="nowrap"><span class="type">array</span></td><td>最大20件。APIが <code>dueAt</code> の昇順を保証します。</td></tr>
+                      <tr><td class="nowrap"><code>items[].questionId</code></td><td class="nowrap"><span class="type">string</span></td><td>1文字以上。フロントはこのIDでcontentから本文を解決します。</td></tr>
+                      <tr><td class="nowrap"><code>items[].dueAt</code></td><td class="nowrap"><span class="type">number</span></td><td>0以上の整数。Unixエポックミリ秒（SRSの <code>dueAt</code> と同じ表現）。</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="tabs">
+                  <input type="radio" name="res-review-queue" id="res-review-queue-200" checked /><label for="res-review-queue-200" class="ok">200</label>
+                  <input type="radio" name="res-review-queue" id="res-review-queue-500" /><label for="res-review-queue-500" class="danger">500</label>
+                  <div class="panels">
+                    <div class="panel">
+                      <figure class="sample">
+                        <figcaption><span class="wire ok">200 OK</span><span class="meta">due がある場合</span></figcaption>
+                        <pre data-lang="json"><code>{
+  "hasMore": false,
+  "items": [
+    { "questionId": "security-xss-01-q1", "dueAt": 1787648400000 },
+    { "questionId": "security-xss-01-q3", "dueAt": 1787693400000 }
+  ]
+}</code></pre>
+                      </figure>
+                      <figure class="sample">
+                        <figcaption><span class="wire ok">200 OK</span><span class="meta">復習対象が無い場合</span></figcaption>
+                        <pre data-lang="json"><code>{
+  "hasMore": false,
+  "items": []
+}</code></pre>
+                      </figure>
+                      <p class="note">復習対象が無い場合も <span class="http">200</span> と空配列です（<span class="http">404</span> にはしません）。<code>items</code> が20件で <code>hasMore</code> が <code>true</code> のときは、解答後に再取得すると次バッチが得られます。</p>
+                    </div>
+                    <div class="panel">
+                      <figure class="sample">
+                        <figcaption><span class="wire danger">500 Internal Server Error</span><span class="meta">INTERNAL</span></figcaption>
+                        <pre data-lang="json"><code>{
+  "error": {
+    "code": "INTERNAL",
+    "message": "Internal Server Error"
+  }
+}</code></pre>
+                      </figure>
+                    </div>
+                  </div>
+                </div>
+              </section>
             </article>
 
             <article class="endpoint" id="due-count">
-              <header><span class="method">GET</span><h3><code>/dashboard/due-count</code></h3><span class="status">implemented</span></header>
-              <p>ダッシュボードに表示する、今すぐ復習できる問題数を返します。</p>
-              <table class="contract"><tbody>
-                <tr><th>リクエスト</th><td>body・query parameterなし。</td></tr>
-                <tr><th>成功</th><td><span class="http">200 OK</span>。<code>dueCountResponseSchema</code>: <code>{ dueCount: 0以上の整数 }</code>。</td></tr>
-                <tr><th>エラー</th><td><span class="http">500</span> <code>INTERNAL</code>。</td></tr>
-                <tr><th>Zod</th><td>実装済み: <code>dueCountResponseSchema</code></td></tr>
-              </tbody></table>
+              <header><span class="method get">GET</span><h3><code>/dashboard/due-count</code></h3><span class="status">implemented</span></header>
+              <p class="summary">ダッシュボードに表示する、今すぐ復習できる問題数を返します。</p>
+              <div class="badges">
+                <span class="badge">認証: Access（公開entrypoint）</span>
+                <span class="badge">レート制限: なし（読み取り）</span>
+                <span class="badge">Zod: <code>dueCountResponseSchema</code></span>
+              </div>
+
+              <section class="pane">
+                <h4>リクエスト</h4>
+                <p class="note">body・query parameter はありません。</p>
+                <div class="tabs">
+                  <input type="radio" name="req-due-count" id="req-due-count-curl" checked /><label for="req-due-count-curl">curl</label>
+                  <input type="radio" name="req-due-count" id="req-due-count-hc" /><label for="req-due-count-hc">hc</label>
+                  <div class="panels">
+                    <div class="panel">
+                      <figure class="sample">
+                        <figcaption><span class="wire">ローカル開発</span><span class="meta">http://localhost:8787</span></figcaption>
+                        <pre data-lang="shell"><code>curl -i http://localhost:8787/dashboard/due-count</code></pre>
+                      </figure>
+                    </div>
+                    <div class="panel">
+                      <figure class="sample">
+                        <figcaption><span class="wire">型安全RPC</span><span class="meta">apps/web/src/features/dashboard/api/dashboard-api.ts</span></figcaption>
+                        <pre data-lang="ts"><code>const response = await client.dashboard['due-count'].$get()
+const { dueCount } = dueCountResponseSchema.parse(await response.json())</code></pre>
+                      </figure>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="pane">
+                <h4>レスポンス</h4>
+                <div class="table-wrap">
+                  <table class="grid">
+                    <thead><tr><th>フィールド</th><th class="nowrap">型</th><th>意味</th></tr></thead>
+                    <tbody>
+                      <tr><td class="nowrap"><code>dueCount</code></td><td class="nowrap"><span class="type">number</span></td><td>0以上の整数。<code>/review/queue</code> の最大20件とは無関係に、due の総件数を返します。</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="tabs">
+                  <input type="radio" name="res-due-count" id="res-due-count-200" checked /><label for="res-due-count-200" class="ok">200</label>
+                  <input type="radio" name="res-due-count" id="res-due-count-500" /><label for="res-due-count-500" class="danger">500</label>
+                  <div class="panels">
+                    <div class="panel">
+                      <figure class="sample">
+                        <figcaption><span class="wire ok">200 OK</span><span class="meta">application/json</span></figcaption>
+                        <pre data-lang="json"><code>{
+  "dueCount": 12
+}</code></pre>
+                      </figure>
+                    </div>
+                    <div class="panel">
+                      <figure class="sample">
+                        <figcaption><span class="wire danger">500 Internal Server Error</span><span class="meta">INTERNAL</span></figcaption>
+                        <pre data-lang="json"><code>{
+  "error": {
+    "code": "INTERNAL",
+    "message": "Internal Server Error"
+  }
+}</code></pre>
+                      </figure>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </article>
+
+            <article class="endpoint" id="health">
+              <header><span class="method get">GET</span><h3><code>/health</code></h3><span class="status">implemented</span></header>
+              <p class="summary">公開entrypointの疎通確認。CORS の後、Access 検証と <code>userContext</code> より前で応答するため、認証なしで到達できます。</p>
+              <div class="badges">
+                <span class="badge">認証: なし（Accessの前段）</span>
+                <span class="badge">公開entrypoint専用</span>
+                <span class="badge">Zod: なし（route内リテラル）</span>
+              </div>
+
+              <section class="pane">
+                <h4>リクエスト</h4>
+                <p class="note">body・query parameter はありません。<code>InternalApi</code>（Service Binding）側にはこのrouteはありません。</p>
+                <figure class="sample">
+                  <figcaption><span class="wire">ローカル開発</span><span class="meta">http://localhost:8787</span></figcaption>
+                  <pre data-lang="shell"><code>curl -i http://localhost:8787/health</code></pre>
+                </figure>
+              </section>
+
+              <section class="pane">
+                <h4>レスポンス</h4>
+                <figure class="sample">
+                  <figcaption><span class="wire ok">200 OK</span><span class="meta">application/json</span></figcaption>
+                  <pre data-lang="json"><code>{
+  "status": "ok"
+}</code></pre>
+                </figure>
+                <p class="note">D1 には触れないため、DBの健全性までは保証しません。</p>
+              </section>
             </article>
           </div>
         </section>
 
-        <section aria-labelledby="planned-title">
-          <h2 id="planned-title">Walking Skeleton 後に追加するAPI</h2>
-          <p class="legend"><span class="status planned">planned · DTO未確定</span><span>目的・成功ステータス・予定スキーマを先に共有し、フィールドは各実装Issueで共有Zodスキーマとして確定します。</span></p>
+        <section aria-labelledby="additional-apis-title">
+          <h2 id="additional-apis-title">追加API</h2>
+          <p class="legend"><span class="status">implemented · route / Zod実装済み</span><span class="status planned">planned · DTO未確定</span><span>実装済みのAPIは共有ZodスキーマとD1 integration testまで確定しています。planned は目的・成功ステータス・返す予定の値のみを先に共有し、フィールド名と型は各実装Issueで確定します。</span></p>
           <div class="callout">
             <p><strong>後続Issueで必ず更新するもの</strong></p>
-            <p>各APIの実装に着手するときは、返却値を共有Zodスキーマで確定し、このページの成功・エラー応答と実装状態も同じPRで更新します。APIのIF（URL、HTTPステータス、JSON形式、エラー形式）を実装だけで先に変えないでください。</p>
+            <p>各APIの実装に着手するときは、返却値を共有Zodスキーマで確定し、このページの<strong>レスポンス例・フィールド表・実装状態</strong>も同じPRで更新します。APIのIF（URL、HTTPステータス、JSON形式、エラー形式）を実装だけで先に変えないでください。</p>
+            <p>この節のAPIはいずれも認証・エラー形式が Walking Skeleton のAPIと共通です（<a href="#errors">共通エラー応答</a>）。すべて読み取り専用のため、永続書き込みのレート制限（429 / 503）は対象外です。</p>
+            <p><strong>planned のAPIについて未確定なのはレスポンスbodyだけです。</strong>URL・メソッド・成功ステータス・認証・エラー形式・返す値の意味（設計文書 §7.3）は確定済みで、実装Issueで決めるのはフィールド名・型・入れ子構造です。<code>/domains</code> は実装済みで、レスポンス例とフィールド表も確定しています。</p>
           </div>
           <div class="endpoint-list">
-            <article class="endpoint" id="domains"><header><span class="method">GET</span><h3><code>/domains</code></h3><span class="status planned">planned</span></header><p>4領域の習得率、トピック数、レッスン数を返し、スキルツリーとダッシュボードの領域別カードで共用します。</p><table class="contract"><tbody><tr><th>リクエスト</th><td>body・query parameterなし。</td></tr><tr><th>成功</th><td><span class="http">200 OK</span>。レスポンスbodyは未確定。</td></tr><tr><th>エラー</th><td>実装時に共通の400（入力検証時）・500（<code>INTERNAL</code>）を適用。</td></tr><tr><th>Zod</th><td>予定: <code>domainsResponseSchema</code></td></tr></tbody></table></article>
-            <article class="endpoint" id="analytics-summary"><header><span class="method">GET</span><h3><code>/analytics/summary</code></h3><span class="status planned">planned</span></header><p>総解答数、正答率、平均反応時間、習得済み問題数、連続学習日数、今週の学習時間を返します。</p><table class="contract"><tbody><tr><th>リクエスト</th><td>body・query parameterなし。</td></tr><tr><th>成功</th><td><span class="http">200 OK</span>。レスポンスbodyは未確定。</td></tr><tr><th>エラー</th><td>実装時に共通の400（入力検証時）・500（<code>INTERNAL</code>）を適用。</td></tr><tr><th>Zod</th><td>予定: <code>analyticsSummaryResponseSchema</code></td></tr></tbody></table></article>
-            <article class="endpoint" id="analytics-weekly"><header><span class="method">GET</span><h3><code>/analytics/weekly</code></h3><span class="status planned">planned</span></header><p>直近7日の曜日ごとの解答数推移を返します。</p><table class="contract"><tbody><tr><th>リクエスト</th><td>body・query parameterなし。</td></tr><tr><th>成功</th><td><span class="http">200 OK</span>。レスポンスbodyは未確定。</td></tr><tr><th>エラー</th><td>実装時に共通の400（入力検証時）・500（<code>INTERNAL</code>）を適用。</td></tr><tr><th>Zod</th><td>予定: <code>analyticsWeeklyResponseSchema</code></td></tr></tbody></table></article>
-            <article class="endpoint" id="analytics-heatmap"><header><span class="method">GET</span><h3><code>/analytics/heatmap</code></h3><span class="status planned">planned</span></header><p>直近26週の学習コントリビューション表示用に、日次解答数を返します。</p><table class="contract"><tbody><tr><th>リクエスト</th><td>body・query parameterなし。</td></tr><tr><th>成功</th><td><span class="http">200 OK</span>。レスポンスbodyは未確定。</td></tr><tr><th>エラー</th><td>実装時に共通の400（入力検証時）・500（<code>INTERNAL</code>）を適用。</td></tr><tr><th>Zod</th><td>予定: <code>analyticsHeatmapResponseSchema</code>。現行設計文書には未記載。</td></tr></tbody></table></article>
-            <article class="endpoint" id="analytics-mistakes"><header><span class="method">GET</span><h3><code>/analytics/mistakes</code></h3><span class="status planned">planned</span></header><p>誤答率が高い問題の上位ランキングを返します。</p><table class="contract"><tbody><tr><th>リクエスト</th><td>body・query parameterなし。</td></tr><tr><th>成功</th><td><span class="http">200 OK</span>。レスポンスbodyは未確定。</td></tr><tr><th>エラー</th><td>実装時に共通の400（入力検証時）・500（<code>INTERNAL</code>）を適用。</td></tr><tr><th>Zod</th><td>予定: <code>mistakesResponseSchema</code></td></tr></tbody></table></article>
-            <article class="endpoint" id="activity-recent"><header><span class="method">GET</span><h3><code>/activity/recent</code></h3><span class="status planned">planned</span></header><p>レッスン閲覧・演習完了・復習キュー更新を統合した直近イベントを返します。集計ロジックとDTOは実装時に確定します。</p><table class="contract"><tbody><tr><th>リクエスト</th><td>body・query parameterなし。</td></tr><tr><th>成功</th><td><span class="http">200 OK</span>。レスポンスbodyは未確定。</td></tr><tr><th>エラー</th><td>実装時に共通の400（入力検証時）・500（<code>INTERNAL</code>）を適用。</td></tr><tr><th>Zod</th><td>予定: <code>recentActivityResponseSchema</code></td></tr></tbody></table></article>
+
+            <article class="endpoint" id="domains">
+              <header><span class="method get">GET</span><h3><code>/domains</code></h3><span class="status">implemented</span></header>
+              <p class="summary">4領域の習得率、トピック数、レッスン数を返し、スキルツリー（<code>/domains</code>）の領域別カードで表示します。content sync 済みで <code>is_active = 1</code> の問題だけを集計し、対象ユーザーの <code>interval_days &gt;= 21</code> を習得済みとします。</p>
+              <div class="badges">
+                <span class="badge">認証: Access（公開entrypoint）</span>
+                <span class="badge">レート制限: なし（読み取り）</span>
+                <span class="badge">Zod: <code>domainsRequestSchema</code> / <code>domainSummarySchema</code> / <code>domainsResponseSchema</code></span>
+              </div>
+
+              <section class="pane">
+                <h4>リクエスト</h4>
+                <p class="note">body はありません。query parameter は strict な <code>domainsRequestSchema</code>（空オブジェクト）で検証するため、<strong>未知のquery parameterは <span class="http">400</span> で拒否します。</strong></p>
+                <div class="tabs">
+                  <input type="radio" name="req-domains" id="req-domains-curl" checked /><label for="req-domains-curl">curl</label>
+                  <input type="radio" name="req-domains" id="req-domains-hc" /><label for="req-domains-hc">hc</label>
+                  <div class="panels">
+                    <div class="panel">
+                      <figure class="sample">
+                        <figcaption><span class="wire">ローカル開発</span><span class="meta">http://localhost:8787</span></figcaption>
+                        <pre data-lang="shell"><code>curl -i http://localhost:8787/domains</code></pre>
+                      </figure>
+                    </div>
+                    <div class="panel">
+                      <figure class="sample">
+                        <figcaption><span class="wire">型安全RPC</span><span class="meta">apps/web/src/features/domains/api/domains-api.ts</span></figcaption>
+                        <pre data-lang="ts"><code>const response = await client.domains.$get({ query: {} })
+const { domains } = domainsResponseSchema.parse(await response.json())</code></pre>
+                      </figure>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="pane">
+                <h4>レスポンス</h4>
+                <div class="table-wrap">
+                  <table class="grid">
+                    <thead><tr><th>フィールド</th><th class="nowrap">型</th><th>意味</th></tr></thead>
+                    <tbody>
+                      <tr><td class="nowrap"><code>domains</code></td><td class="nowrap"><span class="type">array</span></td><td>常に4件。<code>security</code> → <code>frontend</code> → <code>backend</code> → <code>architecture</code> の順で、同じdomainは重複しません。</td></tr>
+                      <tr><td class="nowrap"><code>domains[].domain</code></td><td class="nowrap"><span class="type">enum</span></td><td><code>security</code> / <code>frontend</code> / <code>backend</code> / <code>architecture</code>。</td></tr>
+                      <tr><td class="nowrap"><code>domains[].masteredQuestionCount</code></td><td class="nowrap"><span class="type">number</span></td><td>0以上の整数。<code>interval_days &gt;= 21</code> の問題数。</td></tr>
+                      <tr><td class="nowrap"><code>domains[].totalQuestionCount</code></td><td class="nowrap"><span class="type">number</span></td><td>0以上の整数。<code>is_active = 1</code> の問題数。</td></tr>
+                      <tr><td class="nowrap"><code>domains[].masteryRate</code></td><td class="nowrap"><span class="type">number</span></td><td>0〜100の整数（百分率）。総問題0件は <code>0</code>、それ以外は四捨五入。</td></tr>
+                      <tr><td class="nowrap"><code>domains[].topicCount</code></td><td class="nowrap"><span class="type">number</span></td><td>0以上の整数。</td></tr>
+                      <tr><td class="nowrap"><code>domains[].lessonCount</code></td><td class="nowrap"><span class="type">number</span></td><td>0以上の整数。</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="tabs">
+                  <input type="radio" name="res-domains" id="res-domains-200" checked /><label for="res-domains-200" class="ok">200</label>
+                  <input type="radio" name="res-domains" id="res-domains-400" /><label for="res-domains-400" class="warn">400</label>
+                  <input type="radio" name="res-domains" id="res-domains-500" /><label for="res-domains-500" class="danger">500</label>
+                  <div class="panels">
+                    <div class="panel">
+                      <figure class="sample">
+                        <figcaption><span class="wire ok">200 OK</span><span class="meta">content未投入の領域も0件で返る</span></figcaption>
+                        <pre data-lang="json"><code>{
+  "domains": [
+    {
+      "domain": "security",
+      "masteredQuestionCount": 1,
+      "totalQuestionCount": 2,
+      "masteryRate": 50,
+      "topicCount": 1,
+      "lessonCount": 1
+    },
+    {
+      "domain": "frontend",
+      "masteredQuestionCount": 0,
+      "totalQuestionCount": 0,
+      "masteryRate": 0,
+      "topicCount": 0,
+      "lessonCount": 0
+    },
+    {
+      "domain": "backend",
+      "masteredQuestionCount": 1,
+      "totalQuestionCount": 1,
+      "masteryRate": 100,
+      "topicCount": 1,
+      "lessonCount": 1
+    },
+    {
+      "domain": "architecture",
+      "masteredQuestionCount": 0,
+      "totalQuestionCount": 0,
+      "masteryRate": 0,
+      "topicCount": 0,
+      "lessonCount": 0
+    }
+  ]
+}</code></pre>
+                      </figure>
+                      <p class="note">D1に行が無い領域も<strong>省略せず0件で返します。</strong>クライアントは4件そろっている前提で描画できます。</p>
+                    </div>
+                    <div class="panel">
+                      <figure class="sample">
+                        <figcaption><span class="wire warn">400 Bad Request</span><span class="meta">GET /domains?domain=security</span></figcaption>
+                        <pre data-lang="json"><code>{
+  "success": false,
+  "error": {
+    "issues": [
+      {
+        "code": "unrecognized_keys",
+        "keys": ["domain"],
+        "path": [],
+        "message": "Unrecognized key(s) in object: 'domain'"
+      }
+    ],
+    "name": "ZodError"
+  }
+}</code></pre>
+                      </figure>
+                      <p class="note">絞り込みや並び替えのquery parameterは受け付けません。</p>
+                    </div>
+                    <div class="panel">
+                      <figure class="sample">
+                        <figcaption><span class="wire danger">500 Internal Server Error</span><span class="meta">INTERNAL</span></figcaption>
+                        <pre data-lang="json"><code>{
+  "error": {
+    "code": "INTERNAL",
+    "message": "Internal Server Error"
+  }
+}</code></pre>
+                      </figure>
+                    </div>
+                  </div>
+                </div>
+                <p class="note">公開entrypointではAccess検証に失敗すると route に到達せず <a href="#errors">401 <code>UNAUTHORIZED</code></a> を返します。</p>
+              </section>
+            </article>
+
+            <article class="endpoint" id="analytics-summary">
+              <header><span class="method get">GET</span><h3><code>/analytics/summary</code></h3><span class="status planned">planned</span></header>
+              <p class="summary">総解答数、正答率、平均反応時間、習得済み問題数、連続学習日数、今週の学習時間を返します。</p>
+              <div class="badges"><span class="badge">リクエスト: body・query なし</span><span class="badge">成功: <span class="http">200 OK</span></span><span class="badge">Zod（予定）: <code>analyticsSummaryResponseSchema</code></span></div>
+              <section class="pane">
+                <h4>レスポンス</h4>
+                <div class="tbd">
+                  <strong>レスポンス例は未確定です</strong>
+                  <code>answer_logs</code>・<code>lesson_views</code> からの集計値を返します。
+                  <ul>
+                    <li>総解答数・正答率・平均反応時間（<code>answer_logs.response_time_ms</code>）</li>
+                    <li>習得済み問題数（SRS interval ≥ 21日）</li>
+                    <li>連続学習日数・今週の学習時間</li>
+                  </ul>
+                </div>
+              </section>
+            </article>
+
+            <article class="endpoint" id="analytics-weekly">
+              <header><span class="method get">GET</span><h3><code>/analytics/weekly</code></h3><span class="status planned">planned</span></header>
+              <p class="summary">直近7日の曜日ごとの解答数推移を返します。</p>
+              <div class="badges"><span class="badge">リクエスト: body・query なし</span><span class="badge">成功: <span class="http">200 OK</span></span><span class="badge">Zod（予定）: <code>analyticsWeeklyResponseSchema</code></span></div>
+              <section class="pane">
+                <h4>レスポンス</h4>
+                <div class="tbd">
+                  <strong>レスポンス例は未確定です</strong>
+                  <ul>
+                    <li>直近7日の曜日ごとの解答件数</li>
+                  </ul>
+                </div>
+              </section>
+            </article>
+
+            <article class="endpoint" id="analytics-heatmap">
+              <header><span class="method get">GET</span><h3><code>/analytics/heatmap</code></h3><span class="status planned">planned</span></header>
+              <p class="summary">直近26週の学習コントリビューション表示用に、日次解答数を返します。</p>
+              <div class="badges"><span class="badge">リクエスト: body・query なし</span><span class="badge">成功: <span class="http">200 OK</span></span><span class="badge">Zod（予定・名称も未確定）: <code>analyticsHeatmapResponseSchema</code></span></div>
+              <section class="pane">
+                <h4>レスポンス</h4>
+                <div class="tbd">
+                  <strong>レスポンス例は未確定です</strong>
+                  <ul>
+                    <li>直近26週の日次解答数（<code>answer_logs</code> の日次集計）</li>
+                  </ul>
+                  <p>このエンドポイントだけは、設計文書 §10.6 の予定スキーマ一覧に名前がありません。<code>analyticsHeatmapResponseSchema</code> は本ページ上の仮称です。</p>
+                </div>
+              </section>
+            </article>
+
+            <article class="endpoint" id="analytics-mistakes">
+              <header><span class="method get">GET</span><h3><code>/analytics/mistakes</code></h3><span class="status planned">planned</span></header>
+              <p class="summary">誤答率が高い問題の上位ランキングを返します。</p>
+              <div class="badges"><span class="badge">リクエスト: body・query なし</span><span class="badge">成功: <span class="http">200 OK</span></span><span class="badge">Zod（予定）: <code>mistakesResponseSchema</code></span></div>
+              <section class="pane">
+                <h4>レスポンス</h4>
+                <div class="tbd">
+                  <strong>レスポンス例は未確定です</strong>
+                  <ul>
+                    <li>問題ID（<code>question_id</code>）と誤答率の上位ランキング</li>
+                  </ul>
+                </div>
+              </section>
+            </article>
+
+            <article class="endpoint" id="activity-recent">
+              <header><span class="method get">GET</span><h3><code>/activity/recent</code></h3><span class="status planned">planned</span></header>
+              <p class="summary">レッスン閲覧・演習完了・復習キュー更新を統合した直近イベントを返します。集計ロジックとDTOは実装時に確定します。</p>
+              <div class="badges"><span class="badge">リクエスト: body・query なし</span><span class="badge">成功: <span class="http">200 OK</span></span><span class="badge">Zod（予定）: <code>recentActivityResponseSchema</code></span></div>
+              <section class="pane">
+                <h4>レスポンス</h4>
+                <div class="tbd">
+                  <strong>レスポンス例は未確定です</strong>
+                  <ul>
+                    <li>レッスン閲覧・演習完了・復習キュー更新を統合した直近イベント一覧</li>
+                  </ul>
+                </div>
+              </section>
+            </article>
           </div>
         </section>
       </main>
     </div>
+
+    <script type="module">
+      const PATTERNS = {
+        json: [
+          ["key", /"(?:\\.|[^"\\])*"(?=\s*:)/y],
+          ["string", /"(?:\\.|[^"\\])*"/y],
+          ["atom", /\b(?:true|false|null)\b/y],
+          ["number", /-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/y],
+          ["punct", /[{}[\],:]/y],
+        ],
+        shell: [
+          ["comment", /#[^\n]*/y],
+          ["string", /'[^']*'|"(?:\\.|[^"\\])*"/y],
+          ["cmd", /\b(?:curl|pnpm|npx)\b/y],
+          ["flag", /(?<=\s)-{1,2}[A-Za-z][\w-]*/y],
+          ["punct", /[\\|]/y],
+        ],
+        ts: [
+          ["comment", /\/\/[^\n]*/y],
+          ["string", /'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|`(?:\\.|[^`\\])*`/y],
+          ["atom", /\b(?:const|let|await|async|return|import|from|type|new)\b/y],
+          ["number", /\b\d+\b/y],
+          ["key", /\b[A-Za-z_$][\w$]*(?=\s*:)/y],
+          ["punct", /[{}[\]();,]/y],
+        ],
+      };
+
+      function escapeHtml(value) {
+        return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+      }
+
+      function highlight(source, patterns) {
+        let html = "";
+        let index = 0;
+
+        while (index < source.length) {
+          let matched = false;
+
+          for (const [name, pattern] of patterns) {
+            pattern.lastIndex = index;
+            const match = pattern.exec(source);
+            if (match) {
+              html += '<span class="tok ' + name + '">' + escapeHtml(match[0]) + "</span>";
+              index = pattern.lastIndex;
+              matched = true;
+              break;
+            }
+          }
+
+          if (!matched) {
+            html += escapeHtml(source[index]);
+            index += 1;
+          }
+        }
+
+        return html;
+      }
+
+      for (const pre of document.querySelectorAll(".sample pre[data-lang]")) {
+        const patterns = PATTERNS[pre.dataset.lang];
+        if (!patterns) continue;
+
+        const code = pre.querySelector("code") ?? pre;
+        code.innerHTML = highlight(code.textContent, patterns);
+      }
+
+      if (navigator.clipboard) {
+        for (const sample of document.querySelectorAll(".sample")) {
+          const caption = sample.querySelector("figcaption");
+          const code = sample.querySelector("pre");
+          if (!caption || !code) continue;
+
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "copy";
+          button.textContent = "コピー";
+          button.addEventListener("click", async () => {
+            try {
+              await navigator.clipboard.writeText(code.textContent);
+              button.textContent = "コピーしました";
+            } catch {
+              button.textContent = "コピーできません";
+            }
+            setTimeout(() => {
+              button.textContent = "コピー";
+            }, 1600);
+          });
+          caption.append(button);
+        }
+      }
+    </script>
   </body>
 </html>

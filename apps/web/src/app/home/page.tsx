@@ -4,7 +4,6 @@ import { Suspense } from 'react'
 
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
-import { ProgressBar } from '@/components/ui/progress-bar'
 import { TermCrumb } from '@/components/ui/term-crumb'
 import { DashboardDueCard } from '@/features/dashboard/server/components/dashboard-due-card'
 import { DashboardDueCardFallback } from '@/features/dashboard/server/components/dashboard-due-card-fallback'
@@ -36,13 +35,6 @@ const stats = [
     tone: 'orange',
     isSample: true,
   },
-] as const
-
-const domains = [
-  { label: 'Security', value: 42, color: 'green' },
-  { label: 'Frontend', value: 68, color: 'blue' },
-  { label: 'Backend', value: 31, color: 'purple' },
-  { label: 'Architecture', value: 18, color: 'orange' },
 ] as const
 
 const heatmap = Array.from({ length: 26 * 7 }, (_, index) => ({
@@ -150,58 +142,32 @@ export default function HomePage() {
           </div>
         </Card>
 
-        <div className="grid gap-5 xl:grid-cols-2">
-          <Card className="reveal p-5 sm:p-6" style={revealStyle(6)}>
-            <h2 className="m-0 text-balance text-lg font-black text-ink">領域別の習得状況</h2>
-            <p className="mb-0 mt-1 text-pretty text-sm text-mute">
-              表示用サンプル。学習データには接続していません。
+        <Card className="reveal p-5 sm:p-6" style={revealStyle(6)}>
+          <h2 className="m-0 text-balance text-lg font-black text-ink">設計システムの状態</h2>
+          <p className="mb-0 mt-1 text-pretty text-sm text-mute">
+            基盤で提供するUI語彙を明示しています。
+          </p>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Badge keycap="UI">Card</Badge>
+            <Badge keycap="CTA">Button</Badge>
+            <Badge keycap="1">Badge</Badge>
+            <Badge keycap="%">ProgressBar</Badge>
+          </div>
+          <div className="mt-6 border-t-2 border-border pt-5">
+            <p className="m-0 font-mono text-xs font-bold text-green">
+              &gt;_ design-system --check
             </p>
-            <div className="mt-5 flex flex-col gap-5">
-              {domains.map((domain) => (
-                <div key={domain.label}>
-                  <div className="mb-2 flex items-center justify-between gap-3">
-                    <span className="font-semibold text-ink-2">{domain.label}</span>
-                    <span className="font-mono font-bold tabular-nums text-ink">
-                      {domain.value}%
-                    </span>
-                  </div>
-                  <ProgressBar
-                    color={domain.color}
-                    label={`${domain.label} の習得状況`}
-                    value={domain.value}
-                  />
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          <Card className="reveal p-5 sm:p-6" style={revealStyle(7)}>
-            <h2 className="m-0 text-balance text-lg font-black text-ink">設計システムの状態</h2>
-            <p className="mb-0 mt-1 text-pretty text-sm text-mute">
-              基盤で提供するUI語彙を明示しています。
+            <p className="mb-0 mt-2 text-pretty text-sm leading-6 text-ink-2">
+              dark/light tokens, responsive navigation, focus-visible, and safe-area support are
+              ready.
             </p>
-            <div className="mt-5 flex flex-wrap gap-2">
-              <Badge keycap="UI">Card</Badge>
-              <Badge keycap="CTA">Button</Badge>
-              <Badge keycap="1">Badge</Badge>
-              <Badge keycap="%">ProgressBar</Badge>
-            </div>
-            <div className="mt-6 border-t-2 border-border pt-5">
-              <p className="m-0 font-mono text-xs font-bold text-green">
-                &gt;_ design-system --check
-              </p>
-              <p className="mb-0 mt-2 text-pretty text-sm leading-6 text-ink-2">
-                dark/light tokens, responsive navigation, focus-visible, and safe-area support are
-                ready.
-              </p>
-              <Badge className="mt-4 border-green bg-green-bg text-green">
-                exit 0 · foundation ready
-              </Badge>
-            </div>
-          </Card>
-        </div>
+            <Badge className="mt-4 border-green bg-green-bg text-green">
+              exit 0 · foundation ready
+            </Badge>
+          </div>
+        </Card>
 
-        <Card className="reveal border-green p-5 sm:p-6" style={revealStyle(8)}>
+        <Card className="reveal border-green p-5 sm:p-6" style={revealStyle(7)}>
           <div className="flex flex-wrap items-center gap-4">
             <span
               aria-hidden="true"
