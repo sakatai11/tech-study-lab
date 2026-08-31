@@ -23,13 +23,6 @@ export type AnalyticsRepositoryOptions = {
 const utcDayExpression = (column: unknown) =>
   sql<string>`strftime('%Y-%m-%d', ${column} / 1000, 'unixepoch')`
 
-function utcWeekStart(timestamp: number): number {
-  const date = new Date(timestamp)
-  const today = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
-  const weekday = new Date(today).getUTCDay() || 7
-  return today - (weekday - 1) * 24 * 60 * 60 * 1000
-}
-
 function toNumber(value: number | null | undefined): number {
   return Number(value ?? 0)
 }
@@ -41,8 +34,7 @@ export function createAnalyticsDeps(
   const estimatedMinutesByLesson = options.estimatedMinutesByLesson ?? {}
 
   return {
-    async findSummaryData(userId, now): Promise<AnalyticsSummaryData> {
-      const weekStart = utcWeekStart(now)
+    async findSummaryData(userId, now, weekStartAt): Promise<AnalyticsSummaryData> {
       const currentTime = new Date(now)
       const [answerStats, weekAnswerStats, srsStates, lessonViewRows, answerDates, viewDates] =
         await Promise.all([
@@ -63,7 +55,7 @@ export function createAnalyticsDeps(
             .where(
               and(
                 eq(schema.answerLogs.userId, userId),
-                gte(schema.answerLogs.answeredAt, new Date(weekStart)),
+                gte(schema.answerLogs.answeredAt, new Date(weekStartAt)),
                 lte(schema.answerLogs.answeredAt, currentTime),
               ),
             ),
@@ -83,7 +75,7 @@ export function createAnalyticsDeps(
             .where(
               and(
                 eq(schema.lessonViews.userId, userId),
-                gte(schema.lessonViews.viewedAt, new Date(weekStart)),
+                gte(schema.lessonViews.viewedAt, new Date(weekStartAt)),
                 lte(schema.lessonViews.viewedAt, currentTime),
               ),
             )

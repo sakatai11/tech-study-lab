@@ -41,7 +41,7 @@ export type AnalyticsMistakeRow = {
 }
 
 export type AnalyticsDeps = {
-  findSummaryData(userId: string, now: number): Promise<AnalyticsSummaryData>
+  findSummaryData(userId: string, now: number, weekStartAt: number): Promise<AnalyticsSummaryData>
   findWeeklyAnswerCounts(
     userId: string,
     startAt: number,
@@ -97,7 +97,8 @@ export function getAnalyticsSummary(
   deps: AnalyticsDeps,
   input: AnalyticsInput,
 ): Promise<AnalyticsSummaryResponse> {
-  return deps.findSummaryData(input.userId, input.now).then((data) => {
+  const weekStartAt = utcWeekStart(input.now)
+  return deps.findSummaryData(input.userId, input.now, weekStartAt).then((data) => {
     const correctAnswerRate =
       data.totalAnswerCount === 0
         ? 0

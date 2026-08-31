@@ -1,5 +1,5 @@
 import { applyD1Migrations, env } from 'cloudflare:test'
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import initialMigration from '../drizzle/migrations/0000_flowery_quasar.sql?raw'
 import srsVersionMigration from '../drizzle/migrations/0001_add_srs_version.sql?raw'
@@ -36,6 +36,8 @@ async function fetchAnalytics(path: string): Promise<Response> {
 }
 
 describe('analytics API', () => {
+  const fixedNow = Date.parse('2026-08-31T12:00:00.000Z')
+
   beforeAll(async () => {
     await applyD1Migrations(env.DB, [
       { name: '0000_flowery_quasar.sql', queries: migrationQueries(initialMigration) },
@@ -53,58 +55,65 @@ describe('analytics API', () => {
   })
 
   it('aggregates only the middleware user and returns the weekly, retention, and mistake contracts', async () => {
-    const now = Date.now()
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(fixedNow)
+    const now = fixedNow
     const day = 24 * 60 * 60 * 1000
-    await env.DB.batch([
-      env.DB.prepare(
-        'INSERT INTO answer_logs (id, user_id, question_id, is_correct, answered_at, response_time_ms) VALUES (?, ?, ?, ?, ?, ?)',
-      ).bind('answer-1', FIXED_USER_ID, 'q-1', 1, now - day, 800),
-      env.DB.prepare(
-        'INSERT INTO answer_logs (id, user_id, question_id, is_correct, answered_at, response_time_ms) VALUES (?, ?, ?, ?, ?, ?)',
-      ).bind('answer-2', FIXED_USER_ID, 'q-1', 0, now, null),
-      env.DB.prepare(
-        'INSERT INTO answer_logs (id, user_id, question_id, is_correct, answered_at, response_time_ms) VALUES (?, ?, ?, ?, ?, ?)',
-      ).bind('answer-other', 'other-user', 'q-other', 0, now, 20),
-      env.DB.prepare(
-        'INSERT INTO lesson_views (id, user_id, lesson_id, viewed_at) VALUES (?, ?, ?, ?)',
-      ).bind('view-1', FIXED_USER_ID, 'security-xss-01', now),
-      env.DB.prepare(
-        'INSERT INTO srs_states (user_id, question_id, ease, interval_days, due_at, reps, lapses) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      ).bind(FIXED_USER_ID, 'q-mastered', 2500, 21, now + day, 5, 0),
-      env.DB.prepare(
-        'INSERT INTO srs_states (user_id, question_id, ease, interval_days, due_at, reps, lapses) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      ).bind(FIXED_USER_ID, 'q-due', 2500, 1, now, 1, 0),
-    ])
+    try {
+      await env.DB.batch([
+        env.DB.prepare(
+          'INSERT INTO answer_logs (id, user_id, question_id, is_correct, answered_at, response_time_ms) VALUES (?, ?, ?, ?, ?, ?)',
+        ).bind('answer-1', FIXED_USER_ID, 'q-1', 1, now, 800),
+        env.DB.prepare(
+          'INSERT INTO answer_logs (id, user_id, question_id, is_correct, answered_at, response_time_ms) VALUES (?, ?, ?, ?, ?, ?)',
+        ).bind('answer-2', FIXED_USER_ID, 'q-1', 0, now - day, null),
+        env.DB.prepare(
+          'INSERT INTO answer_logs (id, user_id, question_id, is_correct, answered_at, response_time_ms) VALUES (?, ?, ?, ?, ?, ?)',
+        ).bind('answer-other', 'other-user', 'q-other', 0, now, 20),
+        env.DB.prepare(
+          'INSERT INTO lesson_views (id, user_id, lesson_id, viewed_at) VALUES (?, ?, ?, ?)',
+        ).bind('view-1', FIXED_USER_ID, 'security-xss-01', now),
+        env.DB.prepare(
+          'INSERT INTO srs_states (user_id, question_id, ease, interval_days, due_at, reps, lapses) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        ).bind(FIXED_USER_ID, 'q-mastered', 2500, 21, now + day, 5, 0),
+        env.DB.prepare(
+          'INSERT INTO srs_states (user_id, question_id, ease, interval_days, due_at, reps, lapses) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        ).bind(FIXED_USER_ID, 'q-due', 2500, 1, now, 1, 0),
+      ])
 
-    const [summaryResponse, weeklyResponse, mistakesResponse] = await Promise.all([
-      fetchAnalytics('/analytics/summary'),
-      fetchAnalytics('/analytics/weekly'),
-      fetchAnalytics('/analytics/mistakes'),
-    ])
+      const [summaryResponse, weeklyResponse, mistakesResponse] = await Promise.all([
+        fetchAnalytics('/analytics/summary'),
+        fetchAnalytics('/analytics/weekly'),
+        fetchAnalytics('/analytics/mistakes'),
+      ])
 
-    expect(summaryResponse.status).toBe(200)
-    await expect(summaryResponse.json()).resolves.toMatchObject({
-      totalAnswerCount: 2,
-      correctAnswerRate: 50,
-      averageResponseTimeMs: 800,
-      masteredQuestionCount: 1,
-      currentStreakDays: 2,
-      thisWeekStudyTimeMs: 1_080_000,
-      retentionDistribution: { masteredCount: 1, learningCount: 0, dueCount: 1 },
-    })
+      expect(summaryResponse.status).toBe(200)
+      await expect(summaryResponse.json()).resolves.toMatchObject({
+        totalAnswerCount: 2,
+        correctAnswerRate: 50,
+        averageResponseTimeMs: 800,
+        masteredQuestionCount: 1,
+        currentStreakDays: 2,
+        thisWeekStudyTimeMs: 1_080_800,
+        retentionDistribution: { masteredCount: 1, learningCount: 0, dueCount: 1 },
+      })
 
-    expect(weeklyResponse.status).toBe(200)
-    const weekly = (await weeklyResponse.json()) as {
-      days: { date: string; weekday: number; answerCount: number }[]
+      expect(weeklyResponse.status).toBe(200)
+      const weekly = (await weeklyResponse.json()) as {
+        days: { date: string; weekday: number; answerCount: number }[]
+      }
+      expect(weekly.days).toHaveLength(7)
+      expect(weekly.days.reduce((total, entry) => total + entry.answerCount, 0)).toBe(2)
+      expect(
+        weekly.days.find((entry) => entry.date === new Date(now).toISOString().slice(0, 10)),
+      ).toMatchObject({ answerCount: 1 })
+
+      expect(mistakesResponse.status).toBe(200)
+      await expect(mistakesResponse.json()).resolves.toEqual({
+        items: [{ questionId: 'q-1', incorrectRate: 50, answerCount: 2, incorrectAnswerCount: 1 }],
+      })
+    } finally {
+      nowSpy.mockRestore()
     }
-    expect(weekly.days).toHaveLength(7)
-    expect(weekly.days.reduce((total, entry) => total + entry.answerCount, 0)).toBe(2)
-    expect(weekly.days.at(-1)?.answerCount).toBe(1)
-
-    expect(mistakesResponse.status).toBe(200)
-    await expect(mistakesResponse.json()).resolves.toEqual({
-      items: [{ questionId: 'q-1', incorrectRate: 50, answerCount: 2, incorrectAnswerCount: 1 }],
-    })
   })
 
   it('requires the empty query contract', async () => {

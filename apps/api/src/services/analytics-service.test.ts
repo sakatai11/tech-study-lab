@@ -77,6 +77,33 @@ describe('analytics service', () => {
     })
   })
 
+  it('passes the service-calculated UTC week start to the summary dependency', async () => {
+    let received: { now: number; weekStartAt: number } | undefined
+    await getAnalyticsSummary(
+      createDeps({
+        findSummaryData: async (_userId, receivedNow, weekStartAt) => {
+          received = { now: receivedNow, weekStartAt }
+          return {
+            totalAnswerCount: 0,
+            correctAnswerCount: 0,
+            responseTimeTotalMs: 0,
+            responseTimeCount: 0,
+            thisWeekResponseTimeTotalMs: 0,
+            lessonViewCounts: [],
+            activityDates: [],
+            srsStates: [],
+          }
+        },
+      }),
+      { userId: 'u1', now },
+    )
+
+    expect(received).toEqual({
+      now,
+      weekStartAt: Date.parse('2026-08-31T00:00:00.000Z'),
+    })
+  })
+
   it('returns seven UTC days in chronological order and fills missing counts with zero', async () => {
     const result = await getAnalyticsWeekly(
       createDeps({
