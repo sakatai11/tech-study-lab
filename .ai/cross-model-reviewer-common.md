@@ -27,7 +27,7 @@
 
 ## 外部レビュー方針と判定規則
 
-`reviewPolicy`は次の3つとし、未指定時は`always`とする。
+`reviewPolicy`は次の3つとし、未指定時は`risk-based`とする。
 
 - `always`: `externalReviewDecision: required`
 - `risk-based`: current HEADの累積差分とinternal discovery結果を以下の規則で判定する
