@@ -355,6 +355,30 @@ describe('analytics response schemas', () => {
     expect(analyticsWeeklyResponseSchema.safeParse({ days: [] }).success).toBe(false)
   })
 
+  it('accepts leap-day dates and rejects impossible calendar dates', () => {
+    const days = Array.from({ length: 7 }, (_, index) => ({
+      date: index === 0 ? '2024-02-29' : `2024-03-${String(index).padStart(2, '0')}`,
+      weekday: ((index + 3) % 7) + 1,
+      answerCount: 0,
+    }))
+    expect(analyticsWeeklyResponseSchema.safeParse({ days }).success).toBe(true)
+
+    const invalidDays = days.map((day, index) => ({
+      ...day,
+      date: index === 0 ? '2026-02-30' : day.date,
+    }))
+    expect(analyticsWeeklyResponseSchema.safeParse({ days: invalidDays }).success).toBe(false)
+  })
+
+  it('rejects duplicate weekly dates', () => {
+    const days = Array.from({ length: 7 }, (_, index) => ({
+      date: index === 0 ? '2026-08-01' : '2026-08-02',
+      weekday: ((index + 6) % 7) + 1,
+      answerCount: index,
+    }))
+    expect(analyticsWeeklyResponseSchema.safeParse({ days }).success).toBe(false)
+  })
+
   it('accepts and bounds mistake items', () => {
     expect(
       mistakesResponseSchema.safeParse({
@@ -366,6 +390,26 @@ describe('analytics response schemas', () => {
     expect(
       mistakesResponseSchema.safeParse({
         items: [{ questionId: 'q-1', incorrectRate: 101, answerCount: 3, incorrectAnswerCount: 2 }],
+      }).success,
+    ).toBe(false)
+  })
+
+  it('requires at least two integer answers and bounds incorrect answers', () => {
+    expect(
+      mistakesResponseSchema.safeParse({
+        items: [{ questionId: 'q-1', incorrectRate: 0, answerCount: 1, incorrectAnswerCount: 0 }],
+      }).success,
+    ).toBe(false)
+    expect(
+      mistakesResponseSchema.safeParse({
+        items: [
+          { questionId: 'q-1', incorrectRate: 50, answerCount: 2.5, incorrectAnswerCount: 1 },
+        ],
+      }).success,
+    ).toBe(false)
+    expect(
+      mistakesResponseSchema.safeParse({
+        items: [{ questionId: 'q-1', incorrectRate: 100, answerCount: 2, incorrectAnswerCount: 3 }],
       }).success,
     ).toBe(false)
   })

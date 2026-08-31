@@ -53,4 +53,12 @@ describe('HomePage', () => {
       'http://localhost:3000/learn/security/xss/preventing-xss',
     )
   })
+
+  it('provides a mobile analytics link from the dashboard', () => {
+    render(<HomePage />)
+
+    const analyticsLink = screen.getByRole('link', { name: 'すべて表示' })
+    expect(analyticsLink).toHaveProperty('href', 'http://localhost:3000/analytics')
+    expect(analyticsLink.className).toContain('lg:hidden')
+  })
 })

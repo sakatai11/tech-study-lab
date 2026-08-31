@@ -124,24 +124,65 @@ export const analyticsSummaryResponseSchema = z.object({
 })
 export type AnalyticsSummaryResponse = z.infer<typeof analyticsSummaryResponseSchema>
 
+const isoCalendarDatePattern = /^(\d{4})-(\d{2})-(\d{2})$/
+
+function isValidCalendarDate(value: string): boolean {
+  const match = isoCalendarDatePattern.exec(value)
+  if (!match) return false
+
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  const isLeapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)
+  const daysInMonth = [31, isLeapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1]
+
+  return month >= 1 && month <= 12 && day >= 1 && day <= (daysInMonth ?? 0)
+}
+
+const analyticsWeeklyDateSchema = z
+  .string()
+  .regex(isoCalendarDatePattern)
+  .refine(isValidCalendarDate, { message: 'date must be a valid calendar date' })
+
 export const analyticsWeeklyDaySchema = z.object({
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  date: analyticsWeeklyDateSchema,
   weekday: z.number().int().min(1).max(7),
   answerCount: z.number().int().nonnegative(),
 })
 export type AnalyticsWeeklyDay = z.infer<typeof analyticsWeeklyDaySchema>
 
-export const analyticsWeeklyResponseSchema = z.object({
-  days: z.array(analyticsWeeklyDaySchema).length(7),
-})
+export const analyticsWeeklyResponseSchema = z
+  .object({
+    days: z.array(analyticsWeeklyDaySchema).length(7),
+  })
+  .superRefine(({ days }, context) => {
+    const uniqueDates = new Set(days.map(({ date }) => date))
+    if (uniqueDates.size !== days.length) {
+      context.addIssue({
+        code: 'custom',
+        path: ['days'],
+        message: 'days must contain unique dates',
+      })
+    }
+  })
 export type AnalyticsWeeklyResponse = z.infer<typeof analyticsWeeklyResponseSchema>
 
-export const mistakeItemSchema = z.object({
-  questionId: z.string().min(1),
-  incorrectRate: z.number().min(0).max(100),
-  answerCount: z.number().int().nonnegative(),
-  incorrectAnswerCount: z.number().int().nonnegative(),
-})
+export const mistakeItemSchema = z
+  .object({
+    questionId: z.string().min(1),
+    incorrectRate: z.number().min(0).max(100),
+    answerCount: z.number().int().min(2),
+    incorrectAnswerCount: z.number().int().nonnegative(),
+  })
+  .superRefine(({ answerCount, incorrectAnswerCount }, context) => {
+    if (incorrectAnswerCount > answerCount) {
+      context.addIssue({
+        code: 'custom',
+        path: ['incorrectAnswerCount'],
+        message: 'incorrectAnswerCount must not exceed answerCount',
+      })
+    }
+  })
 export type MistakeItem = z.infer<typeof mistakeItemSchema>
 
 export const mistakesResponseSchema = z.object({
