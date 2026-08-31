@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  analyticsSummaryResponseSchema,
+  analyticsWeeklyResponseSchema,
   answerRequestSchema,
   answerResponseSchema,
   domainSummarySchema,
@@ -7,8 +9,10 @@ import {
   dueCountResponseSchema,
   lessonViewRequestSchema,
   lessonViewResponseSchema,
+  mistakesResponseSchema,
   rateLimitUnavailableErrorResponseSchema,
   rateLimitedErrorResponseSchema,
+  retentionDistributionSchema,
   reviewQueueResponseSchema,
 } from './api'
 
@@ -306,6 +310,71 @@ describe('domainSummarySchema', () => {
         lessonCount: 1,
       }).success,
     ).toBe(false)
+  })
+})
+
+describe('analytics response schemas', () => {
+  it('accepts the summary contract including retention distribution', () => {
+    expect(
+      analyticsSummaryResponseSchema.safeParse({
+        totalAnswerCount: 3,
+        correctAnswerRate: 67,
+        averageResponseTimeMs: 800,
+        masteredQuestionCount: 1,
+        currentStreakDays: 2,
+        thisWeekStudyTimeMs: 120_000,
+        retentionDistribution: { masteredCount: 1, learningCount: 1, dueCount: 1 },
+      }).success,
+    ).toBe(true)
+  })
+
+  it('rejects out-of-range summary values and non-exclusive-shaped counts', () => {
+    expect(
+      analyticsSummaryResponseSchema.safeParse({
+        totalAnswerCount: 1,
+        correctAnswerRate: 101,
+        averageResponseTimeMs: 0,
+        masteredQuestionCount: 0,
+        currentStreakDays: 0,
+        thisWeekStudyTimeMs: 0,
+        retentionDistribution: { masteredCount: 0, learningCount: 0, dueCount: -1 },
+      }).success,
+    ).toBe(false)
+  })
+
+  it('requires exactly seven dated weekly entries', () => {
+    expect(
+      analyticsWeeklyResponseSchema.safeParse({
+        days: Array.from({ length: 7 }, (_, index) => ({
+          date: `2026-08-${String(index + 1).padStart(2, '0')}`,
+          weekday: ((index + 6) % 7) + 1,
+          answerCount: index,
+        })),
+      }).success,
+    ).toBe(true)
+    expect(analyticsWeeklyResponseSchema.safeParse({ days: [] }).success).toBe(false)
+  })
+
+  it('accepts and bounds mistake items', () => {
+    expect(
+      mistakesResponseSchema.safeParse({
+        items: [
+          { questionId: 'q-1', incorrectRate: 66.7, answerCount: 3, incorrectAnswerCount: 2 },
+        ],
+      }).success,
+    ).toBe(true)
+    expect(
+      mistakesResponseSchema.safeParse({
+        items: [{ questionId: 'q-1', incorrectRate: 101, answerCount: 3, incorrectAnswerCount: 2 }],
+      }).success,
+    ).toBe(false)
+  })
+
+  it('keeps retention distribution as a shared standalone contract', () => {
+    expect(
+      retentionDistributionSchema.safeParse({ masteredCount: 0, learningCount: 0, dueCount: 0 })
+        .success,
+    ).toBe(true)
   })
 })
 

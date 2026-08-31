@@ -102,3 +102,49 @@ export type DomainsResponse = z.infer<typeof domainsResponseSchema>
 
 export const domainsRequestSchema = z.object({}).strict()
 export type DomainsRequest = z.infer<typeof domainsRequestSchema>
+
+export const analyticsRequestSchema = z.object({}).strict()
+export type AnalyticsRequest = z.infer<typeof analyticsRequestSchema>
+
+export const retentionDistributionSchema = z.object({
+  masteredCount: z.number().int().nonnegative(),
+  learningCount: z.number().int().nonnegative(),
+  dueCount: z.number().int().nonnegative(),
+})
+export type RetentionDistribution = z.infer<typeof retentionDistributionSchema>
+
+export const analyticsSummaryResponseSchema = z.object({
+  totalAnswerCount: z.number().int().nonnegative(),
+  correctAnswerRate: z.number().int().min(0).max(100),
+  averageResponseTimeMs: z.number().int().nonnegative(),
+  masteredQuestionCount: z.number().int().nonnegative(),
+  currentStreakDays: z.number().int().nonnegative(),
+  thisWeekStudyTimeMs: z.number().int().nonnegative(),
+  retentionDistribution: retentionDistributionSchema,
+})
+export type AnalyticsSummaryResponse = z.infer<typeof analyticsSummaryResponseSchema>
+
+export const analyticsWeeklyDaySchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  weekday: z.number().int().min(1).max(7),
+  answerCount: z.number().int().nonnegative(),
+})
+export type AnalyticsWeeklyDay = z.infer<typeof analyticsWeeklyDaySchema>
+
+export const analyticsWeeklyResponseSchema = z.object({
+  days: z.array(analyticsWeeklyDaySchema).length(7),
+})
+export type AnalyticsWeeklyResponse = z.infer<typeof analyticsWeeklyResponseSchema>
+
+export const mistakeItemSchema = z.object({
+  questionId: z.string().min(1),
+  incorrectRate: z.number().min(0).max(100),
+  answerCount: z.number().int().nonnegative(),
+  incorrectAnswerCount: z.number().int().nonnegative(),
+})
+export type MistakeItem = z.infer<typeof mistakeItemSchema>
+
+export const mistakesResponseSchema = z.object({
+  items: z.array(mistakeItemSchema).max(10),
+})
+export type MistakesResponse = z.infer<typeof mistakesResponseSchema>
