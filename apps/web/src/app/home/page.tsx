@@ -115,7 +115,15 @@ export default function HomePage() {
                 静的見本 · 実際の解答ログはまだ接続していません
               </p>
             </div>
-            <Badge className="tabular-nums">12 day streak</Badge>
+            <div className="flex items-center gap-2">
+              <Link
+                className="inline-flex min-h-11 items-center rounded-lg px-2 font-semibold text-blue hover:underline lg:hidden"
+                href="/analytics"
+              >
+                すべて表示
+              </Link>
+              <Badge className="tabular-nums">12 day streak</Badge>
+            </div>
           </div>
           <div
             aria-label="直近26週・182日間の学習コントリビューション見本"

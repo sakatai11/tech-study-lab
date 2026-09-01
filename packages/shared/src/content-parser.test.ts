@@ -30,6 +30,7 @@ function lessonFile({
       topic,
       lessonId,
       title: 'XSS basics',
+      estimatedMinutes: 18,
       questions: questionIds.map((id) => ({
         id,
         type: 'mcq',
@@ -62,6 +63,7 @@ describe('createContentBundle', () => {
           topic: 'xss',
           lessonId: 'security-xss-01',
           title: 'XSS basics',
+          estimatedMinutes: 18,
           questions: [
             {
               id: 'security-xss-01-q1',

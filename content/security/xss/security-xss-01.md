@@ -3,6 +3,7 @@ domain: security
 topic: xss
 lessonId: security-xss-01
 title: XSSを防ぐ安全な画面表示
+estimatedMinutes: 18
 questions:
   - id: security-xss-01-q1
     type: mcq

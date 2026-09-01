@@ -291,10 +291,10 @@
                 <tr><td class="nowrap"><span class="verb-tag get">GET</span></td><td class="nowrap"><a href="#due-count"><code>/dashboard/due-count</code></a></td><td>今すぐ復習できる問題数を返す</td><td class="nowrap http">200</td><td class="nowrap">implemented</td></tr>
                 <tr><td class="nowrap"><span class="verb-tag get">GET</span></td><td class="nowrap"><a href="#health"><code>/health</code></a></td><td>公開entrypointの疎通確認（Access検証の前段）</td><td class="nowrap http">200</td><td class="nowrap">implemented</td></tr>
                 <tr><td class="nowrap"><span class="verb-tag get">GET</span></td><td class="nowrap"><a href="#domains"><code>/domains</code></a></td><td>4領域の習得率・トピック数・レッスン数</td><td class="nowrap http">200</td><td class="nowrap">implemented</td></tr>
-                <tr><td class="nowrap"><span class="verb-tag get">GET</span></td><td class="nowrap"><a href="#analytics-summary"><code>/analytics/summary</code></a></td><td>総解答数・正答率・平均反応時間などの集計</td><td class="nowrap http">200</td><td class="nowrap">planned</td></tr>
-                <tr><td class="nowrap"><span class="verb-tag get">GET</span></td><td class="nowrap"><a href="#analytics-weekly"><code>/analytics/weekly</code></a></td><td>直近7日の解答数推移</td><td class="nowrap http">200</td><td class="nowrap">planned</td></tr>
+                <tr><td class="nowrap"><span class="verb-tag get">GET</span></td><td class="nowrap"><a href="#analytics-summary"><code>/analytics/summary</code></a></td><td>総解答数・正答率・平均反応時間などの集計</td><td class="nowrap http">200</td><td class="nowrap">implemented</td></tr>
+                <tr><td class="nowrap"><span class="verb-tag get">GET</span></td><td class="nowrap"><a href="#analytics-weekly"><code>/analytics/weekly</code></a></td><td>直近7日の解答数推移</td><td class="nowrap http">200</td><td class="nowrap">implemented</td></tr>
                 <tr><td class="nowrap"><span class="verb-tag get">GET</span></td><td class="nowrap"><a href="#analytics-heatmap"><code>/analytics/heatmap</code></a></td><td>直近26週の日次解答数</td><td class="nowrap http">200</td><td class="nowrap">planned</td></tr>
-                <tr><td class="nowrap"><span class="verb-tag get">GET</span></td><td class="nowrap"><a href="#analytics-mistakes"><code>/analytics/mistakes</code></a></td><td>誤答率が高い問題の上位ランキング</td><td class="nowrap http">200</td><td class="nowrap">planned</td></tr>
+                <tr><td class="nowrap"><span class="verb-tag get">GET</span></td><td class="nowrap"><a href="#analytics-mistakes"><code>/analytics/mistakes</code></a></td><td>誤答率が高い問題の上位ランキング</td><td class="nowrap http">200</td><td class="nowrap">implemented</td></tr>
                 <tr><td class="nowrap"><span class="verb-tag get">GET</span></td><td class="nowrap"><a href="#activity-recent"><code>/activity/recent</code></a></td><td>直近の学習イベント一覧</td><td class="nowrap http">200</td><td class="nowrap">planned</td></tr>
               </tbody>
             </table>
@@ -920,7 +920,7 @@ const { dueCount } = dueCountResponseSchema.parse(await response.json())</code><
             <p><strong>後続Issueで必ず更新するもの</strong></p>
             <p>各APIの実装に着手するときは、返却値を共有Zodスキーマで確定し、このページの<strong>レスポンス例・フィールド表・実装状態</strong>も同じPRで更新します。APIのIF（URL、HTTPステータス、JSON形式、エラー形式）を実装だけで先に変えないでください。</p>
             <p>この節のAPIはいずれも認証・エラー形式が Walking Skeleton のAPIと共通です（<a href="#errors">共通エラー応答</a>）。すべて読み取り専用のため、永続書き込みのレート制限（429 / 503）は対象外です。</p>
-            <p><strong>planned のAPIについて未確定なのはレスポンスbodyだけです。</strong>URL・メソッド・成功ステータス・認証・エラー形式・返す値の意味（設計文書 §7.3）は確定済みで、実装Issueで決めるのはフィールド名・型・入れ子構造です。<code>/domains</code> は実装済みで、レスポンス例とフィールド表も確定しています。</p>
+            <p><strong>analytics の3 APIは Issue #32 で実装済みです。</strong>週次データは UTC の直近7日を0埋めし、誤答ランキングは2回答以上の問題を対象に最大10件を返します。忘却曲線と復習タイミングの計算APIは提供しません。</p>
           </div>
           <div class="endpoint-list">
 
@@ -1058,36 +1058,59 @@ const { domains } = domainsResponseSchema.parse(await response.json())</code></p
             </article>
 
             <article class="endpoint" id="analytics-summary">
-              <header><span class="method get">GET</span><h3><code>/analytics/summary</code></h3><span class="status planned">planned</span></header>
-              <p class="summary">総解答数、正答率、平均反応時間、習得済み問題数、連続学習日数、今週の学習時間を返します。</p>
-              <div class="badges"><span class="badge">リクエスト: body・query なし</span><span class="badge">成功: <span class="http">200 OK</span></span><span class="badge">Zod（予定）: <code>analyticsSummaryResponseSchema</code></span></div>
+              <header><span class="method get">GET</span><h3><code>/analytics/summary</code></h3><span class="status">implemented</span></header>
+              <p class="summary">総解答数、正答率、平均反応時間、習得済み問題数、連続学習日数、今週の学習時間、SRS定着度分布を返します。</p>
+              <div class="badges"><span class="badge">認証: Access（公開entrypoint）</span><span class="badge">レート制限: なし（読み取り）</span><span class="badge">Zod: <code>analyticsSummaryResponseSchema</code></span></div>
+              <section class="pane">
+                <h4>リクエスト</h4>
+                <p class="note">body はありません。query parameter は strict な空オブジェクトで検証するため、未知のquery parameterは <span class="http">400</span> で拒否します。</p>
+                <figure class="sample"><figcaption><span class="wire">ローカル開発</span><span class="meta">http://localhost:8787</span></figcaption><pre data-lang="shell"><code>curl -i http://localhost:8787/analytics/summary</code></pre></figure>
+              </section>
               <section class="pane">
                 <h4>レスポンス</h4>
-                <div class="tbd">
-                  <strong>レスポンス例は未確定です</strong>
-                  <code>answer_logs</code>・<code>lesson_views</code> からの集計値を返します。
-                  <ul>
-                    <li>総解答数・正答率・平均反応時間（<code>answer_logs.response_time_ms</code>）</li>
-                    <li>習得済み問題数（SRS interval ≥ 21日）</li>
-                    <li>連続学習日数・今週の学習時間</li>
-                  </ul>
-                </div>
+                <div class="table-wrap"><table class="grid"><thead><tr><th>フィールド</th><th class="nowrap">型</th><th>意味</th></tr></thead><tbody>
+                  <tr><td><code>totalAnswerCount</code></td><td><span class="type">number</span></td><td>対象ユーザーの総解答数。</td></tr>
+                  <tr><td><code>correctAnswerRate</code></td><td><span class="type">number</span></td><td>0〜100の整数百分率。0件は0。</td></tr>
+                  <tr><td><code>averageResponseTimeMs</code></td><td><span class="type">number</span></td><td>NULLを除いた反応時間の平均（ms、四捨五入）。対象なしは0。</td></tr>
+                  <tr><td><code>masteredQuestionCount</code></td><td><span class="type">number</span></td><td><code>interval_days ≥ 21</code> の問題数。</td></tr>
+                  <tr><td><code>currentStreakDays</code></td><td><span class="type">number</span></td><td>UTC日付で教材閲覧または解答が連続した日数。</td></tr>
+                  <tr><td><code>thisWeekStudyTimeMs</code></td><td><span class="type">number</span></td><td>UTC月曜からの教材所要時間と反応時間の合計。</td></tr>
+                  <tr><td><code>retentionDistribution</code></td><td><span class="type">object</span></td><td><code>masteredCount</code>・<code>learningCount</code>・<code>dueCount</code> の排他的な3区分。</td></tr>
+                </tbody></table></div>
+                <figure class="sample"><figcaption><span class="wire ok">200 OK</span><span class="meta">application/json</span></figcaption><pre data-lang="json"><code>{
+  "totalAnswerCount": 12,
+  "correctAnswerRate": 75,
+  "averageResponseTimeMs": 842,
+  "masteredQuestionCount": 4,
+  "currentStreakDays": 3,
+  "thisWeekStudyTimeMs": 3240000,
+  "retentionDistribution": { "masteredCount": 4, "learningCount": 5, "dueCount": 2 }
+}</code></pre></figure>
+                <p class="note">未認証の公開アクセスは共通の <a href="#errors">401 <code>UNAUTHORIZED</code></a>、集計失敗は <a href="#errors">500 <code>INTERNAL</code></a> です。</p>
               </section>
             </article>
 
             <article class="endpoint" id="analytics-weekly">
-              <header><span class="method get">GET</span><h3><code>/analytics/weekly</code></h3><span class="status planned">planned</span></header>
-              <p class="summary">直近7日の曜日ごとの解答数推移を返します。</p>
-              <div class="badges"><span class="badge">リクエスト: body・query なし</span><span class="badge">成功: <span class="http">200 OK</span></span><span class="badge">Zod（予定）: <code>analyticsWeeklyResponseSchema</code></span></div>
-              <section class="pane">
-                <h4>レスポンス</h4>
-                <div class="tbd">
-                  <strong>レスポンス例は未確定です</strong>
-                  <ul>
-                    <li>直近7日の曜日ごとの解答件数</li>
-                  </ul>
-                </div>
-              </section>
+              <header><span class="method get">GET</span><h3><code>/analytics/weekly</code></h3><span class="status">implemented</span></header>
+              <p class="summary">UTCの直近7日を古い順に並べた曜日ごとの解答数推移を返します。</p>
+              <div class="badges"><span class="badge">認証: Access（公開entrypoint）</span><span class="badge">レート制限: なし（読み取り）</span><span class="badge">Zod: <code>analyticsWeeklyResponseSchema</code></span></div>
+              <section class="pane"><h4>リクエスト</h4><p class="note">body はありません。query parameter はありません（未知のquery parameterは <span class="http">400</span>）。</p><figure class="sample"><figcaption><span class="wire">ローカル開発</span><span class="meta">http://localhost:8787</span></figcaption><pre data-lang="shell"><code>curl -i http://localhost:8787/analytics/weekly</code></pre></figure></section>
+              <section class="pane"><h4>レスポンス</h4><div class="table-wrap"><table class="grid"><thead><tr><th>フィールド</th><th class="nowrap">型</th><th>意味</th></tr></thead><tbody>
+                <tr><td><code>days</code></td><td><span class="type">array</span></td><td>常に7件。古い日付から新しい日付の順。</td></tr>
+                <tr><td><code>days[].date</code></td><td><span class="type">string</span></td><td>UTCの <code>YYYY-MM-DD</code>。</td></tr>
+                <tr><td><code>days[].weekday</code></td><td><span class="type">number</span></td><td>ISO曜日（1=月曜〜7=日曜）。</td></tr>
+                <tr><td><code>days[].answerCount</code></td><td><span class="type">number</span></td><td>対象日の解答数。解答がない日は0。</td></tr>
+              </tbody></table></div><figure class="sample"><figcaption><span class="wire ok">200 OK</span><span class="meta">application/json</span></figcaption><pre data-lang="json"><code>{
+  "days": [
+    { "date": "2026-08-25", "weekday": 2, "answerCount": 0 },
+    { "date": "2026-08-26", "weekday": 3, "answerCount": 4 },
+    { "date": "2026-08-27", "weekday": 4, "answerCount": 1 },
+    { "date": "2026-08-28", "weekday": 5, "answerCount": 0 },
+    { "date": "2026-08-29", "weekday": 6, "answerCount": 2 },
+    { "date": "2026-08-30", "weekday": 7, "answerCount": 0 },
+    { "date": "2026-08-31", "weekday": 1, "answerCount": 3 }
+  ]
+}</code></pre></figure></section>
             </article>
 
             <article class="endpoint" id="analytics-heatmap">
@@ -1107,18 +1130,21 @@ const { domains } = domainsResponseSchema.parse(await response.json())</code></p
             </article>
 
             <article class="endpoint" id="analytics-mistakes">
-              <header><span class="method get">GET</span><h3><code>/analytics/mistakes</code></h3><span class="status planned">planned</span></header>
-              <p class="summary">誤答率が高い問題の上位ランキングを返します。</p>
-              <div class="badges"><span class="badge">リクエスト: body・query なし</span><span class="badge">成功: <span class="http">200 OK</span></span><span class="badge">Zod（予定）: <code>mistakesResponseSchema</code></span></div>
-              <section class="pane">
-                <h4>レスポンス</h4>
-                <div class="tbd">
-                  <strong>レスポンス例は未確定です</strong>
-                  <ul>
-                    <li>問題ID（<code>question_id</code>）と誤答率の上位ランキング</li>
-                  </ul>
-                </div>
-              </section>
+              <header><span class="method get">GET</span><h3><code>/analytics/mistakes</code></h3><span class="status">implemented</span></header>
+              <p class="summary">2回答以上の問題を対象に、誤答率が高い順の上位ランキングを返します。</p>
+              <div class="badges"><span class="badge">認証: Access（公開entrypoint）</span><span class="badge">レート制限: なし（読み取り）</span><span class="badge">Zod: <code>mistakesResponseSchema</code></span></div>
+              <section class="pane"><h4>リクエスト</h4><p class="note">body はありません。query parameter はありません（未知のquery parameterは <span class="http">400</span>）。</p><figure class="sample"><figcaption><span class="wire">ローカル開発</span><span class="meta">http://localhost:8787</span></figcaption><pre data-lang="shell"><code>curl -i http://localhost:8787/analytics/mistakes</code></pre></figure></section>
+              <section class="pane"><h4>レスポンス</h4><div class="table-wrap"><table class="grid"><thead><tr><th>フィールド</th><th class="nowrap">型</th><th>意味</th></tr></thead><tbody>
+                <tr><td><code>items</code></td><td><span class="type">array</span></td><td>最大10件。誤答率降順、回答数降順、問題ID昇順。</td></tr>
+                <tr><td><code>items[].questionId</code></td><td><span class="type">string</span></td><td>問題ID。</td></tr>
+                <tr><td><code>items[].incorrectRate</code></td><td><span class="type">number</span></td><td>誤答率の百分率（小数第1位まで）。</td></tr>
+                <tr><td><code>items[].answerCount</code></td><td><span class="type">number</span></td><td>対象問題の回答数。</td></tr>
+                <tr><td><code>items[].incorrectAnswerCount</code></td><td><span class="type">number</span></td><td>対象問題の誤答数。</td></tr>
+              </tbody></table></div><figure class="sample"><figcaption><span class="wire ok">200 OK</span><span class="meta">該当なしは空配列</span></figcaption><pre data-lang="json"><code>{
+  "items": [
+    { "questionId": "security-xss-01-q2", "incorrectRate": 66.7, "answerCount": 6, "incorrectAnswerCount": 4 }
+  ]
+}</code></pre></figure></section>
             </article>
 
             <article class="endpoint" id="activity-recent">

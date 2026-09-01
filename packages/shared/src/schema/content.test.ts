@@ -22,6 +22,7 @@ const validLessonFrontmatter = {
   topic: 'xss',
   lessonId: 'security-xss-01',
   title: 'XSS basics',
+  estimatedMinutes: 18,
   questions: [
     {
       id: 'security-xss-01-q1',
@@ -148,5 +149,26 @@ describe('DOMAIN_LABELS', () => {
 
     expect(orders).toEqual([1, 2, 3, 4])
     expect(new Set(orders).size).toBe(4)
+  })
+
+  it('requires a positive integer estimatedMinutes', () => {
+    expect(
+      validatedLessonFrontmatterSchema.safeParse({
+        ...validLessonFrontmatter,
+        estimatedMinutes: 0,
+      }).success,
+    ).toBe(false)
+    expect(
+      validatedLessonFrontmatterSchema.safeParse({
+        ...validLessonFrontmatter,
+        estimatedMinutes: 1.5,
+      }).success,
+    ).toBe(false)
+    expect(
+      validatedLessonFrontmatterSchema.safeParse({
+        ...validLessonFrontmatter,
+        estimatedMinutes: 12,
+      }).success,
+    ).toBe(true)
   })
 })
