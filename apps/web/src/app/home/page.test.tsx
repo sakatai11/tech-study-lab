@@ -16,16 +16,8 @@ vi.mock('../_components/app-shell', () => ({
   },
 }))
 
-vi.mock('@/features/dashboard/server/components/dashboard-due-card', () => ({
-  DashboardDueCard: () => <p>due-card</p>,
-}))
-
-vi.mock('@/features/dashboard/server/load-dashboard', () => ({
-  loadDashboardStatic: () => ({
-    continueHref: '/learn/security/xss/preventing-xss',
-    learnHref: '/learn/security/xss/preventing-xss',
-    quizHref: '/quiz/preventing-xss',
-  }),
+vi.mock('@/features/dashboard/server/components/dashboard-page-content', () => ({
+  DashboardPageContent: () => <p>dashboard-page-content</p>,
 }))
 
 import HomePage from './page'
@@ -36,29 +28,10 @@ describe('HomePage', () => {
     appShell.mockReset()
   })
 
-  it('keeps the dashboard composition, due card, and learning links at /home', () => {
+  it('composes the dashboard feature content at /home', () => {
     render(<HomePage />)
 
     expect(appShell).toHaveBeenCalledWith('dashboard')
-    expect(screen.getByRole('heading', { name: '開発者のための学習ワークベンチ' })).toBeTruthy()
-    expect(screen.queryByRole('heading', { name: '領域別の習得状況' })).toBeNull()
-    expect(screen.getByText('due-card')).toBeTruthy()
-    expect(screen.getAllByText('表示用サンプル')).toHaveLength(2)
-    expect(screen.getByRole('link', { name: '復習を始める' })).toHaveProperty(
-      'href',
-      'http://localhost:3000/review',
-    )
-    expect(screen.getByRole('link', { name: '続きから' })).toHaveProperty(
-      'href',
-      'http://localhost:3000/learn/security/xss/preventing-xss',
-    )
-  })
-
-  it('provides a mobile analytics link from the dashboard', () => {
-    render(<HomePage />)
-
-    const analyticsLink = screen.getByRole('link', { name: 'すべて表示' })
-    expect(analyticsLink).toHaveProperty('href', 'http://localhost:3000/analytics')
-    expect(analyticsLink.className).toContain('lg:hidden')
+    expect(screen.getByText('dashboard-page-content')).toBeTruthy()
   })
 })
