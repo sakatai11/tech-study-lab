@@ -102,7 +102,7 @@ Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runt
 - ブランチ名は `AGENTS.md`「ブランチ戦略」の命名規則に従う。種別は issue のラベル・タイトル・本文から判断し、**迷う場合は `feature`** とする。
 - 最新の `origin/develop` を取り込んだ `develop` から切る。`develop` がローカル・リモートともに存在しない初回だけ新規作成し、その旨を報告する。
 - **別モデルCLIと正規化エージェントはホストランタイムから一意に決まる**（選択制ではない）。`.ai/runtime-compatibility.md`「別モデルCLIレビューのモデル方針」の表に従う。ホストが判定できない場合は推測せず停止して確認する。
-- `reviewPolicy`は`always` / `risk-based` / `never`のいずれかとする。ユーザー指定がなければ`always`とする。`never`はユーザーが明示した場合だけ選べる。`risk-based`ではフェーズ5・6で`.ai/cross-model-reviewer-common.md`の判定規則を適用する。
+- `reviewPolicy`は`always` / `risk-based` / `never`のいずれかとする。ユーザー指定がなければ`risk-based`とし、フェーズ5・6で`.ai/cross-model-reviewer-common.md`の固定規則に基づいて外部レビュー要否を判定する。`always`はユーザーが常時レビューを希望する場合に選べる。`never`はユーザーが明示した場合だけ選べる。
 
 | ホストランタイム | 正規化エージェント | 送信先（`egressDestination`） |
 |---|---|---|

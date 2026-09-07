@@ -52,6 +52,7 @@ domain: ${domain}
 topic: ${topic}
 lessonId: ${lessonId}
 title: XSS
+estimatedMinutes: 18
 questions:
   - id: ${questionId}
     type: mcq

@@ -17,6 +17,7 @@ const lesson: BundledLesson = {
   topic: 'xss',
   lessonId: 'security-xss-01',
   title: '安全な表示',
+  estimatedMinutes: 18,
   relativePath: 'security/xss/security-xss-01.md',
   body: '# 本文',
   questions: [

@@ -50,6 +50,7 @@ export const lessonFrontmatterSchema = z.object({
   topic: z.string().min(1),
   lessonId: lessonIdSchema,
   title: z.string().min(1),
+  estimatedMinutes: z.number().int().positive(),
   questions: z.array(questionSchema).min(1),
 })
 export type LessonFrontmatter = z.infer<typeof lessonFrontmatterSchema>

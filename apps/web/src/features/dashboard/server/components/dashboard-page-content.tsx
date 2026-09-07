@@ -1,0 +1,203 @@
+import 'server-only'
+
+import Link from 'next/link'
+import type { CSSProperties } from 'react'
+
+import { Badge } from '@/components/ui/badge'
+import { Card } from '@/components/ui/card'
+import { TermCrumb } from '@/components/ui/term-crumb'
+import { DashboardDueCard } from '@/features/dashboard/server/components/dashboard-due-card'
+import { DashboardDueCardFallback } from '@/features/dashboard/server/components/dashboard-due-card-fallback'
+import { loadDashboardStatic } from '@/features/dashboard/server/load-dashboard'
+import { Suspense } from 'react'
+
+const stats = [
+  {
+    label: '正答率 · 直近7日',
+    value: '78',
+    unit: '%',
+    icon: '✓',
+    tone: 'green',
+    isSample: true,
+  },
+  {
+    label: '基盤コンポーネント',
+    value: '4',
+    unit: '種',
+    icon: '⌘',
+    tone: 'purple',
+    isSample: false,
+  },
+  {
+    label: '連続学習ストリーク',
+    value: '12',
+    unit: '日',
+    icon: '↗',
+    tone: 'orange',
+    isSample: true,
+  },
+] as const
+
+const heatmap = Array.from({ length: 26 * 7 }, (_, index) => ({
+  id: `sample-day-${index}`,
+  index,
+  level: (index * 7 + Math.floor(index / 4)) % 5,
+}))
+
+const heatmapClasses = ['bg-heat-0', 'bg-heat-1', 'bg-heat-2', 'bg-heat-3', 'bg-heat-4'] as const
+
+const statToneClasses = {
+  blue: 'bg-blue-bg text-blue',
+  green: 'bg-green-bg text-green',
+  purple: 'bg-purple-bg text-purple',
+  orange: 'bg-orange-bg text-orange',
+} as const
+
+function revealStyle(index: number): CSSProperties {
+  return { '--reveal-index': index } as CSSProperties
+}
+
+export function DashboardPageContent() {
+  const { continueHref } = loadDashboardStatic()
+
+  return (
+    <div className="flex flex-col gap-5">
+      <section
+        className="reveal flex flex-wrap items-start justify-between gap-4 px-1 pt-1"
+        style={revealStyle(0)}
+      >
+        <div>
+          <TermCrumb command="status" />
+          <h1 className="mb-0 mt-2 text-balance text-3xl font-black text-ink sm:text-4xl">
+            開発者のための学習ワークベンチ
+          </h1>
+          <p className="mb-0 mt-2 max-w-2xl text-pretty text-mute">
+            今日の復習を片付けてから、新しい教材へ進みましょう。
+          </p>
+        </div>
+        <Link
+          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-green px-4 py-2.5 font-bold text-white shadow-[0_4px_0_var(--green-shade)] transition-transform hover:brightness-110 active:translate-y-1 active:shadow-none"
+          href="/review"
+        >
+          復習を始める
+        </Link>
+      </section>
+
+      <section aria-label="学習サマリー" className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <Suspense fallback={<DashboardDueCardFallback />}>
+          <DashboardDueCard />
+        </Suspense>
+        {stats.map((stat, index) => (
+          <Card className="reveal p-4" key={stat.label} style={revealStyle(index + 1)}>
+            <span
+              aria-hidden="true"
+              className={`grid size-10 place-items-center rounded-xl font-mono text-lg ${statToneClasses[stat.tone]}`}
+            >
+              {stat.icon}
+            </span>
+            <p className="mb-0 mt-4 font-mono text-2xl font-black tabular-nums text-ink">
+              {stat.value}
+              <span className="ml-1 text-sm text-mute">{stat.unit}</span>
+            </p>
+            <p className="mb-0 text-pretty text-sm text-mute">{stat.label}</p>
+            {stat.isSample ? <Badge className="mt-2">表示用サンプル</Badge> : null}
+          </Card>
+        ))}
+      </section>
+
+      <Card className="reveal p-5 sm:p-6" style={revealStyle(5)}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="m-0 text-balance text-lg font-black text-ink">
+              学習コントリビューション
+            </h2>
+            <p className="mb-0 mt-1 text-pretty text-sm text-mute">
+              静的見本 · 実際の解答ログはまだ接続していません
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link
+              className="inline-flex min-h-11 items-center rounded-lg px-2 font-semibold text-blue hover:underline lg:hidden"
+              href="/analytics"
+            >
+              すべて表示
+            </Link>
+            <Badge className="tabular-nums">12 day streak</Badge>
+          </div>
+        </div>
+        <div
+          aria-label="直近26週・182日間の学習コントリビューション見本"
+          className="heatmap-grid mt-5 grid grid-flow-col grid-rows-7 gap-1"
+          role="img"
+        >
+          {heatmap.map((cell) => (
+            <span
+              aria-hidden="true"
+              className={`heatmap-cell rounded-sm ${heatmapClasses[cell.level]}`}
+              key={cell.id}
+              style={{ '--heatmap-index': cell.index } as CSSProperties}
+            />
+          ))}
+        </div>
+        <div className="mt-4 flex items-center justify-between gap-4 font-mono text-xs text-faint">
+          <span>Less</span>
+          <div aria-hidden="true" className="flex gap-1">
+            {heatmapClasses.map((className) => (
+              <span className={`size-3 rounded-sm ${className}`} key={className} />
+            ))}
+          </div>
+          <span>More</span>
+        </div>
+      </Card>
+
+      <Card className="reveal p-5 sm:p-6" style={revealStyle(6)}>
+        <h2 className="m-0 text-balance text-lg font-black text-ink">設計システムの状態</h2>
+        <p className="mb-0 mt-1 text-pretty text-sm text-mute">
+          基盤で提供するUI語彙を明示しています。
+        </p>
+        <div className="mt-5 flex flex-wrap gap-2">
+          <Badge keycap="UI">Card</Badge>
+          <Badge keycap="CTA">Button</Badge>
+          <Badge keycap="1">Badge</Badge>
+          <Badge keycap="%">ProgressBar</Badge>
+        </div>
+        <div className="mt-6 border-t-2 border-border pt-5">
+          <p className="m-0 font-mono text-xs font-bold text-green">&gt;_ design-system --check</p>
+          <p className="mb-0 mt-2 text-pretty text-sm leading-6 text-ink-2">
+            dark/light tokens, responsive navigation, focus-visible, and safe-area support are
+            ready.
+          </p>
+          <Badge className="mt-4 border-green bg-green-bg text-green">
+            exit 0 · foundation ready
+          </Badge>
+        </div>
+      </Card>
+
+      <Card className="reveal border-green p-5 sm:p-6" style={revealStyle(7)}>
+        <div className="flex flex-wrap items-center gap-4">
+          <span
+            aria-hidden="true"
+            className="grid size-12 place-items-center rounded-2xl bg-green-bg font-mono text-xl text-green"
+          >
+            ▤
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="m-0 font-mono text-xs font-bold text-green">NEXT VERTICAL SLICE</p>
+            <h2 className="mb-0 mt-1 text-balance text-xl font-black text-ink">
+              教材 → 演習 → SRS の実データ連携
+            </h2>
+            <p className="mb-0 mt-1 text-pretty text-sm text-mute">
+              この画面は、将来の機能を載せるための静的な基盤です。
+            </p>
+          </div>
+          <Link
+            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-green px-4 py-2.5 font-bold text-white shadow-[0_4px_0_var(--green-shade)] transition-transform hover:brightness-110 active:translate-y-1 active:shadow-none"
+            href={continueHref}
+          >
+            続きから
+          </Link>
+        </div>
+      </Card>
+    </div>
+  )
+}

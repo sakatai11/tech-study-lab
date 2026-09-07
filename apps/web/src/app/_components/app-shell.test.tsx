@@ -49,5 +49,9 @@ describe('AppShell', () => {
       'textContent',
       expect.stringContaining('復習'),
     )
+    expect(desktop.querySelector('a[href="/analytics"]')).toHaveProperty(
+      'textContent',
+      expect.stringContaining('アナリティクス'),
+    )
   })
 })

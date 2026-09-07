@@ -102,3 +102,146 @@ export type DomainsResponse = z.infer<typeof domainsResponseSchema>
 
 export const domainsRequestSchema = z.object({}).strict()
 export type DomainsRequest = z.infer<typeof domainsRequestSchema>
+
+export const analyticsRequestSchema = z.object({}).strict()
+export type AnalyticsRequest = z.infer<typeof analyticsRequestSchema>
+
+export const retentionDistributionSchema = z.object({
+  masteredCount: z.number().int().nonnegative(),
+  learningCount: z.number().int().nonnegative(),
+  dueCount: z.number().int().nonnegative(),
+})
+export type RetentionDistribution = z.infer<typeof retentionDistributionSchema>
+
+export const analyticsSummaryResponseSchema = z.object({
+  totalAnswerCount: z.number().int().nonnegative(),
+  correctAnswerRate: z.number().int().min(0).max(100),
+  averageResponseTimeMs: z.number().int().nonnegative(),
+  masteredQuestionCount: z.number().int().nonnegative(),
+  currentStreakDays: z.number().int().nonnegative(),
+  thisWeekStudyTimeMs: z.number().int().nonnegative(),
+  retentionDistribution: retentionDistributionSchema,
+})
+export type AnalyticsSummaryResponse = z.infer<typeof analyticsSummaryResponseSchema>
+
+const isoCalendarDatePattern = /^(\d{4})-(\d{2})-(\d{2})$/
+
+function isValidCalendarDate(value: string): boolean {
+  const match = isoCalendarDatePattern.exec(value)
+  if (!match) return false
+
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  const isLeapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)
+  const daysInMonth = [31, isLeapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1]
+
+  return month >= 1 && month <= 12 && day >= 1 && day <= (daysInMonth ?? 0)
+}
+
+const analyticsWeeklyDateSchema = z
+  .string()
+  .regex(isoCalendarDatePattern)
+  .refine(isValidCalendarDate, { message: 'date must be a valid calendar date' })
+
+export const analyticsWeeklyDaySchema = z
+  .object({
+    date: analyticsWeeklyDateSchema,
+    weekday: z.number().int().min(1).max(7),
+    answerCount: z.number().int().nonnegative(),
+  })
+  .superRefine(({ date, weekday }, context) => {
+    if (isValidCalendarDate(date) && (new Date(`${date}T00:00:00Z`).getUTCDay() || 7) !== weekday) {
+      context.addIssue({
+        code: 'custom',
+        path: ['weekday'],
+        message: 'weekday must match the UTC date',
+      })
+    }
+  })
+export type AnalyticsWeeklyDay = z.infer<typeof analyticsWeeklyDaySchema>
+
+export const analyticsWeeklyResponseSchema = z
+  .object({
+    days: z.array(analyticsWeeklyDaySchema).length(7),
+  })
+  .superRefine(({ days }, context) => {
+    const uniqueDates = new Set(days.map(({ date }) => date))
+    days.forEach((day, index) => {
+      const previous = days[index - 1]
+      if (
+        previous &&
+        Date.parse(`${day.date}T00:00:00Z`) - Date.parse(`${previous.date}T00:00:00Z`) !==
+          86_400_000
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['days', index, 'date'],
+          message: 'days must be consecutive and in ascending order',
+        })
+      }
+    })
+    if (uniqueDates.size !== days.length) {
+      context.addIssue({
+        code: 'custom',
+        path: ['days'],
+        message: 'days must contain unique dates',
+      })
+    }
+  })
+export type AnalyticsWeeklyResponse = z.infer<typeof analyticsWeeklyResponseSchema>
+
+export const mistakeItemSchema = z
+  .object({
+    questionId: z.string().min(1),
+    incorrectRate: z.number().min(0).max(100),
+    answerCount: z.number().int().min(2),
+    incorrectAnswerCount: z.number().int().nonnegative(),
+  })
+  .superRefine(({ answerCount, incorrectAnswerCount, incorrectRate }, context) => {
+    if (incorrectRate !== Math.round((incorrectAnswerCount / answerCount) * 1000) / 10) {
+      context.addIssue({
+        code: 'custom',
+        path: ['incorrectRate'],
+        message: 'incorrectRate must match the counts rounded to one decimal place',
+      })
+    }
+    if (incorrectAnswerCount > answerCount) {
+      context.addIssue({
+        code: 'custom',
+        path: ['incorrectAnswerCount'],
+        message: 'incorrectAnswerCount must not exceed answerCount',
+      })
+    }
+  })
+export type MistakeItem = z.infer<typeof mistakeItemSchema>
+
+/** Compare the unrounded error rate, then answer count and question ID. */
+export function compareMistakeRank(
+  left: Pick<MistakeItem, 'answerCount' | 'incorrectAnswerCount' | 'questionId'>,
+  right: Pick<MistakeItem, 'answerCount' | 'incorrectAnswerCount' | 'questionId'>,
+): number {
+  return (
+    right.incorrectAnswerCount / right.answerCount - left.incorrectAnswerCount / left.answerCount ||
+    right.answerCount - left.answerCount ||
+    left.questionId.localeCompare(right.questionId, 'en')
+  )
+}
+
+export const mistakesResponseSchema = z
+  .object({
+    items: z.array(mistakeItemSchema).max(10),
+  })
+  .superRefine(({ items }, context) => {
+    items.forEach((item, index) => {
+      const previous = items[index - 1]
+      if (previous && compareMistakeRank(previous, item) > 0) {
+        context.addIssue({
+          code: 'custom',
+          path: ['items', index],
+          message: 'items must follow mistake ranking order',
+        })
+      }
+    })
+  })
+export type MistakesResponse = z.infer<typeof mistakesResponseSchema>

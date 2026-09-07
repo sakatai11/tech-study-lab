@@ -425,7 +425,8 @@ check_absent_contract "legacy standard-budget stop policy stays removed" '到達
 check_agent_contract "claude wrapper remains required" '.ai/scripts/run-claude-review.sh' .ai/agents/claude-review-normalizer.md
 
 # ---- 実装担当・認証・risk-based external review ----
-check_agent_contract "review policy defaults to always" 'ユーザー指定がなければ`always`' "$SKILL"
+check_agent_contract "review policy defaults to risk-based in orchestrator" 'ユーザー指定がなければ`risk-based`' "$SKILL"
+check_agent_contract "review policy defaults to risk-based in common rules" '未指定時は`risk-based`' "$COMMON"
 check_agent_contract "never requires explicit user choice" '`never`はユーザーが明示した場合だけ選べる' "$SKILL"
 check_agent_contract "risk-based runs internal discovery first" '`risk-based`ではinternal discoveryを先に実行し' "$SKILL"
 check_agent_contract "risk decision is bound to current head" '`decisionHead`がcurrent HEADと一致しなければ無効' "$COMMON"
