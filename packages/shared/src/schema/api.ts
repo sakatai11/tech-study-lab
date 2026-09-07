@@ -144,11 +144,21 @@ const analyticsWeeklyDateSchema = z
   .regex(isoCalendarDatePattern)
   .refine(isValidCalendarDate, { message: 'date must be a valid calendar date' })
 
-export const analyticsWeeklyDaySchema = z.object({
-  date: analyticsWeeklyDateSchema,
-  weekday: z.number().int().min(1).max(7),
-  answerCount: z.number().int().nonnegative(),
-})
+export const analyticsWeeklyDaySchema = z
+  .object({
+    date: analyticsWeeklyDateSchema,
+    weekday: z.number().int().min(1).max(7),
+    answerCount: z.number().int().nonnegative(),
+  })
+  .superRefine(({ date, weekday }, context) => {
+    if (isValidCalendarDate(date) && (new Date(`${date}T00:00:00Z`).getUTCDay() || 7) !== weekday) {
+      context.addIssue({
+        code: 'custom',
+        path: ['weekday'],
+        message: 'weekday must match the UTC date',
+      })
+    }
+  })
 export type AnalyticsWeeklyDay = z.infer<typeof analyticsWeeklyDaySchema>
 
 export const analyticsWeeklyResponseSchema = z
@@ -157,6 +167,20 @@ export const analyticsWeeklyResponseSchema = z
   })
   .superRefine(({ days }, context) => {
     const uniqueDates = new Set(days.map(({ date }) => date))
+    days.forEach((day, index) => {
+      const previous = days[index - 1]
+      if (
+        previous &&
+        Date.parse(`${day.date}T00:00:00Z`) - Date.parse(`${previous.date}T00:00:00Z`) !==
+          86_400_000
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['days', index, 'date'],
+          message: 'days must be consecutive and in ascending order',
+        })
+      }
+    })
     if (uniqueDates.size !== days.length) {
       context.addIssue({
         code: 'custom',
@@ -174,7 +198,14 @@ export const mistakeItemSchema = z
     answerCount: z.number().int().min(2),
     incorrectAnswerCount: z.number().int().nonnegative(),
   })
-  .superRefine(({ answerCount, incorrectAnswerCount }, context) => {
+  .superRefine(({ answerCount, incorrectAnswerCount, incorrectRate }, context) => {
+    if (incorrectRate !== Math.round((incorrectAnswerCount / answerCount) * 1000) / 10) {
+      context.addIssue({
+        code: 'custom',
+        path: ['incorrectRate'],
+        message: 'incorrectRate must match the counts rounded to one decimal place',
+      })
+    }
     if (incorrectAnswerCount > answerCount) {
       context.addIssue({
         code: 'custom',
@@ -185,7 +216,32 @@ export const mistakeItemSchema = z
   })
 export type MistakeItem = z.infer<typeof mistakeItemSchema>
 
-export const mistakesResponseSchema = z.object({
-  items: z.array(mistakeItemSchema).max(10),
-})
+/** Compare the unrounded error rate, then answer count and question ID. */
+export function compareMistakeRank(
+  left: Pick<MistakeItem, 'answerCount' | 'incorrectAnswerCount' | 'questionId'>,
+  right: Pick<MistakeItem, 'answerCount' | 'incorrectAnswerCount' | 'questionId'>,
+): number {
+  return (
+    right.incorrectAnswerCount / right.answerCount - left.incorrectAnswerCount / left.answerCount ||
+    right.answerCount - left.answerCount ||
+    left.questionId.localeCompare(right.questionId, 'en')
+  )
+}
+
+export const mistakesResponseSchema = z
+  .object({
+    items: z.array(mistakeItemSchema).max(10),
+  })
+  .superRefine(({ items }, context) => {
+    items.forEach((item, index) => {
+      const previous = items[index - 1]
+      if (previous && compareMistakeRank(previous, item) > 0) {
+        context.addIssue({
+          code: 'custom',
+          path: ['items', index],
+          message: 'items must follow mistake ranking order',
+        })
+      }
+    })
+  })
 export type MistakesResponse = z.infer<typeof mistakesResponseSchema>

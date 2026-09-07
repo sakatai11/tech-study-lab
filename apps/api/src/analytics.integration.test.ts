@@ -1,4 +1,5 @@
 import { applyD1Migrations, env } from 'cloudflare:test'
+import { analyticsWeeklyResponseSchema } from '@tsl/shared'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import initialMigration from '../drizzle/migrations/0000_flowery_quasar.sql?raw'
@@ -98,9 +99,7 @@ describe('analytics API', () => {
       })
 
       expect(weeklyResponse.status).toBe(200)
-      const weekly = (await weeklyResponse.json()) as {
-        days: { date: string; weekday: number; answerCount: number }[]
-      }
+      const weekly = analyticsWeeklyResponseSchema.parse(await weeklyResponse.json())
       expect(weekly.days).toHaveLength(7)
       expect(weekly.days.reduce((total, entry) => total + entry.answerCount, 0)).toBe(2)
       expect(
