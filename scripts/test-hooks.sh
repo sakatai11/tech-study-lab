@@ -115,6 +115,8 @@ COMMON=.ai/cross-model-reviewer-common.md
 GUIDE=.ai/review-guidelines.md
 RUNTIME=.ai/runtime-compatibility.md
 AGENT_GUIDE=docs/ai-coding-agents.md
+PHASE_REF=.ai/skills/issue-dev-orchestrate/references/phase-reconciliation.md
+TEST_FIXER=.ai/agents/test-fixer.md
 
 # 正規化エージェント名から、外部CLIを実行・監視する主体だと誤認できないことを固定する。
 for old_path in \
@@ -139,7 +141,7 @@ fi
 check_agent_contract "claude normalizer TOML name" 'name = "claude-review-normalizer"' .codex/agents/claude-review-normalizer.toml
 check_agent_contract "codex normalizer TOML name" 'name = "codex-review-normalizer"' .codex/agents/codex-review-normalizer.toml
 check_absent_contract "legacy consent field name stays removed" '`reviewerAgent`' "$SKILL"
-check_agent_contract "consent identifies the normalizer" '`normalizerAgent`' "$SKILL"
+check_agent_contract "consent identifies the normalizer" '`normalizerAgent`' "$COMMON"
 
 for file in \
   "$SKILL" \
@@ -163,60 +165,72 @@ check_agent_contract "failure is never approval" 'レビューが正常完了し
 check_agent_contract "zero findings can be a valid approve" 'must-fix / should-fix が0件なら、それは正当な `approve` である' "$SKILL"
 check_agent_contract "common defines scoped approve rule" '対象範囲内の must-fix / should-fix が0件' "$COMMON"
 check_agent_contract "out-of-scope candidates do not block approve" '判定件数・修正対象に含めない' "$COMMON"
-check_agent_contract "confirmation items do not block approve" '「別issue候補（範囲外）」または「確認事項」として報告し、当該 issue の修正ループと approve / request-changes の判定件数には含めないこと' "$SKILL"
+check_agent_contract "confirmation items do not block approve" '「別issue候補（範囲外）」または「確認事項」として保持し、修正ループと判定件数へ含めない' "$COMMON"
 legacy_zero_finding_ban=$(printf '%s%s' 'レビューの失敗・未取得・指摘ゼロ' 'を approve として扱わない')
 check_absent_contract "no blanket ban on zero findings" "$legacy_zero_finding_ban" "$SKILL"
 # フォールバックの2件目 reviewer は既定が accuracy-first のため、明示しないと観点が揃う。
-check_agent_contract "cross-model path gets spec profile" '別モデルCLIと正規化エージェントに `spec-compliance-first`' "$SKILL"
-check_agent_contract "consent-blocked result does not enter fallback" '第二のinternal reviewerを代替レビューとして起動せず' "$SKILL"
-check_agent_contract "consent-blocked result reports missing scope" '不足した対象を具体的に報告し' "$SKILL"
-check_agent_contract "consent-blocked result requires fresh confirmation" '同意を取得・記録するまでCLIを再実行しない' "$SKILL"
-check_agent_contract "green check is not review" 'ステータスチェックが緑でも、レビュー済みの根拠にしない' "$SKILL"
+check_agent_contract "cross-model path gets spec profile" '`spec-compliance-first`' "$COMMON"
+check_agent_contract "consent-blocked result does not enter fallback" '第二のinternal reviewerを代替レビューとして起動せず' "$COMMON"
+check_agent_contract "consent-blocked result reports missing scope" '不足した対象を具体的に報告し' "$COMMON"
+check_agent_contract "consent-blocked result requires fresh confirmation" '同意を取得・記録するまでCLIを再実行しない' "$COMMON"
+check_agent_contract "green check is not review" 'ステータスチェックが緑でも、レビュー済みの根拠にしない' "$COMMON"
 check_agent_contract "no guessing review range" 'レビュー範囲を推測で決めない' "$SKILL"
-check_agent_contract "no cherry-picking findings" 'オーケストレーターの判断で取捨選択しない' "$SKILL"
-check_agent_contract "reviewed head only after real review" 'timeout、失敗、未取得はFinding状態とレビュー境界を更新しない' "$SKILL"
-check_agent_contract "profiles must differ" 'レビュープロファイルを必ず分ける' "$SKILL"
-check_agent_contract "orchestrator brief defines target feature" '`targetFeature`' "$SKILL"
-check_agent_contract "orchestrator brief defines in-scope files" '`inScopeFiles`' "$SKILL"
-check_agent_contract "orchestrator brief defines acceptance criteria" '`acceptanceCriteria`' "$SKILL"
-check_agent_contract "orchestrator brief defines out-of-scope policy" '`outOfScopePolicy`' "$SKILL"
-check_agent_contract "orchestrator brief defines committed range" '`committedRange`' "$SKILL"
-check_agent_contract "all review actors receive the same scope" 'internal reviewer、別モデルCLI、正規化エージェントへ同じ内容で渡す' "$SKILL"
-check_agent_contract "both reviewer types receive one full brief path" '同じレビューブリーフファイルの読み取り可能なパスを渡す' "$SKILL"
-check_agent_contract "integrated review brief includes policy decision and head" '`reviewPolicy` / `externalReviewDecision` / 規則ID / 具体的根拠 / `decisionHead`' "$SKILL"
-check_agent_contract "review mode record alone is insufficient" '`review-mode-<N>.md` だけを渡して済ませない' "$SKILL"
-check_agent_contract "full brief includes consent record" '`reviewMode` / `normalizerAgent` / `egressDestination` / `externalEgressApproved` / `approvedScope` / 同意の原文・時刻' "$SKILL"
-check_agent_contract "out-of-scope candidates stay out of fix loop" 'nit、「別issue候補（範囲外）」、確認事項は含めない' "$SKILL"
-check_agent_contract "scope expansion requires user decision" 'ユーザー判断を得たうえでブリーフを更新する' "$SKILL"
-check_agent_contract "urgent independent severe findings pause for user decision" 'レビュー判定とは別にパイプラインを一時停止してユーザーへエスカレーション' "$SKILL"
+check_agent_contract "no cherry-picking findings" '各レビュー結果をオーケストレーターの都合で取捨選択せず' "$SKILL"
+check_agent_contract "reviewed head only after real review" 'timeout、失敗、未取得はFinding状態とレビュー境界を更新しない' "$COMMON"
+check_agent_contract "profiles must differ" 'プロファイル' "$COMMON"
+check_agent_contract "orchestrator brief defines target feature" '`targetFeature`' "$COMMON"
+check_agent_contract "orchestrator brief defines in-scope files" '`inScopeFiles`' "$COMMON"
+check_agent_contract "orchestrator brief defines acceptance criteria" '`acceptanceCriteria`' "$COMMON"
+check_agent_contract "orchestrator brief defines out-of-scope policy" '`outOfScopePolicy`' "$COMMON"
+check_agent_contract "orchestrator brief defines committed range" '`committedRange`' "$COMMON"
+check_agent_contract "all review actors receive the same scope" 'internal reviewer、別モデルCLI、正規化エージェントがそれぞれの範囲' "$COMMON"
+check_agent_contract "both reviewer types receive one full brief path" '同じブリーフファイルの読み取り可能なパスを渡す' "$COMMON"
+check_agent_contract "integrated review brief includes policy decision and head" '`reviewPolicy` / `externalReviewDecision` / 規則ID / 具体的根拠 / `decisionHead`' "$COMMON"
+check_agent_contract "review mode record alone is insufficient" '`review-mode-<N>.md` だけを渡して済ませず' "$COMMON"
+check_agent_contract "full brief includes consent record" '`reviewMode: cross-model-cli`、`normalizerAgent`、`egressDestination`' "$COMMON"
+check_agent_contract "out-of-scope candidates stay out of fix loop" '別issue候補（範囲外）' "$COMMON"
+check_agent_contract "scope expansion requires user decision" 'ユーザーが明示的に範囲を変更するまでは修正ループと判定件数に含めない' "$GUIDE"
+check_agent_contract "urgent independent severe findings pause for user decision" '緊急性がある場合だけユーザー判断へエスカレーションする' "$GUIDE"
 
 # ---- 不変条件: ブランチとコミット ----
 check_agent_contract "no work on main" '`main` では作業せず' "$SKILL"
-check_agent_contract "no merge" '`gh pr merge` は `AGENTS.md` で禁止' "$SKILL"
+check_agent_contract "no merge" '`gh pr merge` は使わず' "$SKILL"
 check_agent_contract "no closes keyword" '`closes #<N>` は使わない' "$SKILL"
 check_agent_contract "refs required" 'refs #<N>' "$SKILL"
 check_agent_contract "no hiding failures" '`|| true` などで隠さない' "$SKILL"
 check_agent_contract "orchestrator owns commits" '`developer` と `test-fixer` はコミットしない' "$SKILL"
-check_agent_contract "no extra commit at completion" 'このフェーズで追加コミットは作らない' "$SKILL"
+check_agent_contract "no extra commit at completion" '追加コミットを作らず' "$SKILL"
 check_agent_contract "implementation owner is recorded" '`executionOwner: developer | orchestrator`' "$SKILL"
 check_agent_contract "orchestrator implementation inherits developer guardrails" '`orchestrator`が実装する場合も`.ai/agents/developer.md`を全文読み' "$SKILL"
 check_agent_contract "implementation never self-reviews" 'internal reviewは別の`reviewer`エージェントへ委譲して自己レビューで代替しない' "$SKILL"
 check_agent_contract "developer self-check is scoped" '変更ファイルと影響packageに絞った自己検証' .ai/agents/developer.md
 check_agent_contract "test fixer owns full gates" '正式な`pnpm typecheck` / `pnpm lint` / `pnpm test`はフェーズ4の`test-fixer`が担う' .ai/agents/developer.md
+check_agent_contract "test fixer formal typecheck gate" '`pnpm typecheck`' "$TEST_FIXER"
+check_agent_contract "test fixer formal lint gate" '`pnpm lint`' "$TEST_FIXER"
+check_agent_contract "test fixer formal test gate" '`pnpm test`' "$TEST_FIXER"
+check_agent_contract "test fixer lint includes dependency cruiser" 'dependency-cruiser' "$TEST_FIXER"
+check_agent_contract "test fixer baseline failure is not pass" '正式ゲートの `pass` ではない' "$TEST_FIXER"
+check_agent_contract "test fixer reports lint instead of biome-only gate" '| lint（Biome + dependency-cruiser） | pass / fail（ベースライン） |' "$TEST_FIXER"
+check_absent_contract "test fixer has no biome-only formal report" '| biome | pass / fail |' "$TEST_FIXER"
+check_absent_contract "skill does not duplicate lifecycle log command" './.ai/hooks/log-skill-usage.sh --runtime codex --skill issue-dev-orchestrate' "$SKILL"
+check_agent_contract "skill delegates lifecycle logging to runtime" 'スキルライフサイクルログは `.ai/runtime-compatibility.md` の「設定とログ」に従う' "$SKILL"
+check_agent_contract "runtime owns lifecycle log command" './.ai/hooks/log-skill-usage.sh --runtime codex --skill <name> --status started|completed' "$RUNTIME"
+check_agent_contract "runtime defines scratchpad brief location" '長いブリーフは `<scratchpad>` 配下' "$RUNTIME"
 
 # ---- 不変条件: スパイク／フェーズ分割時の関連状態照合 ----
 # 実施手順ではなく、対象の限定・記録すべき状態・追跡可能性だけを固定する。
-goal_section=$(extract_section "$SKILL" '## ゴール' '## オーケストレーター（このスキル）の責務') || {
+goal_section=$(extract_section "$SKILL" '## ゴール' '## オーケストレーターの責務') || {
   printf '%s\n' 'failed to extract goal completion contract' >&2
   exit 1
 }
-phase7_section=$(extract_section "$SKILL" '## フェーズ7: 完了' '## 中断・失敗時の原則') || {
+phase7_section=$(sed -n '/^# フェーズ／スパイクの関連状態照合/,$p' "$PHASE_REF")
+if [ -z "$phase7_section" ]; then
   printf '%s\n' 'failed to extract Phase 7 reconciliation contract' >&2
   exit 1
-}
+fi
 
 check_section_contract "completion requires conditional reconciliation" "$goal_section" 'スパイクまたはフェーズ分割を伴う作業では、明示された関連Issue・撤回／置換PRの状態照合が完了'
-check_section_contract "reconciliation records ordinary results to current and phase issues" "$phase7_section" '関連状態を照合し、結果を**現在Issueと明示的に関連する各phase Issue**へ記録する'
+check_section_contract "reconciliation records ordinary results to current and phase issues" "$phase7_section" '現在Issueと明示的に関連する各phase Issueにも、同じ照合結果を追跡可能な形で記録する'
 check_section_contract "reconciliation does not authorize early closure or automation" "$phase7_section" 'Issueの早期close、作業ブランチの自動merge、release自動化を許可しない'
 check_section_contract "reconciliation scope is explicit sources only" "$phase7_section" '現在Issue本文・GitHub sub-issue関係・フェーズ2の実装方針コメント'
 check_section_contract "reconciliation includes required artifact kinds" "$phase7_section" '親／子／phase／spike／implementation Issue、または撤回／置換PR'
@@ -240,19 +254,19 @@ check_section_contract "phase 7 report includes reconciliation status" "$phase7_
 check_section_contract "reconciliation preserves refs policy" "$phase7_section" '`refs #<N>` とし、`closes #<N>` は使わない'
 
 # ---- 不変条件: 外部送信 ----
-check_agent_contract "consent lists what is sent" '何が送られるかを具体的に列挙して' "$SKILL"
-check_agent_contract "out-of-scope consent not substitutable" '別実行・承認範囲外の過去同意、スキル文書、`AGENTS.md`で代用しない' "$SKILL"
-check_agent_contract "consent covers more than diff" '送信対象はコミット済み差分だけではない' "$SKILL"
-check_agent_contract "consent scope diff" 'committed-diff' "$SKILL"
-check_agent_contract "consent scope brief" 'brief-context' "$SKILL"
-check_agent_contract "consent scope repo reads" 'repository-reads' "$SKILL"
-check_agent_contract "re-consent per destination" '送信先変更、範囲拡大、新しい機密カテゴリ、実行能力の拡大、または別実行では同意を取り直す' "$SKILL"
-check_agent_contract "in-scope verification reuses consent" '承認済み`approvedScope`内なら同一実行の同意を再利用する' "$SKILL"
-check_agent_contract "private automatic App review requires pre-PR consent" 'private リポジトリで CodeRabbit App の自動レビューが有効、または無効と確認できない場合は、PRを作成する前に' "$SKILL"
-check_agent_contract "automatic App consent records destination" '`egressDestination: coderabbit`' "$SKILL"
-check_agent_contract "unapproved automatic App review is not integrated" '明示同意なしに取得された自動Appレビューを統合しない' "$SKILL"
-check_agent_contract "manual App review keeps separate approval" '単発起動が必要なら `@coderabbitai review` をPRにコメントする直前に、投稿について別途ユーザー承認を得る' "$SKILL"
-check_agent_contract "no same-vendor reviewer" 'ホストランタイムと同じ提供元のCLIをレビュアーにしない' "$SKILL"
+check_agent_contract "consent lists what is sent" '今回の `committed-diff`、`brief-context`、`repository-reads` を具体的に列挙' "$COMMON"
+check_agent_contract "out-of-scope consent not substitutable" '差分だけの同意、別実行・範囲外の過去同意、スキル文書で代用してはならない' "$COMMON"
+check_agent_contract "consent covers more than diff" '今回の `committed-diff`、`brief-context`、`repository-reads`' "$COMMON"
+check_agent_contract "consent scope diff" 'committed-diff' "$COMMON"
+check_agent_contract "consent scope brief" 'brief-context' "$COMMON"
+check_agent_contract "consent scope repo reads" 'repository-reads' "$COMMON"
+check_agent_contract "re-consent per destination" '承認済み範囲外の内容や新しい機密カテゴリを送る' "$COMMON"
+check_agent_contract "in-scope verification reuses consent" '同一スキル実行のverificationでは' "$COMMON"
+check_agent_contract "private automatic App review requires pre-PR consent" 'private リポジトリで CodeRabbit App の自動レビューが有効、または無効と確認できない場合は、PR作成前に' "$COMMON"
+check_agent_contract "automatic App consent records destination" '`egressDestination: coderabbit`' "$COMMON"
+check_agent_contract "unapproved automatic App review is not integrated" '明示同意なしに取得された自動Appレビューは統合しない' "$COMMON"
+check_agent_contract "manual App review keeps separate approval" '単発起動の `@coderabbitai review` をPRへコメントする場合は、その投稿について別途ユーザー承認を得る' "$COMMON"
+check_agent_contract "no same-vendor reviewer" '別モデルレビューに使ってはならない' "$COMMON"
 check_agent_contract "no bypass flags" '迂回フラグ' "$SKILL"
 
 # 危険フラグそのものが復活していないこと
@@ -290,7 +304,7 @@ check_agent_contract "claude toml reads common" "$COMMON" .codex/agents/claude-r
 check_agent_contract "reviewer defers to guidelines" '`.ai/review-guidelines.md` が単一ソース' .ai/agents/reviewer.md
 check_agent_contract "reviewer default profile" '`accuracy-first`（正確性優先）' .ai/agents/reviewer.md
 check_agent_contract "common uses spec profile" '`spec-compliance-first`' "$COMMON"
-check_agent_contract "common validates scope brief" '`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage` / `committedRange`' "$COMMON"
+check_agent_contract "common validates scope brief" 'ブリーフには次の共通フィールドを含める' "$COMMON"
 consent_section=$(extract_section "$COMMON" '## オーケストレーターの直接実行・監視契約' '## 範囲と分割coverage') || {
   printf '%s\n' 'failed to extract external egress consent contract' >&2
   exit 1
@@ -317,7 +331,7 @@ check_agent_contract "common verifies destination" 'egressDestination' "$COMMON"
 check_agent_contract "common rejects wrong host" 'wrong-host-agent' "$COMMON"
 check_agent_contract "common never approves on failure" '指摘ゼロを `approve` と読み替えない' "$COMMON"
 check_agent_contract "common preserves failed CLI results" '認証・通信・同意不足・実行失敗も、正常レビューの代わりに扱わず' "$COMMON"
-check_agent_contract "common requires direct CLI execution" 'オーケストレーターは正しいCLIを継続セッションで直接起動し' "$COMMON"
+check_agent_contract "runtime requires direct CLI execution" 'オーケストレーターは上表のCLIを継続セッションで直接起動する' "$RUNTIME"
 check_agent_contract "common keeps consent before first CLI execution" '最初の外部送信直前に' "$COMMON"
 check_agent_contract "common assigns CLI responsibility to orchestrator" 'CLI 実行と継続監視はオーケストレーターの責務' "$COMMON"
 check_agent_contract "common requires a clean committed review range" 'レビュー対象はコミット済み差分だけに限定し' "$COMMON"
@@ -334,6 +348,11 @@ check_absent_contract "codex normalizer has no CLI execution command" 'codex exe
 check_agent_contract "Claude review wrapper loads Keychain secret" '. "$script_dir/load-secrets.sh"' .ai/scripts/run-claude-review.sh
 check_agent_contract "Claude review wrapper forwards arguments without interpolation" 'exec claude "$@"' .ai/scripts/run-claude-review.sh
 check_agent_contract "runtime requires Claude review wrapper" '`.ai/scripts/run-claude-review.sh` を使う' "$RUNTIME"
+check_agent_contract "runtime uniquely owns CLI mapping" '唯一の対応表' "$COMMON"
+check_agent_contract "runtime uniquely defines OpenAI destination" '| OpenAI |' "$RUNTIME"
+check_agent_contract "runtime uniquely defines Anthropic destination" '| Anthropic |' "$RUNTIME"
+check_absent_contract "common does not duplicate Claude CLI mapping" '| Claude Code | `codex exec review` |' "$COMMON"
+check_absent_contract "common does not duplicate Codex CLI mapping" '| Codex（App / CLI） | `.ai/scripts/run-claude-review.sh`' "$COMMON"
 
 # ---- モデル方針（実地検証で確定した事実） ----
 check_agent_contract "model policy section exists" '## 別モデルCLIレビューのモデル方針' "$RUNTIME"
@@ -388,28 +407,28 @@ check_agent_contract "test fixer runs in phases 4 and 6" 'issue-dev-orchestrate 
 check_agent_contract "reviewer committed range" '`git diff develop...HEAD`' .ai/agents/reviewer.md
 
 # ---- Issue #124: discovery / verification state-machine contracts ----
-check_agent_contract "discovery is explicit" '`reviewStage: discovery`' "$SKILL"
-check_agent_contract "discovery reads cumulative diff" '`develop...HEAD` の**全累積差分**' "$SKILL"
-check_agent_contract "finding ID format" '`I<issue>-F<3桁連番>`' "$SKILL"
-check_agent_contract "finding metadata" '期待解消状態、状態、修正コミット、検証結果' "$SKILL"
-check_agent_contract "duplicate findings merge" '同一 `ファイル:行` かつ指摘内容が実質的に同じ場合' "$SKILL"
-check_agent_contract "verification brief requirement" 'Finding台帳、修正要約、修正コミット範囲を必須ブリーフ' "$SKILL"
-check_agent_contract "zero findings skip only fix work" 'Findingが0件なら修正・品質ゲート・周回コミットだけをskipし、verificationはskipしない' "$SKILL"
-check_agent_contract "zero findings still verify the current HEAD" 'verification はFindingの有無にかかわらず、current HEADに対する' "$SKILL"
-check_agent_contract "verification internal first" 'current HEAD が approve の場合だけ' "$SKILL"
-check_agent_contract "required external path needs both approvals" '外部レビューが`required`なら別モデルCLI verificationを' "$SKILL"
-check_agent_contract "non-required path stays distinct from approval" '`not-required-by-policy`ならcurrent HEADに対する有効な判定記録とinternal approve' "$SKILL"
-check_agent_contract "verification permitted new finding classes" '修正起因回帰、明確な受け入れ条件未達、重大なsecurity/data destruction' "$SKILL"
-check_agent_contract "orchestrator directly monitors CLI" '別モデルCLIはサブエージェントから起動しない' "$SKILL"
-check_agent_contract "five minutes remains running" '5分で停止しない' "$SKILL"
-check_agent_contract "ten-minute progress notification" '10分で進捗通知' "$SKILL"
-check_agent_contract "twenty-minute single timeout" '20分で一度だけ終了して `timeout`' "$SKILL"
-check_agent_contract "chunk union coverage" 'coveredCommitShas` と `coveredFiles` のunionが元差分を完全に覆い' "$SKILL"
-check_agent_contract "cross-cutting review required" '`crossCuttingReview` が完了' "$SKILL"
-check_agent_contract "common avoids raw-output persistence" 'raw stdout / stderr はファイル・ブリーフ・scratchpadへ永続化せず' "$COMMON"
+check_agent_contract "discovery is explicit" '`reviewStage`: `discovery`' "$COMMON"
+check_agent_contract "discovery reads cumulative diff" '`develop...HEAD` の**全累積差分**' "$COMMON"
+check_agent_contract "finding ID format" '`I<issue>-F<3桁連番>`' "$COMMON"
+check_agent_contract "finding metadata" '期待解消状態、状態、修正コミット、検証結果' "$COMMON"
+check_agent_contract "duplicate findings merge" '同一ファイル・行かつ実質同内容' "$COMMON"
+check_agent_contract "verification brief requirement" 'verification には上記に加えて、issue固有のFinding台帳、修正要約、修正コミット範囲を含める' "$COMMON"
+check_agent_contract "zero findings skip only fix work" 'Findingが0件でも verification は省略しない' "$SKILL"
+check_agent_contract "zero findings still verify the current HEAD" 'Findingが0件でも verification は省略しない' "$SKILL"
+check_agent_contract "verification internal first" 'current HEADで internal verification が approve した場合だけ' "$SKILL"
+check_agent_contract "required external path needs both approvals" 'required なら別モデルCLI verificationを行う' "$SKILL"
+check_agent_contract "non-required path stays distinct from approval" '有効な `not-required-by-policy` 判定' "$SKILL"
+check_agent_contract "verification permitted new finding classes" '修正起因回帰、明確な受け入れ条件未達、重大な security / data destruction' "$SKILL"
+check_agent_contract "orchestrator directly monitors CLI" 'オーケストレーターが別モデルCLIを直接起動・監視する' "$SKILL"
+check_agent_contract "five minutes remains running" '5分で停止しない' "$RUNTIME"
+check_agent_contract "ten-minute progress notification" '10分で進捗を通知' "$RUNTIME"
+check_agent_contract "twenty-minute single timeout" '20分で一度だけ終了して「判定: timeout」とする' "$RUNTIME"
+check_agent_contract "chunk union coverage" '`cumulativeSplit` は各chunkの `coveredCommitShas` と `coveredFiles`' "$COMMON"
+check_agent_contract "cross-cutting review required" '`crossCuttingReview` を完了する' "$COMMON"
+check_agent_contract "runtime avoids raw-output persistence" 'raw stdout / stderr はファイル、ブリーフ、scratchpadへ永続化せず' "$RUNTIME"
 check_agent_contract "common retains all egress scopes" '`committed-diff`、`brief-context`、`repository-reads`' "$COMMON"
 check_agent_contract "common remains read-only" 'read-only' "$COMMON"
-check_agent_contract "runtime assigns direct monitoring" 'オーケストレーターが直接担う' "$RUNTIME"
+check_agent_contract "runtime assigns direct monitoring" 'オーケストレーターは上表のCLIを継続セッションで直接起動する' "$RUNTIME"
 check_agent_contract "Claude CLI restricts allowed tools" '`--allowedTools "Read Grep Glob"`' "$RUNTIME"
 check_agent_contract "Claude CLI restricts disallowed tools" '`--disallowedTools "Edit Write NotebookEdit Bash"`' "$RUNTIME"
 check_agent_contract "Codex nested review requires read-only sandbox" '`-c sandbox_mode="read-only"` を必ず付ける' "$RUNTIME"
@@ -418,9 +437,9 @@ check_agent_contract "required findings must resolve before approval" 'required 
 check_agent_contract "zero findings still require a policy-valid path" 'Findingが0件の場合、required Finding全件resolvedは真だが' "$COMMON"
 check_agent_contract "required boundary needs external approval" '`externalReviewDecision: required`: current HEADに対する別モデルCLIも正常に`approve`' "$COMMON"
 check_agent_contract "policy skip is not external approval" '`not-required-by-policy`は外部`approve`ではない' "$COMMON"
-check_agent_contract "standard budgets do not stop autonomous continuation" '到達だけでは自律的な継続を止めず、継続確認も求めない' "$SKILL"
-check_agent_contract "current-loop findings continue within existing issue scope" 'current issueの既存`acceptanceCriteria`と`inScopeFiles`内で、verificationが許すcurrent-loop Finding' "$SKILL"
-check_agent_contract "scope expansion is the only stop trigger" '停止してユーザー判断を求めるのは重大なスコープ変更が必要な場合だけ' "$SKILL"
+check_agent_contract "standard budgets do not stop autonomous continuation" '標準運用予算は進捗管理の目安であり、到達だけでは自律的な継続を止めない' "$SKILL"
+check_agent_contract "current-loop findings continue within existing issue scope" '既存の受け入れ条件と範囲内で解消できる課題は継続する' "$SKILL"
+check_agent_contract "scope expansion is the only stop trigger" '受け入れ条件・対象範囲・対象機能の実質的拡張、破壊的操作、新しい権限' "$SKILL"
 check_absent_contract "legacy standard-budget stop policy stays removed" '到達したら自律的な継続を止め、状況・残課題・継続の選択肢を報告して判断を仰ぐ' "$SKILL"
 check_agent_contract "claude wrapper remains required" '.ai/scripts/run-claude-review.sh' .ai/agents/claude-review-normalizer.md
 
