@@ -1,7 +1,8 @@
-import type {
-  AnalyticsSummaryResponse,
-  AnalyticsWeeklyResponse,
-  MistakesResponse,
+import {
+  type AnalyticsSummaryResponse,
+  type AnalyticsWeeklyResponse,
+  type MistakesResponse,
+  compareMistakeRank,
 } from '@tsl/shared'
 
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -161,19 +162,14 @@ export async function getAnalyticsMistakes(
   const rows = await deps.findMistakes(input.userId)
   const items = rows
     .filter((row) => row.answerCount >= 2)
+    .sort(compareMistakeRank)
+    .slice(0, 10)
     .map((row) => ({
       questionId: row.questionId,
       incorrectRate: Math.round((row.incorrectAnswerCount / row.answerCount) * 1000) / 10,
       answerCount: row.answerCount,
       incorrectAnswerCount: row.incorrectAnswerCount,
     }))
-    .sort(
-      (left, right) =>
-        right.incorrectRate - left.incorrectRate ||
-        right.answerCount - left.answerCount ||
-        left.questionId.localeCompare(right.questionId, 'en'),
-    )
-    .slice(0, 10)
 
   return { items }
 }

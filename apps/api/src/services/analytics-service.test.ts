@@ -148,6 +148,30 @@ describe('analytics service', () => {
     ])
   })
 
+  it('ranks unrounded error rates before selecting the top ten', async () => {
+    const result = await getAnalyticsMistakes(
+      createDeps({
+        findMistakes: async () => [
+          { questionId: 'q-lower', answerCount: 1000, incorrectAnswerCount: 714 },
+          { questionId: 'q-higher', answerCount: 7, incorrectAnswerCount: 5 },
+          ...Array.from({ length: 9 }, (_, index) => ({
+            questionId: `q-perfect-${index}`,
+            answerCount: 2,
+            incorrectAnswerCount: 2,
+          })),
+        ],
+      }),
+      { userId: 'u1' },
+    )
+    expect(result.items).toHaveLength(10)
+    expect(result.items[9]).toEqual({
+      questionId: 'q-higher',
+      answerCount: 7,
+      incorrectAnswerCount: 5,
+      incorrectRate: 71.4,
+    })
+  })
+
   it('uses UTC and Monday as the week boundary', () => {
     expect(recentUtcDays(now)[0]).toEqual({ date: '2026-08-25', weekday: 2 })
     expect(utcWeekStart(now)).toBe(Date.parse('2026-08-31T00:00:00.000Z'))

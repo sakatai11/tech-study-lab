@@ -257,6 +257,8 @@ HTTP 入出力、リクエスト・レスポンスの実例（JSON）、Zod ス�
 - `GET /analytics/mistakes` — 2回答以上の問題に絞った誤答率上位10件（`questionId`・誤答率・回答数・誤答数）
 - `GET /activity/recent` — ダッシュボードの「最近のアクティビティ」向け直近イベント一覧（レッスン閲覧・演習完了・復習キュー更新を統合。集計ロジックの詳細は10章相当で実装時に確定する簡易版でよい）
 
+共有スキーマは weekly の連続する7日・昇順・UTC曜日との一致、mistakes の件数と小数第1位に丸めた誤答率の一致・順位を検証する。順位は丸め前の誤答率で比較する。当日を終点とする期間はAPIの集計時刻で決定し、受信側スキーマは現在時刻に依存させない（通信中のUTC日付変更を許容する）。
+
 ### 7.4 → 第8章へ
 
 本章は画面・ルーティング（What/Where）を定義した。フロントエンドのアーキテクチャ（How）は **第8章** で確定する。
@@ -1106,9 +1108,9 @@ routes     ──→ services                 # ユースケース呼び出し
    └────────→ dal                       # deps factory の生成だけ
 dal        ──→ services                 # deps 型の import type だけ
 dal        ──→ services/errors          # 値 import。自身が throw するドメインエラーに限る
-index.ts   ──→ routes                   # .route() での合成
-index.ts   ──→ middleware               # 全リクエストへの適用
-index.ts   ──→ services/errors          # onError でのドメインエラー → HTTP 写像
+app.ts     ──→ routes                   # .route() での合成
+app.ts     ──→ middleware               # 全リクエストへの適用
+app.ts     ──→ services/errors          # onError でのドメインエラー → HTTP 写像
 middleware ──→ env 型・fixed-user（FIXED_USER_ID の値 import）。routes・services・dal は import しない
 content-sync（apps/api/src/content-sync.ts） ──→ gray-matter・packages/shared のみ。routes・services・dal・middleware は import しない
 
@@ -1117,7 +1119,7 @@ services ──→ @tsl/shared          # 純粋ドメインロジック・型
 dal      ──→ @tsl/shared          # db 名前空間の Drizzle schema（import { db as schema }）
 ```
 
-- HTTP へのエラー写像は `index.ts` の `onError` が下記 §10.6 の方針に従って担う（写像ロジックの所在は `index.ts` に一本化し、route・service には持たせない）。`SrsConflictError` は本書作成時点では `onError` で個別写像されておらず 500 に落ちるが、本節・§10.6 はこの振る舞いを変更する仕様ではない（新しい HTTP ステータスへの写像は別途検討する）。
+- HTTP へのエラー写像は `app.ts` の `onError` が下記 §10.6 の方針に従って担う（写像ロジックの所在は `app.ts` に一本化し、route・service には持たせない）。`SrsConflictError` は本書作成時点では `onError` で個別写像されておらず 500 に落ちるが、本節・§10.6 はこの振る舞いを変更する仕様ではない（新しい HTTP ステータスへの写像は別途検討する）。
 
 - service から `routes`・`dal`・Hono・D1・Drizzle を import しない。service は渡された deps だけを呼ぶ。
 - dal から `routes`・Hono を import しない。service への依存は deps 型の `import type` に限定し、値 import は自身が throw するドメインエラー（`services/errors`）に限る。
@@ -1137,7 +1139,8 @@ dal      ──→ @tsl/shared          # db 名前空間の Drizzle schema（im
 ```
 apps/api/
 ├── src/
-│   ├── index.ts                 # エントリ。middleware 適用・ルート合成・AppType エクスポート
+│   ├── index.ts                 # エントリ。app と InternalApi の再エクスポート
+│   ├── app.ts                   # middleware 適用・ルート合成・AppType 定義
 │   ├── client.ts                # hc クライアントファクトリ（既存）
 │   ├── env.ts                   # Bindings（D1 / vars）・Variables（userId）の型定義
 │   ├── middleware/
@@ -1166,7 +1169,7 @@ apps/api/
     └── seed-dev.ts               # `src/dev-seed.ts` の純粋関数を呼ぶローカル専用 Node CLI（§10.8）
 ```
 
-- 上記は Walking Skeleton 中核 3 エンドポイントに、同じ処理パターンで実装済みの `GET /domains` と Issue #32 の `GET /analytics/*`（summary / weekly / mistakes）を加えた構成（§10.1）。後続の heatmap / activity は対応する route・service・dal と `index.ts` への `.route()` 追記で追加する。アナリティクスは集計クエリ主体（読み取りのみ）のため service 層は薄くなる見込み。
+- 上記は Walking Skeleton 中核 3 エンドポイントに、同じ処理パターンで実装済みの `GET /domains` と Issue #32 の `GET /analytics/*`（summary / weekly / mistakes）を加えた構成（§10.1）。後続の heatmap / activity は対応する route・service・dal と `app.ts` への `.route()` 追記で追加する。アナリティクスは集計クエリ主体（読み取りのみ）のため service 層は薄くなる見込み。
 - **dal はテーブル単位ではなくユースケース単位**で置く。「service が要求する deps 型」を 1 ファイルで実装する形にすると、service ⇔ dal の対応が 1:1 で追いやすく、テーブル単位 repository の細切れ合成（と、それを束ねる工数）を避けられる。テーブル単位の共有が必要になった時点で分割する。
 - **`src/content-sync.ts` は `gray-matter` と `packages/shared` のみに依存する純粋ロジック**（frontmatter パース・同期ペイロード生成・upsert SQL 生成）。`scripts/sync-content.ts` は Node の `fs` 読み取りと `wrangler d1 execute` 実行を担う CLI 部で、`content-sync.ts` の純粋関数を呼び出すだけに留める（routes・services・dal・middleware は import しない）。
 - **`src/dev-seed.ts` は content sync で検証済みの question ID を入力として、固定ユーザーの動的開発データを生成する純粋ロジック**にする。`scripts/seed-dev.ts` は content 読み取り・時刻取得・一時 SQL ファイル作成・Wrangler 実行だけを担い、任意の CLI 引数を転送しない。
@@ -1343,7 +1346,7 @@ export type AppEnv = { Bindings: Bindings; Variables: Variables }
 ```
 
 ```typescript
-// index.ts — middleware 適用・ルート合成・AppType エクスポート
+// app.ts — middleware 適用・ルート合成・AppType エクスポート
 const app = new Hono<AppEnv>()
 
 // CORS はブラウザ経路（§3.1）用。credentials と GET/POST/OPTIONS、Content-Type だけを許可する。
@@ -1364,7 +1367,7 @@ export type AppType = typeof routes
 export default app
 ```
 
-- **`hc` の型推論を保つため、ルート定義はメソッドチェーンで書く**。各サブルーターは `new Hono<AppEnv>().post(...)` のチェーンで定義・export し、`index.ts` では `.route()` のチェーンで合成する。チェーンを分断（`app.post(...)` を文として並べる等）すると `AppType` からエンドポイント型が消える。
+- **`hc` の型推論を保つため、ルート定義はメソッドチェーンで書く**。各サブルーターは `new Hono<AppEnv>().post(...)` のチェーンで定義・export し、`app.ts` では `.route()` のチェーンで合成する。チェーンを分断（`app.post(...)` を文として並べる等）すると `AppType` からエンドポイント型が消える。
 - パス設計は §7.3 の契約（`POST /answers`・`GET /review/queue`・`GET /dashboard/due-count`・`GET /domains`）をそのまま `.route()` のプレフィックス＋サブルーター内パスで構成する。後続の `GET /analytics/*`・`GET /activity/recent`（§10.1）も同じ要領でチェーンに追記する。
 - Access boundary は public entrypoint だけに置く。route・service・DAL は Access JWT を参照せず、`userContext` が実行済みであるという既存契約を保つ。internal entrypoint は同じ user route sub-app を `userContext` の後に mount することで、DTO・固定ユーザー挙動・Hono RPC 契約を public entrypoint と共有する。
 
@@ -1406,7 +1409,7 @@ export const dueCountResponseSchema = z.object({
 - レート制限の 429 と limiter failure の 503 も shared の error response schema を使い、route から type-safe に返す。前者には `Retry-After: 60` を必ず付ける（§10.3.1）。
 
 ```typescript
-// index.ts（抜粋）
+// app.ts（抜粋）
 app.onError((err, c) => {
   if (err instanceof QuestionNotFoundError) {
     return c.json({ error: { code: 'QUESTION_NOT_FOUND', message: err.message } }, 404)
@@ -1482,7 +1485,7 @@ const result = await submitAnswer(deps, {
 - `packages/shared/src/db/schema.ts`：`questions` テーブル（§4.4 の content 同期キャッシュ）を追加。`srs_states` に複合主キー `(user_id, question_id)` を追加。`answer_logs` に `response_time_ms`（任意列）を追加。`lesson_views` テーブル（§4.4。アナリティクス用）を追加
 - `packages/shared/src/schema/api.ts`：新設（§10.6）。Walking Skeleton 分（answer / reviewQueue / dueCount）・domains・Issue #32 の analytics（summary / weekly / mistakes）を実装済み。activity のレスポンススキーマは後続で追加
 - `apps/api/wrangler.toml`：`name` を `tech-study-lab-api` へ変更（web Worker と区別する。§3.1 の Service Binding が参照する `service` 名になる）。`vars` に `WEB_ORIGIN` を追加
-- `apps/api/src/`：`env.ts` / `middleware/` / `routes/` / `services/` / `dal/` を §10.2 の構成で新設し、`index.ts` をルート合成形へ書き換え。`/domains` と Issue #32 の `/analytics/summary`・`/analytics/weekly`・`/analytics/mistakes` 用の route/service/dal は同パターンで追加済み。`/analytics/heatmap`・`/activity/recent` は後続で追加（§10.1）
+- `apps/api/src/`：`env.ts` / `middleware/` / `routes/` / `services/` / `dal/` を §10.2 の構成で新設し、`app.ts` でルートを合成し、`index.ts` から再エクスポート。`/domains` と Issue #32 の `/analytics/summary`・`/analytics/weekly`・`/analytics/mistakes` 用の route/service/dal は同パターンで追加済み。`/analytics/heatmap`・`/activity/recent` は後続で追加（§10.1）
 - `apps/api/scripts/sync-content.ts`：新設（§10.8。package.json の `content:sync` は定義済み）
 
 ### 10.11 将来拡張ポイント

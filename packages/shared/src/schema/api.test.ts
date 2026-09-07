@@ -347,7 +347,7 @@ describe('analytics response schemas', () => {
       analyticsWeeklyResponseSchema.safeParse({
         days: Array.from({ length: 7 }, (_, index) => ({
           date: `2026-08-${String(index + 1).padStart(2, '0')}`,
-          weekday: ((index + 6) % 7) + 1,
+          weekday: ((index + 5) % 7) + 1,
           answerCount: index,
         })),
       }).success,
@@ -377,6 +377,66 @@ describe('analytics response schemas', () => {
       answerCount: index,
     }))
     expect(analyticsWeeklyResponseSchema.safeParse({ days }).success).toBe(false)
+  })
+
+  it('rejects weekly gaps, reversed order, and mismatched UTC weekdays', () => {
+    const days = Array.from({ length: 7 }, (_, index) => ({
+      date: `2026-08-0${index + 1}`,
+      weekday: ((index + 5) % 7) + 1,
+      answerCount: 0,
+    }))
+    expect(analyticsWeeklyResponseSchema.safeParse({ days }).success).toBe(true)
+    expect(analyticsWeeklyResponseSchema.safeParse({ days: [...days].reverse() }).success).toBe(
+      false,
+    )
+    expect(
+      analyticsWeeklyResponseSchema.safeParse({
+        days: days.map((day, i) => (i === 6 ? { ...day, date: '2026-08-08', weekday: 6 } : day)),
+      }).success,
+    ).toBe(false)
+    expect(
+      analyticsWeeklyResponseSchema.safeParse({
+        days: days.map((day, i) => (i === 0 ? { ...day, weekday: 7 } : day)),
+      }).success,
+    ).toBe(false)
+  })
+
+  it('validates rates and all ranking tie breakers without rounding the sort key', () => {
+    const items = [
+      { questionId: 'q-high', answerCount: 7, incorrectAnswerCount: 5, incorrectRate: 71.4 },
+      { questionId: 'q-low', answerCount: 1000, incorrectAnswerCount: 714, incorrectRate: 71.4 },
+      { questionId: 'q-more', answerCount: 4, incorrectAnswerCount: 2, incorrectRate: 50 },
+      { questionId: 'q-a', answerCount: 2, incorrectAnswerCount: 1, incorrectRate: 50 },
+      { questionId: 'q-b', answerCount: 2, incorrectAnswerCount: 1, incorrectRate: 50 },
+    ]
+    expect(mistakesResponseSchema.safeParse({ items }).success).toBe(true)
+    for (const index of [0, 2, 3]) {
+      const reversed = [...items]
+      const left = reversed[index]
+      const right = reversed[index + 1]
+      if (!left || !right) throw new Error('Missing fixture')
+      reversed[index] = right
+      reversed[index + 1] = left
+      expect(mistakesResponseSchema.safeParse({ items: reversed }).success).toBe(false)
+    }
+    expect(
+      mistakesResponseSchema.safeParse({ items: [{ ...items[0], incorrectRate: 71.5 }] }).success,
+    ).toBe(false)
+    expect(mistakesResponseSchema.safeParse({ items: [] }).success).toBe(true)
+    for (const incorrectAnswerCount of [0, 2]) {
+      expect(
+        mistakesResponseSchema.safeParse({
+          items: [
+            {
+              questionId: 'q',
+              answerCount: 2,
+              incorrectAnswerCount,
+              incorrectRate: incorrectAnswerCount * 50,
+            },
+          ],
+        }).success,
+      ).toBe(true)
+    }
   })
 
   it('accepts and bounds mistake items', () => {
