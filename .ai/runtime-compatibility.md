@@ -40,7 +40,7 @@
 - 現在のCodexツール面でカスタムエージェント種別を直接指定できない場合は、通常のサブエージェントを起動し、プロンプトで `.ai/agents/<name>.md` を全文読むよう明記して代替する。
 - サブエージェント機能がない環境: オーケストレーター自身が対象エージェント定義を全文読み、同じ制約で担当作業を実行する。並列レビューは順次実行で代替できる。
 
-長いブリーフは `.claude/logs/briefs/`（gitignore 対象）に保存し、サブエージェントにはリポジトリ相対パスを渡す。ファイル作成が不要な短い依頼は直接渡してよい。
+このリポジトリでは `<scratchpad>` を `.claude/logs/briefs/` と定義する。長いブリーフは `<scratchpad>` 配下（例: `<scratchpad>/issue-<N>.md`）のgitignore対象一時領域に保存し、サブエージェントにはそのファイルパスを渡す。リポジトリ内の追跡対象へ保存しない。ファイル作成が不要な短い依頼は直接渡してよい。
 
 ## 設定とログ
 
@@ -71,17 +71,22 @@
 
 レビュー方針で外部レビューが必須となったコミット済み差分は、**ホストランタイムとは別のモデルのCLI**で独立レビューする。使用するCLIと正規化エージェントはホストで決まる。ホストと同じ提供元のCLIを別モデルレビューに使ってはならない（「独立した第二の目」が成立しなくなる）。
 
-`<effective-base>` は推測や論理ベース名の直書きで代用せず、CLI起動前にオーケストレーターが `git merge-base <base> HEAD` で算出する。終了コードが非0、出力が空または複数行、もしくは `git rev-parse --verify <effective-base>^{commit}` が失敗した場合は「判定: error」とし、別モデルCLIを実行しない。検証済みの単一commit SHAだけを、以下の両経路の `<effective-base>` に渡す。
+| ホストランタイム | 正規化エージェント | オーケストレーターが直接実行するコマンド | モデル指定 | 送信先 |
+|---|---|---|---|---|
+| Claude Code | `codex-review-normalizer` | `codex exec review --base <effective-base> -c sandbox_mode="read-only"` | `-m gpt-5.6-sol` | OpenAI |
+| Codex（App / CLI） | `claude-review-normalizer` | `git diff <effective-base>...HEAD \| .ai/scripts/run-claude-review.sh -p ...` | `--model opus` | Anthropic |
 
-| ホストランタイム | 正規化エージェント | オーケストレーターが直接実行するコマンド | モデル指定 |
-|---|---|---|---|
-| Claude Code | `codex-review-normalizer` | `codex exec review --base <effective-base> -c sandbox_mode="read-only"` | `-m gpt-5.6-sol` |
-| Codex（App / CLI） | `claude-review-normalizer` | `git diff <effective-base>...HEAD \| .ai/scripts/run-claude-review.sh -p ...` | `--model opus` |
+- モデルは必ず `-m` / `--model` で明示指定する。既定モデルに委ねてはならない。ChatGPTアカウントのCodex CLIでは素の `gpt-5.6` は使えないため、利用可能なバリアントを指定する。
+- どちらの経路でも、ホストの `reviewer` とは提供元が異なるモデルを使う。レビュー観点の分担は `reviewer` が正確性優先、別モデルCLIと正規化エージェントが仕様準拠優先であり、詳細は `.ai/review-guidelines.md` に従う。
 
-- モデルは必ず `-m` / `--model` で明示指定する。既定モデルに委ねてはならない。
-- 別モデルCLIの実行・継続監視はサブエージェントの寿命から切り離し、オーケストレーターが直接担う。CodexホストはClaude CLI、Claude CodeホストはCodex CLIを継続セッションで直接起動する。Claude CLIには `--allowedTools "Read Grep Glob"` と `--disallowedTools "Edit Write NotebookEdit Bash"` の両方を必ず指定する。5分無出力でもrunning、10分で進捗通知、20分で一度だけtimeout終了とする。timeout・失敗・未取得ではFinding台帳やレビュー境界を更新せず、raw stdout/stderrを永続化しない。
-- **ChatGPT アカウントで認証した Codex CLI では、素の `gpt-5.6` は使えない**（`The 'gpt-5.6' model is not supported when using Codex with a ChatGPT account.` で 400 になる）。`gpt-5.6-sol` / `gpt-5.6-terra` / `gpt-5.6-luna` のバリアントを指定する。
-- `codex exec review` の既定 Sandbox は `workspace-write` である。レビューを読み取り専用に保つため `-c sandbox_mode="read-only"` を必ず付ける（`-s` / `--sandbox` は `review` サブコマンドでは使えない）。
-- どちらの経路でも、ホストの `reviewer` とは提供元が異なるモデルが差分を読むため、モデルの独立性は完全である。
-- レビュー観点の分担は `reviewer` が正確性優先、別モデルCLIと正規化エージェントが仕様準拠（`.ai/review-guidelines.md` と `docs/design.md`）優先である。モデルを変えるだけでなくこの観点差でも補完させる。
-- サブエージェント機能がない環境では、オーケストレーター自身が該当エージェント定義を全文読み、同じ制約でCLIを実行する。
+## 別モデルCLIの実行契約
+
+外部レビューが必要な場合、オーケストレーターは上表のCLIを継続セッションで直接起動する。別モデルCLIはサブエージェントから起動しない。レビュー用ブリーフは `<scratchpad>` のファイルとして渡し、長文を起動プロンプトへ直接貼らない。ブリーフは `.ai/cross-model-reviewer-common.md` の契約と同意済みの送信範囲に一致させる。
+
+起動前に `git merge-base <base> HEAD` で単一の effective base を算出し、`git rev-parse --verify <effective-base>^{commit}` で検証する。終了コードが非0、出力が空または複数行、検証失敗のいずれかなら「判定: error」とし、別モデルCLIを実行しない。レビュー対象はコミット済み差分に限り、`git status --short` が空であることとブリーフの `committedRange` が実差分と一致することを確認する。
+
+Codexホストは `.ai/scripts/run-claude-review.sh`、Claude Codeホストは `codex exec review` を使う。`codex exec review` の既定 Sandbox は `workspace-write` なので、`-c sandbox_mode="read-only"` を必ず付ける（`-s` / `--sandbox` は `review` サブコマンドでは使わない）。Claude CLIには `--allowedTools "Read Grep Glob"` と `--disallowedTools "Edit Write NotebookEdit Bash"` を付け、Keychain wrapper以外へ資格情報を渡さない。raw stdout / stderr はファイル、ブリーフ、scratchpadへ永続化せず、正規化に必要な機密を除いた要約だけを渡す。
+
+生存中で無出力のプロセスは `running` とし、5分で停止しない。10分で進捗を通知し、20分で一度だけ終了して「判定: timeout」とする。自動リトライは行わず、timeout・認証・通信・同意不足・実行失敗を `approve` と読み替えない。これらの結果ではFinding台帳とレビュー境界を更新しない。累積discoveryが20分timeoutした場合に限り、commonで定義するcoverage契約に沿ったchunk分割を選べる。これはtimeout後の明示的な例外であり、通常の自動retryではない。
+
+認証preflightの実行時点、`authReady: true` の記録、トークンを保存しない条件、同意の種類とCLI認証を混同しない条件は、このファイルの「認証preflightと承認の分離」に従う。レビュー結果・進捗・エラーを永続化する場合は、機密を含めず、正常レビューの判定に必要なメタ情報だけを記録する。サブエージェント機能がない環境では、オーケストレーター自身が該当エージェント定義を全文読み、同じ制約でCLIを実行する。
