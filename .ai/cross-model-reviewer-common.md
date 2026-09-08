@@ -26,15 +26,9 @@
 
 discovery と verification の全レビュー主体には、同じレビュー用ブリーフの内容を渡す。internal reviewer、別モデルCLI、正規化エージェントがそれぞれの範囲と判定条件を自力で確認できる状態にする。
 
-ブリーフには次の共通フィールドを含める。
+ブリーフの基本5項目（`targetFeature`、`inScopeFiles`、`acceptanceCriteria`、`outOfScopePolicy`、`committedRange`）は、`.ai/review-guidelines.md` の「レビュー範囲」に従う。同節の `inScopeFiles` に関する規則も継承し、この文書では再定義しない。
 
-- `targetFeature`: issueで変更する対象機能・振る舞い
-- `inScopeFiles`: 修正対象として合意したファイルまたはパス
-- `acceptanceCriteria`: issueの受け入れ条件
-- `outOfScopePolicy`: 範囲外の問題を「別issue候補（範囲外）」または「確認事項」として保持し、修正ループと判定件数へ含めない規則
-- `reviewStage`: `discovery` または `verification`
-- `committedRange`: 今回レビューするコミット済み累積差分の範囲
-- `reviewPolicy` / `externalReviewDecision` / 規則ID / 具体的根拠 / `decisionHead`
+この共通定義が追加する契約は、`reviewStage`（`discovery` または `verification`）と、`reviewPolicy` / `externalReviewDecision` / 規則ID / 具体的根拠 / `decisionHead` である。
 
 verification には上記に加えて、issue固有のFinding台帳、修正要約、修正コミット範囲を含める。`committedRange` は discovery と verification のどちらでもレビュー対象となる累積差分であり、Findingが0件または今回の修正コミットがないことを理由に空へしない。修正コミット範囲は別フィールドとして「修正なし」と明示できる。フィールド不足・矛盾、または実際のコミット済み差分との不一致は推測で補わず「判定: error」とする。
 
@@ -79,8 +73,6 @@ Findingが0件の場合、required Finding全件resolvedは真だが、internal 
 
 各Findingは最低限、次を保持する。
 
-最低限、ID、出典、重要度、場所、内容、期待解消状態、状態、修正コミット、検証結果を保持する。
-
 | ID | 出典 | 重要度 | 場所 | 内容 | 期待解消状態 | 状態 | 修正コミット | 検証結果 |
 |---|---|---|---|---|---|---|---|---|
 
@@ -92,11 +84,7 @@ Findingが0件の場合、required Finding全件resolvedは真だが、internal 
 
 同一スキル実行のverificationでは、送信先、issue、branch、effective base、変更ファイルとrepository readsが承認済みパスの部分集合、データ種別、read-only能力がすべて同じ承認範囲内なら同意を再利用できる。送信先変更、範囲拡大、新しい機密カテゴリ、実行能力の拡大、または別実行では同意を取り直す。承認済み範囲外の内容や新しい機密カテゴリを送る場合も同様である。差分だけの同意、別実行・範囲外の過去同意、スキル文書で代用してはならない。
 
-CLIの選択、effective base、認証preflight、read-only実行、Keychain wrapper、継続監視、資格情報非保存、raw出力の扱いは `.ai/runtime-compatibility.md` に従う。生存中の無出力、timeoutは正常レビューの代わりに扱わず、認証・通信・同意不足・実行失敗も、正常レビューの代わりに扱わず、Finding台帳と全レビュー境界を更新しない。
-
-timeout、失敗、未取得はFinding状態とレビュー境界を更新しない。
-
-同意不足、wrong-host、timeout、認証・通信・実行エラーのときに、第二のinternal reviewerを代替レビューとして起動せず、不足した対象を具体的に報告し、未取得理由も示す。同意を取得・記録するまでCLIを再実行しない。CodeRabbit のステータスチェックが緑でも、レビュー済みの根拠にしない。
+CLIの選択、effective base、認証preflight、read-only実行、Keychain wrapper、継続監視、資格情報非保存、raw出力の扱いは `.ai/runtime-compatibility.md` に従う。生存中の無出力は監視を継続し、timeout、wrong-host、認証・通信・同意不足・実行失敗、未取得は正常レビューの代わりに扱わない。これらの状態ではFinding台帳と全レビュー境界を更新せず、不足した対象と理由を具体的に報告する。前項のレビュー不能状態では第二のinternal reviewerを代替レビューとして起動せず、同意不足の場合は同意を取得・記録するまでCLIを再実行しない。CodeRabbit のステータスチェックが緑でも、レビュー済みの根拠にしない。
 
 ## CodeRabbit App（補助・任意）
 

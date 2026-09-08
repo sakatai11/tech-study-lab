@@ -165,24 +165,21 @@ check_agent_contract "failure is never approval" 'レビューが正常完了し
 check_agent_contract "zero findings can be a valid approve" 'must-fix / should-fix が0件なら、それは正当な `approve` である' "$SKILL"
 check_agent_contract "common defines scoped approve rule" '対象範囲内の must-fix / should-fix が0件' "$COMMON"
 check_agent_contract "out-of-scope candidates do not block approve" '判定件数・修正対象に含めない' "$COMMON"
-check_agent_contract "confirmation items do not block approve" '「別issue候補（範囲外）」または「確認事項」として保持し、修正ループと判定件数へ含めない' "$COMMON"
+check_agent_contract "out-of-scope and confirmation items are classified" '別issue候補（範囲外）、確認事項へ分類する' "$COMMON"
 legacy_zero_finding_ban=$(printf '%s%s' 'レビューの失敗・未取得・指摘ゼロ' 'を approve として扱わない')
 check_absent_contract "no blanket ban on zero findings" "$legacy_zero_finding_ban" "$SKILL"
 # フォールバックの2件目 reviewer は既定が accuracy-first のため、明示しないと観点が揃う。
 check_agent_contract "cross-model path gets spec profile" '`spec-compliance-first`' "$COMMON"
 check_agent_contract "consent-blocked result does not enter fallback" '第二のinternal reviewerを代替レビューとして起動せず' "$COMMON"
-check_agent_contract "consent-blocked result reports missing scope" '不足した対象を具体的に報告し' "$COMMON"
+check_agent_contract "consent-blocked result reports missing scope" '不足した対象と理由を具体的に報告する' "$COMMON"
 check_agent_contract "consent-blocked result requires fresh confirmation" '同意を取得・記録するまでCLIを再実行しない' "$COMMON"
 check_agent_contract "green check is not review" 'ステータスチェックが緑でも、レビュー済みの根拠にしない' "$COMMON"
 check_agent_contract "no guessing review range" 'レビュー範囲を推測で決めない' "$SKILL"
 check_agent_contract "no cherry-picking findings" '各レビュー結果をオーケストレーターの都合で取捨選択せず' "$SKILL"
-check_agent_contract "reviewed head only after real review" 'timeout、失敗、未取得はFinding状態とレビュー境界を更新しない' "$COMMON"
+check_agent_contract "reviewed head only after real review" 'これらの状態ではFinding台帳と全レビュー境界を更新せず' "$COMMON"
 check_agent_contract "profiles must differ" 'プロファイル' "$COMMON"
-check_agent_contract "orchestrator brief defines target feature" '`targetFeature`' "$COMMON"
-check_agent_contract "orchestrator brief defines in-scope files" '`inScopeFiles`' "$COMMON"
-check_agent_contract "orchestrator brief defines acceptance criteria" '`acceptanceCriteria`' "$COMMON"
-check_agent_contract "orchestrator brief defines out-of-scope policy" '`outOfScopePolicy`' "$COMMON"
-check_agent_contract "orchestrator brief defines committed range" '`committedRange`' "$COMMON"
+check_agent_contract "orchestrator brief references the basic scope contract" '基本5項目（`targetFeature`、`inScopeFiles`、`acceptanceCriteria`、`outOfScopePolicy`、`committedRange`）は、`.ai/review-guidelines.md` の「レビュー範囲」に従う' "$COMMON"
+check_agent_contract "common inherits the read-only file scope rule" '同節の `inScopeFiles` に関する規則も継承し' "$COMMON"
 check_agent_contract "all review actors receive the same scope" 'internal reviewer、別モデルCLI、正規化エージェントがそれぞれの範囲' "$COMMON"
 check_agent_contract "both reviewer types receive one full brief path" '同じブリーフファイルの読み取り可能なパスを渡す' "$COMMON"
 check_agent_contract "integrated review brief includes policy decision and head" '`reviewPolicy` / `externalReviewDecision` / 規則ID / 具体的根拠 / `decisionHead`' "$COMMON"
@@ -215,7 +212,10 @@ check_absent_contract "test fixer has no biome-only formal report" '| biome | pa
 check_absent_contract "skill does not duplicate lifecycle log command" './.ai/hooks/log-skill-usage.sh --runtime codex --skill issue-dev-orchestrate' "$SKILL"
 check_agent_contract "skill delegates lifecycle logging to runtime" 'スキルライフサイクルログは `.ai/runtime-compatibility.md` の「設定とログ」に従う' "$SKILL"
 check_agent_contract "runtime owns lifecycle log command" './.ai/hooks/log-skill-usage.sh --runtime codex --skill <name> --status started|completed' "$RUNTIME"
+check_agent_contract "runtime defines concrete scratchpad location" 'このリポジトリでは `<scratchpad>` を `.claude/logs/briefs/` と定義する' "$RUNTIME"
 check_agent_contract "runtime defines scratchpad brief location" '長いブリーフは `<scratchpad>` 配下' "$RUNTIME"
+check_agent_contract "runtime keeps scratchpad gitignored" 'gitignore対象一時領域' "$RUNTIME"
+check_absent_contract "runtime does not duplicate briefs directory" '.claude/logs/briefs/briefs/' "$RUNTIME"
 
 # ---- 不変条件: スパイク／フェーズ分割時の関連状態照合 ----
 # 実施手順ではなく、対象の限定・記録すべき状態・追跡可能性だけを固定する。
@@ -281,7 +281,14 @@ check_agent_contract "guidelines define spec profile" '`spec-compliance-first`�
 check_agent_contract "guidelines define severities" '## 重要度' "$GUIDE"
 check_agent_contract "guidelines own review scope" '## レビュー範囲' "$GUIDE"
 check_agent_contract "guidelines define out-of-scope candidates" '**別issue候補（範囲外）**' "$GUIDE"
-check_agent_contract "guidelines require committed range" '`committedRange`: 今回レビューするコミット済み差分の範囲' "$GUIDE"
+scope_contract_section=$(extract_section "$GUIDE" '## レビュー範囲' '### 範囲判定') || {
+  printf '%s\n' 'failed to extract review scope contract' >&2
+  exit 1
+}
+for field in targetFeature inScopeFiles acceptanceCriteria outOfScopePolicy committedRange; do
+  check_section_contract "guidelines define $field" "$scope_contract_section" "\`$field\`:"
+  check_absent_contract "common does not redefine $field" "- \`$field\`:" "$COMMON"
+done
 check_agent_contract "feature or acceptance relevance is required" '`targetFeature` または `acceptanceCriteria` に直接関係し' "$GUIDE"
 check_agent_contract "in-scope files are an additional constraint" 'かつ指摘箇所が `inScopeFiles` に含まれる' "$GUIDE"
 check_agent_contract "file location alone never makes a finding in scope" '`inScopeFiles` に含まれることだけでは対象範囲内にしない' "$GUIDE"
@@ -304,7 +311,7 @@ check_agent_contract "claude toml reads common" "$COMMON" .codex/agents/claude-r
 check_agent_contract "reviewer defers to guidelines" '`.ai/review-guidelines.md` が単一ソース' .ai/agents/reviewer.md
 check_agent_contract "reviewer default profile" '`accuracy-first`（正確性優先）' .ai/agents/reviewer.md
 check_agent_contract "common uses spec profile" '`spec-compliance-first`' "$COMMON"
-check_agent_contract "common validates scope brief" 'ブリーフには次の共通フィールドを含める' "$COMMON"
+check_agent_contract "common delegates scope definitions to guidelines" '基本5項目（`targetFeature`、`inScopeFiles`、`acceptanceCriteria`、`outOfScopePolicy`、`committedRange`）は、`.ai/review-guidelines.md` の「レビュー範囲」に従う' "$COMMON"
 consent_section=$(extract_section "$COMMON" '## オーケストレーターの直接実行・監視契約' '## 範囲と分割coverage') || {
   printf '%s\n' 'failed to extract external egress consent contract' >&2
   exit 1
@@ -330,7 +337,7 @@ check_agent_contract "common verifies scope" 'approvedScope' "$COMMON"
 check_agent_contract "common verifies destination" 'egressDestination' "$COMMON"
 check_agent_contract "common rejects wrong host" 'wrong-host-agent' "$COMMON"
 check_agent_contract "common never approves on failure" '指摘ゼロを `approve` と読み替えない' "$COMMON"
-check_agent_contract "common preserves failed CLI results" '認証・通信・同意不足・実行失敗も、正常レビューの代わりに扱わず' "$COMMON"
+check_agent_contract "common preserves failed CLI results" 'timeout、wrong-host、認証・通信・同意不足・実行失敗、未取得は正常レビューの代わりに扱わない' "$COMMON"
 check_agent_contract "runtime requires direct CLI execution" 'オーケストレーターは上表のCLIを継続セッションで直接起動する' "$RUNTIME"
 check_agent_contract "common keeps consent before first CLI execution" '最初の外部送信直前に' "$COMMON"
 check_agent_contract "common assigns CLI responsibility to orchestrator" 'CLI 実行と継続監視はオーケストレーターの責務' "$COMMON"
@@ -407,10 +414,10 @@ check_agent_contract "test fixer runs in phases 4 and 6" 'issue-dev-orchestrate 
 check_agent_contract "reviewer committed range" '`git diff develop...HEAD`' .ai/agents/reviewer.md
 
 # ---- Issue #124: discovery / verification state-machine contracts ----
-check_agent_contract "discovery is explicit" '`reviewStage`: `discovery`' "$COMMON"
+check_agent_contract "review stage is explicit" '`reviewStage`（`discovery` または `verification`）' "$COMMON"
 check_agent_contract "discovery reads cumulative diff" '`develop...HEAD` の**全累積差分**' "$COMMON"
 check_agent_contract "finding ID format" '`I<issue>-F<3桁連番>`' "$COMMON"
-check_agent_contract "finding metadata" '期待解消状態、状態、修正コミット、検証結果' "$COMMON"
+check_agent_contract "finding metadata" '| ID | 出典 | 重要度 | 場所 | 内容 | 期待解消状態 | 状態 | 修正コミット | 検証結果 |' "$COMMON"
 check_agent_contract "duplicate findings merge" '同一ファイル・行かつ実質同内容' "$COMMON"
 check_agent_contract "verification brief requirement" 'verification には上記に加えて、issue固有のFinding台帳、修正要約、修正コミット範囲を含める' "$COMMON"
 check_agent_contract "zero findings skip only fix work" 'Findingが0件でも verification は省略しない' "$SKILL"
