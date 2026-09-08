@@ -118,6 +118,23 @@ AGENT_GUIDE=docs/ai-coding-agents.md
 PHASE_REF=.ai/skills/issue-dev-orchestrate/references/phase-reconciliation.md
 TEST_FIXER=.ai/agents/test-fixer.md
 
+reference_map_section=$(extract_section "$SKILL" '## 参照マップ' '## 実行準備') || {
+  printf '%s\n' 'failed to extract skill reference map contract' >&2
+  exit 1
+}
+consent_section=$(extract_section "$COMMON" '## オーケストレーターの直接実行・監視契約' '## 範囲と分割coverage') || {
+  printf '%s\n' 'failed to extract external egress consent contract' >&2
+  exit 1
+}
+coderabbit_consent_section=$(extract_section "$COMMON" '## CodeRabbit App（補助・任意）' '## 範囲と分割coverage') || {
+  printf '%s\n' 'failed to extract CodeRabbit consent contract' >&2
+  exit 1
+}
+phase7_skill_section=$(extract_section "$SKILL" '### フェーズ7: 完了' '## 中断・失敗時') || {
+  printf '%s\n' 'failed to extract skill Phase 7 contract' >&2
+  exit 1
+}
+
 # 正規化エージェント名から、外部CLIを実行・監視する主体だと誤認できないことを固定する。
 for old_path in \
   .ai/agents/claude-reviewer.md \
@@ -168,8 +185,7 @@ check_agent_contract "out-of-scope candidates do not block approve" '判定件�
 check_agent_contract "out-of-scope and confirmation items are classified" '別issue候補（範囲外）、確認事項へ分類する' "$COMMON"
 legacy_zero_finding_ban=$(printf '%s%s' 'レビューの失敗・未取得・指摘ゼロ' 'を approve として扱わない')
 check_absent_contract "no blanket ban on zero findings" "$legacy_zero_finding_ban" "$SKILL"
-# フォールバックの2件目 reviewer は既定が accuracy-first のため、明示しないと観点が揃う。
-check_agent_contract "cross-model path gets spec profile" '`spec-compliance-first`' "$COMMON"
+# internal reviewer と外部レビューは、規約のプロファイル割当と優先順を分ける。
 check_agent_contract "consent-blocked result does not enter fallback" '第二のinternal reviewerを代替レビューとして起動せず' "$COMMON"
 check_agent_contract "consent-blocked result reports missing scope" '不足した対象と理由を具体的に報告する' "$COMMON"
 check_agent_contract "consent-blocked result requires fresh confirmation" '同意を取得・記録するまでCLIを再実行しない' "$COMMON"
@@ -177,7 +193,6 @@ check_agent_contract "green check is not review" 'ステータスチェックが
 check_agent_contract "no guessing review range" 'レビュー範囲を推測で決めない' "$SKILL"
 check_agent_contract "no cherry-picking findings" '各レビュー結果をオーケストレーターの都合で取捨選択せず' "$SKILL"
 check_agent_contract "reviewed head only after real review" 'これらの状態ではFinding台帳と全レビュー境界を更新せず' "$COMMON"
-check_agent_contract "profiles must differ" 'プロファイル' "$COMMON"
 check_agent_contract "orchestrator brief references the basic scope contract" '基本5項目（`targetFeature`、`inScopeFiles`、`acceptanceCriteria`、`outOfScopePolicy`、`committedRange`）は、`.ai/review-guidelines.md` の「レビュー範囲」に従う' "$COMMON"
 check_agent_contract "common inherits the read-only file scope rule" '同節の `inScopeFiles` に関する規則も継承し' "$COMMON"
 check_agent_contract "all review actors receive the same scope" 'internal reviewer、別モデルCLI、正規化エージェントがそれぞれの範囲' "$COMMON"
@@ -185,13 +200,15 @@ check_agent_contract "both reviewer types receive one full brief path" '同じ�
 check_agent_contract "integrated review brief includes policy decision and head" '`reviewPolicy` / `externalReviewDecision` / 規則ID / 具体的根拠 / `decisionHead`' "$COMMON"
 check_agent_contract "review mode record alone is insufficient" '`review-mode-<N>.md` だけを渡して済ませず' "$COMMON"
 check_agent_contract "full brief includes consent record" '`reviewMode: cross-model-cli`、`normalizerAgent`、`egressDestination`' "$COMMON"
-check_agent_contract "out-of-scope candidates stay out of fix loop" '別issue候補（範囲外）' "$COMMON"
 check_agent_contract "scope expansion requires user decision" 'ユーザーが明示的に範囲を変更するまでは修正ループと判定件数に含めない' "$GUIDE"
 check_agent_contract "urgent independent severe findings pause for user decision" '緊急性がある場合だけユーザー判断へエスカレーションする' "$GUIDE"
 
 # ---- 不変条件: ブランチとコミット ----
 check_agent_contract "no work on main" '`main` では作業せず' "$SKILL"
-check_agent_contract "no merge" '`gh pr merge` は使わず' "$SKILL"
+check_agent_contract "work branch does not merge into develop" '作業ブランチから `develop` へのマージは行わず' "$SKILL"
+check_agent_contract "develop to main is human-owned" '`develop` から `main` へのPR作成・マージも人間が行う' "$SKILL"
+check_agent_contract "develop updates into work branch remain allowed" '作業ブランチへ `develop` を取り込む通常の操作は妨げない' "$SKILL"
+check_agent_contract "gh pr merge remains human-only" '`gh pr merge` は使わない' "$SKILL"
 check_agent_contract "no closes keyword" '`closes #<N>` は使わない' "$SKILL"
 check_agent_contract "refs required" 'refs #<N>' "$SKILL"
 check_agent_contract "no hiding failures" '`|| true` などで隠さない' "$SKILL"
@@ -216,6 +233,18 @@ check_agent_contract "runtime defines concrete scratchpad location" 'このリ�
 check_agent_contract "runtime defines scratchpad brief location" '長いブリーフは `<scratchpad>` 配下' "$RUNTIME"
 check_agent_contract "runtime keeps scratchpad gitignored" 'gitignore対象一時領域' "$RUNTIME"
 check_absent_contract "runtime does not duplicate briefs directory" '.claude/logs/briefs/briefs/' "$RUNTIME"
+
+# ---- 参照マップの通常経路 ----
+check_section_contract "reference map reaches runtime compatibility" "$reference_map_section" '実行開始 | `.ai/runtime-compatibility.md` | ランタイム、GitHub、エージェント、CLI、scratchpad の互換条件'
+check_section_contract "reference map reaches review guidelines and common" "$reference_map_section" 'discovery / verification 前 | `.ai/review-guidelines.md`、`.ai/cross-model-reviewer-common.md` | 範囲、分類、Finding、判定、同意、境界'
+check_section_contract "reference map reaches phase reconciliation" "$reference_map_section" 'phase / spike | `references/phase-reconciliation.md` | 関連Issue・撤回／置換PRの状態照合'
+
+# ---- 最終報告契約 ----
+check_section_contract "final report points to common output contract" "$phase7_skill_section" '最終報告は `.ai/cross-model-reviewer-common.md` の出力契約を参照し'
+check_section_contract "final report keeps out-of-scope split proposal" "$phase7_skill_section" '別issue候補（範囲外）と切り出し案'
+check_section_contract "final report includes policy decision evidence" "$phase7_skill_section" '`reviewPolicy` / current HEADの`externalReviewDecision` / 規則IDと根拠'
+check_section_contract "final report includes external review actors" "$phase7_skill_section" '使用した別モデルCLI・正規化エージェント名・送信先（未実行・未取得なら理由）'
+check_section_contract "final report states guarantee degradation" "$phase7_skill_section" '保証低下の有無'
 
 # ---- 不変条件: スパイク／フェーズ分割時の関連状態照合 ----
 # 実施手順ではなく、対象の限定・記録すべき状態・追跡可能性だけを固定する。
@@ -260,10 +289,12 @@ check_agent_contract "consent covers more than diff" '今回の `committed-diff`
 check_agent_contract "consent scope diff" 'committed-diff' "$COMMON"
 check_agent_contract "consent scope brief" 'brief-context' "$COMMON"
 check_agent_contract "consent scope repo reads" 'repository-reads' "$COMMON"
-check_agent_contract "re-consent per destination" '承認済み範囲外の内容や新しい機密カテゴリを送る' "$COMMON"
-check_agent_contract "in-scope verification reuses consent" '同一スキル実行のverificationでは' "$COMMON"
-check_agent_contract "private automatic App review requires pre-PR consent" 'private リポジトリで CodeRabbit App の自動レビューが有効、または無効と確認できない場合は、PR作成前に' "$COMMON"
-check_agent_contract "automatic App consent records destination" '`egressDestination: coderabbit`' "$COMMON"
+check_section_contract "consent is confirmed before external send" "$consent_section" '最初の外部送信直前に、今回の `committed-diff`、`brief-context`、`repository-reads` を具体的に列挙した明示同意を確認する。'
+check_section_contract "cross-model consent records destination" "$consent_section" '`reviewMode: cross-model-cli`、`normalizerAgent`、`egressDestination`、`externalEgressApproved: true`、`approvedScope`'
+check_section_contract "verification consent is limited to approved scope" "$consent_section" '送信先、issue、branch、effective base、変更ファイルとrepository readsが承認済みパスの部分集合、データ種別、read-only能力がすべて同じ承認範囲内なら同意を再利用できる。'
+check_section_contract "destination or scope changes require renewed consent" "$consent_section" '送信先変更、範囲拡大、新しい機密カテゴリ、実行能力の拡大、または別実行では同意を取り直す。'
+check_section_contract "private automatic App review requires pre-PR consent" "$coderabbit_consent_section" 'private リポジトリで CodeRabbit App の自動レビューが有効、または無効と確認できない場合は、PR作成前に'
+check_section_contract "automatic App consent records destination" "$coderabbit_consent_section" '`reviewMode: coderabbit-app` / `egressDestination: coderabbit` / `externalEgressApproved: true` / `approvedScope`'
 check_agent_contract "unapproved automatic App review is not integrated" '明示同意なしに取得された自動Appレビューは統合しない' "$COMMON"
 check_agent_contract "manual App review keeps separate approval" '単発起動の `@coderabbitai review` をPRへコメントする場合は、その投稿について別途ユーザー承認を得る' "$COMMON"
 check_agent_contract "no same-vendor reviewer" '別モデルレビューに使ってはならない' "$COMMON"
@@ -285,6 +316,18 @@ scope_contract_section=$(extract_section "$GUIDE" '## レビュー範囲' '### �
   printf '%s\n' 'failed to extract review scope contract' >&2
   exit 1
 }
+scope_judgment_section=$(extract_section "$GUIDE" '### 範囲判定' '### 重大問題の例外') || {
+  printf '%s\n' 'failed to extract review scope judgment contract' >&2
+  exit 1
+}
+scope_exception_section=$(extract_section "$GUIDE" '### 重大問題の例外' '## 読む章（design.md 章マッピング）') || {
+  printf '%s\n' 'failed to extract review scope exception contract' >&2
+  exit 1
+}
+review_profiles_section=$(extract_section "$GUIDE" '## レビュープロファイル' '## 重要度') || {
+  printf '%s\n' 'failed to extract review profile contract' >&2
+  exit 1
+}
 for field in targetFeature inScopeFiles acceptanceCriteria outOfScopePolicy committedRange; do
   check_section_contract "guidelines define $field" "$scope_contract_section" "\`$field\`:"
   check_absent_contract "common does not redefine $field" "- \`$field\`:" "$COMMON"
@@ -296,6 +339,12 @@ check_absent_contract "legacy any-one scope rule stays removed" 'の少なくと
 check_agent_contract "guidelines keep repository reads from expanding scope" 'レビュー対象の外側を読んで問題を発見したこと自体は、当該 issue の修正対象にする根拠にならない' "$GUIDE"
 check_agent_contract "guidelines include diff-caused regressions" '**今回差分が起こした範囲外機能の回帰**' "$GUIDE"
 check_agent_contract "guidelines escalate urgent independent severe findings" '緊急性がある場合だけユーザー判断へエスカレーションする' "$GUIDE"
+check_section_contract "out-of-scope candidates are reported, not fixed" "$scope_judgment_section" 'must-fix / should-fix / nit に変換せず、理由・影響・切り出し案を報告する。'
+check_section_contract "out-of-scope candidates stay out of fix loop" "$scope_exception_section" 'ユーザーが明示的に範囲を変更するまでは修正ループと判定件数に含めない。'
+check_section_contract "internal reviewer uses accuracy-first" "$review_profiles_section" '担当: `reviewer`、および GitHub App 方式で並列実行する1件目の `reviewer`。'
+check_section_contract "internal reviewer prioritizes accuracy" "$review_profiles_section" '優先順: **正確性 → セキュリティ → 仕様準拠 → ガードレール違反 → テスト**'
+check_section_contract "external review uses spec-compliance-first" "$review_profiles_section" '担当: 別モデルCLIのレビュー結果を扱う `codex-review-normalizer` / `claude-review-normalizer`、および GitHub App 方式で並列実行する2件目の `reviewer`。'
+check_section_contract "external review prioritizes specification" "$review_profiles_section" '優先順: **仕様準拠 → ガードレール違反 → 正確性 → セキュリティ → テスト**'
 check_agent_contract "agents md points at guidelines" '.ai/review-guidelines.md' AGENTS.md
 # 章マッピング表が単一ソース以外へ再掲されていないこと
 for f in AGENTS.md .ai/agents/reviewer.md "$COMMON" "$SKILL"; do
@@ -310,19 +359,19 @@ check_agent_contract "codex toml reads common" "$COMMON" .codex/agents/codex-rev
 check_agent_contract "claude toml reads common" "$COMMON" .codex/agents/claude-review-normalizer.toml
 check_agent_contract "reviewer defers to guidelines" '`.ai/review-guidelines.md` が単一ソース' .ai/agents/reviewer.md
 check_agent_contract "reviewer default profile" '`accuracy-first`（正確性優先）' .ai/agents/reviewer.md
-check_agent_contract "common uses spec profile" '`spec-compliance-first`' "$COMMON"
 check_agent_contract "common delegates scope definitions to guidelines" '基本5項目（`targetFeature`、`inScopeFiles`、`acceptanceCriteria`、`outOfScopePolicy`、`committedRange`）は、`.ai/review-guidelines.md` の「レビュー範囲」に従う' "$COMMON"
-consent_section=$(extract_section "$COMMON" '## オーケストレーターの直接実行・監視契約' '## 範囲と分割coverage') || {
-  printf '%s\n' 'failed to extract external egress consent contract' >&2
-  exit 1
-}
 scope_validation_section=$(extract_section "$COMMON" '## 範囲と分割coverage' '## 正規化と判定') || {
   printf '%s\n' 'failed to extract review scope validation contract' >&2
+  exit 1
+}
+normalization_section=$(extract_section "$COMMON" '## 正規化と判定' '## 出力フォーマット') || {
+  printf '%s\n' 'failed to extract review normalization contract' >&2
   exit 1
 }
 check_section_absent_contract "missing scope fields are not consent failures" "$consent_section" 'レビュー範囲契約'
 check_section_contract "missing scope fields are brief errors" "$scope_validation_section" '「判定: error」とする'
 check_section_contract "committed range is a brief field" "$scope_validation_section" '`committedRange`'
+check_section_contract "normalizer applies specification profile" "$normalization_section" '`spec-compliance-first` で design.md の該当章を照合し、CLI出力で扱われていない論点は自分の指摘として追加する。'
 check_agent_contract "common outputs out-of-scope section" '### 別issue候補（範囲外）' "$COMMON"
 check_agent_contract "internal reviewer validates scope brief" '`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage` / `committedRange`' .ai/agents/reviewer.md
 check_agent_contract "internal reviewer outputs out-of-scope section" '### 別issue候補（範囲外）' .ai/agents/reviewer.md

@@ -39,7 +39,7 @@ GitHub issue の仕様を、レビュー済み・品質ゲート通過済みの�
 ### ブランチとコミット
 
 - `main` では作業せず、作業ブランチは `develop` から切る。
-- 作業ブランチや `develop` へのマージを行わない。`gh pr merge` は使わず、人間が判断する。
+- 作業ブランチから `develop` へのマージは行わず、`develop` 向けPRのマージは人間が判断する。`develop` から `main` へのPR作成・マージも人間が行う。作業ブランチへ `develop` を取り込む通常の操作は妨げない。`gh pr merge` は使わない。
 - 無関係なユーザー変更をコミットへ含めない。分岐処理の失敗を `|| true` などで隠さない。
 - コミットメッセージとPR本文のIssue参照は `refs #<N>` とし、`closes #<N>` は使わない。
 
@@ -108,7 +108,7 @@ Issueの内容を把握し、最新の `origin/develop` を取り込んだ `deve
 
 ### フェーズ7: 完了
 
-追加コミットを作らず、作業ツリー、コミット列、レビュー境界、ローカルゲート、PR CIを最終確認する。PR作成・pushはユーザー承認後に行い、ベースは `develop` とする。利用可能なら `pr-creator` skill を使い、既存PRがあれば再作成しない。PR本文はテンプレートに従い、実装、担当、レビュー方針と結果、Finding、ゲート、ブランチ、PR URLを報告する。CodeRabbitの適用判定は common の条件に従う。phase / spike がある場合は [references/phase-reconciliation.md](references/phase-reconciliation.md) を読み、明示された関連対象へ状態を記録する。
+追加コミットを作らず、作業ツリー、コミット列、レビュー境界、ローカルゲート、PR CIを最終確認する。PR作成・pushはユーザー承認後に行い、ベースは `develop` とする。利用可能なら `pr-creator` skill を使い、既存PRがあれば再作成しない。PR本文はテンプレートに従い、実装、担当、レビュー方針と結果、Finding、ゲート、ブランチ、PR URLを報告する。最終報告は `.ai/cross-model-reviewer-common.md` の出力契約を参照し、`reviewPolicy` / current HEADの`externalReviewDecision` / 規則IDと根拠、使用した別モデルCLI・正規化エージェント名・送信先（未実行・未取得なら理由）、別issue候補（範囲外）と切り出し案、保証低下の有無をユーザーへ伝える。CodeRabbitの適用判定は common の条件に従う。phase / spike がある場合は [references/phase-reconciliation.md](references/phase-reconciliation.md) を読み、明示された関連対象へ状態を記録する。
 
 ## 中断・失敗時
 
