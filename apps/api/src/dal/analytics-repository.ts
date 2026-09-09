@@ -5,6 +5,7 @@ import { db as schema } from '@tsl/shared'
 
 import type {
   AnalyticsDeps,
+  AnalyticsHeatmapRow,
   AnalyticsLessonViewCount,
   AnalyticsMistakeRow,
   AnalyticsSummaryData,
@@ -117,6 +118,24 @@ export function createAnalyticsDeps(
     },
 
     async findWeeklyAnswerCounts(userId, startAt, endAt): Promise<AnalyticsWeeklyRow[]> {
+      const date = utcDayExpression(schema.answerLogs.answeredAt)
+      const rows = await db
+        .select({ date, answerCount: count() })
+        .from(schema.answerLogs)
+        .where(
+          and(
+            eq(schema.answerLogs.userId, userId),
+            gte(schema.answerLogs.answeredAt, new Date(startAt)),
+            lt(schema.answerLogs.answeredAt, new Date(endAt)),
+          ),
+        )
+        .groupBy(date)
+        .orderBy(asc(date))
+
+      return rows.map((row) => ({ date: row.date, answerCount: toNumber(row.answerCount) }))
+    },
+
+    async findHeatmapAnswerCounts(userId, startAt, endAt): Promise<AnalyticsHeatmapRow[]> {
       const date = utcDayExpression(schema.answerLogs.answeredAt)
       const rows = await db
         .select({ date, answerCount: count() })

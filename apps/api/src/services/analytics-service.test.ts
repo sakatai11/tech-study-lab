@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest'
 
 import {
   type AnalyticsDeps,
+  getAnalyticsHeatmap,
   getAnalyticsMistakes,
   getAnalyticsSummary,
   getAnalyticsWeekly,
+  recentHeatmapDays,
   recentUtcDays,
   utcWeekStart,
 } from './analytics-service'
@@ -24,6 +26,7 @@ function createDeps(overrides: Partial<AnalyticsDeps> = {}): AnalyticsDeps {
       srsStates: [],
     }),
     findWeeklyAnswerCounts: async () => [],
+    findHeatmapAnswerCounts: async () => [],
     findMistakes: async () => [],
     ...overrides,
   }
@@ -148,6 +151,34 @@ describe('analytics service', () => {
     ])
   })
 
+  it('returns 182 UTC heatmap days in chronological order and fills zeroes', async () => {
+    let received: { startAt: number; endAt: number } | undefined
+    const result = await getAnalyticsHeatmap(
+      createDeps({
+        findHeatmapAnswerCounts: async (_userId, startAt, endAt) => {
+          received = { startAt, endAt }
+          return [
+            { date: '2026-03-04', answerCount: 2 },
+            { date: '2026-08-31', answerCount: 5 },
+          ]
+        },
+      }),
+      { userId: 'u1', now: Date.parse('2026-09-01T12:00:00.000Z') },
+    )
+
+    expect(result.days).toHaveLength(182)
+    expect(result.days[0]).toEqual({ date: '2026-03-04', answerCount: 2 })
+    expect(result.days.at(-1)).toEqual({ date: '2026-09-01', answerCount: 0 })
+    expect(result.days.find((day) => day.date === '2026-08-31')).toEqual({
+      date: '2026-08-31',
+      answerCount: 5,
+    })
+    expect(received).toEqual({
+      startAt: Date.parse('2026-03-04T00:00:00.000Z'),
+      endAt: Date.parse('2026-09-02T00:00:00.000Z'),
+    })
+  })
+
   it('ranks unrounded error rates before selecting the top ten', async () => {
     const result = await getAnalyticsMistakes(
       createDeps({
@@ -175,5 +206,11 @@ describe('analytics service', () => {
   it('uses UTC and Monday as the week boundary', () => {
     expect(recentUtcDays(now)[0]).toEqual({ date: '2026-08-25', weekday: 2 })
     expect(utcWeekStart(now)).toBe(Date.parse('2026-08-31T00:00:00.000Z'))
+  })
+
+  it('uses the UTC date at a day boundary for heatmap generation', () => {
+    const days = recentHeatmapDays(Date.parse('2026-09-01T00:00:00.000Z'))
+    expect(days[0]).toEqual({ date: '2026-03-04' })
+    expect(days.at(-1)).toEqual({ date: '2026-09-01' })
   })
 })

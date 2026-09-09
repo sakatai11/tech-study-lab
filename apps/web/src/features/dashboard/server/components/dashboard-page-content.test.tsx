@@ -9,6 +9,17 @@ vi.mock('@/features/dashboard/server/components/dashboard-due-card', () => ({
   DashboardDueCard: () => <p>due-card</p>,
 }))
 
+vi.mock('@/features/dashboard/server/components/dashboard-user-content', () => ({
+  DashboardUserContent: () => (
+    <>
+      <p>dashboard-user-content</p>
+      <a className="lg:hidden" href="/analytics">
+        すべて表示
+      </a>
+    </>
+  ),
+}))
+
 vi.mock('@/features/dashboard/server/load-dashboard', () => ({ loadDashboardStatic }))
 
 import { DashboardPageContent } from './dashboard-page-content'
@@ -29,9 +40,9 @@ describe('DashboardPageContent', () => {
     render(<DashboardPageContent />)
 
     expect(screen.getByRole('heading', { name: '開発者のための学習ワークベンチ' })).toBeTruthy()
-    expect(screen.queryByRole('heading', { name: '領域別の習得状況' })).toBeNull()
     expect(screen.getByText('due-card')).toBeTruthy()
-    expect(screen.getAllByText('表示用サンプル')).toHaveLength(2)
+    expect(screen.getByText('dashboard-user-content')).toBeTruthy()
+    expect(screen.queryByText('表示用サンプル')).toBeNull()
     expect(screen.getByRole('link', { name: '復習を始める' })).toHaveProperty(
       'href',
       'http://localhost:3000/review',

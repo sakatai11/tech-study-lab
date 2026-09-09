@@ -1,5 +1,9 @@
 import { applyD1Migrations, env } from 'cloudflare:test'
-import { analyticsWeeklyResponseSchema } from '@tsl/shared'
+import {
+  analyticsHeatmapResponseSchema,
+  analyticsWeeklyResponseSchema,
+  recentActivityResponseSchema,
+} from '@tsl/shared'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import initialMigration from '../drizzle/migrations/0000_flowery_quasar.sql?raw'
@@ -81,11 +85,14 @@ describe('analytics API', () => {
         ).bind(FIXED_USER_ID, 'q-due', 2500, 1, now, 1, 0),
       ])
 
-      const [summaryResponse, weeklyResponse, mistakesResponse] = await Promise.all([
-        fetchAnalytics('/analytics/summary'),
-        fetchAnalytics('/analytics/weekly'),
-        fetchAnalytics('/analytics/mistakes'),
-      ])
+      const [summaryResponse, weeklyResponse, heatmapResponse, mistakesResponse, activityResponse] =
+        await Promise.all([
+          fetchAnalytics('/analytics/summary'),
+          fetchAnalytics('/analytics/weekly'),
+          fetchAnalytics('/analytics/heatmap'),
+          fetchAnalytics('/analytics/mistakes'),
+          fetchAnalytics('/activity/recent'),
+        ])
 
       expect(summaryResponse.status).toBe(200)
       await expect(summaryResponse.json()).resolves.toMatchObject({
@@ -106,9 +113,42 @@ describe('analytics API', () => {
         weekly.days.find((entry) => entry.date === new Date(now).toISOString().slice(0, 10)),
       ).toMatchObject({ answerCount: 1 })
 
+      expect(heatmapResponse.status).toBe(200)
+      const heatmap = analyticsHeatmapResponseSchema.parse(await heatmapResponse.json())
+      expect(heatmap.days).toHaveLength(182)
+      expect(heatmap.days.reduce((total, entry) => total + entry.answerCount, 0)).toBe(2)
+
       expect(mistakesResponse.status).toBe(200)
       await expect(mistakesResponse.json()).resolves.toEqual({
         items: [{ questionId: 'q-1', incorrectRate: 50, answerCount: 2, incorrectAnswerCount: 1 }],
+      })
+
+      expect(activityResponse.status).toBe(200)
+      expect(recentActivityResponseSchema.parse(await activityResponse.json())).toEqual({
+        items: [
+          {
+            id: 'answer:answer-1',
+            type: 'answer_recorded',
+            occurredAt: now,
+            questionId: 'q-1',
+            lessonId: null,
+            isCorrect: true,
+          },
+          {
+            id: 'lesson-view:view-1',
+            type: 'lesson_viewed',
+            occurredAt: now,
+            lessonId: 'security-xss-01',
+          },
+          {
+            id: 'answer:answer-2',
+            type: 'answer_recorded',
+            occurredAt: now - day,
+            questionId: 'q-1',
+            lessonId: null,
+            isCorrect: false,
+          },
+        ],
       })
     } finally {
       nowSpy.mockRestore()
@@ -118,5 +158,11 @@ describe('analytics API', () => {
   it('requires the empty query contract', async () => {
     const response = await fetchAnalytics('/analytics/summary?range=week')
     expect(response.status).toBe(400)
+
+    const heatmapResponse = await fetchAnalytics('/analytics/heatmap?range=week')
+    expect(heatmapResponse.status).toBe(400)
+
+    const activityResponse = await fetchAnalytics('/activity/recent?range=week')
+    expect(activityResponse.status).toBe(400)
   })
 })
