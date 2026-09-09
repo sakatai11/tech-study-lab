@@ -3,7 +3,7 @@ import 'server-only'
 import { domainKeySchema } from '@tsl/shared'
 import { connection } from 'next/server'
 
-import { domainsToProgressViewModel } from '@/features/shared/domain-progress'
+import { domainsToProgressData } from '@/features/shared/domain-progress'
 import { createServerApiClient } from '@/lib/api'
 import { getLessonContent, getLessonRouteParams, getOrderedTopicRoutes } from '@/lib/content'
 
@@ -66,7 +66,7 @@ export async function loadDashboard(): Promise<DashboardViewModel> {
     const result = domainKeySchema.safeParse(route.domain)
     return result.success ? [{ domain: result.data, topic: route.topic, order: route.order }] : []
   })
-  const domainViewModel = domainsToProgressViewModel(domains, topicRoutes)
+  const domainViewModel = domainsToProgressData(domains, topicRoutes)
   const lessonTitles = new Map(
     getLessonRouteParams().flatMap(({ lesson }) => {
       const content = getLessonContent(lesson)

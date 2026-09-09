@@ -1,17 +1,8 @@
 import 'server-only'
 
-import type { DomainKey } from '@tsl/shared'
-
-import { ProgressSummaryCard } from '@/components/ui/progress-summary-card'
+import { DomainProgressCard } from '@/components/ui/domain-progress-card'
 
 import type { DashboardViewModel } from '../../view-model'
-
-const domainColors: Record<DomainKey, 'green' | 'blue' | 'purple' | 'orange'> = {
-  security: 'green',
-  frontend: 'blue',
-  backend: 'purple',
-  architecture: 'orange',
-}
 
 export function DashboardDomainProgress({
   domains,
@@ -30,26 +21,7 @@ export function DashboardDomainProgress({
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         {domains.map((domain) => (
-          <ProgressSummaryCard
-            action={
-              domain.firstTopicHref
-                ? { href: domain.firstTopicHref, label: '最初のトピック →' }
-                : { disabledLabel: '準備中' }
-            }
-            color={domainColors[domain.domain]}
-            detail={
-              <>
-                {domain.masteredQuestionCount} / {domain.totalQuestionCount} 問習得 ·{' '}
-                {domain.topicCount} topic · {domain.lessonCount} lesson
-              </>
-            }
-            eyebrow={domain.domain}
-            key={domain.domain}
-            progressValue={domain.masteryRate}
-            progressLabel={`${domain.label} の習得状況`}
-            title={domain.label}
-            value={`${domain.masteryRate}%`}
-          />
+          <DomainProgressCard domain={domain} key={domain.domain} />
         ))}
       </div>
     </section>

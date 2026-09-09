@@ -6,15 +6,15 @@ export type DomainTopicRoute = {
   order: number
 }
 
-export type DomainProgressViewModel = DomainsResponse['domains'][number] & {
+export type DomainProgressData = DomainsResponse['domains'][number] & {
   label: string
   firstTopicHref?: string
 }
 
-export function domainsToProgressViewModel(
+export function domainsToProgressData(
   response: DomainsResponse,
   topicRoutes: readonly DomainTopicRoute[] = [],
-): DomainProgressViewModel[] {
+): DomainProgressData[] {
   const firstTopicByDomain = new Map<DomainKey, DomainTopicRoute>()
   for (const route of topicRoutes) {
     const current = firstTopicByDomain.get(route.domain)

@@ -10,14 +10,7 @@ vi.mock('@/features/dashboard/server/components/dashboard-due-card', () => ({
 }))
 
 vi.mock('@/features/dashboard/server/components/dashboard-user-content', () => ({
-  DashboardUserContent: () => (
-    <>
-      <p>dashboard-user-content</p>
-      <a className="lg:hidden" href="/analytics">
-        すべて表示
-      </a>
-    </>
-  ),
+  DashboardUserContent: () => <p>dashboard-user-content</p>,
 }))
 
 vi.mock('@/features/dashboard/server/load-dashboard', () => ({ loadDashboardStatic }))
@@ -51,19 +44,5 @@ describe('DashboardPageContent', () => {
       'href',
       'http://localhost:3000/learn/security/xss/preventing-xss',
     )
-  })
-
-  it('provides a mobile analytics link from the dashboard', () => {
-    loadDashboardStatic.mockReturnValue({
-      continueHref: '/learn/security/xss/preventing-xss',
-      learnHref: '/learn/security/xss/preventing-xss',
-      quizHref: '/quiz/preventing-xss',
-    })
-
-    render(<DashboardPageContent />)
-
-    const analyticsLink = screen.getByRole('link', { name: 'すべて表示' })
-    expect(analyticsLink).toHaveProperty('href', 'http://localhost:3000/analytics')
-    expect(analyticsLink.className).toContain('lg:hidden')
   })
 })

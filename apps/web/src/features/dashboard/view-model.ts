@@ -5,7 +5,7 @@ import type {
   RecentActivityItem,
 } from '@tsl/shared'
 
-import type { DomainProgressViewModel } from '@/features/shared/domain-progress'
+import type { DomainProgressData } from '@/features/shared/domain-progress'
 
 export type DashboardStaticViewModel = {
   continueHref: string
@@ -23,9 +23,11 @@ export type DashboardActivityViewModel = RecentActivityItem & {
   lessonTitle: string | null
 }
 
+export type DashboardDomainViewModel = DomainProgressData
+
 export type DashboardViewModel = {
   summary: AnalyticsSummaryResponse
   heatmap: AnalyticsHeatmapResponse
-  domains: DomainProgressViewModel[]
+  domains: DashboardDomainViewModel[]
   activity: DashboardActivityViewModel[]
 }

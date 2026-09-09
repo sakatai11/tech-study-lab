@@ -568,7 +568,10 @@ describe('recentActivityResponseSchema', () => {
     ).toBe(false)
     expect(
       recentActivityResponseSchema.safeParse({
-        items: [item, { ...item, occurredAt: item.occurredAt - 1 }],
+        items: [
+          { ...item, id: 'answer-old', occurredAt: item.occurredAt - 1 },
+          { ...item, id: 'answer-new', occurredAt: item.occurredAt },
+        ],
       }).success,
     ).toBe(false)
     expect(

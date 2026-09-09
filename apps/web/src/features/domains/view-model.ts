@@ -1,7 +1,9 @@
-import type { DomainProgressViewModel } from '@/features/shared/domain-progress'
+import type { DomainProgressData } from '@/features/shared/domain-progress'
 
-export type { DomainProgressViewModel, DomainTopicRoute } from '@/features/shared/domain-progress'
+export type { DomainTopicRoute } from '@/features/shared/domain-progress'
+
+export type DomainViewModel = DomainProgressData
 
 export type DomainsViewModel = {
-  domains: DomainProgressViewModel[]
+  domains: DomainViewModel[]
 }
