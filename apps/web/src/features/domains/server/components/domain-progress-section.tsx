@@ -1,7 +1,8 @@
 import 'server-only'
 
+import { DomainProgressCard } from '@/features/domains/components/domain-progress-card'
+
 import type { DomainsViewModel } from '../../view-model'
-import { DomainProgressCard } from './domain-progress-card'
 
 export function DomainProgressSection({ viewModel }: { viewModel: DomainsViewModel }) {
   return (

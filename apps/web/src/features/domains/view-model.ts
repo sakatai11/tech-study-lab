@@ -1,8 +1,17 @@
-import type { DomainProgressData } from '@/features/shared/domain-progress'
+import type { DomainKey, DomainsResponse } from '@tsl/shared'
 
-export type { DomainTopicRoute } from '@/features/shared/domain-progress'
+export type DomainTopicRoute = {
+  domain: DomainKey
+  topic: string
+  order: number
+}
 
-export type DomainProgressViewModel = DomainProgressData
+type DomainSummary = DomainsResponse['domains'][number]
+
+export type DomainProgressViewModel = DomainSummary & {
+  label: string
+  firstTopicHref?: string
+}
 
 export type DomainsViewModel = {
   domains: DomainProgressViewModel[]

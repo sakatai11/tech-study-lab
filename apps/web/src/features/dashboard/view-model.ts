@@ -1,11 +1,11 @@
 import type {
   AnalyticsHeatmapResponse,
   AnalyticsSummaryResponse,
+  DomainKey,
+  DomainsResponse,
   DueCountResponse,
   RecentActivityItem,
 } from '@tsl/shared'
-
-import type { DomainProgressData } from '@/features/shared/domain-progress'
 
 export type DashboardStaticViewModel = {
   continueHref: string
@@ -23,7 +23,18 @@ export type DashboardActivityViewModel = RecentActivityItem & {
   lessonTitle: string | null
 }
 
-export type DashboardDomainViewModel = DomainProgressData
+type DomainSummary = DomainsResponse['domains'][number]
+
+export type DashboardDomainViewModel = DomainSummary & {
+  label: string
+  firstTopicHref?: string
+}
+
+export type DashboardTopicRoute = {
+  domain: DomainKey
+  topic: string
+  order: number
+}
 
 export type DashboardViewModel = {
   summary: AnalyticsSummaryResponse

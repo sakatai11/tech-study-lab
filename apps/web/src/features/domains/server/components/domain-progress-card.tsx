@@ -1,7 +1,7 @@
 import 'server-only'
 
-export { DomainProgressCard } from '@/components/ui/domain-progress-card'
+export { DomainProgressCard } from '@/features/domains/components/domain-progress-card'
 export type {
   DomainProgressCardData,
   DomainProgressCardProps,
-} from '@/components/ui/domain-progress-card'
+} from '@/features/domains/components/domain-progress-card'

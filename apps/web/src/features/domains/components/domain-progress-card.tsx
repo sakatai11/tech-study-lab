@@ -1,6 +1,6 @@
-import type { DomainKey } from '@tsl/shared'
+import type { DomainKey, DomainsResponse } from '@tsl/shared'
 
-import { ProgressSummaryCard } from './progress-summary-card'
+import { ProgressSummaryCard } from '@/components/ui/progress-summary-card'
 
 const domainColors: Record<DomainKey, 'green' | 'blue' | 'purple' | 'orange'> = {
   security: 'green',
@@ -9,14 +9,11 @@ const domainColors: Record<DomainKey, 'green' | 'blue' | 'purple' | 'orange'> = 
   architecture: 'orange',
 }
 
-export type DomainProgressCardData = {
-  domain: DomainKey
+type DomainSummary = DomainsResponse['domains'][number]
+
+/** Domains feature が公開する表示用カードの入力契約。 */
+export type DomainProgressCardData = DomainSummary & {
   label: string
-  masteredQuestionCount: number
-  totalQuestionCount: number
-  masteryRate: number
-  topicCount: number
-  lessonCount: number
   firstTopicHref?: string
 }
 
