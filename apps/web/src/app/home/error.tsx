@@ -34,6 +34,12 @@ export default function HomeError({ error, reset }: { error: Error; reset: () =>
             >
               ホームへ
             </Link>
+            <Link
+              className="inline-flex min-h-11 items-center justify-center rounded-xl border-2 border-border px-4 py-2.5 font-bold text-ink transition-colors hover:bg-well"
+              href="/analytics"
+            >
+              学習分析を見る
+            </Link>
           </div>
         </Card>
       </main>

@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { DomainProgressCard } from '@/features/domains/components/domain-progress-card'
+import { DomainProgressCard } from '@/features/domains/client/components/domain-progress-card'
 
 import type { DomainsViewModel } from '../../view-model'
 

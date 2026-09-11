@@ -1,3 +1,5 @@
+'use client'
+
 import type { DomainKey, DomainsResponse } from '@tsl/shared'
 
 import { ProgressSummaryCard } from '@/components/ui/progress-summary-card'
