@@ -105,6 +105,20 @@ check_absent_contract() {
   fi
 }
 
+check_order_contract() {
+  label=$1
+  file=$2
+  first=$3
+  second=$4
+  first_line=$(awk -v marker="$first" 'index($0, marker) { print NR; exit }' "$file")
+  second_line=$(awk -v marker="$second" 'index($0, marker) { print NR; exit }' "$file")
+
+  if [ -z "$first_line" ] || [ -z "$second_line" ] || [ "$first_line" -ge "$second_line" ]; then
+    printf '%s\n' "agent contract order check failed: $label ($file)" >&2
+    exit 1
+  fi
+}
+
 printf '%s\n' "Checking agent contract consistency..."
 
 # 方針: 手順の逐語表現は固定しない。より良い言い回しへの改善を阻害するため。
@@ -468,13 +482,27 @@ check_agent_contract "knowledge graph is always enabled" 'このフローでは 
 check_agent_contract "architecture mode is explicit" '`architectureMode: knowledge-graph`' "$SKILL"
 check_agent_contract "develop-v2 is the integration base" 'Issue作業ブランチは `develop-v2` から切る' "$SKILL"
 check_agent_contract "brief records base branch" '`baseBranch: develop-v2`' "$SKILL"
-check_agent_contract "effective base is reproducible" '`git merge-base develop-v2 HEAD`' "$SKILL"
+check_agent_contract "effective base is reproducible" '`git merge-base origin/develop-v2 HEAD`' "$SKILL"
+check_agent_contract "latest remote develop-v2 is fetched" '`git fetch origin develop-v2`' "$SKILL"
+check_agent_contract "latest remote develop-v2 commit is resolved" '`git rev-parse --verify origin/develop-v2^{commit}`' "$SKILL"
+check_agent_contract "work branch is prepared from refreshed integration branch" '`origin/develop-v2` を起点に統合ブランチ `develop-v2` をfast-forwardで更新して新規Issue作業ブランチを切る。' "$SKILL"
+check_agent_contract "existing issue branches take normal develop-v2 updates" '既存Issue作業ブランチを継続する場合は、最新 `develop-v2` を通常のmergeで取り込んでから準備完了とする。' "$SKILL"
+check_agent_contract "non-ancestor work branches stop" '非祖先の場合は古いまたは別系統の起点として実装へ進まず停止する。' "$SKILL"
+check_agent_contract "effective base uses the remote ref" '`git merge-base origin/develop-v2 HEAD` を実行し、その単一結果を `effectiveBase` として固定する。' "$SKILL"
+check_order_contract "remote commit resolution precedes work branch preparation" "$SKILL" '`git rev-parse --verify origin/develop-v2^{commit}` で存在とcommit解決を確認する。' '`origin/develop-v2` を起点に統合ブランチ `develop-v2` をfast-forwardで更新して新規Issue作業ブランチを切る。'
+check_order_contract "work branch preparation precedes effective base calculation" "$SKILL" '`origin/develop-v2` を起点に統合ブランチ `develop-v2` をfast-forwardで更新して新規Issue作業ブランチを切る。' '祖先性検証後に `git merge-base origin/develop-v2 HEAD` を実行し'
+check_order_contract "effective base follows work branch ancestry validation" "$SKILL" '作業ブランチ準備後、必ず `git merge-base --is-ancestor origin/develop-v2 HEAD` を実行する。' '祖先性検証後に `git merge-base origin/develop-v2 HEAD` を実行し'
 check_agent_contract "architecture reference is discoverable" 'references/architecture-context.md' "$SKILL"
 check_agent_contract "architecture preflight checks snapshot" 'pnpm architecture:check' "$ARCHITECTURE_CONTEXT"
 check_agent_contract "architecture preflight tests extractor" 'pnpm architecture:test' "$ARCHITECTURE_CONTEXT"
 check_agent_contract "query starts narrow" '最初は depth 0〜2 に絞り' "$ARCHITECTURE_CONTEXT"
 check_agent_contract "investigation records graph evidence" 'graph evidence / graph limitations' "$ARCHITECTURE_CONTEXT"
 check_agent_contract "orchestrator owns snapshot extraction" 'オーケストレーターが次を行う' "$ARCHITECTURE_CONTEXT"
+check_agent_contract "architecture context refreshes remote base" '`git fetch origin develop-v2`' "$ARCHITECTURE_CONTEXT"
+check_agent_contract "architecture context resolves remote commit" '`git rev-parse --verify origin/develop-v2^{commit}`' "$ARCHITECTURE_CONTEXT"
+check_agent_contract "architecture context rejects non-ancestor heads" '非祖先の場合は古いまたは別系統の起点として実装へ進まず停止する。' "$ARCHITECTURE_CONTEXT"
+check_order_contract "architecture context prepares branch before effective base" "$ARCHITECTURE_CONTEXT" '`origin/develop-v2` を起点に統合ブランチ `develop-v2` をfast-forwardで更新して新規Issue作業ブランチを切る。' '祖先性検証後に `git merge-base origin/develop-v2 HEAD` を実行し'
+check_order_contract "architecture context derives effective base after ancestry validation" "$ARCHITECTURE_CONTEXT" '作業ブランチ準備後、必ず `git merge-base --is-ancestor origin/develop-v2 HEAD` を実行する。' '祖先性検証後に `git merge-base origin/develop-v2 HEAD` を実行し'
 check_agent_contract "review uses effective base" '`git diff <effectiveBase>...HEAD`' .ai/agents/reviewer.md
 check_agent_contract "investigator reports architecture evidence" '### 8. Architecture evidence' .ai/agents/issue-investigator.md
 check_agent_contract "developer does not hand edit snapshot" '`architecture/graph.json` は手編集しない' .ai/agents/developer.md

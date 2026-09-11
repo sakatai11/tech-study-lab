@@ -5,7 +5,10 @@
 ## 基底と完了条件
 
 - Issue作業ブランチの統合ブランチは `develop-v2` とし、開始時に `baseBranch: develop-v2` を記録する。既存の `develop` 系統は変更せず、release-main-pr の `develop` → `main` 運用にも触れない。
-- 開始時の clean な `develop-v2` 起点を確認し、`git merge-base develop-v2 HEAD` で算出・検証したコミットを `effectiveBase` として固定する。レビューの `committedRange` は常に `<effectiveBase>...HEAD` とする。
+- 作業ツリーが clean (`git status --short` が空) であることを確認してから `git fetch origin develop-v2` を実行し、最新 `origin/develop-v2` の存在とcommitを `git rev-parse --verify origin/develop-v2^{commit}` で解決・検証する。取得・解決できない場合は停止する。
+- `origin/develop-v2` を起点に統合ブランチ `develop-v2` をfast-forwardで更新して新規Issue作業ブランチを切る。既存Issue作業ブランチを継続する場合は、最新 `develop-v2` を通常のmergeで取り込んでから準備完了とする。履歴の破壊的な書き換えやforce操作は行わない。
+- 作業ブランチ準備後、必ず `git merge-base --is-ancestor origin/develop-v2 HEAD` を実行する。非祖先の場合は古いまたは別系統の起点として実装へ進まず停止する。
+- 祖先性検証後に `git merge-base origin/develop-v2 HEAD` を実行し、その単一結果を `effectiveBase` として固定する。レビューの `committedRange` は常に `<effectiveBase>...HEAD` とする。
 - 実行記録とレビュー用ブリーフには `architectureMode: knowledge-graph`、`baseBranch: develop-v2`、`effectiveBase`、対象を絞った graph evidence、graph limitations を含める。
 - 完了条件は、snapshotを再生成・差分照合し、通常の typecheck / lint / test / build に加えて `architecture:check` と `architecture:test` を通過した検証済みコミット列を `develop-v2` 向けPRへ渡すこと。PRのマージは人間が判断する。
 

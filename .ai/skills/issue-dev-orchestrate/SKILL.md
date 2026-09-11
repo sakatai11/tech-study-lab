@@ -77,7 +77,7 @@ GitHub issue の仕様を、レビュー済み・品質ゲート通過済みの�
 
 第1引数は必須のIssue番号である。Issue番号がない場合は停止して確認する。開始時に `.ai/runtime-compatibility.md` を読み、利用可能な plan/todo 機能で進捗を管理する。Codexのスキルライフサイクルログは `.ai/runtime-compatibility.md` の「設定とログ」に従う。
 
-ブランチ操作より先に `references/architecture-context.md` を読み、`pnpm architecture:check` と `pnpm architecture:test` で基盤を確認する。`git status --short` が空であることを確認し、`baseBranch: develop-v2` と `architectureMode: knowledge-graph` を実行記録へ固定する。`git merge-base develop-v2 HEAD` で算出・検証した単一の `effectiveBase`、対象を絞った graph evidence、graph limitations も記録する。作業ツリーが汚れている場合や基盤確認に失敗した場合は実装へ進まない。
+ブランチ操作より先に `references/architecture-context.md` を読み、`pnpm architecture:check` と `pnpm architecture:test` で基盤を確認する。`git status --short` が空であることを確認し、`baseBranch: develop-v2` と `architectureMode: knowledge-graph` を実行記録へ固定する。`effectiveBase` は作業ブランチ準備と `origin/develop-v2` の祖先性検証が完了するまで算出・固定しない。作業ツリーが汚れている場合や基盤確認に失敗した場合は実装へ進まない。
 
 ホストランタイムから別モデルCLI、正規化エージェント、送信先を一意に決める。`reviewPolicy` は `always` / `risk-based` / `never` のいずれかで、ユーザー指定がなければ`risk-based`とする。`never`はユーザーが明示した場合だけ選べる。`<scratchpad>` と認証preflightの扱いは runtime の定義に従う。外部送信同意は実際の対象を列挙できるレビュー直前まで取得しない。
 
@@ -85,7 +85,14 @@ GitHub issue の仕様を、レビュー済み・品質ゲート通過済みの�
 
 ### フェーズ0: 準備
 
-Issueの内容を把握し、最新の `origin/develop-v2` を取り込んだ `develop-v2` 起点のIssue作業ブランチを準備する。`architectureMode: knowledge-graph`、`baseBranch: develop-v2`、`effectiveBase`、`reviewPolicy`、別モデルCLI、正規化エージェント、送信先を決めて記録する。作業開始時に作業ツリーが汚れている場合、または architecture preflight が通らない場合は、ユーザーの変更を動かさず停止して報告する。ブランチの作成、GitHub認証、CLI認証の条件は参照先へ委ねる。
+Issueの内容を把握し、次の順序で `develop-v2` 起点のIssue作業ブランチを準備する。
+
+- clean確認後、`git fetch origin develop-v2` で最新のリモート追跡参照を取得し、`git rev-parse --verify origin/develop-v2^{commit}` で存在とcommit解決を確認する。取得・解決できない場合は停止する。
+- `origin/develop-v2` を起点に統合ブランチ `develop-v2` をfast-forwardで更新して新規Issue作業ブランチを切る。既存Issue作業ブランチを継続する場合は、最新 `develop-v2` を通常のmergeで取り込んでから準備完了とする。履歴の破壊的な書き換えやforce操作は行わない。
+- 作業ブランチ準備後、必ず `git merge-base --is-ancestor origin/develop-v2 HEAD` を実行する。非祖先の場合は古いまたは別系統の起点として実装へ進まず停止する。
+- 祖先性検証後に `git merge-base origin/develop-v2 HEAD` を実行し、その単一結果を `effectiveBase` として固定する。`architectureMode: knowledge-graph`、`baseBranch: develop-v2`、`reviewPolicy`、別モデルCLI、正規化エージェント、送信先も記録する。
+
+作業開始時に作業ツリーが汚れている場合、または architecture preflight が通らない場合は、ユーザーの変更を動かさず停止して報告する。ブランチの作成、GitHub認証、CLI認証の条件は参照先へ委ねる。
 
 ### フェーズ1: 調査
 
