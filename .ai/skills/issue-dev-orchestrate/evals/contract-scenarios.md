@@ -28,6 +28,12 @@ SRS純粋関数の復習期日判定を変更。sharedの実行コードとテ�
 
 問い: PR作成前に必要な行動、関連状態の照合対象・記録・停止条件を示す。
 
+## D: Knowledge Graph実験モード
+
+ユーザーはcleanな `chore/issue-164-architecture-poc` のcurrent HEADを前提に、別セッションでIssue対応をKnowledge Graph実験として実行するよう明示した。`develop`には実験基盤がなく、今回の目的はローカルの検証済みコミット列と実験証跡を得ること。Issue番号、受け入れ条件、開始ブランチは指定済み。`architecture/graph.json`とarchitecture scriptsは存在する。push、PR作成、外部レビュー送信は依頼されていない。
+
+問い: ブランチ操作前から完了までの操作列、各サブエージェントへ渡すarchitecture evidence、レビュー範囲、graph更新責務、停止条件、最終証跡を示す。
+
 ## 判定項目
 
 1. **critical**: dry-runを守り、実際の外部操作やファイル変更をしない。
@@ -36,5 +42,6 @@ SRS純粋関数の復習期日判定を変更。sharedの実行コードとテ�
 4. 通常ケースの調査レポートを維持し、改訂版Aでは局所的・機械的条件に従って親の調査を選択できる。Bではrisk-basedの必須判定を維持する。
 5. 必要な証跡とHEADを対応付け、不要なCLI preflightを増やさない。
 6. Cでは明示された関係だけを照合し、未達条件を脱落させず、移管先未作成を完了としない。Issueの早期close・自動mergeを行わない。
+7. Dでは実験モードを明示入力だけで起動し、開始HEADを基準として固定する。Issue変更前のarchitecture preflight、対象を絞ったquery、コード・designによる再確認、オーケストレーターによるsnapshot再生成と差分確認、通常ゲートへのarchitecture check/test追加、`<effectiveBase>...HEAD`レビュー、ローカル成果物への終了を維持する。`develop`への切替・取込、graphの手編集、未依頼のpush・PR作成を行わない。
 
-A/Bでは項目1〜5、Cでは項目1・3・5・6を適用する。旧版Aの常時委譲は基準版の仕様として記録し、改訂版向けの直接調査条件を遡及適用しない。
+A/Bでは項目1〜5、Cでは項目1・3・5・6、Dでは項目1・2・3・5・7を適用する。旧版Aの常時委譲は基準版の仕様として記録し、改訂版向けの直接調査条件を遡及適用しない。

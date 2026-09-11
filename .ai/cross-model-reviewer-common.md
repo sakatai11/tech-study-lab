@@ -18,7 +18,7 @@
 
 ## Discovery / verification
 
-- `discovery`: internal reviewer と別モデルCLIが、どちらも `develop...HEAD` の**全累積差分**を発見モードで読む。結果をFinding台帳へ統合する。
+- `discovery`: internal reviewer と別モデルCLIが、どちらも同じ effective base から current HEAD までの**全累積差分**を発見モードで読む。通常モードは `develop...HEAD` の**全累積差分**、明示された Knowledge Graph 実験モードはブリーフの `<effectiveBase>...HEAD` を使う。結果をFinding台帳へ統合する。
 - `verification`: Finding台帳、修正要約、修正コミット範囲を必須ブリーフとする。internal verification が current HEAD を `approve` した場合だけ、別モデルCLI verification を直接実行する。
 - verification で current loop に追加できる新規Findingは、修正起因回帰、明確な受け入れ条件未達、重大なsecurity/data destructionだけである。独立改善は「別issue候補（範囲外）」または追加改善に残し、判定件数・修正対象に含めない。
 
@@ -28,7 +28,7 @@ discovery と verification の全レビュー主体には、同じレビュー�
 
 ブリーフの基本5項目（`targetFeature`、`inScopeFiles`、`acceptanceCriteria`、`outOfScopePolicy`、`committedRange`）は、`.ai/review-guidelines.md` の「レビュー範囲」に従う。同節の `inScopeFiles` に関する規則も継承し、この文書では再定義しない。
 
-この共通定義が追加する契約は、`reviewStage`（`discovery` または `verification`）と、`reviewPolicy` / `externalReviewDecision` / 規則ID / 具体的根拠 / `decisionHead` である。
+この共通定義が追加する契約は、`reviewStage`（`discovery` または `verification`）と、`reviewPolicy` / `externalReviewDecision` / 規則ID / 具体的根拠 / `decisionHead` である。Knowledge Graph 実験モードではさらに `architectureMode: experimental` / `experimentBaseBranch` / `experimentBaseCommit` / `effectiveBase` / graph evidence / graph limitations を含める。
 
 verification には上記に加えて、issue固有のFinding台帳、修正要約、修正コミット範囲を含める。`committedRange` は discovery と verification のどちらでもレビュー対象となる累積差分であり、Findingが0件または今回の修正コミットがないことを理由に空へしない。修正コミット範囲は別フィールドとして「修正なし」と明示できる。フィールド不足・矛盾、または実際のコミット済み差分との不一致は推測で補わず「判定: error」とする。
 

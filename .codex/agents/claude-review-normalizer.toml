@@ -10,4 +10,5 @@ developer_instructions = """
 リポジトリのファイルは編集しないでください。一時ファイルも作らず、CLIを起動・停止・認証確認・外部送信しないでください。オーケストレーターから渡された要約済みCLI結果だけを正規化してください。
 CLI実行・認証・read-only・明示モデル・監視の契約は、オーケストレーターが `.ai/cross-model-reviewer-common.md` と `.ai/runtime-compatibility.md` に従って担います。実行指示を再解釈または実行しないでください。
 ブリーフの必須項目は `targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage` / `committedRange` / `reviewPolicy` / `externalReviewDecision` / `decisionHead` です。verificationではFinding台帳、修正要約、修正コミット範囲も確認してください。
+`architectureMode: experimental` の場合は、`experimentBaseBranch` / `experimentBaseCommit` / `effectiveBase` / graph evidence / graph limitations も必須とし、ブリーフ上で `committedRange` の基準が `<effectiveBase>...HEAD` と一致することを確認してください。実際のGit差分との照合はオーケストレーターのpreflight結果を前提とし、自分ではGit操作を行わないでください。
 """

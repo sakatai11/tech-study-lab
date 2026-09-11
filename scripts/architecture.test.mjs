@@ -3,6 +3,60 @@ import test from 'node:test'
 import { assertFresh, extract, query, readSources, validateGraph } from './architecture.mjs'
 
 const sources = readSources(process.cwd())
+test('tracks shared top-level functions and excludes function-local variables', () => {
+  const graph = extract(sources)
+  const review = 'symbol:packages/shared/src/srs/sm2.ts#reviewSrs'
+  assert(graph.nodes.some((node) => node.id === review))
+  assert(graph.edges.some((edge) => edge.relation === 'uses-symbol' && edge.to === review))
+  assert(!graph.nodes.some((node) => node.id === 'symbol:packages/shared/src/schema/api.ts#year'))
+})
+
+test('preserves qualified table type provenance', () => {
+  const graph = extract(sources)
+  assert(
+    graph.edges.some(
+      (edge) =>
+        edge.from === 'symbol:packages/shared/src/db/schema.ts#User' &&
+        edge.relation === 'derives-schema' &&
+        edge.to === 'symbol:packages/shared/src/db/schema.ts#users',
+    ),
+  )
+})
+
+test('resolves direct shared declarations by file and rejects ambiguous barrel names', () => {
+  const changed = {
+    ...sources,
+    'packages/shared/src/one.ts': 'export const duplicate = 1',
+    'packages/shared/src/two.ts': 'export const duplicate = 2',
+    'apps/api/src/example.ts': "import { duplicate } from '../../../packages/shared/src/one'",
+  }
+  const graph = extract(changed)
+  assert(
+    graph.edges.some(
+      (edge) =>
+        edge.from === 'apps/api/src/example.ts' &&
+        edge.relation === 'uses-symbol' &&
+        edge.to === 'symbol:packages/shared/src/one.ts#duplicate',
+    ),
+  )
+  assert.throws(
+    () =>
+      extract({ ...changed, 'apps/api/src/example.ts': "import { duplicate } from '@tsl/shared'" }),
+    /Ambiguous shared symbol/,
+  )
+})
+
+test('records each mount token line and direct root handlers', () => {
+  const graph = extract(sources)
+  const lines = sources['apps/api/src/app.ts'].split('\n')
+  for (const edge of graph.edges.filter((edge) => edge.relation === 'mounts')) {
+    assert(lines[edge.source.line - 1].includes(`.route('${edge.prefix}'`))
+  }
+  const health = graph.nodes.find((node) => node.id === 'endpoint:GET /health')
+  assert(health)
+  assert(lines[health.source.line - 1].includes(".get('/health'"))
+})
+
 test('links imported route calls, service deps parameters and DAL return types', () => {
   const graph = extract(sources)
   const service = 'symbol:apps/api/src/services/review-service.ts#getDueCount'

@@ -120,10 +120,51 @@ export function extract(sources) {
   )
   const imports = new Map()
   const symbols = new Map()
+  const exportedSymbols = new Map()
+  const sharedSymbol = (file, name) => {
+    const direct = symbols.get(`${file}#${name}`)
+    if (direct) return direct
+    const candidates = exportedSymbols.get(name) ?? []
+    if (candidates.length > 1) throw new Error(`Ambiguous shared symbol: ${name}`)
+    return candidates[0]
+  }
   const apiSymbols = new Map()
   for (const [file, sf] of parsed) {
     const named = new Map()
     imports.set(file, named)
+    if (file.startsWith('packages/shared/')) {
+      for (const statement of sf.statements) {
+        const declarations = ts.isVariableStatement(statement)
+          ? statement.declarationList.declarations
+          : [statement]
+        for (const node of declarations) {
+          if (
+            !(
+              ts.isVariableDeclaration(node) ||
+              ts.isTypeAliasDeclaration(node) ||
+              ts.isInterfaceDeclaration(node) ||
+              ts.isFunctionDeclaration(node)
+            ) ||
+            !node.name ||
+            !ts.isIdentifier(node.name)
+          )
+            continue
+          const key = `${file}#${node.name.text}`
+          if (symbols.has(key)) throw new Error(`Duplicate shared declaration: ${key}`)
+          const id = add(`symbol:${key}`, 'symbol', sourceAt(sf, node), {
+            declaration: node.getText(sf),
+          })
+          symbols.set(key, id)
+          if (
+            statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)
+          ) {
+            const candidates = exportedSymbols.get(node.name.text) ?? []
+            exportedSymbols.set(node.name.text, [...candidates, id])
+          }
+          edge(file, 'implements', id, sourceAt(sf, node))
+        }
+      }
+    }
     if (/^apps\/api\/src\/(services|dal)\//.test(file)) {
       for (const node of sf.statements) {
         if (
@@ -156,17 +197,6 @@ export function extract(sources) {
               node: binding,
             })
       }
-      if (
-        file.startsWith('packages/shared/') &&
-        (ts.isVariableDeclaration(node) || ts.isTypeAliasDeclaration(node)) &&
-        ts.isIdentifier(node.name)
-      ) {
-        const id = add(`symbol:${file}#${node.name.text}`, 'symbol', sourceAt(sf, node), {
-          declaration: node.getText(sf),
-        })
-        symbols.set(node.name.text, id)
-        edge(file, 'implements', id, sourceAt(sf, node))
-      }
     })
   }
   for (const [file, sf] of parsed) {
@@ -194,25 +224,33 @@ export function extract(sources) {
         const target = apiSymbols.get(`${imported.target}#${imported.name}`)
         if (target) edge(file, 'calls-symbol', target, sourceAt(sf, node))
       })
-    for (const binding of imports.get(file).values())
-      if (binding.target.startsWith('packages/shared/') && symbols.has(binding.name))
-        edge(file, 'uses-symbol', symbols.get(binding.name), sourceAt(sf, binding.node))
+    for (const binding of imports.get(file).values()) {
+      if (!binding.target.startsWith('packages/shared/')) continue
+      const target = sharedSymbol(binding.target, binding.name)
+      if (target) edge(file, 'uses-symbol', target, sourceAt(sf, binding.node))
+    }
     if (file.startsWith('packages/shared/'))
-      visit(sf, (node) => {
+      for (const node of sf.statements) {
         if (ts.isTypeAliasDeclaration(node))
           visit(node.type, (part) => {
-            if (ts.isTypeQueryNode(part) && symbols.has(part.exprName.getText(sf)))
+            if (!ts.isTypeQueryNode(part)) return
+            let root = part.exprName
+            while (ts.isQualifiedName(root)) root = root.left
+            if (!ts.isIdentifier(root)) return
+            const binding = imports.get(file).get(root.text)
+            const target = sharedSymbol(binding?.target ?? file, binding?.name ?? root.text)
+            if (target)
               edge(
-                symbols.get(node.name.text),
+                symbols.get(`${file}#${node.name.text}`),
                 'derives-schema',
-                symbols.get(part.exprName.getText(sf)),
+                target,
                 sourceAt(sf, part),
               )
           })
-      })
+      }
   }
   const app = parsed.get('apps/api/src/app.ts')
-  const mounted = []
+  const mounted = [{ prefix: '', target: app.fileName }]
   visit(app, (node) => {
     if (
       !ts.isCallExpression(node) ||
@@ -233,7 +271,7 @@ export function extract(sources) {
     }
     if (prefix === undefined) throw new Error('Unsupported dynamic mount path')
     mounted.push({ prefix, target })
-    edge(app.fileName, 'mounts', target, sourceAt(app, node), { prefix })
+    edge(app.fileName, 'mounts', target, sourceAt(app, node.expression.name), { prefix })
   })
   const methods = new Set(['get', 'post', 'put', 'patch', 'delete', 'options', 'head'])
   for (const { prefix, target } of mounted)

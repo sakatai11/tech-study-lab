@@ -663,6 +663,16 @@
       "path": "/domains"
     },
     {
+      "id": "endpoint:GET /health",
+      "kind": "endpoint",
+      "source": {
+        "file": "apps/api/src/app.ts",
+        "line": 87
+      },
+      "method": "GET",
+      "path": "/health"
+    },
+    {
       "id": "endpoint:GET /review/queue",
       "kind": "endpoint",
       "source": {
@@ -1097,76 +1107,40 @@
       "declaration": "type ContentPath = {\n  domain: string\n  topic: string\n  filename: string\n  relativePath: string\n}"
     },
     {
-      "id": "symbol:packages/shared/src/content-parser.ts#file",
+      "id": "symbol:packages/shared/src/content-parser.ts#contentPathFor",
       "kind": "symbol",
       "source": {
         "file": "packages/shared/src/content-parser.ts",
-        "line": 148
+        "line": 45
       },
-      "declaration": "file"
+      "declaration": "function contentPathFor(relativePath: string): ContentPath {\n  const segments = relativePath.split('/')\n  const [domain, topic, filename] = segments\n\n  if (\n    segments.length !== 3 ||\n    !domain ||\n    !topic ||\n    !filename ||\n    relativePath.startsWith('/') ||\n    segments.some((segment) => segment === '.' || segment === '..' || segment.length === 0)\n  ) {\n    return invalidContent(relativePath, 'must be a file directly below <domain>/<topic>')\n  }\n\n  if (!domainKeySchema.safeParse(domain).success) {\n    return invalidContent(relativePath, `unknown domain directory \"${domain}\"`)\n  }\n\n  if (!filename.endsWith('.md')) {\n    return invalidContent(relativePath, 'must be a Markdown file')\n  }\n\n  return { domain, topic, filename, relativePath }\n}"
     },
     {
-      "id": "symbol:packages/shared/src/content-parser.ts#filenameLessonId",
+      "id": "symbol:packages/shared/src/content-parser.ts#createContentBundle",
       "kind": "symbol",
       "source": {
         "file": "packages/shared/src/content-parser.ts",
-        "line": 113
+        "line": 140
       },
-      "declaration": "filenameLessonId = path.filename.slice(0, -'.md'.length)"
+      "declaration": "export function createContentBundle(files: readonly ParsedContentSourceFile[]): ContentBundle {\n  const topics: BundledTopic[] = []\n  const lessons: BundledLesson[] = []\n  const questions: McqQuestion[] = []\n  const topicPaths = new Map<string, string>()\n  const lessonPaths = new Map<string, string>()\n  const questionPaths = new Map<string, string>()\n\n  for (const file of [...files].sort((a, b) =>\n    a.relativePath.localeCompare(b.relativePath, 'en'),\n  )) {\n    const path = contentPathFor(file.relativePath)\n\n    if (path.filename === 'index.md') {\n      const topic = topicFor(path, file)\n      const topicKey = `${path.domain}/${topic.topic}`\n      const firstPath = topicPaths.get(topicKey)\n      if (firstPath) {\n        invalidContent(path.relativePath, `topic is also defined in \"${firstPath}\"`)\n      }\n\n      topicPaths.set(topicKey, path.relativePath)\n      topics.push(topic)\n      continue\n    }\n\n    const lesson = lessonFor(path, file)\n    const firstLessonPath = lessonPaths.get(lesson.lessonId)\n    if (firstLessonPath) {\n      invalidContent(\n        path.relativePath,\n        `lessonId \"${lesson.lessonId}\" is also defined in \"${firstLessonPath}\"`,\n      )\n    }\n\n    lessonPaths.set(lesson.lessonId, path.relativePath)\n    lessons.push(lesson)\n\n    for (const question of lesson.questions) {\n      const firstPath = questionPaths.get(question.id)\n      if (firstPath) {\n        invalidContent(\n          path.relativePath,\n          `questionId \"${question.id}\" is also defined in \"${firstPath}\"`,\n        )\n      }\n\n      questionPaths.set(question.id, path.relativePath)\n      questions.push(question)\n    }\n  }\n\n  topics.sort((a, b) => a.relativePath.localeCompare(b.relativePath, 'en'))\n  lessons.sort((a, b) => a.lessonId.localeCompare(b.lessonId, 'en'))\n\n  return { topics, lessons, questions }\n}"
     },
     {
-      "id": "symbol:packages/shared/src/content-parser.ts#firstLessonPath",
+      "id": "symbol:packages/shared/src/content-parser.ts#invalidContent",
       "kind": "symbol",
       "source": {
         "file": "packages/shared/src/content-parser.ts",
-        "line": 167
+        "line": 41
       },
-      "declaration": "firstLessonPath = lessonPaths.get(lesson.lessonId)"
+      "declaration": "function invalidContent(relativePath: string, message: string): never {\n  throw new Error(`${relativePath}: ${message}`)\n}"
     },
     {
-      "id": "symbol:packages/shared/src/content-parser.ts#firstPath",
+      "id": "symbol:packages/shared/src/content-parser.ts#lessonFor",
       "kind": "symbol",
       "source": {
         "file": "packages/shared/src/content-parser.ts",
-        "line": 156
+        "line": 90
       },
-      "declaration": "firstPath = topicPaths.get(topicKey)"
-    },
-    {
-      "id": "symbol:packages/shared/src/content-parser.ts#lesson",
-      "kind": "symbol",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 99
-      },
-      "declaration": "lesson = lessonResult.data"
-    },
-    {
-      "id": "symbol:packages/shared/src/content-parser.ts#lessonPaths",
-      "kind": "symbol",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 145
-      },
-      "declaration": "lessonPaths = new Map<string, string>()"
-    },
-    {
-      "id": "symbol:packages/shared/src/content-parser.ts#lessonResult",
-      "kind": "symbol",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 91
-      },
-      "declaration": "lessonResult = validatedLessonFrontmatterSchema.safeParse(file.frontmatter)"
-    },
-    {
-      "id": "symbol:packages/shared/src/content-parser.ts#lessons",
-      "kind": "symbol",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 142
-      },
-      "declaration": "lessons: BundledLesson[] = []"
+      "declaration": "function lessonFor(path: ContentPath, file: ParsedContentSourceFile): BundledLesson {\n  const lessonResult = validatedLessonFrontmatterSchema.safeParse(file.frontmatter)\n  if (!lessonResult.success) {\n    return invalidContent(\n      path.relativePath,\n      lessonResult.error.issues.map((issue) => issue.message).join('; '),\n    )\n  }\n\n  const lesson = lessonResult.data\n  if (lesson.domain !== path.domain) {\n    return invalidContent(\n      path.relativePath,\n      `domain frontmatter \"${lesson.domain}\" does not match directory \"${path.domain}\"`,\n    )\n  }\n  if (lesson.topic !== path.topic) {\n    return invalidContent(\n      path.relativePath,\n      `topic frontmatter \"${lesson.topic}\" does not match directory \"${path.topic}\"`,\n    )\n  }\n\n  const filenameLessonId = path.filename.slice(0, -'.md'.length)\n  if (lesson.lessonId !== filenameLessonId) {\n    return invalidContent(\n      path.relativePath,\n      `lessonId \"${lesson.lessonId}\" does not match filename \"${path.filename}\"`,\n    )\n  }\n\n  const questions = lesson.questions.map((question) => {\n    const questionResult = validatedMcqSchema.safeParse(question)\n    if (!questionResult.success) {\n      return invalidContent(\n        path.relativePath,\n        questionResult.error.issues.map((issue) => issue.message).join('; '),\n      )\n    }\n\n    return questionResult.data\n  })\n\n  return { ...lesson, questions, relativePath: path.relativePath, body: file.body }\n}"
     },
     {
       "id": "symbol:packages/shared/src/content-parser.ts#ParsedContentSourceFile",
@@ -1178,103 +1152,13 @@
       "declaration": "export type ParsedContentSourceFile = {\n  relativePath: string\n  frontmatter: unknown\n  body: string\n}"
     },
     {
-      "id": "symbol:packages/shared/src/content-parser.ts#path",
+      "id": "symbol:packages/shared/src/content-parser.ts#topicFor",
       "kind": "symbol",
       "source": {
         "file": "packages/shared/src/content-parser.ts",
-        "line": 151
+        "line": 71
       },
-      "declaration": "path = contentPathFor(file.relativePath)"
-    },
-    {
-      "id": "symbol:packages/shared/src/content-parser.ts#question",
-      "kind": "symbol",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 178
-      },
-      "declaration": "question"
-    },
-    {
-      "id": "symbol:packages/shared/src/content-parser.ts#questionPaths",
-      "kind": "symbol",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 146
-      },
-      "declaration": "questionPaths = new Map<string, string>()"
-    },
-    {
-      "id": "symbol:packages/shared/src/content-parser.ts#questionResult",
-      "kind": "symbol",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 122
-      },
-      "declaration": "questionResult = validatedMcqSchema.safeParse(question)"
-    },
-    {
-      "id": "symbol:packages/shared/src/content-parser.ts#questions",
-      "kind": "symbol",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 121
-      },
-      "declaration": "questions = lesson.questions.map((question) => {\n    const questionResult = validatedMcqSchema.safeParse(question)\n    if (!questionResult.success) {\n      return invalidContent(\n        path.relativePath,\n        questionResult.error.issues.map((issue) => issue.message).join('; '),\n      )\n    }\n\n    return questionResult.data\n  })"
-    },
-    {
-      "id": "symbol:packages/shared/src/content-parser.ts#result",
-      "kind": "symbol",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 72
-      },
-      "declaration": "result = topicFrontmatterSchema.safeParse(file.frontmatter)"
-    },
-    {
-      "id": "symbol:packages/shared/src/content-parser.ts#segments",
-      "kind": "symbol",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 46
-      },
-      "declaration": "segments = relativePath.split('/')"
-    },
-    {
-      "id": "symbol:packages/shared/src/content-parser.ts#topic",
-      "kind": "symbol",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 154
-      },
-      "declaration": "topic = topicFor(path, file)"
-    },
-    {
-      "id": "symbol:packages/shared/src/content-parser.ts#topicKey",
-      "kind": "symbol",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 155
-      },
-      "declaration": "topicKey = `${path.domain}/${topic.topic}`"
-    },
-    {
-      "id": "symbol:packages/shared/src/content-parser.ts#topicPaths",
-      "kind": "symbol",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 144
-      },
-      "declaration": "topicPaths = new Map<string, string>()"
-    },
-    {
-      "id": "symbol:packages/shared/src/content-parser.ts#topics",
-      "kind": "symbol",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 141
-      },
-      "declaration": "topics: BundledTopic[] = []"
+      "declaration": "function topicFor(path: ContentPath, file: ParsedContentSourceFile): BundledTopic {\n  const result = topicFrontmatterSchema.safeParse(file.frontmatter)\n  if (!result.success) {\n    return invalidContent(\n      path.relativePath,\n      result.error.issues.map((issue) => issue.message).join('; '),\n    )\n  }\n\n  if (result.data.topic !== path.topic) {\n    return invalidContent(\n      path.relativePath,\n      `topic frontmatter \"${result.data.topic}\" does not match directory \"${path.topic}\"`,\n    )\n  }\n\n  return { ...result.data, relativePath: path.relativePath, body: file.body }\n}"
     },
     {
       "id": "symbol:packages/shared/src/db/schema.ts#AnswerLog",
@@ -1484,22 +1368,13 @@
       "declaration": "answerResponseSchema = z.object({\n  isCorrect: z.boolean(),\n  // choices は最大6（schema/content の .max(6) と整合）。\n  correctIndex: z.number().int().min(0).max(5),\n})"
     },
     {
-      "id": "symbol:packages/shared/src/schema/api.ts#day",
+      "id": "symbol:packages/shared/src/schema/api.ts#compareMistakeRank",
       "kind": "symbol",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 135
+        "line": 220
       },
-      "declaration": "day = Number(match[3])"
-    },
-    {
-      "id": "symbol:packages/shared/src/schema/api.ts#daysInMonth",
-      "kind": "symbol",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 137
-      },
-      "declaration": "daysInMonth = [31, isLeapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1]"
+      "declaration": "export function compareMistakeRank(\n  left: Pick<MistakeItem, 'answerCount' | 'incorrectAnswerCount' | 'questionId'>,\n  right: Pick<MistakeItem, 'answerCount' | 'incorrectAnswerCount' | 'questionId'>,\n): number {\n  return (\n    right.incorrectAnswerCount / right.answerCount - left.incorrectAnswerCount / left.answerCount ||\n    right.answerCount - left.answerCount ||\n    left.questionId.localeCompare(right.questionId, 'en')\n  )\n}"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#DomainsRequest",
@@ -1574,15 +1449,6 @@
       "declaration": "dueCountResponseSchema = z.object({\n  dueCount: z.number().int().nonnegative(),\n})"
     },
     {
-      "id": "symbol:packages/shared/src/schema/api.ts#isLeapYear",
-      "kind": "symbol",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 136
-      },
-      "declaration": "isLeapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)"
-    },
-    {
       "id": "symbol:packages/shared/src/schema/api.ts#isoCalendarDatePattern",
       "kind": "symbol",
       "source": {
@@ -1590,6 +1456,15 @@
         "line": 127
       },
       "declaration": "isoCalendarDatePattern = /^(\\d{4})-(\\d{2})-(\\d{2})$/"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#isValidCalendarDate",
+      "kind": "symbol",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 129
+      },
+      "declaration": "function isValidCalendarDate(value: string): boolean {\n  const match = isoCalendarDatePattern.exec(value)\n  if (!match) return false\n\n  const year = Number(match[1])\n  const month = Number(match[2])\n  const day = Number(match[3])\n  const isLeapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)\n  const daysInMonth = [31, isLeapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1]\n\n  return month >= 1 && month <= 12 && day >= 1 && day <= (daysInMonth ?? 0)\n}"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#LessonViewRequest",
@@ -1628,15 +1503,6 @@
       "declaration": "lessonViewResponseSchema = z.object({\n  recorded: z.literal(true),\n})"
     },
     {
-      "id": "symbol:packages/shared/src/schema/api.ts#match",
-      "kind": "symbol",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 130
-      },
-      "declaration": "match = isoCalendarDatePattern.exec(value)"
-    },
-    {
       "id": "symbol:packages/shared/src/schema/api.ts#MistakeItem",
       "kind": "symbol",
       "source": {
@@ -1671,24 +1537,6 @@
         "line": 231
       },
       "declaration": "mistakesResponseSchema = z\n  .object({\n    items: z.array(mistakeItemSchema).max(10),\n  })\n  .superRefine(({ items }, context) => {\n    items.forEach((item, index) => {\n      const previous = items[index - 1]\n      if (previous && compareMistakeRank(previous, item) > 0) {\n        context.addIssue({\n          code: 'custom',\n          path: ['items', index],\n          message: 'items must follow mistake ranking order',\n        })\n      }\n    })\n  })"
-    },
-    {
-      "id": "symbol:packages/shared/src/schema/api.ts#month",
-      "kind": "symbol",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 134
-      },
-      "declaration": "month = Number(match[2])"
-    },
-    {
-      "id": "symbol:packages/shared/src/schema/api.ts#previous",
-      "kind": "symbol",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 171
-      },
-      "declaration": "previous = days[index - 1]"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#RateLimitedErrorResponse",
@@ -1761,33 +1609,6 @@
         "line": 58
       },
       "declaration": "reviewQueueResponseSchema = z.object({\n  hasMore: z.boolean(),\n  items: z\n    .array(\n      z.object({\n        questionId: z.string().min(1),\n        // Unix epoch milliseconds（SRS の dueAt と同じ表現）。\n        dueAt: z.number().int().nonnegative(),\n      }),\n    )\n    .max(20),\n})"
-    },
-    {
-      "id": "symbol:packages/shared/src/schema/api.ts#uniqueDates",
-      "kind": "symbol",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 169
-      },
-      "declaration": "uniqueDates = new Set(days.map(({ date }) => date))"
-    },
-    {
-      "id": "symbol:packages/shared/src/schema/api.ts#uniqueDomains",
-      "kind": "symbol",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 92
-      },
-      "declaration": "uniqueDomains = new Set(domains.map(({ domain }) => domain))"
-    },
-    {
-      "id": "symbol:packages/shared/src/schema/api.ts#year",
-      "kind": "symbol",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 133
-      },
-      "declaration": "year = Number(match[1])"
     },
     {
       "id": "symbol:packages/shared/src/schema/content.ts#DOMAIN_LABELS",
@@ -1871,15 +1692,6 @@
       "declaration": "export type Question = z.infer<typeof questionSchema>"
     },
     {
-      "id": "symbol:packages/shared/src/schema/content.ts#questionIdPattern",
-      "kind": "symbol",
-      "source": {
-        "file": "packages/shared/src/schema/content.ts",
-        "line": 69
-      },
-      "declaration": "questionIdPattern = new RegExp(`^${lesson.lessonId}-q\\\\d+$`)"
-    },
-    {
       "id": "symbol:packages/shared/src/schema/content.ts#questionIdSchema",
       "kind": "symbol",
       "source": {
@@ -1943,15 +1755,6 @@
       "declaration": "DAY_MS = 24 * 60 * 60 * 1000"
     },
     {
-      "id": "symbol:packages/shared/src/srs/sm2.ts#ease",
-      "kind": "symbol",
-      "source": {
-        "file": "packages/shared/src/srs/sm2.ts",
-        "line": 42
-      },
-      "declaration": "ease = Math.max(MIN_EASE, state.ease - 200)"
-    },
-    {
       "id": "symbol:packages/shared/src/srs/sm2.ts#INITIAL_EASE",
       "kind": "symbol",
       "source": {
@@ -1961,13 +1764,22 @@
       "declaration": "INITIAL_EASE = 2500"
     },
     {
-      "id": "symbol:packages/shared/src/srs/sm2.ts#intervalDays",
+      "id": "symbol:packages/shared/src/srs/sm2.ts#initialSrs",
       "kind": "symbol",
       "source": {
         "file": "packages/shared/src/srs/sm2.ts",
-        "line": 53
+        "line": 27
       },
-      "declaration": "intervalDays: number"
+      "declaration": "export function initialSrs(): SrsInput {\n  return { ease: INITIAL_EASE, intervalDays: 0, reps: 0, lapses: 0 }\n}"
+    },
+    {
+      "id": "symbol:packages/shared/src/srs/sm2.ts#isDue",
+      "kind": "symbol",
+      "source": {
+        "file": "packages/shared/src/srs/sm2.ts",
+        "line": 75
+      },
+      "declaration": "export function isDue(dueAt: number, now: number): boolean {\n  return dueAt <= now\n}"
     },
     {
       "id": "symbol:packages/shared/src/srs/sm2.ts#MIN_EASE",
@@ -1979,13 +1791,13 @@
       "declaration": "MIN_EASE = 1300"
     },
     {
-      "id": "symbol:packages/shared/src/srs/sm2.ts#reps",
+      "id": "symbol:packages/shared/src/srs/sm2.ts#reviewSrs",
       "kind": "symbol",
       "source": {
         "file": "packages/shared/src/srs/sm2.ts",
-        "line": 52
+        "line": 39
       },
-      "declaration": "reps = state.reps + 1"
+      "declaration": "export function reviewSrs(state: SrsInput, correct: boolean, now: number): SrsResult {\n  if (!correct) {\n    // 不正解: reps をリセットし、翌日に再出題。ease は下限まで下げる。\n    const ease = Math.max(MIN_EASE, state.ease - 200)\n    return {\n      ease,\n      intervalDays: 1,\n      reps: 0,\n      lapses: state.lapses + 1,\n      dueAt: now + 1 * DAY_MS,\n    }\n  }\n\n  const reps = state.reps + 1\n  let intervalDays: number\n  if (reps === 1) {\n    intervalDays = 1\n  } else if (reps === 2) {\n    intervalDays = 6\n  } else {\n    intervalDays = Math.round(state.intervalDays * (state.ease / 1000))\n  }\n\n  // 正解時は ease を微増(SM-2 の grade=4 相当)。\n  const ease = Math.max(MIN_EASE, state.ease + 0)\n\n  return {\n    ease,\n    intervalDays,\n    reps,\n    lapses: state.lapses,\n    dueAt: now + intervalDays * DAY_MS,\n  }\n}"
     },
     {
       "id": "symbol:packages/shared/src/srs/sm2.ts#SrsInput",
@@ -2134,7 +1946,7 @@
       "to": "apps/api/src/routes/analytics.ts",
       "source": {
         "file": "apps/api/src/app.ts",
-        "line": 56
+        "line": 62
       },
       "prefix": "/analytics"
     },
@@ -2144,7 +1956,7 @@
       "to": "apps/api/src/routes/answers.ts",
       "source": {
         "file": "apps/api/src/app.ts",
-        "line": 56
+        "line": 57
       },
       "prefix": "/answers"
     },
@@ -2154,7 +1966,7 @@
       "to": "apps/api/src/routes/dashboard.ts",
       "source": {
         "file": "apps/api/src/app.ts",
-        "line": 56
+        "line": 60
       },
       "prefix": "/dashboard"
     },
@@ -2164,7 +1976,7 @@
       "to": "apps/api/src/routes/domains.ts",
       "source": {
         "file": "apps/api/src/app.ts",
-        "line": 56
+        "line": 61
       },
       "prefix": "/domains"
     },
@@ -2174,7 +1986,7 @@
       "to": "apps/api/src/routes/lesson-views.ts",
       "source": {
         "file": "apps/api/src/app.ts",
-        "line": 56
+        "line": 58
       },
       "prefix": "/lesson-views"
     },
@@ -2184,7 +1996,7 @@
       "to": "apps/api/src/routes/review.ts",
       "source": {
         "file": "apps/api/src/app.ts",
-        "line": 56
+        "line": 59
       },
       "prefix": "/review"
     },
@@ -2209,6 +2021,15 @@
       },
       "specifier": "@tsl/shared",
       "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/content-sync.ts",
+      "relation": "uses-symbol",
+      "to": "symbol:packages/shared/src/content-parser.ts#createContentBundle",
+      "source": {
+        "file": "apps/api/src/content-sync.ts",
+        "line": 3
+      }
     },
     {
       "from": "apps/api/src/content-sync.ts",
@@ -2458,6 +2279,24 @@
       "from": "apps/api/src/dev-seed.ts",
       "relation": "uses-symbol",
       "to": "symbol:packages/shared/src/srs/sm2.ts#DAY_MS",
+      "source": {
+        "file": "apps/api/src/dev-seed.ts",
+        "line": 1
+      }
+    },
+    {
+      "from": "apps/api/src/dev-seed.ts",
+      "relation": "uses-symbol",
+      "to": "symbol:packages/shared/src/srs/sm2.ts#initialSrs",
+      "source": {
+        "file": "apps/api/src/dev-seed.ts",
+        "line": 1
+      }
+    },
+    {
+      "from": "apps/api/src/dev-seed.ts",
+      "relation": "uses-symbol",
+      "to": "symbol:packages/shared/src/srs/sm2.ts#reviewSrs",
       "source": {
         "file": "apps/api/src/dev-seed.ts",
         "line": 1
@@ -3386,6 +3225,15 @@
     {
       "from": "apps/api/src/services/analytics-service.ts",
       "relation": "uses-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#compareMistakeRank",
+      "source": {
+        "file": "apps/api/src/services/analytics-service.ts",
+        "line": 5
+      }
+    },
+    {
+      "from": "apps/api/src/services/analytics-service.ts",
+      "relation": "uses-symbol",
       "to": "symbol:packages/shared/src/schema/api.ts#MistakesResponse",
       "source": {
         "file": "apps/api/src/services/analytics-service.ts",
@@ -3449,6 +3297,24 @@
       },
       "specifier": "@tsl/shared",
       "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/services/answer-service.ts",
+      "relation": "uses-symbol",
+      "to": "symbol:packages/shared/src/srs/sm2.ts#initialSrs",
+      "source": {
+        "file": "apps/api/src/services/answer-service.ts",
+        "line": 1
+      }
+    },
+    {
+      "from": "apps/api/src/services/answer-service.ts",
+      "relation": "uses-symbol",
+      "to": "symbol:packages/shared/src/srs/sm2.ts#reviewSrs",
+      "source": {
+        "file": "apps/api/src/services/answer-service.ts",
+        "line": 1
+      }
     },
     {
       "from": "apps/api/src/services/answer-service.ts",
@@ -4242,6 +4108,15 @@
       }
     },
     {
+      "from": "endpoint:GET /health",
+      "relation": "implements",
+      "to": "apps/api/src/app.ts",
+      "source": {
+        "file": "apps/api/src/app.ts",
+        "line": 87
+      }
+    },
+    {
       "from": "endpoint:GET /review/queue",
       "relation": "implements",
       "to": "apps/api/src/routes/review.ts",
@@ -4307,91 +4182,37 @@
     {
       "from": "packages/shared/src/content-parser.ts",
       "relation": "implements",
-      "to": "symbol:packages/shared/src/content-parser.ts#file",
+      "to": "symbol:packages/shared/src/content-parser.ts#contentPathFor",
       "source": {
         "file": "packages/shared/src/content-parser.ts",
-        "line": 148
+        "line": 45
       }
     },
     {
       "from": "packages/shared/src/content-parser.ts",
       "relation": "implements",
-      "to": "symbol:packages/shared/src/content-parser.ts#filenameLessonId",
+      "to": "symbol:packages/shared/src/content-parser.ts#createContentBundle",
       "source": {
         "file": "packages/shared/src/content-parser.ts",
-        "line": 113
+        "line": 140
       }
     },
     {
       "from": "packages/shared/src/content-parser.ts",
       "relation": "implements",
-      "to": "symbol:packages/shared/src/content-parser.ts#firstLessonPath",
+      "to": "symbol:packages/shared/src/content-parser.ts#invalidContent",
       "source": {
         "file": "packages/shared/src/content-parser.ts",
-        "line": 167
+        "line": 41
       }
     },
     {
       "from": "packages/shared/src/content-parser.ts",
       "relation": "implements",
-      "to": "symbol:packages/shared/src/content-parser.ts#firstPath",
+      "to": "symbol:packages/shared/src/content-parser.ts#lessonFor",
       "source": {
         "file": "packages/shared/src/content-parser.ts",
-        "line": 156
-      }
-    },
-    {
-      "from": "packages/shared/src/content-parser.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/content-parser.ts#firstPath",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 179
-      }
-    },
-    {
-      "from": "packages/shared/src/content-parser.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/content-parser.ts#lesson",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 166
-      }
-    },
-    {
-      "from": "packages/shared/src/content-parser.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/content-parser.ts#lesson",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 99
-      }
-    },
-    {
-      "from": "packages/shared/src/content-parser.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/content-parser.ts#lessonPaths",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 145
-      }
-    },
-    {
-      "from": "packages/shared/src/content-parser.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/content-parser.ts#lessonResult",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 91
-      }
-    },
-    {
-      "from": "packages/shared/src/content-parser.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/content-parser.ts#lessons",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 142
+        "line": 90
       }
     },
     {
@@ -4406,109 +4227,10 @@
     {
       "from": "packages/shared/src/content-parser.ts",
       "relation": "implements",
-      "to": "symbol:packages/shared/src/content-parser.ts#path",
+      "to": "symbol:packages/shared/src/content-parser.ts#topicFor",
       "source": {
         "file": "packages/shared/src/content-parser.ts",
-        "line": 151
-      }
-    },
-    {
-      "from": "packages/shared/src/content-parser.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/content-parser.ts#question",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 178
-      }
-    },
-    {
-      "from": "packages/shared/src/content-parser.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/content-parser.ts#questionPaths",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 146
-      }
-    },
-    {
-      "from": "packages/shared/src/content-parser.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/content-parser.ts#questionResult",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 122
-      }
-    },
-    {
-      "from": "packages/shared/src/content-parser.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/content-parser.ts#questions",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 121
-      }
-    },
-    {
-      "from": "packages/shared/src/content-parser.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/content-parser.ts#questions",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 143
-      }
-    },
-    {
-      "from": "packages/shared/src/content-parser.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/content-parser.ts#result",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 72
-      }
-    },
-    {
-      "from": "packages/shared/src/content-parser.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/content-parser.ts#segments",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 46
-      }
-    },
-    {
-      "from": "packages/shared/src/content-parser.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/content-parser.ts#topic",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 154
-      }
-    },
-    {
-      "from": "packages/shared/src/content-parser.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/content-parser.ts#topicKey",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 155
-      }
-    },
-    {
-      "from": "packages/shared/src/content-parser.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/content-parser.ts#topicPaths",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 144
-      }
-    },
-    {
-      "from": "packages/shared/src/content-parser.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/content-parser.ts#topics",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 141
+        "line": 71
       }
     },
     {
@@ -4850,19 +4572,10 @@
     {
       "from": "packages/shared/src/schema/api.ts",
       "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#day",
+      "to": "symbol:packages/shared/src/schema/api.ts#compareMistakeRank",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 135
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#daysInMonth",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 137
+        "line": 220
       }
     },
     {
@@ -4940,19 +4653,19 @@
     {
       "from": "packages/shared/src/schema/api.ts",
       "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#isLeapYear",
+      "to": "symbol:packages/shared/src/schema/api.ts#isoCalendarDatePattern",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 136
+        "line": 127
       }
     },
     {
       "from": "packages/shared/src/schema/api.ts",
       "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#isoCalendarDatePattern",
+      "to": "symbol:packages/shared/src/schema/api.ts#isValidCalendarDate",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 127
+        "line": 129
       }
     },
     {
@@ -4994,15 +4707,6 @@
     {
       "from": "packages/shared/src/schema/api.ts",
       "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#match",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 130
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
       "to": "symbol:packages/shared/src/schema/api.ts#MistakeItem",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
@@ -5034,33 +4738,6 @@
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 231
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#month",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 134
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#previous",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 171
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#previous",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 237
       }
     },
     {
@@ -5133,33 +4810,6 @@
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 58
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#uniqueDates",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 169
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#uniqueDomains",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 92
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#year",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 133
       }
     },
     {
@@ -5266,15 +4916,6 @@
     {
       "from": "packages/shared/src/schema/content.ts",
       "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/content.ts#questionIdPattern",
-      "source": {
-        "file": "packages/shared/src/schema/content.ts",
-        "line": 69
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/content.ts",
-      "relation": "implements",
       "to": "symbol:packages/shared/src/schema/content.ts#questionIdSchema",
       "source": {
         "file": "packages/shared/src/schema/content.ts",
@@ -5338,24 +4979,6 @@
     {
       "from": "packages/shared/src/srs/sm2.ts",
       "relation": "implements",
-      "to": "symbol:packages/shared/src/srs/sm2.ts#ease",
-      "source": {
-        "file": "packages/shared/src/srs/sm2.ts",
-        "line": 42
-      }
-    },
-    {
-      "from": "packages/shared/src/srs/sm2.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/srs/sm2.ts#ease",
-      "source": {
-        "file": "packages/shared/src/srs/sm2.ts",
-        "line": 63
-      }
-    },
-    {
-      "from": "packages/shared/src/srs/sm2.ts",
-      "relation": "implements",
       "to": "symbol:packages/shared/src/srs/sm2.ts#INITIAL_EASE",
       "source": {
         "file": "packages/shared/src/srs/sm2.ts",
@@ -5365,10 +4988,19 @@
     {
       "from": "packages/shared/src/srs/sm2.ts",
       "relation": "implements",
-      "to": "symbol:packages/shared/src/srs/sm2.ts#intervalDays",
+      "to": "symbol:packages/shared/src/srs/sm2.ts#initialSrs",
       "source": {
         "file": "packages/shared/src/srs/sm2.ts",
-        "line": 53
+        "line": 27
+      }
+    },
+    {
+      "from": "packages/shared/src/srs/sm2.ts",
+      "relation": "implements",
+      "to": "symbol:packages/shared/src/srs/sm2.ts#isDue",
+      "source": {
+        "file": "packages/shared/src/srs/sm2.ts",
+        "line": 75
       }
     },
     {
@@ -5383,10 +5015,10 @@
     {
       "from": "packages/shared/src/srs/sm2.ts",
       "relation": "implements",
-      "to": "symbol:packages/shared/src/srs/sm2.ts#reps",
+      "to": "symbol:packages/shared/src/srs/sm2.ts#reviewSrs",
       "source": {
         "file": "packages/shared/src/srs/sm2.ts",
-        "line": 52
+        "line": 39
       }
     },
     {
@@ -5522,6 +5154,51 @@
       "source": {
         "file": "apps/api/src/services/review-service.ts",
         "line": 22
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/db/schema.ts#AnswerLog",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/db/schema.ts#answerLogs",
+      "source": {
+        "file": "packages/shared/src/db/schema.ts",
+        "line": 63
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/db/schema.ts#LessonView",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/db/schema.ts#lessonViews",
+      "source": {
+        "file": "packages/shared/src/db/schema.ts",
+        "line": 66
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/db/schema.ts#QuestionRow",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/db/schema.ts#questions",
+      "source": {
+        "file": "packages/shared/src/db/schema.ts",
+        "line": 64
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/db/schema.ts#SrsState",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/db/schema.ts#srsStates",
+      "source": {
+        "file": "packages/shared/src/db/schema.ts",
+        "line": 65
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/db/schema.ts#User",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/db/schema.ts#users",
+      "source": {
+        "file": "packages/shared/src/db/schema.ts",
+        "line": 62
       }
     },
     {
