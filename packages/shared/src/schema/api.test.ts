@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  analyticsHeatmapResponseSchema,
   analyticsSummaryResponseSchema,
   analyticsWeeklyResponseSchema,
   answerRequestSchema,
@@ -12,6 +13,7 @@ import {
   mistakesResponseSchema,
   rateLimitUnavailableErrorResponseSchema,
   rateLimitedErrorResponseSchema,
+  recentActivityResponseSchema,
   retentionDistributionSchema,
   reviewQueueResponseSchema,
 } from './api'
@@ -479,6 +481,104 @@ describe('analytics response schemas', () => {
       retentionDistributionSchema.safeParse({ masteredCount: 0, learningCount: 0, dueCount: 0 })
         .success,
     ).toBe(true)
+  })
+
+  it('requires a consecutive 182-day heatmap with valid dates', () => {
+    const start = Date.parse('2026-03-03T00:00:00Z')
+    const days = Array.from({ length: 182 }, (_, index) => ({
+      date: new Date(start + index * 86_400_000).toISOString().slice(0, 10),
+      answerCount: index,
+    }))
+    expect(analyticsHeatmapResponseSchema.safeParse({ days }).success).toBe(true)
+    expect(analyticsHeatmapResponseSchema.safeParse({ days: days.slice(1) }).success).toBe(false)
+    expect(
+      analyticsHeatmapResponseSchema.safeParse({
+        days: days.map((day, index) => (index === 181 ? { ...day, date: '2026-09-01' } : day)),
+      }).success,
+    ).toBe(false)
+  })
+
+  it('rejects duplicate or invalid heatmap dates and counts', () => {
+    const start = Date.parse('2026-03-03T00:00:00Z')
+    const days = Array.from({ length: 182 }, (_, index) => ({
+      date: new Date(start + index * 86_400_000).toISOString().slice(0, 10),
+      answerCount: 0,
+    }))
+    expect(
+      analyticsHeatmapResponseSchema.safeParse({
+        days: days.map((day, index) => (index === 20 ? { ...day, date: days[19]?.date } : day)),
+      }).success,
+    ).toBe(false)
+    expect(
+      analyticsHeatmapResponseSchema.safeParse({
+        days: days.map((day, index) => (index === 20 ? { ...day, answerCount: -1 } : day)),
+      }).success,
+    ).toBe(false)
+  })
+})
+
+describe('recentActivityResponseSchema', () => {
+  it('accepts mixed activity items with required fields', () => {
+    expect(
+      recentActivityResponseSchema.safeParse({
+        items: [
+          {
+            id: 'answer-1',
+            type: 'answer_recorded',
+            occurredAt: 1_700_000_000_000,
+            questionId: 'lesson-q1',
+            lessonId: 'lesson',
+            isCorrect: true,
+          },
+          {
+            id: 'view-1',
+            type: 'lesson_viewed',
+            occurredAt: 1_699_999_000_000,
+            lessonId: 'lesson',
+          },
+          {
+            id: 'answer-2',
+            type: 'answer_recorded',
+            occurredAt: 1_699_998_000_000,
+            questionId: 'unknown-q',
+            lessonId: null,
+            isCorrect: false,
+          },
+        ],
+      }).success,
+    ).toBe(true)
+  })
+
+  it('bounds items, enforces stable ordering, and rejects duplicate IDs', () => {
+    const item = {
+      id: 'answer-1',
+      type: 'answer_recorded' as const,
+      occurredAt: 1_700_000_000_000,
+      questionId: 'q-1',
+      lessonId: null,
+      isCorrect: true,
+    }
+    expect(recentActivityResponseSchema.safeParse({ items: Array(11).fill(item) }).success).toBe(
+      false,
+    )
+    expect(
+      recentActivityResponseSchema.safeParse({
+        items: [item, { ...item, id: 'answer-0' }],
+      }).success,
+    ).toBe(false)
+    expect(
+      recentActivityResponseSchema.safeParse({
+        items: [
+          { ...item, id: 'answer-old', occurredAt: item.occurredAt - 1 },
+          { ...item, id: 'answer-new', occurredAt: item.occurredAt },
+        ],
+      }).success,
+    ).toBe(false)
+    expect(
+      recentActivityResponseSchema.safeParse({
+        items: [{ ...item, type: 'lesson_viewed', lessonId: 'lesson' }],
+      }).success,
+    ).toBe(false)
   })
 })
 

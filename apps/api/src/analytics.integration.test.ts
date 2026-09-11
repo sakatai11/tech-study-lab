@@ -1,5 +1,9 @@
 import { applyD1Migrations, env } from 'cloudflare:test'
-import { analyticsWeeklyResponseSchema } from '@tsl/shared'
+import {
+  analyticsHeatmapResponseSchema,
+  analyticsWeeklyResponseSchema,
+  recentActivityResponseSchema,
+} from '@tsl/shared'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import initialMigration from '../drizzle/migrations/0000_flowery_quasar.sql?raw'
@@ -51,6 +55,7 @@ describe('analytics API', () => {
     await env.DB.batch([
       env.DB.prepare('DELETE FROM answer_logs'),
       env.DB.prepare('DELETE FROM lesson_views'),
+      env.DB.prepare('DELETE FROM questions'),
       env.DB.prepare('DELETE FROM srs_states'),
     ])
   })
@@ -62,6 +67,9 @@ describe('analytics API', () => {
     try {
       await env.DB.batch([
         env.DB.prepare(
+          'INSERT INTO questions (question_id, answer_index, domain, topic, lesson_id, is_active) VALUES (?, ?, ?, ?, ?, ?)',
+        ).bind('q-1', 0, 'security', 'xss', 'security-xss-01', 1),
+        env.DB.prepare(
           'INSERT INTO answer_logs (id, user_id, question_id, is_correct, answered_at, response_time_ms) VALUES (?, ?, ?, ?, ?, ?)',
         ).bind('answer-1', FIXED_USER_ID, 'q-1', 1, now, 800),
         env.DB.prepare(
@@ -70,6 +78,9 @@ describe('analytics API', () => {
         env.DB.prepare(
           'INSERT INTO answer_logs (id, user_id, question_id, is_correct, answered_at, response_time_ms) VALUES (?, ?, ?, ?, ?, ?)',
         ).bind('answer-other', 'other-user', 'q-other', 0, now, 20),
+        env.DB.prepare(
+          'INSERT INTO answer_logs (id, user_id, question_id, is_correct, answered_at, response_time_ms) VALUES (?, ?, ?, ?, ?, ?)',
+        ).bind('answer-missing', FIXED_USER_ID, 'q-missing', 0, now - 2 * day, null),
         env.DB.prepare(
           'INSERT INTO lesson_views (id, user_id, lesson_id, viewed_at) VALUES (?, ?, ?, ?)',
         ).bind('view-1', FIXED_USER_ID, 'security-xss-01', now),
@@ -81,19 +92,22 @@ describe('analytics API', () => {
         ).bind(FIXED_USER_ID, 'q-due', 2500, 1, now, 1, 0),
       ])
 
-      const [summaryResponse, weeklyResponse, mistakesResponse] = await Promise.all([
-        fetchAnalytics('/analytics/summary'),
-        fetchAnalytics('/analytics/weekly'),
-        fetchAnalytics('/analytics/mistakes'),
-      ])
+      const [summaryResponse, weeklyResponse, heatmapResponse, mistakesResponse, activityResponse] =
+        await Promise.all([
+          fetchAnalytics('/analytics/summary'),
+          fetchAnalytics('/analytics/weekly'),
+          fetchAnalytics('/analytics/heatmap'),
+          fetchAnalytics('/analytics/mistakes'),
+          fetchAnalytics('/activity/recent'),
+        ])
 
       expect(summaryResponse.status).toBe(200)
       await expect(summaryResponse.json()).resolves.toMatchObject({
-        totalAnswerCount: 2,
-        correctAnswerRate: 50,
+        totalAnswerCount: 3,
+        correctAnswerRate: 33,
         averageResponseTimeMs: 800,
         masteredQuestionCount: 1,
-        currentStreakDays: 2,
+        currentStreakDays: 3,
         thisWeekStudyTimeMs: 1_080_800,
         retentionDistribution: { masteredCount: 1, learningCount: 0, dueCount: 1 },
       })
@@ -101,14 +115,55 @@ describe('analytics API', () => {
       expect(weeklyResponse.status).toBe(200)
       const weekly = analyticsWeeklyResponseSchema.parse(await weeklyResponse.json())
       expect(weekly.days).toHaveLength(7)
-      expect(weekly.days.reduce((total, entry) => total + entry.answerCount, 0)).toBe(2)
+      expect(weekly.days.reduce((total, entry) => total + entry.answerCount, 0)).toBe(3)
       expect(
         weekly.days.find((entry) => entry.date === new Date(now).toISOString().slice(0, 10)),
       ).toMatchObject({ answerCount: 1 })
 
+      expect(heatmapResponse.status).toBe(200)
+      const heatmap = analyticsHeatmapResponseSchema.parse(await heatmapResponse.json())
+      expect(heatmap.days).toHaveLength(182)
+      expect(heatmap.days.reduce((total, entry) => total + entry.answerCount, 0)).toBe(3)
+
       expect(mistakesResponse.status).toBe(200)
       await expect(mistakesResponse.json()).resolves.toEqual({
         items: [{ questionId: 'q-1', incorrectRate: 50, answerCount: 2, incorrectAnswerCount: 1 }],
+      })
+
+      expect(activityResponse.status).toBe(200)
+      expect(recentActivityResponseSchema.parse(await activityResponse.json())).toEqual({
+        items: [
+          {
+            id: 'answer:answer-1',
+            type: 'answer_recorded',
+            occurredAt: now,
+            questionId: 'q-1',
+            lessonId: 'security-xss-01',
+            isCorrect: true,
+          },
+          {
+            id: 'lesson-view:view-1',
+            type: 'lesson_viewed',
+            occurredAt: now,
+            lessonId: 'security-xss-01',
+          },
+          {
+            id: 'answer:answer-2',
+            type: 'answer_recorded',
+            occurredAt: now - day,
+            questionId: 'q-1',
+            lessonId: 'security-xss-01',
+            isCorrect: false,
+          },
+          {
+            id: 'answer:answer-missing',
+            type: 'answer_recorded',
+            occurredAt: now - 2 * day,
+            questionId: 'q-missing',
+            lessonId: null,
+            isCorrect: false,
+          },
+        ],
       })
     } finally {
       nowSpy.mockRestore()
@@ -118,5 +173,11 @@ describe('analytics API', () => {
   it('requires the empty query contract', async () => {
     const response = await fetchAnalytics('/analytics/summary?range=week')
     expect(response.status).toBe(400)
+
+    const heatmapResponse = await fetchAnalytics('/analytics/heatmap?range=week')
+    expect(heatmapResponse.status).toBe(400)
+
+    const activityResponse = await fetchAnalytics('/activity/recent?range=week')
+    expect(activityResponse.status).toBe(400)
   })
 })

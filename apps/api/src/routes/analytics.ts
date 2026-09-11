@@ -1,5 +1,6 @@
 import { zValidator } from '@hono/zod-validator'
 import {
+  type AnalyticsHeatmapResponse,
   type AnalyticsSummaryResponse,
   type AnalyticsWeeklyResponse,
   type MistakesResponse,
@@ -12,6 +13,7 @@ import { estimatedMinutesByLesson } from '../content-estimates'
 import { createAnalyticsDeps } from '../dal/analytics-repository'
 import type { AppEnv } from '../env'
 import {
+  getAnalyticsHeatmap,
   getAnalyticsMistakes,
   getAnalyticsSummary,
   getAnalyticsWeekly,
@@ -37,6 +39,14 @@ export const analyticsRoute = new Hono<AppEnv>()
     })
 
     return c.json(result satisfies AnalyticsWeeklyResponse)
+  })
+  .get('/heatmap', zValidator('query', analyticsRequestSchema), async (c) => {
+    const result = await getAnalyticsHeatmap(analyticsDeps(c), {
+      userId: c.get('userId'),
+      now: Date.now(),
+    })
+
+    return c.json(result satisfies AnalyticsHeatmapResponse)
   })
   .get('/mistakes', zValidator('query', analyticsRequestSchema), async (c) => {
     const result = await getAnalyticsMistakes(analyticsDeps(c), {
