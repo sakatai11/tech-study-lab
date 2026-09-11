@@ -489,6 +489,7 @@ check_agent_contract "work branch is prepared from refreshed integration branch"
 check_agent_contract "existing issue branches take normal develop-v2 updates" '既存Issue作業ブランチを継続する場合は、最新 `develop-v2` を通常のmergeで取り込んでから準備完了とする。' "$SKILL"
 check_agent_contract "non-ancestor work branches stop" '非祖先の場合は古いまたは別系統の起点として実装へ進まず停止する。' "$SKILL"
 check_agent_contract "effective base uses the remote ref" '`git merge-base origin/develop-v2 HEAD` を実行し、その単一結果を `effectiveBase` として固定する。' "$SKILL"
+check_agent_contract "architecture preflight runs on the prepared work branch" '作業ブランチの準備と祖先性検証が完了したcheckoutで `pnpm architecture:check` と `pnpm architecture:test` を実行する。' "$SKILL"
 check_order_contract "remote commit resolution precedes work branch preparation" "$SKILL" '`git rev-parse --verify origin/develop-v2^{commit}` で存在とcommit解決を確認する。' '`origin/develop-v2` を起点に統合ブランチ `develop-v2` をfast-forwardで更新して新規Issue作業ブランチを切る。'
 check_order_contract "work branch preparation precedes effective base calculation" "$SKILL" '`origin/develop-v2` を起点に統合ブランチ `develop-v2` をfast-forwardで更新して新規Issue作業ブランチを切る。' '祖先性検証後に `git merge-base origin/develop-v2 HEAD` を実行し'
 check_order_contract "effective base follows work branch ancestry validation" "$SKILL" '作業ブランチ準備後、必ず `git merge-base --is-ancestor origin/develop-v2 HEAD` を実行する。' '祖先性検証後に `git merge-base origin/develop-v2 HEAD` を実行し'

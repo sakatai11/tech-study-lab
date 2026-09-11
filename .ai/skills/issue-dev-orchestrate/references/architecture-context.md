@@ -14,7 +14,7 @@
 
 ## 開始時の基盤確認
 
-`architecture/graph.json`、`scripts/architecture.mjs`、次のpackage scriptが存在することを、Issue変更前に確認する。
+`architecture/graph.json`、`scripts/architecture.mjs`、次のpackage scriptが存在することを、Issue変更前に確認する。検査対象は、最新の`origin/develop-v2`を取り込んで祖先性検証を終えたIssue作業ブランチのcheckoutとする。開始時の別ブランチや、更新前のIssue作業ブランチでは実行しない。
 
 ```sh
 pnpm architecture:check
