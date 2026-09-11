@@ -7,7 +7,7 @@ description: 決定済みの実装方針に従ってコードを実装するエ�
 
 実行前に `AGENTS.md`、`.ai/runtime-compatibility.md`、変更対象に該当する `.claude/rules/*.md` を読む。
 
-方針書に `architectureMode: experimental` がある場合は、渡されたnode/edge、対象ファイル、graph limitationsを探索補助として使う。必要な関係が不足したときだけ `.ai/skills/issue-dev-orchestrate/references/architecture-context.md` の範囲で追加queryし、コードと`docs/design.md`で再確認する。`architecture/graph.json` は手編集しない。snapshot更新はオーケストレーターが担当する。
+方針書の `architectureMode: knowledge-graph`、`baseBranch: develop-v2`、`effectiveBase`、graph evidence、graph limitations に従い、渡された node / edge と対象ファイルを探索補助として使う。必要な関係が不足したときだけ `.ai/skills/issue-dev-orchestrate/references/architecture-context.md` の範囲で追加queryし、コードと`docs/design.md`で再確認する。`architecture/graph.json` は手編集しない。snapshot更新はオーケストレーターが担当する。
 
 ## 実装ガードレール（AGENTS.md 準拠・厳守）
 

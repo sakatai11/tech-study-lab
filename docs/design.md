@@ -194,7 +194,7 @@ SM-2 の計算式（`packages/shared/src/srs/sm2.ts`）の周辺で、実装時�
 
 ## 6. 最初のマイルストーン（Walking Skeleton）
 
-> **実験用の構造化アーキテクチャ参照（Issue #164）**：この実験ブランチでは、Worker binding、API endpoint と route・service・DAL・共有schema、Web loader の現在の対応関係を `architecture/` と `scripts/architecture*.mjs` で抽出・照合する。別セッションのIssue開発では、開始時の鮮度確認、対象を絞った近傍query、変更後のsnapshot差分確認に利用する。コード／設定から導ける現在構造は抽出結果を参照し、本書は設計意図・振る舞い・許可する依存方向の一次ソースとして残す。保存済み抽出結果はコードの代替仕様ではなく、再抽出との差分で古さを検知する参照用データである。出典と未対応の解析範囲を明記し、静的解析結果だけで実行時の正確性を保証しない。既存 dependency-cruiser の制約は再実装せず参照する。本番 Server loader の Service Binding 必須と、ローカル URL fallback・ブラウザ公開 URL の例外は §3.1・§8.4 に従う。全体への恒久導入は実験結果を確認してから判断する。
+> **Knowledge Graphによる構造参照（Issue #164）**：`develop-v2` を統合ブランチとするIssue開発では、Worker binding、API endpoint と route・service・DAL・共有schema、Web loader の現在の対応関係を `architecture/` と `scripts/architecture*.mjs` で抽出・照合する。開始時のsnapshot鮮度確認、対象を絞った近傍query、変更後のsnapshot差分確認を通常の開発フローへ組み込み、`architecture:check` と `architecture:test` を既存のtypecheck・lint・test・buildに追加する。コード／設定から導ける現在構造は抽出結果を参照し、本書は設計意図・振る舞い・許可する依存方向の一次ソースとして残す。保存済み抽出結果はコードの代替仕様ではなく、再抽出との差分で古さを検知する参照用データである。出典と未対応の解析範囲を明記し、静的解析結果だけで実行時の正確性を保証しない。既存dependency-cruiserの制約は再実装せず参照する。本番Server loaderのService Binding必須と、ローカルURL fallback・ブラウザ公開URLの例外は§3.1・§8.4に従う。既存の`develop`系統は変更せず、Knowledge Graphを前提とする開発は`develop-v2`系統で行う。
 
 スタック全体が繋がることを最小構成で実証する「歩ける骨格」。
 

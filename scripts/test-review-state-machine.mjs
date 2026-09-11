@@ -632,8 +632,8 @@ const cases = [
   },
   {
     name: 'discovery uses the complete cumulative range',
-    run: () => ({ stage: 'discovery', range: 'develop...HEAD' }),
-    expected: { stage: 'discovery', range: 'develop...HEAD' },
+    run: () => ({ stage: 'discovery', range: '<effectiveBase>...HEAD' }),
+    expected: { stage: 'discovery', range: '<effectiveBase>...HEAD' },
   },
   {
     name: 'finding IDs survive severity, source, and location changes',
