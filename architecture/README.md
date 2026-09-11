@@ -1,6 +1,6 @@
-# 構造化アーキテクチャ実験基盤
+# Knowledge Graph 開発基盤
 
-Issue #164 で検証する、別セッションのIssue開発へ構造化されたコード情報を渡すための実験基盤。設計意図・振る舞いの一次ソースは `docs/design.md`、現在構造の一次ソースはコードと設定である。`graph.json` は再生成できる参照用snapshotであり、手動編集しない。
+`develop-v2` 系統のIssue開発へ構造化されたコード情報を渡すための常用基盤。設計意図・振る舞いの一次ソースは `docs/design.md`、現在構造の一次ソースはコードと設定である。`graph.json` は再生成できる参照用snapshotであり、手動編集しない。
 
 ```sh
 node scripts/architecture.mjs extract
@@ -36,4 +36,4 @@ node --test scripts/architecture.test.mjs
 
 ## issue-dev-orchestrate との連携
 
-Knowledge Graph実験を明示したセッションでは、`.ai/skills/issue-dev-orchestrate/references/architecture-context.md` の契約に従う。開始時にsnapshotの鮮度と抽出テストを確認し、調査では対象を絞った`query`を使う。実装後は`extract`でsnapshotを再生成し、graph差分を確認してから`check`・`architecture:test`を品質ゲートへ含める。
+`develop-v2` をbaseBranchとするIssue開発では、`.ai/skills/issue-dev-orchestrate/references/architecture-context.md` の契約に従う。開始時にsnapshotの鮮度と抽出テストを確認し、調査では対象を絞った`query`を使う。実装後は`extract`でsnapshotを再生成し、graph差分を確認してから`check`・`architecture:test`を品質ゲートへ含める。

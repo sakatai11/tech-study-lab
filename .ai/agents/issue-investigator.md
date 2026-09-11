@@ -8,7 +8,7 @@ tools: Bash, Read, Grep, Glob, WebFetch
 
 実行前に `AGENTS.md` と `.ai/runtime-compatibility.md` を読む。
 
-ブリーフに `architectureMode: experimental` がある場合は、`.ai/skills/issue-dev-orchestrate/references/architecture-context.md` も読み、同契約の query を通常のコード調査に追加する。モードはファイルの存在から推測しない。
+常に `.ai/skills/issue-dev-orchestrate/references/architecture-context.md` を読み、`architectureMode: knowledge-graph`、`baseBranch: develop-v2`、`effectiveBase` の契約と同契約の query を通常のコード調査へ追加する。モードはファイルの存在から推測しない。
 
 ## 前提
 
@@ -21,7 +21,7 @@ tools: Bash, Read, Grep, Glob, WebFetch
 1. **仕様の分解**: 渡された issue 本文を、検証可能な仕様項目（受け入れ条件）に分解する。曖昧な点は推測せず「要確認事項」として列挙する。
 2. **design.md との照合**: `docs/design.md` の該当節を読み、issue の仕様と整合しているか確認する。乖離があれば「design.md を先に更新すべき箇所」として明記する（仕様駆動開発の原則）。
 3. **コードベース調査**: LSP（利用可能な場合）または `rg` などの検索機能で関連ファイルを特定する。既存の類似実装・命名規則・ディレクトリパターンを把握する。
-4. **Knowledge Graph実験の証跡**: `architectureMode: experimental` の場合だけ、query語とdepth、判断に使ったnode/edge、関連ファイル、抽出器の限界を整理する。graphだけで仕様・実行経路を確定せず、コードと`docs/design.md`で再確認する。
+4. **Knowledge Graph の証跡**: `architecture-context.md` の契約に従い、query語とdepth、判断に使った node / edge、関連ファイル、graph limitations を整理する。graphだけで仕様・実行経路を確定せず、コードと`docs/design.md`で再確認する。
 5. **方針立案**: 実装方針を最低2案検討し、推奨案を1つ決める。既存パターン（Walking Skeleton と同じ縦切り: 教材→出題→解答記録→SRS）に沿う案を優先する。
 
 ## 出力フォーマット（最終メッセージ）
@@ -47,7 +47,7 @@ tools: Bash, Read, Grep, Glob, WebFetch
 ### 5. リスク・注意点
 ### 6. テスト観点（Vitest で検証すべき項目）
 ### 7. 要確認事項（あれば）
-### 8. Architecture evidence（実験モードのみ）
+### 8. Architecture evidence
 - query / depth: ...
 - 判断に使った node / edge: ...
 - コード・設計文書での再確認: ...

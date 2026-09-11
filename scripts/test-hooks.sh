@@ -105,6 +105,20 @@ check_absent_contract() {
   fi
 }
 
+check_order_contract() {
+  label=$1
+  file=$2
+  first=$3
+  second=$4
+  first_line=$(awk -v marker="$first" 'index($0, marker) { print NR; exit }' "$file")
+  second_line=$(awk -v marker="$second" 'index($0, marker) { print NR; exit }' "$file")
+
+  if [ -z "$first_line" ] || [ -z "$second_line" ] || [ "$first_line" -ge "$second_line" ]; then
+    printf '%s\n' "agent contract order check failed: $label ($file)" >&2
+    exit 1
+  fi
+}
+
 printf '%s\n' "Checking agent contract consistency..."
 
 # 方針: 手順の逐語表現は固定しない。より良い言い回しへの改善を阻害するため。
@@ -206,9 +220,9 @@ check_agent_contract "urgent independent severe findings pause for user decision
 
 # ---- 不変条件: ブランチとコミット ----
 check_agent_contract "no work on main" '`main` では作業せず' "$SKILL"
-check_agent_contract "work branch does not merge into develop" '作業ブランチから `develop` へのマージは行わず' "$SKILL"
-check_agent_contract "develop to main is human-owned" '`develop` から `main` へのPR作成・マージも人間が行う' "$SKILL"
-check_agent_contract "develop updates into work branch remain allowed" '作業ブランチへ `develop` を取り込む通常の操作は妨げない' "$SKILL"
+check_agent_contract "work branch does not merge into develop-v2" '作業ブランチから `develop-v2` へのマージは行わず' "$SKILL"
+check_agent_contract "legacy develop to main is human-owned" '既存 `develop` から `main` へのPR作成・マージも人間が行い' "$SKILL"
+check_agent_contract "develop-v2 updates into work branch remain allowed" '作業ブランチへ `develop-v2` を取り込む通常の操作は妨げない' "$SKILL"
 check_agent_contract "gh pr merge remains human-only" '`gh pr merge` は使わない' "$SKILL"
 check_agent_contract "no closes keyword" '`closes #<N>` は使わない' "$SKILL"
 check_agent_contract "refs required" 'refs #<N>' "$SKILL"
@@ -393,7 +407,7 @@ check_agent_contract "common keeps consent before first CLI execution" '最初�
 check_agent_contract "common assigns CLI responsibility to orchestrator" 'CLI 実行と継続監視はオーケストレーターの責務' "$COMMON"
 check_agent_contract "common requires a clean committed review range" 'レビュー対象はコミット済み差分だけに限定し' "$COMMON"
 check_agent_contract "common validates clean working tree" '`git status --short` が空' "$COMMON"
-check_agent_contract "common validates committed range" '`committedRange` が `git diff <base>...HEAD` と一致' "$COMMON"
+check_agent_contract "common validates committed range" '`committedRange` が `git diff <effectiveBase>...HEAD` と一致' "$COMMON"
 check_agent_contract "claude host guard" '**Codexホストだけ**' .ai/agents/claude-review-normalizer.md
 check_agent_contract "codex host guard" '**Claude Codeホストだけ**' .ai/agents/codex-review-normalizer.md
 check_agent_contract "claude normalizer only handles summaries" 'CLI を起動・停止・認証確認・外部送信せず' .ai/agents/claude-review-normalizer.md
@@ -461,32 +475,53 @@ check_agent_contract "guide documents Sol escalation" '`gpt-5.6-sol` / `high` �
 # ---- エージェント起動フェーズの整合 ----
 check_agent_contract "reviewer runs in phase 5" 'issue-dev-orchestrate のレビュー段階で使用する' .ai/agents/reviewer.md
 check_agent_contract "test fixer runs in phases 4 and 6" 'issue-dev-orchestrate のフェーズ4・6（品質ゲート）で使用する' .ai/agents/test-fixer.md
-check_agent_contract "reviewer committed range" '`git diff develop...HEAD`' .ai/agents/reviewer.md
+check_agent_contract "reviewer committed range" '`git diff <effectiveBase>...HEAD`' .ai/agents/reviewer.md
 
-# ---- Issue #164: Knowledge Graph実験モード契約 ----
-check_agent_contract "architecture mode requires explicit request" 'リポジトリに `architecture/` が存在するだけでは実験モードにしない' "$SKILL"
+# ---- Issue #164: Knowledge Graph常用モード契約 ----
+check_agent_contract "knowledge graph is always enabled" 'このフローでは Knowledge Graph を常用する' "$SKILL"
+check_agent_contract "architecture mode is explicit" '`architectureMode: knowledge-graph`' "$SKILL"
+check_agent_contract "develop-v2 is the integration base" 'Issue作業ブランチは `develop-v2` から切る' "$SKILL"
+check_agent_contract "brief records base branch" '`baseBranch: develop-v2`' "$SKILL"
+check_agent_contract "effective base is reproducible" '`git merge-base origin/develop-v2 HEAD`' "$SKILL"
+check_agent_contract "latest remote develop-v2 is fetched" '`git fetch origin develop-v2`' "$SKILL"
+check_agent_contract "latest remote develop-v2 commit is resolved" '`git rev-parse --verify origin/develop-v2^{commit}`' "$SKILL"
+check_agent_contract "work branch is prepared from refreshed integration branch" '`origin/develop-v2` を起点に統合ブランチ `develop-v2` をfast-forwardで更新して新規Issue作業ブランチを切る。' "$SKILL"
+check_agent_contract "existing issue branches take normal develop-v2 updates" '既存Issue作業ブランチを継続する場合は、最新 `develop-v2` を通常のmergeで取り込んでから準備完了とする。' "$SKILL"
+check_agent_contract "non-ancestor work branches stop" '非祖先の場合は古いまたは別系統の起点として実装へ進まず停止する。' "$SKILL"
+check_agent_contract "effective base uses the remote ref" '`git merge-base origin/develop-v2 HEAD` を実行し、その単一結果を `effectiveBase` として固定する。' "$SKILL"
+check_agent_contract "architecture preflight runs on the prepared work branch" '作業ブランチの準備と祖先性検証が完了したcheckoutで `pnpm architecture:check` と `pnpm architecture:test` を実行する。' "$SKILL"
+check_order_contract "remote commit resolution precedes work branch preparation" "$SKILL" '`git rev-parse --verify origin/develop-v2^{commit}` で存在とcommit解決を確認する。' '`origin/develop-v2` を起点に統合ブランチ `develop-v2` をfast-forwardで更新して新規Issue作業ブランチを切る。'
+check_order_contract "work branch preparation precedes effective base calculation" "$SKILL" '`origin/develop-v2` を起点に統合ブランチ `develop-v2` をfast-forwardで更新して新規Issue作業ブランチを切る。' '祖先性検証後に `git merge-base origin/develop-v2 HEAD` を実行し'
+check_order_contract "effective base follows work branch ancestry validation" "$SKILL" '作業ブランチ準備後、必ず `git merge-base --is-ancestor origin/develop-v2 HEAD` を実行する。' '祖先性検証後に `git merge-base origin/develop-v2 HEAD` を実行し'
 check_agent_contract "architecture reference is discoverable" 'references/architecture-context.md' "$SKILL"
-check_agent_contract "normal develop base remains default" '通常モードの作業ブランチは `develop` から切る' "$SKILL"
-check_agent_contract "experiment records reproducible base" '`experimentBaseBranch`、`experimentBaseCommit`、`effectiveBase`' "$SKILL"
-check_agent_contract "experiment checks clean tree before base" '`git status --short` が空であることを確認し' "$SKILL"
-check_agent_contract "experiment records exact head" '`git rev-parse HEAD` で得たcommit' "$SKILL"
-check_agent_contract "experiment preflight checks snapshot" 'pnpm architecture:check' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "experiment preflight tests extractor" 'pnpm architecture:test' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "experiment query starts narrow" '最初はdepth 0〜2に絞り' "$ARCHITECTURE_CONTEXT"
+check_agent_contract "architecture preflight checks snapshot" 'pnpm architecture:check' "$ARCHITECTURE_CONTEXT"
+check_agent_contract "architecture preflight tests extractor" 'pnpm architecture:test' "$ARCHITECTURE_CONTEXT"
+check_agent_contract "query starts narrow" '最初は depth 0〜2 に絞り' "$ARCHITECTURE_CONTEXT"
+check_agent_contract "investigation records graph evidence" 'graph evidence / graph limitations' "$ARCHITECTURE_CONTEXT"
 check_agent_contract "orchestrator owns snapshot extraction" 'オーケストレーターが次を行う' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "experiment review uses effective base" '`git diff <effectiveBase>...HEAD`' .ai/agents/reviewer.md
-check_agent_contract "investigator reports architecture evidence" '### 8. Architecture evidence（実験モードのみ）' .ai/agents/issue-investigator.md
+check_agent_contract "architecture context refreshes remote base" '`git fetch origin develop-v2`' "$ARCHITECTURE_CONTEXT"
+check_agent_contract "architecture context resolves remote commit" '`git rev-parse --verify origin/develop-v2^{commit}`' "$ARCHITECTURE_CONTEXT"
+check_agent_contract "architecture context rejects non-ancestor heads" '非祖先の場合は古いまたは別系統の起点として実装へ進まず停止する。' "$ARCHITECTURE_CONTEXT"
+check_order_contract "architecture context prepares branch before effective base" "$ARCHITECTURE_CONTEXT" '`origin/develop-v2` を起点に統合ブランチ `develop-v2` をfast-forwardで更新して新規Issue作業ブランチを切る。' '祖先性検証後に `git merge-base origin/develop-v2 HEAD` を実行し'
+check_order_contract "architecture context derives effective base after ancestry validation" "$ARCHITECTURE_CONTEXT" '作業ブランチ準備後、必ず `git merge-base --is-ancestor origin/develop-v2 HEAD` を実行する。' '祖先性検証後に `git merge-base origin/develop-v2 HEAD` を実行し'
+check_agent_contract "review uses effective base" '`git diff <effectiveBase>...HEAD`' .ai/agents/reviewer.md
+check_agent_contract "investigator reports architecture evidence" '### 8. Architecture evidence' .ai/agents/issue-investigator.md
 check_agent_contract "developer does not hand edit snapshot" '`architecture/graph.json` は手編集しない' .ai/agents/developer.md
 check_agent_contract "test fixer runs architecture gates" 'pnpm architecture:check' .ai/agents/test-fixer.md
-check_agent_contract "claude normalizer receives experiment base" '`experimentBaseBranch` / `experimentBaseCommit` / `effectiveBase` / graph evidence / graph limitations' .ai/agents/claude-review-normalizer.md
-check_agent_contract "codex normalizer receives experiment base" '`experimentBaseBranch` / `experimentBaseCommit` / `effectiveBase` / graph evidence / graph limitations' .ai/agents/codex-review-normalizer.md
-check_agent_contract "claude TOML receives experiment base" '`experimentBaseBranch` / `experimentBaseCommit` / `effectiveBase` / graph evidence / graph limitations' .codex/agents/claude-review-normalizer.toml
-check_agent_contract "codex TOML receives experiment base" '`experimentBaseBranch` / `experimentBaseCommit` / `effectiveBase` / graph evidence / graph limitations' .codex/agents/codex-review-normalizer.toml
-check_agent_contract "experiment completion stays local by default" '`develop`向けPR、push、マージは実験結果に含めず' "$ARCHITECTURE_CONTEXT"
+check_agent_contract "claude normalizer receives knowledge graph fields" '`architectureMode: knowledge-graph` / `baseBranch: develop-v2` / `effectiveBase` / graph evidence / graph limitations' .ai/agents/claude-review-normalizer.md
+check_agent_contract "codex normalizer receives knowledge graph fields" '`architectureMode: knowledge-graph` / `baseBranch: develop-v2` / `effectiveBase` / graph evidence / graph limitations' .ai/agents/codex-review-normalizer.md
+check_agent_contract "claude TOML receives knowledge graph fields" '`architectureMode: knowledge-graph` / `baseBranch: develop-v2` / `effectiveBase` / graph evidence / graph limitations' .codex/agents/claude-review-normalizer.toml
+check_agent_contract "codex TOML receives knowledge graph fields" '`architectureMode: knowledge-graph` / `baseBranch: develop-v2` / `effectiveBase` / graph evidence / graph limitations' .codex/agents/codex-review-normalizer.toml
+check_agent_contract "knowledge graph gates are permanent" '常設ゲート' "$ARCHITECTURE_CONTEXT"
+check_agent_contract "PR base is develop-v2" 'ベースは `develop-v2` とする' "$SKILL"
+for file in "$SKILL" "$ARCHITECTURE_CONTEXT" .ai/agents/issue-investigator.md .ai/agents/developer.md .ai/agents/test-fixer.md .ai/agents/reviewer.md .ai/agents/claude-review-normalizer.md .ai/agents/codex-review-normalizer.md .codex/agents/claude-review-normalizer.toml .codex/agents/codex-review-normalizer.toml "$COMMON"; do
+  check_absent_contract "legacy experimental mode removed ($file)" 'architectureMode: experimental' "$file"
+  check_absent_contract "legacy experiment base removed ($file)" 'experimentBase' "$file"
+done
 
 # ---- Issue #124: discovery / verification state-machine contracts ----
 check_agent_contract "review stage is explicit" '`reviewStage`（`discovery` または `verification`）' "$COMMON"
-check_agent_contract "discovery reads cumulative diff" '`develop...HEAD` の**全累積差分**' "$COMMON"
+check_agent_contract "discovery reads cumulative diff from effective base" '`<effectiveBase>...HEAD`' "$COMMON"
 check_agent_contract "finding ID format" '`I<issue>-F<3桁連番>`' "$COMMON"
 check_agent_contract "finding metadata" '| ID | 出典 | 重要度 | 場所 | 内容 | 期待解消状態 | 状態 | 修正コミット | 検証結果 |' "$COMMON"
 check_agent_contract "duplicate findings merge" '同一ファイル・行かつ実質同内容' "$COMMON"

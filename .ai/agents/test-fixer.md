@@ -9,7 +9,7 @@ description: 正式な全体品質ゲート（pnpm typecheck / pnpm lint（Biome
 
 ## 手順
 
-0. **ベースラインと変更ファイルを把握する**。オーケストレーターから渡された変更ファイル一覧を対象スコープとする。欠けている場合、通常モードは `git diff --name-only develop`、`architectureMode: experimental` はブリーフの `effectiveBase` を使い、`git status --short` も確認する。実験モードで `effectiveBase` がなければ推測せず報告する。ユーザーの変更を動かす `git stash` は使わない。既存失敗は変更前ログ・CI結果・対象外ファイルとの対応から切り分ける。
+0. **ベースラインと変更ファイルを把握する**。オーケストレーターから渡された変更ファイル一覧を対象スコープとする。欠けている場合はブリーフの `effectiveBase` を使って `git diff --name-only <effectiveBase>` を確認し、`git status --short` も確認する。`architectureMode`、`baseBranch`、`effectiveBase` がなければ推測せず報告する。ユーザーの変更を動かす `git stash` は使わない。既存失敗は変更前ログ・CI結果・対象外ファイルとの対応から切り分ける。
 1. 品質ゲートを実行する。**変更ファイルにスコープを絞った確認は原因特定用であり、正式判定は全体ゲートで行う**。まず影響範囲を確認し、次に正式な全体ゲートを実行する:
    ```bash
    pnpm --filter <変更パッケージ> typecheck  # 変更起因の切り分け用。対象packageがない変更では省略可
@@ -19,7 +19,7 @@ description: 正式な全体品質ゲート（pnpm typecheck / pnpm lint（Biome
    pnpm lint                                   # Biome check . と dependency-cruiser を含む正式な全体ゲート
    pnpm test                                   # 正式な全体ゲート
    ```
-   `architectureMode: experimental` の場合は、オーケストレーターが再生成・確認済みの `architecture/graph.json` を変更ファイルへ含め、次の追加ゲートも正式判定に含める。自分でsnapshotを手編集または再生成しない。
+   Knowledge Graph 常用フローでは、オーケストレーターが再生成・確認済みの `architecture/graph.json` を変更ファイルへ含め、次の追加ゲートも正式判定に含める。自分でsnapshotを手編集または再生成しない。
    ```bash
    pnpm architecture:check
    pnpm architecture:test
@@ -32,7 +32,7 @@ description: 正式な全体品質ゲート（pnpm typecheck / pnpm lint（Biome
    - **(b) テスト側の誤り** → テストの期待値が仕様と乖離している場合のみテストを修正する。**実装のバグを隠すためにテストを弱めることは絶対にしない。**
    - **(c) フォーマット/lint** → `pnpm biome check --write <変更ファイル>` で自動修正し、差分を確認する（`.` で全体を書き換えるとスコープ外ファイルまで整形して差分が膨らむため、変更ファイルに限定する）。
    - **(d) 仕様理解が必要な失敗** → 修正せず、状況を整理して報告に回す。
-3. 修正後は 3つの正式な全体ゲート（`pnpm typecheck` / `pnpm lint` / `pnpm test`）を再実行する。実験モードでは architecture check / test も再実行する。全パスするまで繰り返す（最大3周。収束しなければ残課題として報告）。
+3. 修正後は正式な全体ゲート（`pnpm typecheck` / `pnpm lint` / `pnpm test` / `pnpm architecture:check` / `pnpm architecture:test`）を再実行する。全パスするまで繰り返す（最大3周。収束しなければ残課題として報告）。
 
 ## 制約
 
@@ -52,7 +52,7 @@ description: 正式な全体品質ゲート（pnpm typecheck / pnpm lint（Biome
 | typecheck | pass / fail（ベースライン） |
 | lint（Biome + dependency-cruiser） | pass / fail（ベースライン） |
 | test | pass / fail（ベースライン、N passed / M failed） |
-| architecture check / test（実験モード） | pass / fail / 対象外 |
+| architecture check / test | pass / fail |
 
 ### 実施した修正
 | ファイル | 分類(a/b/c) | 内容 |

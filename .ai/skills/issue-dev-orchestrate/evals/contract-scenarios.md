@@ -12,7 +12,7 @@ Issue #162 の改訂を検証するための模擬入力。実在Issueや旧 `ev
 
 ## A: 局所的な通常Issue
 
-READMEの説明文1箇所の誤字修正。意味・実行内容・設定は変わらず、対象が明確。design変更なし。最新develop起点のclean作業ブランチ。ユーザーはIssue対応とPR作成を依頼済み。レビュー方針未指定。internal discoveryは正常完了し指摘・確認事項とも0。必要な品質ゲートは通過済み。privateリポジトリでCodeRabbit自動レビューは無効と確認済み。
+READMEの説明文1箇所の誤字修正。意味・実行内容・設定は変わらず、対象が明確。design変更なし。最新develop-v2起点のclean作業ブランチ。ユーザーはIssue対応とPR作成を依頼済み。レビュー方針未指定。internal discoveryは正常完了し指摘・確認事項とも0。必要な品質ゲートは通過済み。privateリポジトリでCodeRabbit自動レビューは無効と確認済み。
 
 問い: 最初の調査担当を選び、internal discovery後から完了までの操作列と証跡を示す。
 
@@ -28,9 +28,9 @@ SRS純粋関数の復習期日判定を変更。sharedの実行コードとテ�
 
 問い: PR作成前に必要な行動、関連状態の照合対象・記録・停止条件を示す。
 
-## D: Knowledge Graph実験モード
+## D: Knowledge Graph常用モード
 
-ユーザーはcleanな `chore/issue-164-architecture-poc` のcurrent HEADを前提に、別セッションでIssue対応をKnowledge Graph実験として実行するよう明示した。`develop`には実験基盤がなく、今回の目的はローカルの検証済みコミット列と実験証跡を得ること。Issue番号、受け入れ条件、開始ブランチは指定済み。`architecture/graph.json`とarchitecture scriptsは存在する。push、PR作成、外部レビュー送信は依頼されていない。
+ユーザーはcleanな `chore/issue-164-architecture-poc` のcurrent HEADを前提に、Knowledge Graph常用フローでIssue対応を実行するよう明示した。統合ブランチは `develop-v2` であり、既存 `develop` のリリース運用は変更しない。Issue番号、受け入れ条件、開始ブランチは指定済み。`architecture/graph.json`とarchitecture scriptsは存在する。PR baseは `develop-v2` とする。
 
 問い: ブランチ操作前から完了までの操作列、各サブエージェントへ渡すarchitecture evidence、レビュー範囲、graph更新責務、停止条件、最終証跡を示す。
 
@@ -42,6 +42,6 @@ SRS純粋関数の復習期日判定を変更。sharedの実行コードとテ�
 4. 通常ケースの調査レポートを維持し、改訂版Aでは局所的・機械的条件に従って親の調査を選択できる。Bではrisk-basedの必須判定を維持する。
 5. 必要な証跡とHEADを対応付け、不要なCLI preflightを増やさない。
 6. Cでは明示された関係だけを照合し、未達条件を脱落させず、移管先未作成を完了としない。Issueの早期close・自動mergeを行わない。
-7. Dでは実験モードを明示入力だけで起動し、開始HEADを基準として固定する。Issue変更前のarchitecture preflight、対象を絞ったquery、コード・designによる再確認、オーケストレーターによるsnapshot再生成と差分確認、通常ゲートへのarchitecture check/test追加、`<effectiveBase>...HEAD`レビュー、ローカル成果物への終了を維持する。`develop`への切替・取込、graphの手編集、未依頼のpush・PR作成を行わない。
+7. DではKnowledge Graph常用モードを適用し、`architectureMode: knowledge-graph`、`baseBranch: develop-v2`、`effectiveBase`を固定する。Issue変更前のarchitecture preflight、対象を絞ったquery、コード・designによる再確認、graph evidence / graph limitations の記録、オーケストレーターによるsnapshot再生成と差分確認、通常ゲートへのarchitecture check/test追加、`<effectiveBase>...HEAD`レビュー、`develop-v2`向けPR作成までを行う。`develop`へ切替・取込せず、graphを手編集しない。
 
 A/Bでは項目1〜5、Cでは項目1・3・5・6、Dでは項目1・2・3・5・7を適用する。旧版Aの常時委譲は基準版の仕様として記録し、改訂版向けの直接調査条件を遡及適用しない。
