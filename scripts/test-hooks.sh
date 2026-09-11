@@ -115,7 +115,6 @@ COMMON=.ai/cross-model-reviewer-common.md
 GUIDE=.ai/review-guidelines.md
 RUNTIME=.ai/runtime-compatibility.md
 AGENT_GUIDE=docs/ai-coding-agents.md
-ARCHITECTURE_CONTEXT=.ai/skills/issue-dev-orchestrate/references/architecture-context.md
 PHASE_REF=.ai/skills/issue-dev-orchestrate/references/phase-reconciliation.md
 TEST_FIXER=.ai/agents/test-fixer.md
 
@@ -462,27 +461,6 @@ check_agent_contract "guide documents Sol escalation" '`gpt-5.6-sol` / `high` �
 check_agent_contract "reviewer runs in phase 5" 'issue-dev-orchestrate のレビュー段階で使用する' .ai/agents/reviewer.md
 check_agent_contract "test fixer runs in phases 4 and 6" 'issue-dev-orchestrate のフェーズ4・6（品質ゲート）で使用する' .ai/agents/test-fixer.md
 check_agent_contract "reviewer committed range" '`git diff develop...HEAD`' .ai/agents/reviewer.md
-
-# ---- Issue #164: Knowledge Graph実験モード契約 ----
-check_agent_contract "architecture mode requires explicit request" 'リポジトリに `architecture/` が存在するだけでは実験モードにしない' "$SKILL"
-check_agent_contract "architecture reference is discoverable" 'references/architecture-context.md' "$SKILL"
-check_agent_contract "normal develop base remains default" '通常モードの作業ブランチは `develop` から切る' "$SKILL"
-check_agent_contract "experiment records reproducible base" '`experimentBaseBranch`、`experimentBaseCommit`、`effectiveBase`' "$SKILL"
-check_agent_contract "experiment checks clean tree before base" '`git status --short` が空であることを確認し' "$SKILL"
-check_agent_contract "experiment records exact head" '`git rev-parse HEAD` で得たcommit' "$SKILL"
-check_agent_contract "experiment preflight checks snapshot" 'pnpm architecture:check' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "experiment preflight tests extractor" 'pnpm architecture:test' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "experiment query starts narrow" '最初はdepth 0〜2に絞り' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "orchestrator owns snapshot extraction" 'オーケストレーターが次を行う' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "experiment review uses effective base" '`git diff <effectiveBase>...HEAD`' .ai/agents/reviewer.md
-check_agent_contract "investigator reports architecture evidence" '### 8. Architecture evidence（実験モードのみ）' .ai/agents/issue-investigator.md
-check_agent_contract "developer does not hand edit snapshot" '`architecture/graph.json` は手編集しない' .ai/agents/developer.md
-check_agent_contract "test fixer runs architecture gates" 'pnpm architecture:check' .ai/agents/test-fixer.md
-check_agent_contract "claude normalizer receives experiment base" '`experimentBaseBranch` / `experimentBaseCommit` / `effectiveBase` / graph evidence / graph limitations' .ai/agents/claude-review-normalizer.md
-check_agent_contract "codex normalizer receives experiment base" '`experimentBaseBranch` / `experimentBaseCommit` / `effectiveBase` / graph evidence / graph limitations' .ai/agents/codex-review-normalizer.md
-check_agent_contract "claude TOML receives experiment base" '`experimentBaseBranch` / `experimentBaseCommit` / `effectiveBase` / graph evidence / graph limitations' .codex/agents/claude-review-normalizer.toml
-check_agent_contract "codex TOML receives experiment base" '`experimentBaseBranch` / `experimentBaseCommit` / `effectiveBase` / graph evidence / graph limitations' .codex/agents/codex-review-normalizer.toml
-check_agent_contract "experiment completion stays local by default" '`develop`向けPR、push、マージは実験結果に含めず' "$ARCHITECTURE_CONTEXT"
 
 # ---- Issue #124: discovery / verification state-machine contracts ----
 check_agent_contract "review stage is explicit" '`reviewStage`（`discovery` または `verification`）' "$COMMON"
