@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest'
 
 import {
   type AnalyticsDeps,
+  getAnalyticsHeatmap,
   getAnalyticsMistakes,
   getAnalyticsSummary,
   getAnalyticsWeekly,
+  recentHeatmapDays,
   recentUtcDays,
   utcWeekStart,
 } from './analytics-service'
@@ -24,6 +26,7 @@ function createDeps(overrides: Partial<AnalyticsDeps> = {}): AnalyticsDeps {
       srsStates: [],
     }),
     findWeeklyAnswerCounts: async () => [],
+    findHeatmapAnswerCounts: async () => [],
     findMistakes: async () => [],
     ...overrides,
   }
@@ -148,6 +151,29 @@ describe('analytics service', () => {
     ])
   })
 
+  it('returns a UTC 182-day heatmap and fills missing counts with zero', async () => {
+    const startAt = Date.parse('2026-03-03T00:00:00.000Z')
+    let receivedRange: { startAt: number; endAt: number } | undefined
+    const result = await getAnalyticsHeatmap(
+      createDeps({
+        findHeatmapAnswerCounts: async (_userId, startAtValue, endAtValue) => {
+          receivedRange = { startAt: startAtValue, endAt: endAtValue }
+          return [
+            { date: '2026-03-03', answerCount: 4 },
+            { date: '2026-08-31', answerCount: 2 },
+          ]
+        },
+      }),
+      { userId: 'u1', now },
+    )
+
+    expect(result.days).toHaveLength(182)
+    expect(result.days[0]).toEqual({ date: '2026-03-03', answerCount: 4 })
+    expect(result.days[1]).toEqual({ date: '2026-03-04', answerCount: 0 })
+    expect(result.days[181]).toEqual({ date: '2026-08-31', answerCount: 2 })
+    expect(receivedRange).toEqual({ startAt, endAt: Date.parse('2026-09-01T00:00:00.000Z') })
+  })
+
   it('ranks unrounded error rates before selecting the top ten', async () => {
     const result = await getAnalyticsMistakes(
       createDeps({
@@ -175,5 +201,6 @@ describe('analytics service', () => {
   it('uses UTC and Monday as the week boundary', () => {
     expect(recentUtcDays(now)[0]).toEqual({ date: '2026-08-25', weekday: 2 })
     expect(utcWeekStart(now)).toBe(Date.parse('2026-08-31T00:00:00.000Z'))
+    expect(recentHeatmapDays(now)).toHaveLength(182)
   })
 })

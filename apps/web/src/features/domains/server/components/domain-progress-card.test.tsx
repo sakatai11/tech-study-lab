@@ -3,7 +3,7 @@
 import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { DomainProgressCard } from './domain-progress-card'
+import { DomainProgressCard } from '@/features/domains/client/components/domain-progress-card'
 import { DomainProgressFallback } from './domain-progress-fallback'
 
 const security = {
