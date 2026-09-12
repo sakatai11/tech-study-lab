@@ -122,20 +122,23 @@ export function DashboardDataContent({ viewModel }: { viewModel: DashboardViewMo
             <Badge className="tabular-nums">{summary.currentStreakDays} day streak</Badge>
           </div>
         </div>
-        <div
-          aria-label="直近26週・182日間の学習コントリビューション"
-          className="heatmap-grid mt-5 grid grid-flow-col grid-rows-7 gap-1"
-          role="img"
-        >
+        <div aria-hidden="true" className="heatmap-grid mt-5 grid grid-flow-col grid-rows-7 gap-1">
           {heatmap.days.map((day, index) => (
             <span
-              aria-label={`${day.date}: ${day.answerCount}問`}
+              aria-hidden="true"
               className={`heatmap-cell rounded-sm ${heatmapClasses[heatmapLevel(day.answerCount)]}`}
               key={day.date}
               style={{ '--heatmap-index': index } as CSSProperties}
             />
           ))}
         </div>
+        <ol aria-label="直近26週・182日間の学習コントリビューション" className="sr-only">
+          {heatmap.days.map((day) => (
+            <li key={day.date}>
+              {day.date}: {day.answerCount}問
+            </li>
+          ))}
+        </ol>
         <div className="mt-4 flex items-center justify-between gap-4 font-mono text-xs text-faint">
           <span>Less</span>
           <div aria-hidden="true" className="flex gap-1">

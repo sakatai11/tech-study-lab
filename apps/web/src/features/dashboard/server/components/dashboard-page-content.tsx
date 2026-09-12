@@ -18,8 +18,13 @@ function revealStyle(index: number): CSSProperties {
 }
 
 export function DashboardPageContent() {
-  const { continueHref, continueTitle, continueEstimatedMinutes, continueQuestionCount } =
-    loadDashboardStatic()
+  const {
+    continueHref,
+    continueTitle,
+    continueEstimatedMinutes,
+    continueQuestionCount,
+    learnHref,
+  } = loadDashboardStatic()
 
   return (
     <div className="flex flex-col gap-5">
@@ -54,33 +59,35 @@ export function DashboardPageContent() {
         <DashboardUserContent />
       </Suspense>
 
-      <Card className="reveal border-green p-5 sm:p-6" style={revealStyle(2)}>
-        <div className="flex flex-wrap items-center gap-4">
-          <span
-            aria-hidden="true"
-            className="grid size-12 place-items-center rounded-2xl bg-green-bg font-mono text-xl text-green"
-          >
-            ▤
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="m-0 font-mono text-xs font-bold text-green">NEXT LESSON</p>
-            <h2 className="mb-0 mt-1 text-balance text-xl font-black text-ink">
-              {continueTitle ?? '次のレッスン'}
-            </h2>
-            <p className="mb-0 mt-1 text-pretty text-sm text-mute">
-              {continueTitle
-                ? `${continueEstimatedMinutes ?? 0}分 · ${continueQuestionCount ?? 0}問`
-                : '現在 bundle されている先頭レッスンから学習を続けられます。'}
-            </p>
+      {learnHref ? (
+        <Card className="reveal border-green p-5 sm:p-6" style={revealStyle(2)}>
+          <div className="flex flex-wrap items-center gap-4">
+            <span
+              aria-hidden="true"
+              className="grid size-12 place-items-center rounded-2xl bg-green-bg font-mono text-xl text-green"
+            >
+              ▤
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="m-0 font-mono text-xs font-bold text-green">NEXT LESSON</p>
+              <h2 className="mb-0 mt-1 text-balance text-xl font-black text-ink">
+                {continueTitle ?? '次のレッスン'}
+              </h2>
+              <p className="mb-0 mt-1 text-pretty text-sm text-mute">
+                {continueTitle
+                  ? `${continueEstimatedMinutes ?? 0}分 · ${continueQuestionCount ?? 0}問`
+                  : '現在 bundle されている先頭レッスンから学習を続けられます。'}
+              </p>
+            </div>
+            <Link
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-green px-4 py-2.5 font-bold text-white shadow-[0_4px_0_var(--green-shade)] transition-transform hover:brightness-110 active:translate-y-1 active:shadow-none"
+              href={continueHref}
+            >
+              続きから
+            </Link>
           </div>
-          <Link
-            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-green px-4 py-2.5 font-bold text-white shadow-[0_4px_0_var(--green-shade)] transition-transform hover:brightness-110 active:translate-y-1 active:shadow-none"
-            href={continueHref}
-          >
-            続きから
-          </Link>
-        </div>
-      </Card>
+        </Card>
+      ) : null}
     </div>
   )
 }

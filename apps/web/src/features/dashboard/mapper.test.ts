@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import { dashboardToViewModel, dueCountToViewModel } from './mapper'
+import type { DomainsResponse } from '@tsl/shared'
+
+import { dashboardDomainsToViewModel, dashboardToViewModel, dueCountToViewModel } from './mapper'
 
 describe('dueCountToViewModel', () => {
   it('normalizes the shared API DTO into the dashboard due-card contract', () => {
@@ -9,6 +11,64 @@ describe('dueCountToViewModel', () => {
 
   it('preserves zero so the due-card can distinguish an empty queue', () => {
     expect(dueCountToViewModel({ dueCount: 0 })).toEqual({ dueCount: 0 })
+  })
+})
+
+describe('dashboardDomainsToViewModel', () => {
+  const response = {
+    domains: [
+      {
+        domain: 'security' as const,
+        masteredQuestionCount: 1,
+        totalQuestionCount: 2,
+        masteryRate: 50,
+        topicCount: 1,
+        lessonCount: 1,
+      },
+      {
+        domain: 'frontend' as const,
+        masteredQuestionCount: 0,
+        totalQuestionCount: 1,
+        masteryRate: 0,
+        topicCount: 1,
+        lessonCount: 1,
+      },
+      {
+        domain: 'backend' as const,
+        masteredQuestionCount: 0,
+        totalQuestionCount: 0,
+        masteryRate: 0,
+        topicCount: 0,
+        lessonCount: 0,
+      },
+      {
+        domain: 'architecture' as const,
+        masteredQuestionCount: 0,
+        totalQuestionCount: 0,
+        masteryRate: 0,
+        topicCount: 0,
+        lessonCount: 0,
+      },
+    ],
+  } satisfies DomainsResponse
+
+  it('handles empty routes, multiple domains, and selects the minimum order per domain', () => {
+    expect(
+      dashboardDomainsToViewModel(response, []).every((domain) => !domain.firstTopicHref),
+    ).toBe(true)
+
+    expect(
+      dashboardDomainsToViewModel(response, [
+        { domain: 'security', topic: 'later', order: 3 },
+        { domain: 'frontend', topic: 'frontend-topic', order: 2 },
+        { domain: 'security', topic: 'first', order: 1 },
+      ]),
+    ).toMatchObject([
+      { domain: 'security', firstTopicHref: '/learn/security/first' },
+      { domain: 'frontend', firstTopicHref: '/learn/frontend/frontend-topic' },
+      { domain: 'backend', firstTopicHref: undefined },
+      { domain: 'architecture', firstTopicHref: undefined },
+    ])
   })
 })
 

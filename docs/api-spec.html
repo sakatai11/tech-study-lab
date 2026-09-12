@@ -920,7 +920,7 @@ const { dueCount } = dueCountResponseSchema.parse(await response.json())</code><
             <p><strong>後続Issueで必ず更新するもの</strong></p>
             <p>各APIの実装に着手するときは、返却値を共有Zodスキーマで確定し、このページの<strong>レスポンス例・フィールド表・実装状態</strong>も同じPRで更新します。APIのIF（URL、HTTPステータス、JSON形式、エラー形式）を実装だけで先に変えないでください。</p>
             <p>この節のAPIはいずれも認証・エラー形式が Walking Skeleton のAPIと共通です（<a href="#errors">共通エラー応答</a>）。すべて読み取り専用のため、永続書き込みのレート制限（429 / 503）は対象外です。</p>
-            <p><strong>analytics の5 APIは Issue #32 / #33 で実装済みです。</strong>週次データは UTC の直近7日を、heatmap は UTC 当日を終点とする直近182日を0埋めし、誤答ランキングは2回答以上の問題を対象に最大10件を返します。忘却曲線と復習タイミングの計算APIは提供しません。</p>
+            <p><strong>analytics の4 APIと <code>/activity/recent</code> は Issue #32 / #33 で実装済みです。</strong>週次データは UTC の直近7日を、heatmap は UTC 当日を終点とする直近182日を0埋めし、誤答ランキングは2回答以上の問題を対象に最大10件を返します。忘却曲線と復習タイミングの計算APIは提供しません。</p>
           </div>
           <div class="endpoint-list">
 

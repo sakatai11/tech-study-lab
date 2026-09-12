@@ -45,4 +45,17 @@ describe('DashboardPageContent', () => {
       'http://localhost:3000/learn/security/xss/preventing-xss',
     )
   })
+
+  it('does not show a next-lesson card when no bundled lesson is available', () => {
+    loadDashboardStatic.mockReturnValue({
+      continueHref: '/home',
+      learnHref: undefined,
+      quizHref: undefined,
+    })
+
+    render(<DashboardPageContent />)
+
+    expect(screen.queryByText('NEXT LESSON')).toBeNull()
+    expect(screen.queryByRole('link', { name: '続きから' })).toBeNull()
+  })
 })

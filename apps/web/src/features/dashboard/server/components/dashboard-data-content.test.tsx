@@ -63,7 +63,10 @@ describe('DashboardDataContent', () => {
 
     expect(screen.getByText('75')).toBeTruthy()
     expect(screen.getByText('正答率')).toBeTruthy()
-    expect(screen.getByLabelText('直近26週・182日間の学習コントリビューション')).toBeTruthy()
+    expect(
+      screen.getByRole('list', { name: '直近26週・182日間の学習コントリビューション' }),
+    ).toBeTruthy()
+    expect(screen.getByText('2026-09-01: 4問')).toBeTruthy()
     const analyticsLink = screen.getByRole('link', { name: 'すべて表示' })
     expect(analyticsLink).toHaveProperty('href', 'http://localhost:3000/analytics')
     expect(analyticsLink.className).toContain('lg:hidden')
