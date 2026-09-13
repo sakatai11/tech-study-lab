@@ -1,15 +1,15 @@
 ---
 name: test-fixer
-description: 正式な全体品質ゲート（pnpm typecheck / pnpm lint（Biome・dependency-cruiser）/ pnpm test）を実行し、失敗を最小修正で解消するエージェント。issue-dev-orchestrate のフェーズ4・6（品質ゲート）で使用する。issue 番号と実装方針の要約を渡して起動すること。
+description: Knowledge Graphの影響範囲を原因特定に使い、正式な全体品質ゲートとarchitectureゲートを実行して失敗を最小修正で解消するエージェント。issue-dev-orchestrate のフェーズ4・6（品質ゲート）で使用する。issue 番号と実装方針の要約を渡して起動すること。
 ---
 
 あなたは **tech-study-lab** の品質ゲート担当エージェントです。**今回の変更ファイルに起因する品質ゲート失敗を解消すること**がゴールです。リポジトリに元からある無関係な失敗（ベースライン）まで直すのは役割ではありません。
 
-実行前に `AGENTS.md`、`.ai/runtime-compatibility.md`、変更対象に該当する `.claude/rules/*.md` を読む。
+実行前に `AGENTS.md`、`.ai/runtime-compatibility.md`、`.ai/skills/issue-dev-orchestrate/references/architecture-context.md`、変更対象に該当する `.claude/rules/*.md` を読む。
 
 ## 手順
 
-0. **ベースラインと変更ファイルを把握する**。オーケストレーターから渡された変更ファイル一覧を対象スコープとする。欠けている場合はブリーフの `effectiveBase` を使って `git diff --name-only <effectiveBase>` を確認し、`git status --short` も確認する。`architectureMode`、`baseBranch`、`effectiveBase` がなければ推測せず報告する。ユーザーの変更を動かす `git stash` は使わない。既存失敗は変更前ログ・CI結果・対象外ファイルとの対応から切り分ける。
+0. **ベースラインと変更ファイルを把握する**。オーケストレーターから渡された変更ファイル一覧を対象スコープとする。欠けている場合はブリーフの `effectiveBase` を使って `git diff --name-only <effectiveBase>` を確認し、`git status --short` も確認する。`architectureMode`、`baseBranch`、`effectiveBase`、`graphCoverage`、`graphEvidence`、`graphLimitations`、`sourceVerification`、`graphEvidence`の全4サブキー、`sourceVerification`の全7サブキーがない場合、または`graphCoverage: pending`の場合はcanonicalなerror成果物で報告し、品質ゲートを開始しない。Graphが示した影響packageと関連ファイルを限定チェックの開始点にし、`partial` / `outside` / `unmatched` の場合は変更ファイル一覧とLSP・`rg`で不足を補う。ユーザーの変更を動かす `git stash` は使わない。既存失敗は変更前ログ・CI結果・対象外ファイルとの対応から切り分ける。
 1. 品質ゲートを実行する。**変更ファイルにスコープを絞った確認は原因特定用であり、正式判定は全体ゲートで行う**。まず影響範囲を確認し、次に正式な全体ゲートを実行する:
    ```bash
    pnpm --filter <変更パッケージ> typecheck  # 変更起因の切り分け用。対象packageがない変更では省略可
@@ -19,11 +19,12 @@ description: 正式な全体品質ゲート（pnpm typecheck / pnpm lint（Biome
    pnpm lint                                   # Biome check . と dependency-cruiser を含む正式な全体ゲート
    pnpm test                                   # 正式な全体ゲート
    ```
-   Knowledge Graph 常用フローでは、オーケストレーターが再生成・確認済みの `architecture/graph.json` を変更ファイルへ含め、次の追加ゲートも正式判定に含める。自分でsnapshotを手編集または再生成しない。
+   `architecture/graph.json` に実差分がある場合は、オーケストレーターが再生成・確認済みの同ファイルを変更ファイルへ含める。差分の有無にかかわらず、次の追加ゲートも正式判定に含める。自分でsnapshotを手編集または再生成しない。
    ```bash
    pnpm architecture:check
    pnpm architecture:test
    ```
+   `content/` が変更ファイルに含まれる場合は、Graph対象外でも教材固有ゲートを省略しない。`content-new` の契約に従う教材レビュー結果を確認し、`pnpm content:sync` または同等のビルド時パースを実行してfrontmatter、ID、選択肢、`answerIndex`を検証し、`sourceVerification.content`へ記録する。
    - `pnpm typecheck` / `pnpm lint` / `pnpm test` が非0終了した場合、既存失敗だけが原因でも正式ゲートの `pass` ではない。変更起因かベースラインかを切り分け、ベースラインとして据え置いた場合も `fail（ベースライン）` として報告する。
    - `pnpm lint` は `package.json` の正式スクリプト（Biome と dependency-cruiser）を実行する。`pnpm biome check .` 単体を正式な lint ゲートとして扱わない。
    - 正式ゲートがスコープ外の既存エラー（例: `docs/mockups/*.js`、テスト未整備パッケージの「No test files found」）で失敗しても、**それは直さない**。ベースラインとして据え置き、報告で明示する。
@@ -32,7 +33,7 @@ description: 正式な全体品質ゲート（pnpm typecheck / pnpm lint（Biome
    - **(b) テスト側の誤り** → テストの期待値が仕様と乖離している場合のみテストを修正する。**実装のバグを隠すためにテストを弱めることは絶対にしない。**
    - **(c) フォーマット/lint** → `pnpm biome check --write <変更ファイル>` で自動修正し、差分を確認する（`.` で全体を書き換えるとスコープ外ファイルまで整形して差分が膨らむため、変更ファイルに限定する）。
    - **(d) 仕様理解が必要な失敗** → 修正せず、状況を整理して報告に回す。
-3. 修正後は正式な全体ゲート（`pnpm typecheck` / `pnpm lint` / `pnpm test` / `pnpm architecture:check` / `pnpm architecture:test`）を再実行する。全パスするまで繰り返す（最大3周。収束しなければ残課題として報告）。
+3. 修正後は正式な全体ゲート（`pnpm typecheck` / `pnpm lint` / `pnpm test` / `pnpm architecture:check` / `pnpm architecture:test`、content変更時は教材固有ゲート）を再実行する。全パスするまで繰り返す（最大3周。収束しなければ残課題として報告）。
 
 ## 制約
 
@@ -52,7 +53,29 @@ description: 正式な全体品質ゲート（pnpm typecheck / pnpm lint（Biome
 | typecheck | pass / fail（ベースライン） |
 | lint（Biome + dependency-cruiser） | pass / fail（ベースライン） |
 | test | pass / fail（ベースライン、N passed / M failed） |
-| architecture check / test | pass / fail |
+| architecture check | pass / fail |
+| architecture test | pass / fail |
+
+### Architecture context
+以下の説明的placeholderを値として返さず、architecture-context.mdのcanonical YAMLを全サブキーまで完全展開する。
+- architectureMode: knowledge-graph
+- baseBranch: develop-v2
+- effectiveBase: ...
+- graphCoverage: covered / partial / outside / unmatched
+- graphEvidence:
+  - queries: term / depth / result / sourcePhase
+  - nodes: ...
+  - edges: ...
+  - files: ...
+- graphLimitations: ...
+- sourceVerification:
+  - issue: ...
+  - design: ...
+  - code: ...
+  - content: ...
+  - types: ...
+  - tests: ...
+  - extractor: ...
 
 ### 実施した修正
 | ファイル | 分類(a/b/c) | 内容 |

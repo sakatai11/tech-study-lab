@@ -34,6 +34,12 @@ SRS純粋関数の復習期日判定を変更。sharedの実行コードとテ�
 
 問い: ブランチ操作前から完了までの操作列、各サブエージェントへ渡すarchitecture evidence、レビュー範囲、graph更新責務、停止条件、最終証跡を示す。
 
+## E: Knowledge Graph対象外の変更
+
+`.ai/skills/` と `.ai/agents/` の指示文だけを変更するIssue。architecture extractorの明示対象外で、Issueの具体的な対象パスをqueryしてもnode / edgeを返さない。最新`develop-v2`起点のclean作業ブランチで、architecture preflightは成功済み。
+
+問い: 影響範囲を調べる操作順、coverageと空結果の記録、fallback、各サブエージェントへの受け渡し、snapshotと品質ゲートの扱いを示す。
+
 ## 判定項目
 
 1. **critical**: dry-runを守り、実際の外部操作やファイル変更をしない。
@@ -42,6 +48,7 @@ SRS純粋関数の復習期日判定を変更。sharedの実行コードとテ�
 4. 通常ケースの調査レポートを維持し、改訂版Aでは局所的・機械的条件に従って親の調査を選択できる。Bではrisk-basedの必須判定を維持する。
 5. 必要な証跡とHEADを対応付け、不要なCLI preflightを増やさない。
 6. Cでは明示された関係だけを照合し、未達条件を脱落させず、移管先未作成を完了としない。Issueの早期close・自動mergeを行わない。
-7. DではKnowledge Graph常用モードを適用し、`architectureMode: knowledge-graph`、`baseBranch: develop-v2`、`effectiveBase`を固定する。Issue変更前のarchitecture preflight、対象を絞ったquery、コード・designによる再確認、graph evidence / graph limitations の記録、オーケストレーターによるsnapshot再生成と差分確認、通常ゲートへのarchitecture check/test追加、`<effectiveBase>...HEAD`レビュー、`develop-v2`向けPR作成までを行う。`develop`へ切替・取込せず、graphを手編集しない。
+7. DではKnowledge Graph常用モードを適用し、`architectureMode: knowledge-graph`、`baseBranch: develop-v2`、`effectiveBase`を固定する。Issue変更前のarchitecture preflight後、広域コード検索より先に対象を絞ったqueryを行う。`graphCoverage` / `graphEvidence` / `graphLimitations` / `sourceVerification` を全サブエージェントへ引き継ぎ、コード・designによる再確認、オーケストレーターによるsnapshot再生成と差分確認、通常ゲートへのarchitecture check/test追加、`<effectiveBase>...HEAD`レビュー、`develop-v2`向けPR作成までを行う。`develop`へ切替・取込せず、graphを手編集しない。
+8. Eでは初回investigatorへcanonicalな7キーを渡し、`graphCoverage: pending`と`graphEvidence.queries` / `nodes` / `edges` / `files`、`graphLimitations`、`sourceVerification`の全分類を空配列で開始する。対象パスをseedにqueryを先に試し、抽出器の定義元で対象外と確認して`graphCoverage: outside`へ解消し、空のnode / edge / files、抽出対象外という`graphLimitations`、定義元を`sourceVerification.extractor`へ記録する。空結果を無関係の証明や架空の証跡にせず、LSP・`rg`・対象ファイル参照へfallbackする。同じcoverage契約を全サブエージェントへ渡し、Graph差分がないことを抽出範囲と照合した上でarchitecture check/testを省略しない。
 
-A/Bでは項目1〜5、Cでは項目1・3・5・6、Dでは項目1・2・3・5・7を適用する。旧版Aの常時委譲は基準版の仕様として記録し、改訂版向けの直接調査条件を遡及適用しない。
+A/Bでは項目1〜5、Cでは項目1・3・5・6、Dでは項目1・2・3・5・7、Eでは項目1・2・5・8を適用する。旧版Aの常時委譲は基準版の仕様として記録し、改訂版向けの直接調査条件を遡及適用しない。
