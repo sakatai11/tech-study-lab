@@ -36,7 +36,7 @@ ls content/<domain>/<topic>/ 2>/dev/null   # 既存レッスンと連番の確�
 
 `.ai/agents/reviewer.md` の定義を使って `reviewer` エージェントを起動し、教材観点でのレビューを依頼する。観点を明示して渡す:
 
-- `reviewStage: content-draft`、変更済みまたは新規の教材だけを列挙した`draftPaths`、同じ値の`inScopeFiles`（このpreflightでは`committedRange`を渡さない）
+- `reviewStage: content-draft`、`targetFeature`、`acceptanceCriteria`、`outOfScopePolicy`、変更済みまたは新規の教材だけを列挙した`draftPaths`、同じ値の`inScopeFiles`（このpreflightでは`committedRange`を渡さない）
 - `issue-dev-orchestrate`経由では、`content-author`の返却証跡をオーケストレーターが統合した共通実行記録の参照先
 
 - 技術的正確性（誤った記述は must-fix）

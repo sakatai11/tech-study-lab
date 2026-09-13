@@ -518,6 +518,7 @@ check_agent_contract "content changes retain content-specific gates" '`content/`
 check_agent_contract "content workflow owner is explicit" 'オーケストレーターが`content-new`を全文読んで起動し' "$ARCHITECTURE_CONTEXT"
 check_agent_contract "content draft review is precommit" '`reviewStage: content-draft`' .ai/skills/content-new/SKILL.md
 check_agent_contract "content draft scope is exact" '`draftPaths`、同じ値の`inScopeFiles`' .ai/skills/content-new/SKILL.md
+check_agent_contract "content draft preserves basic review scope" '`targetFeature`、`acceptanceCriteria`、`outOfScopePolicy`' .ai/skills/content-new/SKILL.md
 check_agent_contract "nested content commit ownership stays outer" 'コミット対象・時点・ユーザー承認は外側のオーケストレーター契約へ委ねる。' .ai/skills/content-new/SKILL.md
 check_agent_contract "reviewer supports content draft paths" '`content-draft`では`draftPaths`' .ai/agents/reviewer.md
 check_agent_contract "content draft does not update review boundary" 'このpreflightはFinding台帳・レビュー済み境界・外部レビューを更新しない。' .ai/agents/reviewer.md
