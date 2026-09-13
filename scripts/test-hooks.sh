@@ -514,6 +514,8 @@ check_agent_contract "review uses effective base" '`git diff <effectiveBase>...H
 check_agent_contract "investigator reports architecture evidence" '### 8. Architecture evidence' .ai/agents/issue-investigator.md
 check_agent_contract "developer does not hand edit or regenerate snapshot" '`architecture/graph.json` は手編集・再生成しない' .ai/agents/developer.md
 check_agent_contract "test fixer runs architecture gates" 'pnpm architecture:check' .ai/agents/test-fixer.md
+check_agent_contract "test fixer scopes fallback to committed range" '`git diff --name-only <effectiveBase>...HEAD` でコミット済み差分だけを確認する。' .ai/agents/test-fixer.md
+check_agent_contract "test fixer reports worktree separately" '`git status --short` は未コミット変更の報告用として別に確認する。' .ai/agents/test-fixer.md
 check_agent_contract "content changes retain content-specific gates" '`content/` が変更ファイルに含まれる場合は、Graph対象外でも教材固有ゲートを省略しない。' .ai/agents/test-fixer.md
 check_agent_contract "content workflow owner is explicit" 'オーケストレーターが`content-new`を全文読んで起動し' "$ARCHITECTURE_CONTEXT"
 check_agent_contract "content draft review is precommit" '`reviewStage: content-draft`' .ai/skills/content-new/SKILL.md
