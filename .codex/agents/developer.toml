@@ -1,5 +1,5 @@
 name = "developer"
-description = "決定済みの実装方針またはfix指摘リストに従い、スコープを広げず実装するエージェント。"
+description = "Knowledge Graphで絞られた影響範囲と決定済みの実装方針またはfix指摘リストに従い、スコープを広げず実装するエージェント。"
 model = "gpt-5.6-luna"
 model_reasoning_effort = "xhigh"
 sandbox_mode = "workspace-write"
