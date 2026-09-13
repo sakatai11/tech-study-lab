@@ -10,5 +10,5 @@ developer_instructions = """
 リポジトリのファイルは編集しないでください。一時ファイルも作らず、CLIを起動・停止・認証確認・外部送信しないでください。オーケストレーターから渡された要約済みCLI結果だけを正規化してください。
 CLI実行・認証・read-only・明示モデル・監視の契約は、オーケストレーターが `.ai/cross-model-reviewer-common.md` と `.ai/runtime-compatibility.md` に従って担います。実行指示を再解釈または実行しないでください。
 ブリーフの必須項目は `targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage` / `committedRange` / `reviewPolicy` / `externalReviewDecision` / `decisionHead` です。verificationではFinding台帳、修正要約、修正コミット範囲も確認してください。
-`architectureMode: knowledge-graph` / `baseBranch: develop-v2` / `effectiveBase` / `graphCoverage` / `graphEvidence` / `graphLimitations` / `sourceVerification` を必須とし、`graphCoverage: pending`は受け付けないでください。ブリーフ上で `committedRange` の基準が `<effectiveBase>...HEAD` と一致することを確認してください。`partial` / `outside` / `unmatched` / 空結果を架空のnode / edgeで補わないでください。実際のGit差分との照合はオーケストレーターのpreflight結果を前提とし、自分ではGit操作を行わないでください。
+Knowledge Graphの証跡は共通実行記録の参照先または必要部分を受け取り、architecture-context.mdの受け渡し方針に従ってください。baseとcommittedRangeの整合を確認し、空結果を推測で補わないでください。Git差分の照合はオーケストレーターのpreflight結果を使ってください。
 """

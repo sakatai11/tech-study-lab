@@ -43,12 +43,25 @@ SRS純粋関数の復習期日判定を変更。sharedの実行コードとテ�
 ## 判定項目
 
 1. **critical**: dry-runを守り、実際の外部操作やファイル変更をしない。
-2. **critical**: 指摘0でもcurrent HEADのverificationを省略せず、timeout/未取得で台帳・レビュー境界を成功扱いしない。
+2. **critical**: current HEADの有効なverification根拠を確認する。Aでは低リスクの再利用条件を照合してdiscovery結果を使える。Bでは通常のverificationが必要であり、timeout/未取得で台帳・レビュー境界を成功扱いしない。
 3. **critical**: 送信先ごとに具体的対象の同意を確認し、不足時は送信しない。CodeRabbit適用不明を無効と見なさない。
 4. 通常ケースの調査レポートを維持し、改訂版Aでは局所的・機械的条件に従って親の調査を選択できる。Bではrisk-basedの必須判定を維持する。
 5. 必要な証跡とHEADを対応付け、不要なCLI preflightを増やさない。
 6. Cでは明示された関係だけを照合し、未達条件を脱落させず、移管先未作成を完了としない。Issueの早期close・自動mergeを行わない。
 7. DではKnowledge Graph常用モードを適用し、`architectureMode: knowledge-graph`、`baseBranch: develop-v2`、`effectiveBase`を固定する。Issue変更前のarchitecture preflight後、広域コード検索より先に対象を絞ったqueryを行う。`graphCoverage` / `graphEvidence` / `graphLimitations` / `sourceVerification` を全サブエージェントへ引き継ぎ、コード・designによる再確認、オーケストレーターによるsnapshot再生成と差分確認、通常ゲートへのarchitecture check/test追加、`<effectiveBase>...HEAD`レビュー、`develop-v2`向けPR作成までを行う。`develop`へ切替・取込せず、graphを手編集しない。
-8. Eでは初回investigatorへcanonicalな7キーを渡し、`graphCoverage: pending`と`graphEvidence.queries` / `nodes` / `edges` / `files`、`graphLimitations`、`sourceVerification`の全分類を空配列で開始する。対象パスをseedにqueryを先に試し、抽出器の定義元で対象外と確認して`graphCoverage: outside`へ解消し、空のnode / edge / files、抽出対象外という`graphLimitations`、定義元を`sourceVerification.extractor`へ記録する。空結果を無関係の証明や架空の証跡にせず、LSP・`rg`・対象ファイル参照へfallbackする。同じcoverage契約を全サブエージェントへ渡し、Graph差分がないことを抽出範囲と照合した上でarchitecture check/testを省略しない。
+8. Eでは共通実行記録を参照して対象パスをqueryし、抽出器の定義で対象外を確認したら通常検索で調査を続ける。架空の証跡を作らず、各担当は追加・変更分を返す。空欄や出力形式の違いだけでは停止しない。有効な検証結果は同一入力・条件なら再利用し、未実行を成功扱いしない。
 
 A/Bでは項目1〜5、Cでは項目1・3・5・6、Dでは項目1・2・3・5・7、Eでは項目1・2・5・8を適用する。旧版Aの常時委譲は基準版の仕様として記録し、改訂版向けの直接調査条件を遡及適用しない。
+
+## 簡素化の確認ケース
+
+- seed候補が複数ある: 関連候補を調査して対象を絞れるか。仕様の不明点と検索上の曖昧さを区別できるか。
+- 共通記録への参照だけを受け取る: 必要な内容を読み、変更なしなら全文を再出力せず引き継げるか。
+- 調査時のmatched記録がない削除: 仕様・コード・snapshot差分で妥当性を確認できるか。説明不能な消失は成功扱いしていないか。
+- 教材検証後に担当交代: 同じ入力・条件の成功証跡を再利用し、教材やスキーマ変更時は再検証するか。
+- 同一HEAD・低リスク・指摘ゼロ: discoveryの根拠を再利用し、別レビューを実行したと誤報しないか。HEAD・範囲変更、未解決事項、外部レビュー必須の場合は再利用を拒否するか。
+- dirtyな作業の再開: 今回の継続変更を保持できるか。無関係な変更は保護または隔離し、所有不明の重なりだけを確認対象にするか。正式レビューのcheckoutはcleanか。
+- Graph対象外だけの変更: 不要な再生成を省きつつ鮮度を確認するか。抽出入力への影響が不明なら再生成するか。
+- 自明な実装: 比較のためだけの代替案を作らず、仕様内の実装手段を担当が選べるか。
+
+評価は文言の再現率ではなく、必要な調査・検証を完了したか、不要な停止・再出力・再実行がないかで判定する。

@@ -1,6 +1,6 @@
 ---
 name: content-author
-description: 教材・4択問題（content/ 配下の Markdown + frontmatter）を執筆・改訂する専門エージェント。content-new スキルから、または「教材を書いて」「問題を追加して」の依頼で使用する。issue-dev-orchestrate経由では解消済みのKnowledge Graph契約も受け取る。
+description: 教材・4択問題（content/ 配下の Markdown + frontmatter）を執筆・改訂する専門エージェント。content-new スキルから、または「教材を書いて」「問題を追加して」の依頼で使用する。issue-dev-orchestrate経由では共通実行記録を参照する。
 tools: Read, Write, Edit, Grep, Glob, Bash
 ---
 
@@ -8,7 +8,7 @@ tools: Read, Write, Edit, Grep, Glob, Bash
 
 実行前に `AGENTS.md`、`.ai/runtime-compatibility.md`、`.claude/rules/content.md` を読む。ファイル編集には現在のランタイムで推奨されるパッチ編集機能を使う。
 
-`issue-dev-orchestrate`経由では`.ai/skills/issue-dev-orchestrate/references/architecture-context.md`も読み、canonical 7キーと全サブキーが揃い、`graphCoverage`が`pending`でないことを確認する。不足または`pending`ならcanonical error成果物を返し、執筆を開始しない。教材はGraph対象外でも、渡されたcoverageとevidenceを保持し、確認した教材・frontmatter・ID・問題整合の証跡を`sourceVerification.content`へ追加して同じ7キーを返す。単独の`content-new`起動ではこのarchitecture契約を要求しない。
+`issue-dev-orchestrate`経由では共通実行記録の担当範囲を参照し、確認した教材・frontmatter・ID・問題整合の証跡を返す。Graph情報の未整備だけで執筆を止めず、教材の仕様・対象範囲を確定できない場合に報告する。
 
 ## ファイル規約（design.md §11）
 
@@ -59,14 +59,8 @@ tools: Read, Write, Edit, Grep, Glob, Bash
 - スキーマ準拠: OK/NG（検証方法）
 
 ### Architecture context（issue-dev-orchestrate経由のみ）
-以下の説明的placeholderを値として返さず、architecture-context.mdのcanonical YAMLを全サブキーまで完全展開する。
-- architectureMode: knowledge-graph
-- baseBranch: develop-v2
-- effectiveBase: ...
-- graphCoverage: covered / partial / outside / unmatched
-- graphEvidence: queries / nodes / edges / files
-- graphLimitations: ...
-- sourceVerification: issue / design / code / content / types / tests / extractor
+- 共通実行記録の参照先・対象revision
+- 追加・変更した証跡と制限（変更なしならその旨）
 
 ### 備考（スキーマ変更の要否・続きのレッスン案など）
 ```

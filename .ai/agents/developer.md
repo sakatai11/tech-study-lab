@@ -7,7 +7,7 @@ description: Knowledge Graphで絞られた影響範囲と決定済みの実装�
 
 実行前に `AGENTS.md`、`.ai/runtime-compatibility.md`、`.ai/skills/issue-dev-orchestrate/references/architecture-context.md`、変更対象に該当する `.claude/rules/*.md` を読む。
 
-方針書の `architectureMode: knowledge-graph`、`baseBranch: develop-v2`、`effectiveBase`、`graphCoverage`、`graphEvidence`、`graphLimitations`、`sourceVerification`、さらに`graphEvidence`の全4サブキーと`sourceVerification`の全7サブキーが揃っていることを最初に確認する。不足時または`graphCoverage: pending`の場合はcanonicalなerror成果物で報告し、実装を開始しない。`covered`では渡された node / edge と関連ファイルから読み始める。`partial` / `outside` / `unmatched` / 空結果 / 曖昧な結果の場合だけLSP・`rg`で不足部分を検索する。必要な関係が不足したときだけ `.ai/skills/issue-dev-orchestrate/references/architecture-context.md` の範囲で追加queryし、結果をコードと`docs/design.md`で再確認する。同じ空queryを反復せず、追加したevidence・limitations・source verificationは報告へ含める。`architecture/graph.json` は手編集・再生成しない。snapshot更新はオーケストレーターが担当する。
+共通実行記録を参照し、不足は追加調査で補う。仕様・対象範囲・base・権限を確定できない場合は不足内容を報告する。`covered`では渡された node / edge と関連ファイルから読み始める。`partial` / `outside` / `unmatched` / 空結果 / 曖昧な結果の場合だけLSP・`rg`で不足部分を検索する。必要な関係が不足したときだけ `.ai/skills/issue-dev-orchestrate/references/architecture-context.md` の範囲で追加queryし、結果をコードと`docs/design.md`で再確認する。同じ空queryを反復せず、追加したevidence・limitations・source verificationは報告へ含める。`architecture/graph.json` は手編集・再生成しない。snapshot更新はオーケストレーターが担当する。
 
 ## 実装ガードレール（AGENTS.md 準拠・厳守）
 
@@ -33,7 +33,7 @@ description: Knowledge Graphで絞られた影響範囲と決定済みの実装�
 
 ## 禁止事項
 
-- 方針書からの逸脱。逸脱が必要と判断した場合は、実装を止めて理由と代替案を報告する。
+- 仕様・受け入れ条件・対象範囲内の実装手段は担当が選び、重要な変更理由を報告する。契約・対象範囲・権限を変える必要がある場合は、該当作業を止めて理由と代替案を報告する。
 - `docs/design.md` の無断変更（変更が必要ならその内容を報告に含める）。
 - git commit / push（コミットはオーケストレーター側の責務）。
 - 方針書に含まれないリファクタリングやスコープ拡大。
@@ -53,25 +53,8 @@ description: Knowledge Graphで絞られた影響範囲と決定済みの実装�
 - scoped test: pass/fail/未実行（件数・理由）
 
 ### Architecture context の追加・変更
-以下の説明的placeholderを値として返さず、architecture-context.mdのcanonical YAMLを全サブキーまで完全展開する。
-- architectureMode: knowledge-graph
-- baseBranch: develop-v2
-- effectiveBase: ...
-- graphCoverage: covered / partial / outside / unmatched
-- graphEvidence:
-  - queries: term / depth / result / sourcePhase
-  - nodes: ...
-  - edges: ...
-  - files: ...
-- graphLimitations: ...
-- sourceVerification:
-  - issue: ...
-  - design: ...
-  - code: ...
-  - content: ...
-  - types: ...
-  - tests: ...
-  - extractor: ...
+- 共通実行記録の参照先・対象revision
+- 追加・変更した証跡と制限（変更なしならその旨）
 
 ### 方針からの逸脱・未解決事項
 （なければ「なし」）

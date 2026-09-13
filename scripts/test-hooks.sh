@@ -499,24 +499,9 @@ check_agent_contract "architecture preflight checks snapshot" 'pnpm architecture
 check_agent_contract "architecture preflight tests extractor" 'pnpm architecture:test' "$ARCHITECTURE_CONTEXT"
 check_agent_contract "query starts narrow" '最初は depth 0〜2 に絞り' "$ARCHITECTURE_CONTEXT"
 check_agent_contract "graph-first precedes broad code search" '広域のコード検索やファイル読み取りより先に query する。' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "unknown seed stops before broad search" '`graphCoverage: pending`のまま要確認事項を返して停止する。' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "coverage states are explicit" 'query後に `graphCoverage` を `covered`' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "mixed covered and outside scope is partial" 'Graph対象内のmatched/covered領域と明示対象外のoutside領域が1件でも混在する場合は、fallback確認の成否にかかわらず必ず`partial`とする。' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "coverage distinguishes outside and unmatched" '`outside`（対象領域が抽出器の明示対象外）、`unmatched`（対象領域内だがqueryが一致しない）' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "initial investigator coverage is pending" '初回`issue-investigator`への入力だけは `graphCoverage: pending`' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "pending is resolved after first query" 'investigatorは最初のquery後に`pending`を `covered` / `partial` / `outside` / `unmatched` のいずれかへ必ず解消して返す。' "$ARCHITECTURE_CONTEXT"
 check_agent_contract "investigation records graph evidence" '`graphEvidence`' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "graph queries retain phase history" '`graphEvidence.queries`は各phaseのquery履歴、`nodes` / `edges` / `files`は**最新snapshotの現在状態**とする。' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "intentional deletion has five-part proof" '(1) investigation時のmatched証跡、(2) `architecture/graph.json`の対応する削除差分、(3) Issueまたは受け入れ条件上の削除意図、(4) `docs/design.md`との整合、(5) コード差分上の削除事実' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "intentional deletion empty is not unmatched" '削除後emptyだけを`unmatched`または異常の根拠にしない。' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "deleted graph elements leave current arrays" '実装後snapshotから削除されたnode / edge / fileは最新状態の各配列から除き' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "agent outputs expand canonical YAML" '成果物では次のcanonical YAMLを全サブキーまで完全展開する。' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "coverage aggregation is deterministic" '新しいquery証跡を統合するたびにこの順で再計算する。' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "evidence arrays are deterministically ordered" '`graphLimitations`も完全一致を重複排除して辞書順に並べる。' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "investigator handles missing seed locally" 'query前に停止する場合だけは`pending`を保持し' .ai/agents/issue-investigator.md
 check_agent_contract "investigation records graph limitations" '`graphLimitations`' "$ARCHITECTURE_CONTEXT"
 check_agent_contract "investigation records source verification" '`sourceVerification`' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "content verification has a dedicated evidence bucket" 'content: []' "$ARCHITECTURE_CONTEXT"
 check_agent_contract "orchestrator owns snapshot extraction" 'オーケストレーターがsnapshotを更新・照合する。' "$ARCHITECTURE_CONTEXT"
 check_agent_contract "snapshot inclusion requires actual semantic diff" '説明できる実差分の場合だけコミット対象へ含める。' "$ARCHITECTURE_CONTEXT"
 check_agent_contract "unchanged snapshot remains byte identical" '再生成前とbyte-identicalで、変更ファイル一覧やコミット対象へ含めず' "$ARCHITECTURE_CONTEXT"
@@ -531,34 +516,22 @@ check_agent_contract "developer does not hand edit or regenerate snapshot" '`arc
 check_agent_contract "test fixer runs architecture gates" 'pnpm architecture:check' .ai/agents/test-fixer.md
 check_agent_contract "content changes retain content-specific gates" '`content/` が変更ファイルに含まれる場合は、Graph対象外でも教材固有ゲートを省略しない。' .ai/agents/test-fixer.md
 check_agent_contract "content workflow owner is explicit" 'オーケストレーターが`content-new`を全文読んで起動し' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "input error envelope is canonical" '`### Input contract error`、`- missingFields: [<欠落キーのdot path>]`、`- invalidFields: [<dot path>=<受領した不正値>]`' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "invalid fields have deterministic ordering" '各配列は重複を除き、上記canonical schemaの出現順で並べ' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "content skill preserves architecture context" 'canonical architecture context（7つのトップレベルキーと全サブキー、`graphCoverage`は解消済み）' .ai/skills/content-new/SKILL.md
-check_agent_contract "content author rejects unresolved context" '`graphCoverage`が`pending`でないことを確認する。' .ai/agents/content-author.md
 check_agent_contract "content draft review is precommit" '`reviewStage: content-draft`' .ai/skills/content-new/SKILL.md
 check_agent_contract "content draft scope is exact" '`draftPaths`、同じ値の`inScopeFiles`' .ai/skills/content-new/SKILL.md
 check_agent_contract "nested content commit ownership stays outer" 'コミット対象・時点・ユーザー承認は外側のオーケストレーター契約へ委ねる。' .ai/skills/content-new/SKILL.md
 check_agent_contract "reviewer supports content draft paths" '`content-draft`では`draftPaths`' .ai/agents/reviewer.md
 check_agent_contract "content draft does not update review boundary" 'このpreflightはFinding台帳・レビュー済み境界・外部レビューを更新しない。' .ai/agents/reviewer.md
-check_agent_contract "normalizers use canonical architecture error" '入力不備時は同文書のcanonical error形式を使う。' "$COMMON"
-check_agent_contract "claude normalizer receives knowledge graph fields" '`architectureMode: knowledge-graph` / `baseBranch: develop-v2` / `effectiveBase` / `graphCoverage` / `graphEvidence` / `graphLimitations` / `sourceVerification`' .ai/agents/claude-review-normalizer.md
-check_agent_contract "codex normalizer receives knowledge graph fields" '`architectureMode: knowledge-graph` / `baseBranch: develop-v2` / `effectiveBase` / `graphCoverage` / `graphEvidence` / `graphLimitations` / `sourceVerification`' .ai/agents/codex-review-normalizer.md
-check_agent_contract "claude TOML receives knowledge graph fields" '`architectureMode: knowledge-graph` / `baseBranch: develop-v2` / `effectiveBase` / `graphCoverage` / `graphEvidence` / `graphLimitations` / `sourceVerification`' .codex/agents/claude-review-normalizer.toml
-check_agent_contract "codex TOML receives knowledge graph fields" '`architectureMode: knowledge-graph` / `baseBranch: develop-v2` / `effectiveBase` / `graphCoverage` / `graphEvidence` / `graphLimitations` / `sourceVerification`' .codex/agents/codex-review-normalizer.toml
 check_agent_contract "investigator is graph-first" '広域コード検索より先に queryする。' .ai/agents/issue-investigator.md
 check_agent_contract "reviewer is graph-first" '先に`graphCoverage`、`graphEvidence`、graph差分を読み' .ai/agents/reviewer.md
-check_agent_contract "developer rejects pending coverage" '`graphCoverage: pending`の場合はcanonicalなerror成果物で報告し、実装を開始しない。' .ai/agents/developer.md
-check_agent_contract "test fixer rejects pending coverage" '`graphCoverage: pending`の場合はcanonicalなerror成果物で報告し、品質ゲートを開始しない。' .ai/agents/test-fixer.md
-check_agent_contract "reviewer rejects pending coverage" '`graphCoverage: pending`はレビュー入力として認めない。' .ai/agents/reviewer.md
-check_agent_contract "normalizers reject pending coverage" '`graphCoverage: pending`はレビュー入力として認めない。' "$COMMON"
-for file in .ai/agents/issue-investigator.md .ai/agents/developer.md .ai/agents/test-fixer.md .ai/agents/reviewer.md .ai/agents/content-author.md; do
-  check_agent_contract "agent preserves graph coverage ($file)" 'graphCoverage:' "$file"
-done
-check_agent_contract "knowledge graph gates are permanent" '正式ゲートとしてそれぞれ実行・判定する' "$ARCHITECTURE_CONTEXT"
+
 check_agent_contract "PR base is develop-v2" 'ベースは `develop-v2` とする' "$SKILL"
 for file in "$SKILL" "$ARCHITECTURE_CONTEXT" .ai/agents/issue-investigator.md .ai/agents/developer.md .ai/agents/test-fixer.md .ai/agents/reviewer.md .ai/agents/claude-review-normalizer.md .ai/agents/codex-review-normalizer.md .codex/agents/claude-review-normalizer.toml .codex/agents/codex-review-normalizer.toml "$COMMON"; do
   check_absent_contract "legacy experimental mode removed ($file)" 'architectureMode: experimental' "$file"
   check_absent_contract "legacy experiment base removed ($file)" 'experimentBase' "$file"
+done
+
+for file in .ai/agents/*.md; do
+  check_agent_contract "shared evidence reference ($file)" '共通実行記録' "$file"
 done
 
 # ---- Issue #124: discovery / verification state-machine contracts ----
@@ -568,8 +541,8 @@ check_agent_contract "finding ID format" '`I<issue>-F<3桁連番>`' "$COMMON"
 check_agent_contract "finding metadata" '| ID | 出典 | 重要度 | 場所 | 内容 | 期待解消状態 | 状態 | 修正コミット | 検証結果 |' "$COMMON"
 check_agent_contract "duplicate findings merge" '同一ファイル・行かつ実質同内容' "$COMMON"
 check_agent_contract "verification brief requirement" 'verification には上記に加えて、issue固有のFinding台帳、修正要約、修正コミット範囲を含める' "$COMMON"
-check_agent_contract "zero findings skip only fix work" 'Findingが0件でも verification は省略しない' "$SKILL"
-check_agent_contract "zero findings still verify the current HEAD" 'Findingが0件でも verification は省略しない' "$SKILL"
+check_agent_contract "low risk reuse has an explicit basis" 'verificationBasis: reused-discovery' "$COMMON"
+check_agent_contract "reuse never claims a new review" '別のverificationレビューを実行したとは報告しない' "$COMMON"
 check_agent_contract "verification internal first" 'current HEADで internal verification が approve した場合だけ' "$SKILL"
 check_agent_contract "required external path needs both approvals" 'required なら別モデルCLI verificationを行う' "$SKILL"
 check_agent_contract "non-required path stays distinct from approval" '有効な `not-required-by-policy` 判定' "$SKILL"

@@ -16,9 +16,11 @@ tools: Bash, Read, Grep, Glob
 
 オーケストレーターがブリーフで `reviewProfile` を指定した場合はそれに従う。別モデルCLIと並列実行されるとき、別モデル側は `spec-compliance-first` を担当するため、あなたは正確性側を厚く見る。GitHub App 方式などで `reviewer` を2件並列実行する場合は、ブリーフの指定に従って一方が `spec-compliance-first` を担当する。
 
+低リスクでdiscovery結果を再利用する条件は`.ai/cross-model-reviewer-common.md`の「低リスクのdiscovery結果再利用」に従う。条件照合と記録はオーケストレーターが行う。verificationレビューとして起動された場合は以下の通常手順に従う。
+
 ## レビュー手順
 
-1. ブリーフに `targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage` が揃っていることを確認する。`content-draft`では`draftPaths`、`discovery` / `verification`では`committedRange`を必須とする。`issue-dev-orchestrate` から起動された場合は `.ai/skills/issue-dev-orchestrate/references/architecture-context.md` を読み、`architectureMode: knowledge-graph` / `baseBranch: develop-v2` / `effectiveBase` / `graphCoverage` / `graphEvidence` / `graphLimitations` / `sourceVerification` と両nested objectの全サブキーも必須とする。`graphCoverage: pending`はレビュー入力として認めない。`verification` では Finding台帳、修正要約、修正コミット範囲も必須とする。不足・矛盾があれば範囲を推測せず「判定: error」として不足項目を報告する。
+1. ブリーフに `targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage` が揃っていることを確認する。`content-draft`では`draftPaths`、`discovery` / `verification`では`committedRange`を必須とする。`issue-dev-orchestrate` から起動された場合は `.ai/skills/issue-dev-orchestrate/references/architecture-context.md` を読み、共通実行記録の参照先または必要部分を受け取る。Graph証跡の不足は調査で補う。`verification` では Finding台帳、修正要約、修正コミット範囲も必須とする。不足・矛盾があれば範囲を推測せず「判定: error」として不足項目を報告する。
 2. 差分を取得する。`content-draft`は`git status --short -- <draftPaths>`、追跡済みファイルの`git diff -- <draftPaths>`、各教材全文を読み、`draftPaths`外の未コミット変更を理由に停止しない。このpreflightはFinding台帳・レビュー済み境界・外部レビューを更新しない。`discovery` は必ず `git diff <effectiveBase>...HEAD` の全累積差分を読み、`committedRange` と一致することを確認する。`verification` も `committedRange` に示された累積差分を対象にし、Findingに対応付けられた修正コミット範囲は別フィールドとして照合する。Findingが0件または修正なしの場合、修正コミット範囲は空または「修正なし」と明示できるが、累積 `committedRange` を空にしてはならない。各Findingを `resolved` / `partial` / `unresolved` で判定する。verification で current loop に追加できる新規Findingは、修正起因回帰、明確な受け入れ条件未達、重大なsecurity/data destructionだけである。独立改善は別issue候補または追加改善として分離する。`discovery` / `verification`では未コミット変更が残っていないことを `git status --short` で確認する。累積 `committedRange` が不明・空、または未コミット変更ありの場合は、推測で別の差分へ切り替えずオーケストレーターに報告する。
 3. `issue-dev-orchestrate` のレビューでは、先に`graphCoverage`、`graphEvidence`、graph差分を読み、影響するnode / edge / 関連ファイルを絞る。その後で変更ファイルの**周辺コードも読み**（diff だけで判断しない）、呼び出し元・型定義・既存テスト・`sourceVerification`を確認する。`partial` / `outside` / `unmatched` / 空結果 / 曖昧な結果の場合だけLSP・`rg`で不足部分を検索する。snapshotの node / edge を実コードおよび`docs/design.md`と照合し、graphだけで正当性を判定しない。外側を読むこと自体でレビュー範囲を広げない。
 4. 各候補を `.ai/review-guidelines.md`「レビュー範囲」に従って対象範囲内 / 今回差分が起こした範囲外機能の回帰 / 別issue候補（範囲外） / 確認事項へ分類する。
@@ -39,25 +41,8 @@ tools: Bash, Read, Grep, Glob
 - review stage / 対象機能 / 対象ファイル / 受け入れ条件 / committed range（discovery・verification）または draft paths（content-draft）
 
 ### Architecture context（issue-dev-orchestrate時）
-以下の説明的placeholderを値として返さず、architecture-context.mdのcanonical YAMLを全サブキーまで完全展開する。
-- architectureMode: knowledge-graph
-- baseBranch: develop-v2
-- effectiveBase: ...
-- graphCoverage: covered / partial / outside / unmatched
-- graphEvidence:
-  - queries: term / depth / result / sourcePhase
-  - nodes: ...
-  - edges: ...
-  - files: ...
-- graphLimitations: ...
-- sourceVerification:
-  - issue: ...
-  - design: ...
-  - code: ...
-  - content: ...
-  - types: ...
-  - tests: ...
-  - extractor: ...
+- 共通実行記録の参照先・対象revision
+- 追加・変更した証跡と制限（変更なしならその旨）
 
 ### 指摘一覧
 | # | 重要度 | ファイル:行 | 指摘 | 修正案 |
