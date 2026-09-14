@@ -1,21 +1,21 @@
 # Knowledge Graph 開発コンテキスト
 
-`develop-v2` 系統の Issue 開発で常時使用する、構造化アーキテクチャ参照の契約。構造調査は Knowledge Graph から開始し、結果を使って読むコード・型・テスト・設計文書を絞る。設計意図・振る舞い・依存方向の一次ソースは `docs/design.md`、現在構造の一次ソースはコードと設定であり、Graph は探索・照合の入口であって代替仕様ではない。Graph の存在だけで仕様や実行経路を推測してはならない。
+`develop` 系統の Issue 開発で常時使用する、構造化アーキテクチャ参照の契約。構造調査は Knowledge Graph から開始し、結果を使って読むコード・型・テスト・設計文書を絞る。設計意図・振る舞い・依存方向の一次ソースは `docs/design.md`、現在構造の一次ソースはコードと設定であり、Graph は探索・照合の入口であって代替仕様ではない。Graph の存在だけで仕様や実行経路を推測してはならない。
 
 ## 基底と完了条件
 
-- Issue作業ブランチの統合ブランチは `develop-v2` とし、開始時に `baseBranch: develop-v2` を記録する。既存の `develop` 系統は変更せず、release-main-pr の `develop` → `main` 運用にも触れない。
+- Issue作業ブランチの統合ブランチは `develop` とし、開始時に `baseBranch: develop` を記録する。release-main-pr の `develop` → `main` 運用と整合させる。
 - 作業開始時は`git status --short`と差分で、今回の継続変更とユーザー所有・不明な変更を識別する。今回の継続変更は保持して進める。無関係な変更は触れず、必要ならcleanな別worktreeへ作業を隔離する。重なりや所有を解消できない場合だけ該当作業を止めて確認する。ユーザー変更を自動stash・破棄・コミットしない。
-- `git fetch origin develop-v2`後、`git rev-parse --verify origin/develop-v2^{commit}`でremote baseを検証する。checkoutやmergeは対象worktreeで変更を保護できる状態で行う。同一作業の再開で固定済みbaseが有効なら準備を繰り返さず、base更新が必要なら継続変更を保護できる段階で行う。
-- `origin/develop-v2` を起点に統合ブランチ `develop-v2` をfast-forwardで更新して新規Issue作業ブランチを切る。既存Issue作業ブランチを継続する場合は、最新 `develop-v2` を通常のmergeで取り込んでから準備完了とする。履歴の破壊的な書き換えやforce操作は行わない。
-- 作業ブランチ準備後、必ず `git merge-base --is-ancestor origin/develop-v2 HEAD` を実行する。非祖先の場合は古いまたは別系統の起点として実装へ進まず停止する。
-- 祖先性検証後に `git merge-base origin/develop-v2 HEAD` を実行し、その単一結果を `effectiveBase` として固定する。レビューの `committedRange` は常に `<effectiveBase>...HEAD` とする。
+- `git fetch origin develop`後、`git rev-parse --verify origin/develop^{commit}`でremote baseを検証する。checkoutやmergeは対象worktreeで変更を保護できる状態で行う。同一作業の再開で固定済みbaseが有効なら準備を繰り返さず、base更新が必要なら継続変更を保護できる段階で行う。
+- `origin/develop` を起点に統合ブランチ `develop` をfast-forwardで更新して新規Issue作業ブランチを切る。既存Issue作業ブランチを継続する場合は、最新 `develop` を通常のmergeで取り込んでから準備完了とする。履歴の破壊的な書き換えやforce操作は行わない。
+- 作業ブランチ準備後、必ず `git merge-base --is-ancestor origin/develop HEAD` を実行する。非祖先の場合は古いまたは別系統の起点として実装へ進まず停止する。
+- 祖先性検証後に `git merge-base origin/develop HEAD` を実行し、その単一結果を `effectiveBase` として固定する。レビューの `committedRange` は常に `<effectiveBase>...HEAD` とする。
 - 共通の実行記録にモード、base、調査証跡を保持し、エージェントには参照先と担当範囲を渡す。
-- 完了条件は、snapshotを再生成・差分照合し、通常の typecheck / lint / test / build に加えて `architecture:check` と `architecture:test` を通過した検証済みコミット列を `develop-v2` 向けPRへ渡すこと。PRのマージは人間が判断する。
+- 完了条件は、snapshotを再生成・差分照合し、通常の typecheck / lint / test / build に加えて `architecture:check` と `architecture:test` を通過した検証済みコミット列を `develop` 向けPRへ渡すこと。PRのマージは人間が判断する。
 
 ## 開始時の基盤確認
 
-`architecture/graph.json`、`scripts/architecture.mjs`、次のpackage scriptが存在することを、Issue変更前に確認する。検査対象は、最新の`origin/develop-v2`を取り込んで祖先性検証を終えたIssue作業ブランチのcheckoutとする。開始時の別ブランチや、更新前のIssue作業ブランチでは実行しない。
+`architecture/graph.json`、`scripts/architecture.mjs`、次のpackage scriptが存在することを、Issue変更前に確認する。検査対象は、最新の`origin/develop`を取り込んで祖先性検証を終えたIssue作業ブランチのcheckoutとする。開始時の別ブランチや、更新前のIssue作業ブランチでは実行しない。
 
 ```sh
 pnpm architecture:check
@@ -47,7 +47,7 @@ pnpm architecture:query 'load-dashboard.ts' 1
 
 オーケストレーターは共通の実行記録を一か所に保持する。以下は記録項目の目安であり、空欄の展開や配列の並び順は要求しない。
 
-- `architectureMode: knowledge-graph`、`baseBranch: develop-v2`、`effectiveBase`
+- `architectureMode: knowledge-graph`、`baseBranch: develop`、`effectiveBase`
 - `graphCoverage`、`graphEvidence`（query・判断に使ったnode / edge / file）
 - `graphLimitations`（判断に影響する制限）
 - `sourceVerification`（一次ソースの参照先と確認した事実。code / content / types / tests等で必要に応じ分類）

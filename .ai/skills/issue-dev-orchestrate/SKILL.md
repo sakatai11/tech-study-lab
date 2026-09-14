@@ -1,6 +1,6 @@
 ---
 name: issue-dev-orchestrate
-description: GitHub issue に登録された仕様を起点に、Knowledge Graph による構造調査、方針決定、実装、レビュー、品質ゲート、fix を経て develop-v2 向けPRへ渡す issue 駆動開発パイプライン。「issue #N を実装して」「/issue-dev-orchestrate N」などで起動する。
+description: GitHub issue に登録された仕様を起点に、Knowledge Graph による構造調査、方針決定、実装、レビュー、品質ゲート、fix を経て develop 向けPRへ渡す issue 駆動開発パイプライン。「issue #N を実装して」「/issue-dev-orchestrate N」などで起動する。
 ---
 
 # Issue 駆動開発パイプライン
@@ -10,16 +10,16 @@ description: GitHub issue に登録された仕様を起点に、Knowledge Graph
 
 ## ゴール
 
-GitHub issue の仕様を、レビュー済み・品質ゲート通過済みのコミット列として作業ブランチに積み、`develop-v2` 向けPRで人間のマージ判断に渡す。`develop` は従来のリリース系統として維持し、このフローでは変更しない。
+GitHub issue の仕様を、レビュー済み・品質ゲート通過済みのコミット列として作業ブランチに積み、`develop` 向けPRで人間のマージ判断に渡す。
 
 このフローでは Knowledge Graph を構造調査の入口として常用する。[references/architecture-context.md](references/architecture-context.md) の契約に従い、広域のコード検索より先に対象を絞った query を行い、その結果から調査・実装・レビューで読む範囲を決める。設計意図・振る舞い・依存方向の一次ソースは引き続き `docs/design.md`、実行コードと設定の一次ソースはリポジトリのコードと設定であり、Graph はそれらを代替しない。
 
 完了条件は次のとおり。
 
 - 今回の作業用checkoutに未コミット変更がない。隔離元のユーザー変更は保持する。
-- `develop-v2..HEAD` の全コミットが、current HEAD の有効な verification 経路を通過している。経路の判定、Finding、レビュー境界は `.ai/cross-model-reviewer-common.md` に従う。
-- ローカルの typecheck / lint / test / architecture check / architecture test と、PR CI の typecheck / lint / test / build（`develop-v2` 向けPRでは architecture check / architecture test も含む）が通過している。
-- `develop-v2` 向けPRを作成し、URLをユーザーへ報告している。
+- `develop..HEAD` の全コミットが、current HEAD の有効な verification 経路を通過している。経路の判定、Finding、レビュー境界は `.ai/cross-model-reviewer-common.md` に従う。
+- ローカルの typecheck / lint / test / architecture check / architecture test と、PR CI の typecheck / lint / test / build（`develop` 向けPRでは architecture check / architecture test も含む）が通過している。
+- `develop` 向けPRを作成し、URLをユーザーへ報告している。
 - スパイクまたはフェーズ分割を伴う作業では、明示された関連Issue・撤回／置換PRの状態照合が完了している（[references/phase-reconciliation.md](references/phase-reconciliation.md)）。
 
 ## オーケストレーターの責務
@@ -40,8 +40,8 @@ GitHub issue の仕様を、レビュー済み・品質ゲート通過済みの�
 
 ### ブランチとコミット
 
-- `main` では作業せず、Issue作業ブランチは `develop-v2` から切る。
-- 作業ブランチから `develop-v2` へのマージは行わず、`develop-v2` 向けPRのマージは人間が判断する。既存 `develop` から `main` へのPR作成・マージも人間が行い、release-main-pr の既存運用を変更しない。作業ブランチへ `develop-v2` を取り込む通常の操作は妨げない。`gh pr merge` は使わない。
+- `main` では作業せず、Issue作業ブランチは `develop` から切る。
+- 作業ブランチから `develop` へのマージは行わず、`develop` 向けPRのマージは人間が判断する。作業ブランチへ `develop` を取り込む通常の操作は妨げない。`gh pr merge` は使わない。
 - 無関係なユーザー変更をコミットへ含めない。分岐処理の失敗を `|| true` などで隠さない。
 - コミットメッセージとPR本文のIssue参照は `refs #<N>` とし、`closes #<N>` は使わない。
 
@@ -77,7 +77,7 @@ GitHub issue の仕様を、レビュー済み・品質ゲート通過済みの�
 
 第1引数は必須のIssue番号である。Issue番号がない場合は停止して確認する。開始時に `.ai/runtime-compatibility.md` を読み、利用可能な plan/todo 機能で進捗を管理する。Codexのスキルライフサイクルログは `.ai/runtime-compatibility.md` の「設定とログ」に従う。
 
-ブランチ操作より先に `references/architecture-context.md` を読み、既存変更を参照先の保護・継続ルールで確認し、`baseBranch: develop-v2` と `architectureMode: knowledge-graph` を実行記録へ固定する。`effectiveBase` は作業ブランチ準備と `origin/develop-v2` の祖先性検証が完了するまで算出・固定しない。Knowledge Graph の基盤確認は、フェーズ0で準備を終えたIssue作業ブランチのcheckoutに対して行う。初回investigatorには共通実行記録の参照先と調査範囲を渡し、不足する証跡を調査させる。既存変更を保護できない場合や基盤確認に失敗した場合は該当作業へ進まない。
+ブランチ操作より先に `references/architecture-context.md` を読み、既存変更を参照先の保護・継続ルールで確認し、`baseBranch: develop` と `architectureMode: knowledge-graph` を実行記録へ固定する。`effectiveBase` は作業ブランチ準備と `origin/develop` の祖先性検証が完了するまで算出・固定しない。Knowledge Graph の基盤確認は、フェーズ0で準備を終えたIssue作業ブランチのcheckoutに対して行う。初回investigatorには共通実行記録の参照先と調査範囲を渡し、不足する証跡を調査させる。既存変更を保護できない場合や基盤確認に失敗した場合は該当作業へ進まない。
 
 ホストランタイムから別モデルCLI、正規化エージェント、送信先を一意に決める。`reviewPolicy` は `always` / `risk-based` / `never` のいずれかで、ユーザー指定がなければ`risk-based`とする。`never`はユーザーが明示した場合だけ選べる。`<scratchpad>` と認証preflightの扱いは runtime の定義に従う。外部送信同意は実際の対象を列挙できるレビュー直前まで取得しない。
 
@@ -85,12 +85,12 @@ GitHub issue の仕様を、レビュー済み・品質ゲート通過済みの�
 
 ### フェーズ0: 準備
 
-Issueの内容を把握し、次の順序で `develop-v2` 起点のIssue作業ブランチを準備する。
+Issueの内容を把握し、次の順序で `develop` 起点のIssue作業ブランチを準備する。
 
-- 既存変更の保護を確認後、`git fetch origin develop-v2` で最新のリモート追跡参照を取得し、`git rev-parse --verify origin/develop-v2^{commit}` で存在とcommit解決を確認する。取得・解決できない場合は停止する。
-- `origin/develop-v2` を起点に統合ブランチ `develop-v2` をfast-forwardで更新して新規Issue作業ブランチを切る。既存Issue作業ブランチを継続する場合は、最新 `develop-v2` を通常のmergeで取り込んでから準備完了とする。履歴の破壊的な書き換えやforce操作は行わない。
-- 作業ブランチ準備後、必ず `git merge-base --is-ancestor origin/develop-v2 HEAD` を実行する。非祖先の場合は古いまたは別系統の起点として実装へ進まず停止する。
-- 祖先性検証後に `git merge-base origin/develop-v2 HEAD` を実行し、その単一結果を `effectiveBase` として固定する。`architectureMode: knowledge-graph`、`baseBranch: develop-v2`、`reviewPolicy`、別モデルCLI、正規化エージェント、送信先も記録する。
+- 既存変更の保護を確認後、`git fetch origin develop` で最新のリモート追跡参照を取得し、`git rev-parse --verify origin/develop^{commit}` で存在とcommit解決を確認する。取得・解決できない場合は停止する。
+- `origin/develop` を起点に統合ブランチ `develop` をfast-forwardで更新して新規Issue作業ブランチを切る。既存Issue作業ブランチを継続する場合は、最新 `develop` を通常のmergeで取り込んでから準備完了とする。履歴の破壊的な書き換えやforce操作は行わない。
+- 作業ブランチ準備後、必ず `git merge-base --is-ancestor origin/develop HEAD` を実行する。非祖先の場合は古いまたは別系統の起点として実装へ進まず停止する。
+- 祖先性検証後に `git merge-base origin/develop HEAD` を実行し、その単一結果を `effectiveBase` として固定する。`architectureMode: knowledge-graph`、`baseBranch: develop`、`reviewPolicy`、別モデルCLI、正規化エージェント、送信先も記録する。
 - 作業ブランチの準備と祖先性検証が完了したcheckoutで `pnpm architecture:check` と `pnpm architecture:test` を実行する。いずれかが失敗した場合はIssue実装へ進まず、Knowledge Graph基盤の不整合として報告する。
 
 既存変更の保護・継続・隔離と再開時のbase確認は`references/architecture-context.md`に従う。正式レビューは対象HEADのcleanなcheckoutで行う。
@@ -101,7 +101,7 @@ Issueの内容を把握し、次の順序で `develop-v2` 起点のIssue作業�
 
 ### フェーズ2: 方針決定
 
-調査レポートを基に方針、対象ファイル、受け入れ条件、`executionOwner: developer | orchestrator` を確定し、Issueへ記録する。`architectureMode: knowledge-graph`、`baseBranch: develop-v2`、`effectiveBase`、`graphCoverage`、`graphEvidence`、`graphLimitations`、`sourceVerification` を共通実行記録へ保持し、各担当へ参照先と必要な範囲を渡す。`docs/design.md` との乖離があれば実装前に仕様を更新する。方針が拮抗する、または要確認事項が実装を左右する場合だけユーザー判断を求める。実装担当の選定基準は、明確な複数領域・設計判断なら `developer`、局所的で機械的なら `orchestrator` とする。
+調査レポートを基に方針、対象ファイル、受け入れ条件、`executionOwner: developer | orchestrator` を確定し、Issueへ記録する。`architectureMode: knowledge-graph`、`baseBranch: develop`、`effectiveBase`、`graphCoverage`、`graphEvidence`、`graphLimitations`、`sourceVerification` を共通実行記録へ保持し、各担当へ参照先と必要な範囲を渡す。`docs/design.md` との乖離があれば実装前に仕様を更新する。方針が拮抗する、または要確認事項が実装を左右する場合だけユーザー判断を求める。実装担当の選定基準は、明確な複数領域・設計判断なら `developer`、局所的で機械的なら `orchestrator` とする。
 
 ### フェーズ3: 実装
 
@@ -121,7 +121,7 @@ Issueの内容を把握し、次の順序で `develop-v2` 起点のIssue作業�
 
 ### フェーズ7: 完了
 
-追加コミットを作らず、作業ツリー、コミット列、レビュー境界、ローカルゲートを最終確認する。PR CIも確認し、PR作成・pushはユーザー承認後に行い、ベースは `develop-v2` とする。利用可能なら `pr-creator` skill を使い、既存PRがあれば再作成しない。PR本文は、実装、担当、レビュー方針と結果、Finding、ゲート、ブランチ、共通architecture契約を含める。最終報告は `.ai/cross-model-reviewer-common.md` の出力契約を参照し、`reviewPolicy` / current HEADの`externalReviewDecision` / 規則IDと根拠、使用した別モデルCLI・正規化エージェント名・送信先（未実行・未取得なら理由）、別issue候補（範囲外）と切り出し案、保証低下の有無をユーザーへ伝える。graph coverage、evidence、差分、limitations、source verificationも報告する。CodeRabbitの適用判定は common の条件に従う。phase / spike がある場合は [references/phase-reconciliation.md](references/phase-reconciliation.md) を読み、明示された関連対象へ状態を記録する。
+追加コミットを作らず、作業ツリー、コミット列、レビュー境界、ローカルゲートを最終確認する。PR CIも確認し、PR作成・pushはユーザー承認後に行い、ベースは `develop` とする。利用可能なら `pr-creator` skill を使い、既存PRがあれば再作成しない。PR本文は、実装、担当、レビュー方針と結果、Finding、ゲート、ブランチ、共通architecture契約を含める。最終報告は `.ai/cross-model-reviewer-common.md` の出力契約を参照し、`reviewPolicy` / current HEADの`externalReviewDecision` / 規則IDと根拠、使用した別モデルCLI・正規化エージェント名・送信先（未実行・未取得なら理由）、別issue候補（範囲外）と切り出し案、保証低下の有無をユーザーへ伝える。graph coverage、evidence、差分、limitations、source verificationも報告する。CodeRabbitの適用判定は common の条件に従う。phase / spike がある場合は [references/phase-reconciliation.md](references/phase-reconciliation.md) を読み、明示された関連対象へ状態を記録する。
 
 ## 中断・失敗時
 
