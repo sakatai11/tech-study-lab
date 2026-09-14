@@ -49,12 +49,12 @@ jobs:
       - name: Test
         run: pnpm test
 
-      - name: Architecture check (develop-v2 PRs)
-        if: github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'develop-v2'
+      - name: Architecture check (develop PRs)
+        if: github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'develop'
         run: pnpm architecture:check
 
-      - name: Architecture test (develop-v2 PRs)
-        if: github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'develop-v2'
+      - name: Architecture test (develop PRs)
+        if: github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'develop'
         run: pnpm architecture:test
 
       - name: Build

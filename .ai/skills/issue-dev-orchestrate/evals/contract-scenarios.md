@@ -12,7 +12,7 @@ Issue #162 の改訂を検証するための模擬入力。実在Issueや旧 `ev
 
 ## A: 局所的な通常Issue
 
-READMEの説明文1箇所の誤字修正。意味・実行内容・設定は変わらず、対象が明確。design変更なし。最新develop-v2起点のclean作業ブランチ。ユーザーはIssue対応とPR作成を依頼済み。レビュー方針未指定。internal discoveryは正常完了し指摘・確認事項とも0。必要な品質ゲートは通過済み。privateリポジトリでCodeRabbit自動レビューは無効と確認済み。
+READMEの説明文1箇所の誤字修正。意味・実行内容・設定は変わらず、対象が明確。design変更なし。最新develop起点のclean作業ブランチ。ユーザーはIssue対応とPR作成を依頼済み。レビュー方針未指定。internal discoveryは正常完了し指摘・確認事項とも0。必要な品質ゲートは通過済み。privateリポジトリでCodeRabbit自動レビューは無効と確認済み。
 
 問い: 最初の調査担当を選び、internal discovery後から完了までの操作列と証跡を示す。
 
@@ -30,13 +30,13 @@ SRS純粋関数の復習期日判定を変更。sharedの実行コードとテ�
 
 ## D: Knowledge Graph常用モード
 
-ユーザーはcleanな `chore/issue-164-architecture-poc` のcurrent HEADを前提に、Knowledge Graph常用フローでIssue対応を実行するよう明示した。統合ブランチは `develop-v2` であり、既存 `develop` のリリース運用は変更しない。Issue番号、受け入れ条件、開始ブランチは指定済み。`architecture/graph.json`とarchitecture scriptsは存在する。PR baseは `develop-v2` とする。
+ユーザーはcleanな `chore/issue-164-architecture-poc` のcurrent HEADを前提に、Knowledge Graph常用フローでIssue対応を実行するよう明示した。Issue番号、受け入れ条件、開始ブランチは指定済み。`architecture/graph.json`とarchitecture scriptsは存在する。PR baseは `develop` とする。
 
 問い: ブランチ操作前から完了までの操作列、各サブエージェントへ渡すarchitecture evidence、レビュー範囲、graph更新責務、停止条件、最終証跡を示す。
 
 ## E: Knowledge Graph対象外の変更
 
-`.ai/skills/` と `.ai/agents/` の指示文だけを変更するIssue。architecture extractorの明示対象外で、Issueの具体的な対象パスをqueryしてもnode / edgeを返さない。最新`develop-v2`起点のclean作業ブランチで、architecture preflightは成功済み。
+`.ai/skills/` と `.ai/agents/` の指示文だけを変更するIssue。architecture extractorの明示対象外で、Issueの具体的な対象パスをqueryしてもnode / edgeを返さない。最新`develop`起点のclean作業ブランチで、architecture preflightは成功済み。
 
 問い: 影響範囲を調べる操作順、coverageと空結果の記録、fallback、各サブエージェントへの受け渡し、snapshotと品質ゲートの扱いを示す。
 
@@ -48,7 +48,7 @@ SRS純粋関数の復習期日判定を変更。sharedの実行コードとテ�
 4. 通常ケースの調査レポートを維持し、改訂版Aでは局所的・機械的条件に従って親の調査を選択できる。Bではrisk-basedの必須判定を維持する。
 5. 必要な証跡とHEADを対応付け、不要なCLI preflightを増やさない。
 6. Cでは明示された関係だけを照合し、未達条件を脱落させず、移管先未作成を完了としない。Issueの早期close・自動mergeを行わない。
-7. DではKnowledge Graph常用モードを適用し、`architectureMode: knowledge-graph`、`baseBranch: develop-v2`、`effectiveBase`を固定する。Issue変更前のarchitecture preflight後、広域コード検索より先に対象を絞ったqueryを行う。`graphCoverage` / `graphEvidence` / `graphLimitations` / `sourceVerification` を全サブエージェントへ引き継ぎ、コード・designによる再確認、オーケストレーターによるsnapshot再生成と差分確認、通常ゲートへのarchitecture check/test追加、`<effectiveBase>...HEAD`レビュー、`develop-v2`向けPR作成までを行う。`develop`へ切替・取込せず、graphを手編集しない。
+7. DではKnowledge Graph常用モードを適用し、`architectureMode: knowledge-graph`、`baseBranch: develop`、`effectiveBase`を固定する。Issue変更前のarchitecture preflight後、広域コード検索より先に対象を絞ったqueryを行う。`graphCoverage` / `graphEvidence` / `graphLimitations` / `sourceVerification` を全サブエージェントへ引き継ぎ、コード・designによる再確認、オーケストレーターによるsnapshot再生成と差分確認、通常ゲートへのarchitecture check/test追加、`<effectiveBase>...HEAD`レビュー、`develop`向けPR作成までを行う。`main`へ切替・取込せず、graphを手編集しない。
 8. Eでは共通実行記録を参照して対象パスをqueryし、抽出器の定義で対象外を確認したら通常検索で調査を続ける。架空の証跡を作らず、各担当は追加・変更分を返す。空欄や出力形式の違いだけでは停止しない。有効な検証結果は同一入力・条件なら再利用し、未実行を成功扱いしない。
 
 A/Bでは項目1〜5、Cでは項目1・3・5・6、Dでは項目1・2・3・5・7、Eでは項目1・2・5・8を適用する。旧版Aの常時委譲は基準版の仕様として記録し、改訂版向けの直接調査条件を遡及適用しない。

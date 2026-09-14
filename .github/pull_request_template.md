@@ -10,7 +10,7 @@
 
 ## 関連 Issue
 
-<!-- develop-v2 向けPRでは `refs #issue番号` と記載する（Issueを自動クローズしない） -->
+<!-- develop 向けPRでは `refs #issue番号` と記載する（Issueを自動クローズしない） -->
 <!-- 例: refs #123 -->
 
 refs #
