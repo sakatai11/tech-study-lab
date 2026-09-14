@@ -97,9 +97,10 @@ service を中心にテストファーストで進める。
 ### ブランチ戦略（Git Flow 型）
 
 - `main` は保護。**直接コミットしない**。リリース用ブランチ。
-- `develop` が統合ブランチ。作業ブランチは常に `develop` から切る。
+- `develop` は従来系統の統合ブランチとして保持し、Knowledge Graph導入のために履歴を書き換えたり直接変更したりしない。
+- `develop-v2` がKnowledge Graph-firstで構造調査する開発系統の統合ブランチ。新しいIssue作業ブランチは `develop-v2` から切る。Issueの具体語でGraph queryを先に行い、コード・設定・`docs/design.md`で再確認する。Graph対象外・空結果・曖昧な結果の場合だけ通常検索へフォールバックする。
 - 作業ブランチは Conventional Branch 命名: `<種別>/issue-<番号>-<英語スラッグ>`（種別: `feature` / `fix` / `refactor` / `docs` / `test` / `chore`）。
-- feature → develop は PR を作成する（**マージは人間**）。`develop` → `main` の PR・マージは人間が任意タイミングで行う。
+- 作業ブランチ → `develop-v2` は PR を作成する（**マージは人間**）。既存 `develop` のリリース運用と、`develop-v2` から `main` へ反映する時期・方法は人間が判断する。
 - `gh pr merge` は使わない（マージは常に人間の判断）。
 
 ## 進捗の確認方法

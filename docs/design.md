@@ -194,6 +194,8 @@ SM-2 の計算式（`packages/shared/src/srs/sm2.ts`）の周辺で、実装時�
 
 ## 6. 最初のマイルストーン（Walking Skeleton）
 
+> **Knowledge Graphによる構造参照（Issue #164）**：`develop-v2` を統合ブランチとするIssue開発では、Worker binding、API endpoint と route・service・DAL・共有schema、Web loader の現在の対応関係を `architecture/` と `scripts/architecture*.mjs` で抽出・照合する。開始時のsnapshot鮮度確認後、Issue内の具体語をseedに広域コード検索より先に近傍queryを行い、結果から確認対象を絞る。Graph結果はコード・型・テスト・本書で再確認し、抽出対象外・空結果・曖昧な結果の場合だけLSPやテキスト検索へフォールバックする。coverage、query evidence、解析上の制限、一次ソースでの再確認結果を全開発フェーズへ引き継ぐ。変更後のsnapshot差分確認を通常の開発フローへ組み込み、`architecture:check` と `architecture:test` を既存のtypecheck・lint・test・buildに追加する。コード／設定から導ける現在構造は抽出結果を参照し、本書は設計意図・振る舞い・許可する依存方向の一次ソースとして残す。保存済み抽出結果はコードの代替仕様ではなく、再抽出との差分で古さを検知する参照用データである。出典と未対応の解析範囲を明記し、静的解析結果だけで実行時の正確性を保証しない。既存dependency-cruiserの制約は再実装せず参照する。本番Server loaderのService Binding必須と、ローカルURL fallback・ブラウザ公開URLの例外は§3.1・§8.4に従う。既存の`develop`系統は変更せず、Knowledge Graphを前提とする開発は`develop-v2`系統で行う。
+
 スタック全体が繋がることを最小構成で実証する「歩ける骨格」。
 
 - **対象スライス**：`セキュリティ領域 > XSS トピック > 教材1本 + 4択3問`
@@ -215,8 +217,8 @@ SM-2 の計算式（`packages/shared/src/srs/sm2.ts`）の周辺で、実装時�
 | ルート | 役割 | データ経路 | レンダリング／キャッシュ方針 | 主導線 |
 | --- | --- | --- | --- | --- |
 | `/` 公開トップ | 個人開発者向けの AI 駆動ソフトウェア学習ラボを説明し、「教材を読む → 4択で確かめる → SRSで復習する」学習ループを示す。明確なログイン CTA から `/home` へ進む | なし。プロダクト説明だけを静的に表示する | 静的 RSC。`AppShell`・dashboard loader・API client・Service Binding・due-count Client hook/provider を import せず、ユーザー固有データを読まない | 「ログインして学習を始める」→ `/home` |
-| `/home` ダッシュボード | **今日の復習（due）が主役**。学習統計（正答率・学習時間・連続学習日数）・学習コントリビューション（草＝日次解答数ヒートマップ）・最近のアクティビティ・次のレッスン導線を併せ持つ | due 件数は API（Server loader → `hc`）。統計値・草の API 統合は未実装。領域別習得状況は `/domains` で表示する | PPR streaming 対象。静的 shell と、due 件数を読む非キャッシュのユーザー固有 async Server Component を `<Suspense>` で分離（実装済み） | 「復習を始める」→ `/review`、「続きから」→ `/learn/...` |
-| `/domains` スキルツリー | 現行は `GET /domains` の実データを使い、4つの学習領域をカードで俯瞰する。各カードに習得率・習得済み/全問題数・トピック数・レッスン数と、コンテンツ上の先頭トピックへの導線（該当しない場合は「準備中」）を表示する。詳細な done ✓ / current ▶ / locked 🔒 のディレクトリツリーは後続スコープとする（§8.7）。 | 領域別集計は API（`GET /domains`）。領域別習得状況の表示を `/domains` が単独で担う | PPR streaming 対象。静的 shell の内側で、非キャッシュのユーザー固有 `loadDomains` を `<Suspense fallback={<DomainProgressFallback />}>` で分離する。取得失敗は `/domains` の route error boundary で扱う | 先頭トピックあり → `/learn/[domain]/[topic]`、なし → 「準備中」 |
+| `/home` ダッシュボード | **今日の復習（due）が主役**。学習統計（正答率・学習時間・連続学習日数）・学習コントリビューション（草＝日次解答数ヒートマップ）・領域別習得状況・最近のアクティビティ・次のレッスン導線を併せ持つ | due 件数は独立した API（Server loader → `hc`）。summary・heatmap・domains・recent activity は同一の非キャッシュ loader が同じ API client から並列取得し、`/home` で実データを表示する | PPR streaming 対象。静的 shell の内側で、due 件数カードとダッシュボード本体（ユーザー固有データ）をそれぞれ `<Suspense>` で分離する。取得失敗は `/home` の route error boundary で扱う | 「復習を始める」→ `/review`、「続きから」→ `/learn/...` |
+| `/domains` スキルツリー | 現行は `GET /domains` の実データを使い、4つの学習領域をカードで俯瞰する。各カードに習得率・習得済み/全問題数・トピック数・レッスン数と、コンテンツ上の先頭トピックへの導線（該当しない場合は「準備中」）を表示する。詳細な done ✓ / current ▶ / locked 🔒 のディレクトリツリーは後続スコープとする（§8.7）。 | 領域別集計は API（`GET /domains`）。領域カードは `/domains` と `/home` が共通の props 境界を介して表示する | PPR streaming 対象。静的 shell の内側で、非キャッシュのユーザー固有 `loadDomains` を `<Suspense fallback={<DomainProgressFallback />}>` で分離する。取得失敗は `/domains` の route error boundary で扱う | 先頭トピックあり → `/learn/[domain]/[topic]`、なし → 「準備中」 |
 | `/learn/[domain]/[topic]` レッスン一覧 | トピック内のレッスン一覧（初期は XSS 1本） | ビルド時バンドル済み content（RSC） | `generateStaticParams` と `'use cache'` で全件を build 時に prerender。PPR streaming 対象外 | 各レッスンへ |
 | `/learn/[domain]/[topic]/[lesson]` 教材本文 | Markdown 本文表示 | ビルド時バンドル済み content（RSC。本文の初期取得・描画にはAPI不要）・閲覧記録のみAPI（最小Client recorder） | `generateStaticParams` と `'use cache'` で全件を build 時に prerender。PPR streaming 対象外 | 「問題を解く →」`/quiz/[lesson]` |
 | `/quiz/[lesson]` 演習 | イントロ（レッスン概要の確認）→ 全問を 1 問ずつ即時採点 → 結果サマリ、を 1 画面内のクライアント状態遷移（`intro → exercise → result`）で完結。演習ナビ・教材本文の両方から入れる | 問題＝content（RSC で初期化）/ 解答記録＝API | `generateStaticParams` と `'use cache'` で全件を build 時に prerender。PPR streaming 対象外 | 完了 → 「次のレッスンへ」／「再挑戦」 |
@@ -237,7 +239,7 @@ SM-2 の計算式（`packages/shared/src/srs/sm2.ts`）の周辺で、実装時�
 - **レイアウト（サイドバー / ボトムタブ）**：`/home` 以下の学習画面では、PC は左サイドバー（ロゴ＋テーマトグル＋ダッシュボード／教材／演習／復習（due件数バッジ）／アナリティクス／スキルツリー）、本文は右側 1 カラム。SP は上部アプリバー（ロゴ＋ストリーク表示＋テーマトグル）＋下部固定タブバー（**ホーム／教材／演習／復習（dueバッジ）／ツリーの5項目**）。ダッシュボード／ホームのナビゲーション先は `/home` とする。「演習」「復習」ナビ項目は直前に扱っていたレッスン（未着手なら先頭レッスン）を対象とする簡易ヒューリスティックで遷移先を決定する（MVP は XSS 1本のため実質固定）。SP のタブバーはスペース都合で 5 項目に絞り、「アナリティクス（`/analytics`）」へはダッシュボードの「すべて表示」リンクから遷移する。「設定」は将来の公開機能（認証等、§1 スコープ外）向けで、MVP ではナビに置かない。
 - **公開・認証境界**：`/` は公開の静的プロダクト入口である。`/home` とユーザー向け学習ルート（`/learn/...`・`/quiz/...`・`/review`・`/domains`・`/analytics`）は本番で Cloudflare Access により保護する。この issue ではアプリ内のログイン・セッションを実装せず、公開トップの「ログインして学習を始める」は `/home` へリンクするだけとする。Cloudflare Access Application/Policy と route pattern（`/` は公開、`/home` とユーザー向け route は保護）の設定・デプロイ後検証は Issue #35 の責務である。
 - **ユーザー**：アプリ管理のログイン UI・セッションは持たない。API（Hono）側が固定 `user_id` を権威的に注入する。将来公開時は「固定値を返す関数」を「認証から `user_id` を引く関数」に差し替えるだけで、画面・API 契約は不変。
-- **`cacheComponents` / PPR**：`cacheComponents` は NextConfig のアプリケーション全体に効く top-level switch であり、有効化済みである。**PPR streaming の対象は `/home`・`/review`・`/domains`・`/analytics`**とするが、この限定は他の App Router route を Cache Components の build ルールから除外しない（§12.8）。`/` はユーザー固有データを読まない静的 RSC とする。`/home`・`/review`・`/domains`・`/analytics` は静的 shell の内側でユーザー固有データを `<Suspense>` によりストリーミング分離する。`/review` は `<Suspense fallback={<ReviewQueueFallback />}>` の内側で async Server Component を読む。due 件数・統計・review queue・domains 集計は API が `user_id` を権威的に注入し、web の共有キャッシュキーに `user_id` を含められないため、`'use cache'`・`cacheLife`・`cacheTag`・`revalidateTag` を使わない。共有キャッシュによるユーザー間データ混入を防ぐためであり、解答後の鮮度回復は既存方針どおり Client Component の `router.refresh()` で行う。`/domains` は4領域の `GET /domains` を読む非キャッシュのユーザー固有領域を静的 shell 内の `<Suspense fallback={<DomainProgressFallback />}>` に分離する。取得失敗は `/domains` の route error boundary で扱う。`/analytics` は `GET /analytics/summary`・`GET /analytics/weekly`・`GET /analytics/mistakes` を読む非キャッシュのユーザー固有領域を静的 shell 内の `<Suspense fallback={<AnalyticsFallback />}>` に分離し、取得失敗は `/analytics` の route error boundary で扱う。忘却曲線・復習タイミングは対象外とする。
+- **`cacheComponents` / PPR**：`cacheComponents` は NextConfig のアプリケーション全体に効く top-level switch であり、有効化済みである。**PPR streaming の対象は `/home`・`/review`・`/domains`・`/analytics`**とするが、この限定は他の App Router route を Cache Components の build ルールから除外しない（§12.8）。`/` はユーザー固有データを読まない静的 RSC とする。`/home`・`/review`・`/domains`・`/analytics` は静的 shell の内側でユーザー固有データを `<Suspense>` によりストリーミング分離する。`/home` は due 件数カードを `<Suspense fallback={<DashboardDueCardFallback />}>`、summary・heatmap・domains・recent activity を含むダッシュボード本体を `<Suspense fallback={<DashboardFallback />}>` でそれぞれ分離する。`/home` の本体 loader の取得失敗は `app/home/error.tsx` の route error boundary で扱う。`/review` は `<Suspense fallback={<ReviewQueueFallback />}>` の内側で async Server Component を読む。due 件数・統計・review queue・domains 集計は API が `user_id` を権威的に注入し、web の共有キャッシュキーに `user_id` を含められないため、`'use cache'`・`cacheLife`・`cacheTag`・`revalidateTag` を使わない。共有キャッシュによるユーザー間データ混入を防ぐためであり、解答後の鮮度回復は既存方針どおり Client Component の `router.refresh()` で行う。`/domains` は4領域の `GET /domains` を読む非キャッシュのユーザー固有領域を静的 shell 内の `<Suspense fallback={<DomainProgressFallback />}>` に分離する。取得失敗は `/domains` の route error boundary で扱う。`/analytics` は `GET /analytics/summary`・`GET /analytics/weekly`・`GET /analytics/mistakes` を読む非キャッシュのユーザー固有領域を静的 shell 内の `<Suspense fallback={<AnalyticsFallback />}>` に分離し、取得失敗は `/analytics` の route error boundary で扱う。忘却曲線・復習タイミングは対象外とする。
 - **スタイリング**：Tailwind CSS ＋ Dev-Native Neo Flat × Terminal デザインシステム（ダークファースト）。詳細トークン・コンポーネント文法・ゲーミフィケーション表現の実装区分は §8.7。
 
 ### 7.3 画面構成から要請される API（参考）
@@ -253,11 +255,11 @@ HTTP 入出力、リクエスト・レスポンスの実例（JSON）、Zod ス�
 - `GET /domains` — `/domains` の4領域カード向けに、領域それぞれの習得率（習得済み問題数 / 全問題数）・トピック数・レッスン数を返す
 - `GET /analytics/summary` — 総解答数・正答率・平均反応時間・習得済み問題数（SRS interval ≥ 21日）・連続学習日数・今週の学習時間・SRS定着度分布（§4.4 の `lesson_views`・`answer_logs.response_time_ms`・`srs_states` から集計）
 - `GET /analytics/weekly` — UTC の直近7日を古い順に並べた解答数推移（曜日ごとの件数。解答がない日も0件で返す）
-- `GET /analytics/heatmap` — 学習コントリビューション（草）用の日次解答数（直近26週。`answer_logs` の日次集計）
+- `GET /analytics/heatmap` — 学習コントリビューション（草）用の日次解答数（UTC 当日を終点とする直近182日。`answer_logs` の日次集計。解答なしの日は0件で補完）
 - `GET /analytics/mistakes` — 2回答以上の問題に絞った誤答率上位10件（`questionId`・誤答率・回答数・誤答数）
-- `GET /activity/recent` — ダッシュボードの「最近のアクティビティ」向け直近イベント一覧（レッスン閲覧・演習完了・復習キュー更新を統合。集計ロジックの詳細は10章相当で実装時に確定する簡易版でよい）
+- `GET /activity/recent` — ダッシュボードの「最近のアクティビティ」向け直近イベント一覧。新しいイベントテーブルは作らず、保存済みの `lesson_views`（`lesson_viewed`）と `answer_logs`（`answer_recorded`）から最大10件を導出する。統合後の `id` は `answer:` / `lesson-view:` の種別プレフィックスで名前空間化し、テーブル間のID衝突を防ぐ。現行データから quiz / review の発信元や「全問完了」は復元できないため、UI は「演習完了」などと断定せず「問題に回答して復習予定を更新」と表示する。`answer_logs` と `questions` は left join とし、過去メタデータ欠損時も回答履歴を落とさない。
 
-共有スキーマは weekly の連続する7日・昇順・UTC曜日との一致、mistakes の件数と小数第1位に丸めた誤答率の一致・順位を検証する。順位は丸め前の誤答率で比較する。当日を終点とする期間はAPIの集計時刻で決定し、受信側スキーマは現在時刻に依存させない（通信中のUTC日付変更を許容する）。
+共有スキーマは weekly の連続する7日・昇順・UTC曜日との一致、mistakes の件数と小数第1位に丸めた誤答率の一致・順位を検証する。heatmap は実在する日付、182日、重複なし、連続昇順を検証する。recent activity は最大10件、種別ごとの必須項目、`occurredAt` 降順（同時刻はID昇順）、ID重複なしを検証する。順位は丸め前の誤答率で比較する。当日を終点とする期間はAPIの集計時刻で決定し、受信側スキーマは現在時刻に依存させない（通信中のUTC日付変更を許容する）。
 
 ### 7.4 → 第8章へ
 
@@ -350,7 +352,7 @@ apps/web/src/
 
 ### 8.3 Server / Client コンポーネント境界
 
-- **公開トップ・教材・集計系（`/`・`/home`・`/learn/...`・`/domains`・`/analytics`）= RSC**。`/` はプロダクト説明と `/home` への CTA だけを静的に描画し、Server loader・API・Service Binding・due-count hook/provider を使わない。`/home` は due 件数、`/domains` は4領域カードの習得率、`/analytics` は summary・weekly・mistakes を、それぞれの Server loader から `hc` で読む。`/home` の統計値は現状静的表示とする。領域別習得状況の表示と `GET /domains` の呼び出しは `/domains` が単独で担い、分析値の表示と `GET /analytics/*` の呼び出しは `/analytics` が単独で担う。教材本文ページは、本文の初期取得・描画には **API 不要**であり、閲覧記録だけは最小Client recorderからAPIを呼ぶ。
+- **公開トップ・教材・集計系（`/`・`/home`・`/learn/...`・`/domains`・`/analytics`）= RSC**。`/` はプロダクト説明と `/home` への CTA だけを静的に描画し、Server loader・API・Service Binding・due-count hook/provider を使わない。`/home` は due 件数を独立した loader から、summary・heatmap・domains・recent activity を同一の非キャッシュ loader から `hc` で読む。`/home` の静的 shell は due 件数を `DashboardDueCard` と `DashboardDueCardFallback` の Suspense 境界、本体データを `DashboardUserContent` と `DashboardFallback` の Suspense 境界に分離し、`app/home/error.tsx` が本体 loader の取得失敗を route error boundary として扱う。`/domains` は4領域カードの習得率、`/analytics` は summary・weekly・mistakes を、それぞれの Server loader から読む。`/home` のユーザー固有 loader は `connection()` 後に同じ client を使って並列取得し、共有キャッシュを使わない。領域別習得状況の表示は `/domains` と `/home` が同じ表示部品の props 境界を再利用する。教材本文ページは、本文の初期取得・描画には **API 不要**であり、閲覧記録だけは最小Client recorderからAPIを呼ぶ。
 - **演習系（Quiz / Review）= Client Component**。イントロ・演習・結果の画面フェーズと現在問題を持ち、Client hook が返す採点結果・通信状態を表示へ反映するため。初回データは Server loader（`/quiz` は content、`/review` は due queue）で ViewModel 化し props で渡す（§9.2）。
 - **レイアウト / ヘッダー = Server**。
 - 実行場所はディレクトリ名ではなく import 境界で決まる。`apps/web/src/features/*/server` は `apps/web/src/app/**/page.tsx` など Server Component から import する限りサーバー側で実行される。誤用防止のため `import 'server-only'` を必須にする。
@@ -1132,7 +1134,7 @@ dal      ──→ @tsl/shared          # db 名前空間の Drizzle schema（im
 - クリーンアーキテクチャ流の ports/adapters ディレクトリ分離 → 「service が deps 型（interface）を定義し、dal が `import type` して実装する」という最小の依存逆転だけで同じ効果を得る
 - OpenAPI スキーマ生成 → `hc`（`AppType`）が型契約を担うため不要（§8.4）
 
-**スコープの段階性**：本章のコード例・ディレクトリ構成は Walking Skeleton 中核の 3 エンドポイント（§7.3 の `POST /answers`・`GET /review/queue`・`GET /dashboard/due-count`）を基準に確定し、`GET /domains` と Issue #32 の `GET /analytics/summary`・`GET /analytics/weekly`・`GET /analytics/mistakes` も同じ route → service → deps（dal 実装）の処理パターンで追加済みである。§7.3 が挙げる残りの `GET /analytics/heatmap`・`GET /activity/recent` は後続で追加する（§6 の「同じパターンの繰り返しで増やす」方針）。数エンドポイントの規模で抽象を増やすと、AI 駆動開発のレビュー可能性がむしろ下がる。層の責務と import 境界が守られていれば十分とする。
+**スコープの段階性**：本章のコード例・ディレクトリ構成は Walking Skeleton 中核の 3 エンドポイント（§7.3 の `POST /answers`・`GET /review/queue`・`GET /dashboard/due-count`）を基準に確定し、`GET /domains` と Issue #32 の `GET /analytics/summary`・`GET /analytics/weekly`・`GET /analytics/mistakes`、Issue #33 の `GET /analytics/heatmap`・`GET /activity/recent` も同じ route → service → deps（dal 実装）の処理パターンで追加済みである。数エンドポイントの規模で抽象を増やすと、AI 駆動開発のレビュー可能性がむしろ下がる。層の責務と import 境界が守られていれば十分とする。
 
 ### 10.2 ディレクトリ構成
 
@@ -1150,18 +1152,21 @@ apps/api/
 │   │   ├── review.ts            # GET /review/queue
 │   │   ├── dashboard.ts         # GET /dashboard/due-count
 │   │   ├── domains.ts           # GET /domains
-│   │   └── analytics.ts         # GET /analytics/summary・weekly・mistakes
+│   │   ├── analytics.ts         # GET /analytics/summary・weekly・heatmap・mistakes
+│   │   └── activity.ts          # GET /activity/recent
 │   ├── services/
 │   │   ├── answer-service.ts    # 採点 → 記録 → SRS 更新のユースケース
 │   │   ├── review-service.ts    # due 問題の収集・件数集計
 │   │   ├── domains-service.ts   # 4領域の集計結果補完・習得率計算
-│   │   ├── analytics-service.ts  # 解答・閲覧・SRSの学習分析集計
+│   │   ├── analytics-service.ts  # 解答・閲覧・SRSの学習分析集計（weekly・heatmapを含む）
+│   │   ├── activity-service.ts   # lesson view / answer log の最近の活動統合
 │   │   └── errors.ts            # ドメインエラー（QuestionNotFoundError 等）
 │   ├── dal/
 │   │   ├── answer-repository.ts # AnswerDeps 実装（questions 照合・srs 取得・batch 書き込み）
 │   │   ├── review-repository.ts # ReviewDeps 実装（due queue・due count）
 │   │   ├── domains-repository.ts # DomainsDeps 実装（ユーザー別の領域集計）
-│   │   └── analytics-repository.ts # AnalyticsDeps 実装（ユーザー別の学習分析集計）
+│   │   ├── analytics-repository.ts # AnalyticsDeps 実装（ユーザー別の学習分析集計）
+│   │   └── activity-repository.ts # ActivityDeps 実装（ユーザー別の最近の活動）
 │   ├── content-sync.ts          # content → 同期ペイロード/SQL への純粋変換（gray-matter・shared のみに依存。§10.8）
 │   └── dev-seed.ts               # 固定ユーザー用の動的開発 seed の純粋モデル/SQL 変換（§10.8）
 └── scripts/
@@ -1169,7 +1174,7 @@ apps/api/
     └── seed-dev.ts               # `src/dev-seed.ts` の純粋関数を呼ぶローカル専用 Node CLI（§10.8）
 ```
 
-- 上記は Walking Skeleton 中核 3 エンドポイントに、同じ処理パターンで実装済みの `GET /domains` と Issue #32 の `GET /analytics/*`（summary / weekly / mistakes）を加えた構成（§10.1）。後続の heatmap / activity は対応する route・service・dal と `app.ts` への `.route()` 追記で追加する。アナリティクスは集計クエリ主体（読み取りのみ）のため service 層は薄くなる見込み。
+- 上記は Walking Skeleton 中核 3 エンドポイントに、同じ処理パターンで実装済みの `GET /domains`、Issue #32 の `/analytics/*`（summary / weekly / mistakes）、Issue #33 の heatmap / activity を加えた構成（§10.1）。アナリティクスは集計クエリ主体（読み取りのみ）のため service 層は薄く、activity は既存ログの読み取りと安定ソートに限定する。
 - **dal はテーブル単位ではなくユースケース単位**で置く。「service が要求する deps 型」を 1 ファイルで実装する形にすると、service ⇔ dal の対応が 1:1 で追いやすく、テーブル単位 repository の細切れ合成（と、それを束ねる工数）を避けられる。テーブル単位の共有が必要になった時点で分割する。
 - **`src/content-sync.ts` は `gray-matter` と `packages/shared` のみに依存する純粋ロジック**（frontmatter パース・同期ペイロード生成・upsert SQL 生成）。`scripts/sync-content.ts` は Node の `fs` 読み取りと `wrangler d1 execute` 実行を担う CLI 部で、`content-sync.ts` の純粋関数を呼び出すだけに留める（routes・services・dal・middleware は import しない）。
 - **`src/dev-seed.ts` は content sync で検証済みの question ID を入力として、固定ユーザーの動的開発データを生成する純粋ロジック**にする。`scripts/seed-dev.ts` は content 読み取り・時刻取得・一時 SQL ファイル作成・Wrangler 実行だけを担い、任意の CLI 引数を転送しない。
@@ -1368,7 +1373,7 @@ export default app
 ```
 
 - **`hc` の型推論を保つため、ルート定義はメソッドチェーンで書く**。各サブルーターは `new Hono<AppEnv>().post(...)` のチェーンで定義・export し、`app.ts` では `.route()` のチェーンで合成する。チェーンを分断（`app.post(...)` を文として並べる等）すると `AppType` からエンドポイント型が消える。
-- パス設計は §7.3 の契約（`POST /answers`・`GET /review/queue`・`GET /dashboard/due-count`・`GET /domains`）をそのまま `.route()` のプレフィックス＋サブルーター内パスで構成する。後続の `GET /analytics/*`・`GET /activity/recent`（§10.1）も同じ要領でチェーンに追記する。
+- パス設計は §7.3 の契約（`POST /answers`・`GET /review/queue`・`GET /dashboard/due-count`・`GET /domains`・`GET /analytics/*`・`GET /activity/recent`）をそのまま `.route()` のプレフィックス＋サブルーター内パスで構成する。
 - Access boundary は public entrypoint だけに置く。route・service・DAL は Access JWT を参照せず、`userContext` が実行済みであるという既存契約を保つ。internal entrypoint は同じ user route sub-app を `userContext` の後に mount することで、DTO・固定ユーザー挙動・Hono RPC 契約を public entrypoint と共有する。
 
 ### 10.6 バリデーション・DTO・エラー処理
@@ -1399,7 +1404,7 @@ export const dueCountResponseSchema = z.object({
 ```
 
 - `POST /answers` の入力は任意の反応時間を含める：`answerRequestSchema` に `responseTimeMs: z.number().int().nonnegative().optional()` を追加する（§7.3・§4.4。アナリティクスの平均反応時間用。未送信でも採点は成立する）。
-- `GET /domains` は `domainSummarySchema`（domain・習得済み/全問題数・整数の習得率・topic数・lesson数）と、4領域を包む `domainsResponseSchema` を同じ `api.ts` に実装済みである。`GET /analytics/summary`・`GET /analytics/weekly`・`GET /analytics/mistakes` はそれぞれ `analyticsSummaryResponseSchema`・`analyticsWeeklyResponseSchema`・`mistakesResponseSchema` を実装済みであり、`recentActivityResponseSchema` は後続Issueで追加する。
+- `GET /domains` は `domainSummarySchema`（domain・習得済み/全問題数・整数の習得率・topic数・lesson数）と、4領域を包む `domainsResponseSchema` を同じ `api.ts` に実装済みである。`GET /analytics/summary`・`GET /analytics/weekly`・`GET /analytics/heatmap`・`GET /analytics/mistakes` はそれぞれ対応する共有レスポンススキーマを実装済みであり、`recentActivityResponseSchema` は lesson view / answer log の種別付き union として実装済みである。
 
 **エラー処理の方針**：
 
@@ -1483,9 +1488,9 @@ const result = await submitAnswer(deps, {
 ### 10.10 既存コードとの差分（本章から発生する実装タスク）
 
 - `packages/shared/src/db/schema.ts`：`questions` テーブル（§4.4 の content 同期キャッシュ）を追加。`srs_states` に複合主キー `(user_id, question_id)` を追加。`answer_logs` に `response_time_ms`（任意列）を追加。`lesson_views` テーブル（§4.4。アナリティクス用）を追加
-- `packages/shared/src/schema/api.ts`：新設（§10.6）。Walking Skeleton 分（answer / reviewQueue / dueCount）・domains・Issue #32 の analytics（summary / weekly / mistakes）を実装済み。activity のレスポンススキーマは後続で追加
+- `packages/shared/src/schema/api.ts`：Walking Skeleton 分（answer / reviewQueue / dueCount）・domains・analytics（summary / weekly / heatmap / mistakes）・activity の入出力契約を実装
 - `apps/api/wrangler.toml`：`name` を `tech-study-lab-api` へ変更（web Worker と区別する。§3.1 の Service Binding が参照する `service` 名になる）。`vars` に `WEB_ORIGIN` を追加
-- `apps/api/src/`：`env.ts` / `middleware/` / `routes/` / `services/` / `dal/` を §10.2 の構成で新設し、`app.ts` でルートを合成し、`index.ts` から再エクスポート。`/domains` と Issue #32 の `/analytics/summary`・`/analytics/weekly`・`/analytics/mistakes` 用の route/service/dal は同パターンで追加済み。`/analytics/heatmap`・`/activity/recent` は後続で追加（§10.1）
+- `apps/api/src/`：`env.ts` / `middleware/` / `routes/` / `services/` / `dal/` を §10.2 の構成で新設し、`app.ts` でルートを合成し、`index.ts` から再エクスポート。`/domains` と analytics（summary / weekly / heatmap / mistakes）、activity（recent）の route/service/dal を同パターンで実装
 - `apps/api/scripts/sync-content.ts`：新設（§10.8。package.json の `content:sync` は定義済み）
 
 ### 10.11 将来拡張ポイント

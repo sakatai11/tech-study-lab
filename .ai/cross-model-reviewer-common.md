@@ -18,7 +18,7 @@
 
 ## Discovery / verification
 
-- `discovery`: internal reviewer と別モデルCLIが、どちらも `develop...HEAD` の**全累積差分**を発見モードで読む。結果をFinding台帳へ統合する。
+- `discovery`: internal reviewer と別モデルCLIが、どちらも同じ effective base から current HEAD までの**全累積差分**を発見モードで読む。`develop-v2` を `baseBranch` とし、ブリーフの `<effectiveBase>...HEAD` を使う。結果をFinding台帳へ統合する。
 - `verification`: Finding台帳、修正要約、修正コミット範囲を必須ブリーフとする。internal verification が current HEAD を `approve` した場合だけ、別モデルCLI verification を直接実行する。
 - verification で current loop に追加できる新規Findingは、修正起因回帰、明確な受け入れ条件未達、重大なsecurity/data destructionだけである。独立改善は「別issue候補（範囲外）」または追加改善に残し、判定件数・修正対象に含めない。
 
@@ -28,7 +28,7 @@ discovery と verification の全レビュー主体には、同じレビュー�
 
 ブリーフの基本5項目（`targetFeature`、`inScopeFiles`、`acceptanceCriteria`、`outOfScopePolicy`、`committedRange`）は、`.ai/review-guidelines.md` の「レビュー範囲」に従う。同節の `inScopeFiles` に関する規則も継承し、この文書では再定義しない。
 
-この共通定義が追加する契約は、`reviewStage`（`discovery` または `verification`）と、`reviewPolicy` / `externalReviewDecision` / 規則ID / 具体的根拠 / `decisionHead` である。
+この共通定義が追加する契約は、`reviewStage`（`discovery` または `verification`）、`reviewPolicy` / `externalReviewDecision` / 規則ID / 具体的根拠 / `decisionHead`である。Knowledge Graphの証跡は`.ai/skills/issue-dev-orchestrate/references/architecture-context.md`の共通実行記録を参照する。必要部分の添付も可。Graph情報の不足は参照先から補い、判断に影響する未確認事項を報告する。
 
 verification には上記に加えて、issue固有のFinding台帳、修正要約、修正コミット範囲を含める。`committedRange` は discovery と verification のどちらでもレビュー対象となる累積差分であり、Findingが0件または今回の修正コミットがないことを理由に空へしない。修正コミット範囲は別フィールドとして「修正なし」と明示できる。フィールド不足・矛盾、または実際のコミット済み差分との不一致は推測で補わず「判定: error」とする。
 
@@ -65,7 +65,17 @@ verification には上記に加えて、issue固有のFinding台帳、修正要�
 - `externalReviewDecision: required`: current HEADに対する別モデルCLIも正常に`approve`
 - `externalReviewDecision: not-required-by-policy`: current HEADと一致する`decisionHead`、有効な`reviewPolicy`、規則ID、根拠が記録済み
 
-Findingが0件の場合、required Finding全件resolvedは真だが、internal verificationと上記の外部レビュー経路は省略しない。`not-required-by-policy`は外部`approve`ではない。`partial` / `unresolved` のrequired Finding、internalの`request-changes`、必須CLIのtimeout・失敗・未取得、古い`decisionHead`では境界を更新しない。
+Findingが0件の場合、required Finding全件resolvedは真だが、有効なverification経路の確認は必要である。`not-required-by-policy`は外部`approve`ではない。`partial` / `unresolved` のrequired Finding、internalの`request-changes`、必須CLIのtimeout・失敗・未取得、古い`decisionHead`では境界を更新しない。
+
+### 低リスクのdiscovery結果再利用
+
+`reviewPolicy: risk-based`で`LR-1 non-executable-only`が成立し、`externalReviewDecision: not-required-by-policy`の場合に限り、正常なinternal discoveryのapproveをinternal verificationの根拠として再利用できる。次をすべて確認する。
+
+- 同一実行で、HEAD、effectiveBase、committedRange、対象範囲、受け入れ条件がdiscovery時と一致する。
+- 今回の台帳にrequired Findingがなく、正確性・スコープに関する未解決の確認事項がない。
+- レビュー対象checkoutはcleanで、必要なゲートの成功証跡が有効であり、decisionHeadがcurrent HEADと一致する。
+
+オーケストレーターはdiscovery結果への参照と上記の照合結果を`verificationBasis: reused-discovery`として記録する。別のverificationレビューを実行したとは報告しない。条件が欠ける場合、修正がある場合、高リスクまたは外部レビュー必須の場合は通常のverificationを実行する。`never`指定だけを低リスクの根拠にせず、失敗・未取得は再利用しない。
 
 ## Finding台帳
 
@@ -94,7 +104,7 @@ private リポジトリで CodeRabbit App の自動レビューが有効、ま�
 
 ## 範囲と分割coverage
 
-レビュー用ブリーフは上記「レビュー用ブリーフ契約」のフィールドを必須とする。別モデルCLIと正規化エージェントは`externalReviewDecision: required`の場合だけ起動し、`not-required-by-policy`で起動された場合は「判定: error」とする。verification にはFinding台帳、修正要約、修正コミット範囲を追加する。不足・矛盾があれば推測で補完せず「判定: error」とする。レビュー対象はコミット済み差分だけに限定し、開始前に `git status --short` が空であること、`committedRange` が `git diff <base>...HEAD` と一致することを確認する。不一致・未コミット変更があればレビューを実行しない。
+レビュー用ブリーフは上記「レビュー用ブリーフ契約」のフィールドを必須とする。別モデルCLIと正規化エージェントは`externalReviewDecision: required`の場合だけ起動し、`not-required-by-policy`で起動された場合は「判定: error」とする。verification にはFinding台帳、修正要約、修正コミット範囲を追加する。不足・矛盾があれば推測で補完せず「判定: error」とする。レビュー対象はコミット済み差分だけに限定し、開始前に `git status --short` が空であること、`baseBranch: develop-v2` と `effectiveBase` が検証済みであること、`committedRange` が `git diff <effectiveBase>...HEAD` と一致することを確認する。不一致・未コミット変更があればレビューを実行しない。
 
 累積discoveryが20分timeoutした場合だけ、commit/file集合を明示したchunkに分割できる。これはtimeout後の明示的な例外であり、通常のtimeoutに対する自動retryではない。`cumulativeSplit` は各chunkの `coveredCommitShas` と `coveredFiles`、重複理由を含む。chunk unionが元の累積差分のcommit集合と変更ファイル集合を完全に覆うことを照合し、最後に `crossCuttingReview` を完了する。欠落、説明不能な重複、横断レビュー未実施は「判定: error」とし、coverage・境界を更新しない。
 
@@ -115,6 +125,7 @@ private リポジトリで CodeRabbit App の自動レビューが有効、ま�
 
 ### レビュー条件
 - review stage / review policy / external review decision / decision head / 使用モデル / 論理base / 実効base / committed range / 対象機能 / 対象ファイル / 受け入れ条件 / プロファイル: spec-compliance-first
+- 共通実行記録の参照先・対象revision、追加・変更した証跡
 
 ### 指摘一覧
 | Finding ID | 重要度 | ファイル:行 | 指摘（出典タグ付き） | 修正案 |

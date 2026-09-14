@@ -16,6 +16,8 @@
 
 ブリーフの項目が欠けている、または相互に矛盾していて範囲を決められない場合、レビュアーは推測で補完せず、レビューを `error` として不足項目を報告する。`committedRange` が実際のコミット済み差分と一致しない場合も同様に `error` とする。
 
+`content-new`がコミット前の教材を確認する場合だけ`reviewStage: content-draft`を使う。この段階は上記の`committedRange`に代えて、変更済みまたは新規の`content/**`だけを列挙した`draftPaths`を必須とし、レビュー用ブリーフの`inScopeFiles`を`draftPaths`と完全一致させる。レビュアーは`git status --short -- <draftPaths>`、追跡済みファイルの`git diff -- <draftPaths>`、各教材ファイルの全文を読み取り専用で確認する。`content-draft`は教材preflightであり、issue-dev-orchestrateのdiscovery / verification、Finding台帳、レビュー済み境界、外部レビューを成立させない。`draftPaths`外の未コミット変更を理由に停止せず、範囲へ含めない。
+
 ### 範囲判定
 
 各候補を、重要度を付ける前に次のいずれかへ分類する。

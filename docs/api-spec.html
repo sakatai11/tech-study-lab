@@ -293,9 +293,9 @@
                 <tr><td class="nowrap"><span class="verb-tag get">GET</span></td><td class="nowrap"><a href="#domains"><code>/domains</code></a></td><td>4領域の習得率・トピック数・レッスン数</td><td class="nowrap http">200</td><td class="nowrap">implemented</td></tr>
                 <tr><td class="nowrap"><span class="verb-tag get">GET</span></td><td class="nowrap"><a href="#analytics-summary"><code>/analytics/summary</code></a></td><td>総解答数・正答率・平均反応時間などの集計</td><td class="nowrap http">200</td><td class="nowrap">implemented</td></tr>
                 <tr><td class="nowrap"><span class="verb-tag get">GET</span></td><td class="nowrap"><a href="#analytics-weekly"><code>/analytics/weekly</code></a></td><td>直近7日の解答数推移</td><td class="nowrap http">200</td><td class="nowrap">implemented</td></tr>
-                <tr><td class="nowrap"><span class="verb-tag get">GET</span></td><td class="nowrap"><a href="#analytics-heatmap"><code>/analytics/heatmap</code></a></td><td>直近26週の日次解答数</td><td class="nowrap http">200</td><td class="nowrap">planned</td></tr>
+                <tr><td class="nowrap"><span class="verb-tag get">GET</span></td><td class="nowrap"><a href="#analytics-heatmap"><code>/analytics/heatmap</code></a></td><td>直近182日の日次解答数</td><td class="nowrap http">200</td><td class="nowrap">implemented</td></tr>
                 <tr><td class="nowrap"><span class="verb-tag get">GET</span></td><td class="nowrap"><a href="#analytics-mistakes"><code>/analytics/mistakes</code></a></td><td>誤答率が高い問題の上位ランキング</td><td class="nowrap http">200</td><td class="nowrap">implemented</td></tr>
-                <tr><td class="nowrap"><span class="verb-tag get">GET</span></td><td class="nowrap"><a href="#activity-recent"><code>/activity/recent</code></a></td><td>直近の学習イベント一覧</td><td class="nowrap http">200</td><td class="nowrap">planned</td></tr>
+                <tr><td class="nowrap"><span class="verb-tag get">GET</span></td><td class="nowrap"><a href="#activity-recent"><code>/activity/recent</code></a></td><td>直近10件の学習アクティビティ</td><td class="nowrap http">200</td><td class="nowrap">implemented</td></tr>
               </tbody>
             </table>
           </div>
@@ -915,12 +915,12 @@ const { dueCount } = dueCountResponseSchema.parse(await response.json())</code><
 
         <section aria-labelledby="additional-apis-title">
           <h2 id="additional-apis-title">追加API</h2>
-          <p class="legend"><span class="status">implemented · route / Zod実装済み</span><span class="status planned">planned · DTO未確定</span><span>実装済みのAPIは共有ZodスキーマとD1 integration testまで確定しています。planned は目的・成功ステータス・返す予定の値のみを先に共有し、フィールド名と型は各実装Issueで確定します。</span></p>
+          <p class="legend"><span class="status">implemented · route / Zod実装済み</span><span class="status planned">planned · DTO未確定</span><span>実装済みのAPIは共有ZodスキーマとD1 integration testまで確定しています。</span></p>
           <div class="callout">
             <p><strong>後続Issueで必ず更新するもの</strong></p>
             <p>各APIの実装に着手するときは、返却値を共有Zodスキーマで確定し、このページの<strong>レスポンス例・フィールド表・実装状態</strong>も同じPRで更新します。APIのIF（URL、HTTPステータス、JSON形式、エラー形式）を実装だけで先に変えないでください。</p>
             <p>この節のAPIはいずれも認証・エラー形式が Walking Skeleton のAPIと共通です（<a href="#errors">共通エラー応答</a>）。すべて読み取り専用のため、永続書き込みのレート制限（429 / 503）は対象外です。</p>
-            <p><strong>analytics の3 APIは Issue #32 で実装済みです。</strong>週次データは UTC の直近7日を0埋めし、誤答ランキングは2回答以上の問題を対象に最大10件を返します。忘却曲線と復習タイミングの計算APIは提供しません。</p>
+            <p><strong>analytics の4 APIと <code>/activity/recent</code> は Issue #32 / #33 で実装済みです。</strong>週次データは UTC の直近7日を、heatmap は UTC 当日を終点とする直近182日を0埋めし、誤答ランキングは2回答以上の問題を対象に最大10件を返します。忘却曲線と復習タイミングの計算APIは提供しません。</p>
           </div>
           <div class="endpoint-list">
 
@@ -1114,18 +1114,30 @@ const { domains } = domainsResponseSchema.parse(await response.json())</code></p
             </article>
 
             <article class="endpoint" id="analytics-heatmap">
-              <header><span class="method get">GET</span><h3><code>/analytics/heatmap</code></h3><span class="status planned">planned</span></header>
-              <p class="summary">直近26週の学習コントリビューション表示用に、日次解答数を返します。</p>
-              <div class="badges"><span class="badge">リクエスト: body・query なし</span><span class="badge">成功: <span class="http">200 OK</span></span><span class="badge">Zod（予定・名称も未確定）: <code>analyticsHeatmapResponseSchema</code></span></div>
+              <header><span class="method get">GET</span><h3><code>/analytics/heatmap</code></h3><span class="status">implemented</span></header>
+              <p class="summary">UTC当日を終点とする直近182日の学習コントリビューション（日次解答数）を返します。解答がない日も0件で補完します。</p>
+              <div class="badges"><span class="badge">認証: Access（公開entrypoint）</span><span class="badge">レート制限: なし（読み取り）</span><span class="badge">Zod: <code>analyticsHeatmapResponseSchema</code></span></div>
+              <section class="pane">
+                <h4>リクエスト</h4>
+                <p class="note">body はありません。query parameter は strict な空オブジェクトで検証するため、未知のquery parameterは <span class="http">400</span> で拒否します。</p>
+                <figure class="sample"><figcaption><span class="wire">ローカル開発</span><span class="meta">http://localhost:8787</span></figcaption><pre data-lang="shell"><code>curl -i http://localhost:8787/analytics/heatmap</code></pre></figure>
+              </section>
               <section class="pane">
                 <h4>レスポンス</h4>
-                <div class="tbd">
-                  <strong>レスポンス例は未確定です</strong>
-                  <ul>
-                    <li>直近26週の日次解答数（<code>answer_logs</code> の日次集計）</li>
-                  </ul>
-                  <p>このエンドポイントだけは、設計文書 §10.6 の予定スキーマ一覧に名前がありません。<code>analyticsHeatmapResponseSchema</code> は本ページ上の仮称です。</p>
-                </div>
+                <div class="table-wrap"><table class="grid"><thead><tr><th>フィールド</th><th class="nowrap">型</th><th>意味</th></tr></thead><tbody>
+                  <tr><td><code>days</code></td><td><span class="type">array</span></td><td>常に182件。古い日付から新しい日付の連続昇順。</td></tr>
+                  <tr><td><code>days[].date</code></td><td><span class="type">string</span></td><td>UTCの実在する <code>YYYY-MM-DD</code>。</td></tr>
+                  <tr><td><code>days[].answerCount</code></td><td><span class="type">number</span></td><td>対象日の解答数。解答がない日は0。</td></tr>
+                </tbody></table></div>
+                <figure class="sample"><figcaption><span class="wire ok">200 OK</span><span class="meta">application/json · daysは182件</span></figcaption><pre data-lang="json"><code>{
+  "days": [
+    { "date": "2026-03-04", "answerCount": 0 },
+    { "date": "2026-03-05", "answerCount": 2 },
+    { "date": "…", "answerCount": 0 },
+    { "date": "2026-09-01", "answerCount": 4 }
+  ]
+}</code></pre></figure>
+                <p class="note">集計失敗は共通の <a href="#errors">500 <code>INTERNAL</code></a> です。公開entrypointのAccess検証失敗は <a href="#errors">401 <code>UNAUTHORIZED</code></a> です。</p>
               </section>
             </article>
 
@@ -1148,17 +1160,42 @@ const { domains } = domainsResponseSchema.parse(await response.json())</code></p
             </article>
 
             <article class="endpoint" id="activity-recent">
-              <header><span class="method get">GET</span><h3><code>/activity/recent</code></h3><span class="status planned">planned</span></header>
-              <p class="summary">レッスン閲覧・演習完了・復習キュー更新を統合した直近イベントを返します。集計ロジックとDTOは実装時に確定します。</p>
-              <div class="badges"><span class="badge">リクエスト: body・query なし</span><span class="badge">成功: <span class="http">200 OK</span></span><span class="badge">Zod（予定）: <code>recentActivityResponseSchema</code></span></div>
+              <header><span class="method get">GET</span><h3><code>/activity/recent</code></h3><span class="status">implemented</span></header>
+              <p class="summary">保存済みの教材閲覧と問題回答から、直近10件のアクティビティを返します。quiz / review の発信元や全問完了は復元せず、UIでは事実に沿って表示します。</p>
+              <div class="badges"><span class="badge">認証: Access（公開entrypoint）</span><span class="badge">レート制限: なし（読み取り）</span><span class="badge">Zod: <code>recentActivityResponseSchema</code></span></div>
+              <section class="pane">
+                <h4>リクエスト</h4>
+                <p class="note">body はありません。query parameter は strict な空オブジェクトで検証するため、未知のquery parameterは <span class="http">400</span> で拒否します。</p>
+                <figure class="sample"><figcaption><span class="wire">ローカル開発</span><span class="meta">http://localhost:8787</span></figcaption><pre data-lang="shell"><code>curl -i http://localhost:8787/activity/recent</code></pre></figure>
+              </section>
               <section class="pane">
                 <h4>レスポンス</h4>
-                <div class="tbd">
-                  <strong>レスポンス例は未確定です</strong>
-                  <ul>
-                    <li>レッスン閲覧・演習完了・復習キュー更新を統合した直近イベント一覧</li>
-                  </ul>
-                </div>
+                <div class="table-wrap"><table class="grid"><thead><tr><th>フィールド</th><th class="nowrap">型</th><th>意味</th></tr></thead><tbody>
+                  <tr><td><code>items</code></td><td><span class="type">array</span></td><td>最大10件。<code>occurredAt</code>降順、同時刻はID昇順。IDは統合後も重複しません。</td></tr>
+                  <tr><td><code>items[].type</code></td><td><span class="type">enum</span></td><td><code>lesson_viewed</code> または <code>answer_recorded</code>。</td></tr>
+                  <tr><td><code>items[].occurredAt</code></td><td><span class="type">number</span></td><td>Unix epoch milliseconds。</td></tr>
+                  <tr><td><code>lesson_viewed</code> の項目</td><td><span class="type">object</span></td><td><code>id</code>・<code>lessonId</code>・<code>occurredAt</code>。教材閲覧の事実。</td></tr>
+                  <tr><td><code>answer_recorded</code> の項目</td><td><span class="type">object</span></td><td><code>id</code>・<code>questionId</code>・<code>lessonId</code>（メタデータ欠損時はnull）・<code>isCorrect</code>・<code>occurredAt</code>。</td></tr>
+                </tbody></table></div>
+                <figure class="sample"><figcaption><span class="wire ok">200 OK</span><span class="meta">application/json</span></figcaption><pre data-lang="json"><code>{
+  "items": [
+    {
+      "id": "answer:answer-1",
+      "type": "answer_recorded",
+      "occurredAt": 1788177600000,
+      "questionId": "security-xss-01-q1",
+      "lessonId": "security-xss-01",
+      "isCorrect": true
+    },
+    {
+      "id": "lesson-view:view-1",
+      "type": "lesson_viewed",
+      "occurredAt": 1788177500000,
+      "lessonId": "security-xss-01"
+    }
+  ]
+}</code></pre></figure>
+                <p class="note">集計失敗は共通の <a href="#errors">500 <code>INTERNAL</code></a>、活動がない場合は <code>{ "items": [] }</code> を返します。</p>
               </section>
             </article>
           </div>

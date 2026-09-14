@@ -1,11 +1,11 @@
 import { DOMAIN_LABELS, type DomainKey, type DomainsResponse } from '@tsl/shared'
 
-import type { DomainTopicRoute, DomainsViewModel } from './view-model'
+import type { DomainProgressViewModel, DomainTopicRoute, DomainsViewModel } from './view-model'
 
-export function domainsToViewModel(
+function domainsToProgressViewModel(
   response: DomainsResponse,
-  topicRoutes: readonly DomainTopicRoute[] = [],
-): DomainsViewModel {
+  topicRoutes: readonly DomainTopicRoute[],
+): DomainProgressViewModel[] {
   const firstTopicByDomain = new Map<DomainKey, DomainTopicRoute>()
   for (const route of topicRoutes) {
     const current = firstTopicByDomain.get(route.domain)
@@ -14,15 +14,22 @@ export function domainsToViewModel(
     }
   }
 
-  return {
-    domains: response.domains.map((summary) => {
-      const firstTopic = firstTopicByDomain.get(summary.domain)?.topic
+  return response.domains.map((summary) => {
+    const firstTopic = firstTopicByDomain.get(summary.domain)?.topic
 
-      return {
-        ...summary,
-        label: DOMAIN_LABELS[summary.domain].label,
-        firstTopicHref: firstTopic ? `/learn/${summary.domain}/${firstTopic}` : undefined,
-      }
-    }),
+    return {
+      ...summary,
+      label: DOMAIN_LABELS[summary.domain].label,
+      firstTopicHref: firstTopic ? `/learn/${summary.domain}/${firstTopic}` : undefined,
+    }
+  })
+}
+
+export function domainsToViewModel(
+  response: DomainsResponse,
+  topicRoutes: readonly DomainTopicRoute[] = [],
+): DomainsViewModel {
+  return {
+    domains: domainsToProgressViewModel(response, topicRoutes),
   }
 }

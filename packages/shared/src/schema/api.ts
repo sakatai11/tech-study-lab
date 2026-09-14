@@ -191,6 +191,102 @@ export const analyticsWeeklyResponseSchema = z
   })
 export type AnalyticsWeeklyResponse = z.infer<typeof analyticsWeeklyResponseSchema>
 
+export const analyticsHeatmapDaySchema = z.object({
+  date: analyticsWeeklyDateSchema,
+  answerCount: z.number().int().nonnegative(),
+})
+export type AnalyticsHeatmapDay = z.infer<typeof analyticsHeatmapDaySchema>
+
+export const analyticsHeatmapResponseSchema = z
+  .object({
+    days: z.array(analyticsHeatmapDaySchema).length(182),
+  })
+  .superRefine(({ days }, context) => {
+    const uniqueDates = new Set(days.map(({ date }) => date))
+    days.forEach((day, index) => {
+      const previous = days[index - 1]
+      if (
+        previous &&
+        Date.parse(`${day.date}T00:00:00Z`) - Date.parse(`${previous.date}T00:00:00Z`) !==
+          86_400_000
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['days', index, 'date'],
+          message: 'days must be consecutive and in ascending order',
+        })
+      }
+    })
+    if (uniqueDates.size !== days.length) {
+      context.addIssue({
+        code: 'custom',
+        path: ['days'],
+        message: 'days must contain unique dates',
+      })
+    }
+  })
+export type AnalyticsHeatmapResponse = z.infer<typeof analyticsHeatmapResponseSchema>
+
+const recentActivityBaseSchema = z.object({
+  id: z.string().min(1),
+  occurredAt: z.number().int().nonnegative(),
+})
+
+export const recentActivityLessonViewedSchema = recentActivityBaseSchema
+  .extend({
+    type: z.literal('lesson_viewed'),
+    lessonId: z.string().min(1),
+  })
+  .strict()
+export type RecentActivityLessonViewed = z.infer<typeof recentActivityLessonViewedSchema>
+
+export const recentActivityAnswerRecordedSchema = recentActivityBaseSchema
+  .extend({
+    type: z.literal('answer_recorded'),
+    questionId: z.string().min(1),
+    lessonId: z.string().min(1).nullable(),
+    isCorrect: z.boolean(),
+  })
+  .strict()
+export type RecentActivityAnswerRecorded = z.infer<typeof recentActivityAnswerRecordedSchema>
+
+export const recentActivityItemSchema = z.discriminatedUnion('type', [
+  recentActivityLessonViewedSchema,
+  recentActivityAnswerRecordedSchema,
+])
+export type RecentActivityItem = z.infer<typeof recentActivityItemSchema>
+
+export function compareRecentActivity(left: RecentActivityItem, right: RecentActivityItem): number {
+  return right.occurredAt - left.occurredAt || left.id.localeCompare(right.id, 'en')
+}
+
+export const recentActivityResponseSchema = z
+  .object({
+    items: z.array(recentActivityItemSchema).max(10),
+  })
+  .superRefine(({ items }, context) => {
+    const uniqueIds = new Set(items.map(({ id }) => id))
+    if (uniqueIds.size !== items.length) {
+      context.addIssue({
+        code: 'custom',
+        path: ['items'],
+        message: 'items must contain unique IDs',
+      })
+    }
+
+    items.forEach((item, index) => {
+      const previous = items[index - 1]
+      if (previous && compareRecentActivity(previous, item) > 0) {
+        context.addIssue({
+          code: 'custom',
+          path: ['items', index],
+          message: 'items must follow occurredAt descending and ID ascending order',
+        })
+      }
+    })
+  })
+export type RecentActivityResponse = z.infer<typeof recentActivityResponseSchema>
+
 export const mistakeItemSchema = z
   .object({
     questionId: z.string().min(1),
