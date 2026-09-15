@@ -2,6 +2,8 @@
 
 `develop` 系統のIssue開発で、広域コード検索より先に構造化されたコード情報から影響範囲を絞るための常用基盤。設計意図・振る舞いの一次ソースは `docs/design.md`、現在構造の一次ソースはコードと設定である。`graph.json` は再生成できる参照用snapshotであり、手動編集しない。
 
+情報ごとの責務は [設計文書の冒頭](../docs/design.md) を参照する。本書は抽出範囲・解析の制限・操作方法を所有する。Graphは設計契約、テストの検証結果、Issueの完了状況を保持しない。特にWebのUI・mapper・ViewModelや教材など、抽出対象外の情報は元のコード・文書を確認する。
+
 ```sh
 node scripts/architecture.mjs extract
 node scripts/architecture.mjs check
