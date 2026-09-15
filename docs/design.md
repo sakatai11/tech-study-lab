@@ -2,7 +2,18 @@
 
 ソフトウェア学習アプリ。個人エンジニアが「セキュリティ / フロントエンド・バックエンドのフレームワーク / アーキテクチャ設計」を、読み物（教材）と4択問題演習で学ぶ。解答ログを分析し、SRS（間隔反復）アルゴリズムで出題を最適化する。開発自体をAI駆動で進めることを主目的とし、その基盤を構築する。
 
-本書は **一次ソース（Single Source of Truth）** であり、仕様駆動開発（Spec-Driven）の起点となる。実装判断に迷ったときは本書に従い、本書と実装が乖離した場合は本書を先に更新する。
+本書は **プロダクト仕様・設計意図・振る舞い・不変条件・許可する依存方向の一次ソース**であり、仕様駆動開発の起点となる。仕様を変更する場合は、先に本書の契約を更新してから実装する。実装が契約に違反しているだけの場合は、契約を実装に合わせて緩めず、不具合として修正する。
+
+| 情報 | 一次ソース・役割 |
+| --- | --- |
+| 何を実現し、なぜその設計を採り、何を守るか | 本書。設計契約は各節の一箇所で定義し、他の節は参照する |
+| 現在のファイル配置・型・schema・関数シグネチャ・設定 | コードと設定。正確な宣言や現在の構成を本書へ複製しない |
+| 現在構造の探索・変更影響の候補 | [Knowledge Graph](../architecture/README.md)。コード・設定から抽出する参照データであり、仕様や実行時挙動の証明ではない |
+| 契約を満たすことの検証 | 型チェック・テスト・実行確認。テストは根拠であり、仕様変更を単独で承認するものではない |
+| 実装状況・残タスク・完了記録 | GitHub Issue / PR。完了済みタスク一覧は本書に残さない |
+| 過去の調査・比較・検証結果 | 日付と対象を明記した独立した検証記録またはADR。現在も有効な制約は本書から参照できるようにする |
+
+Knowledge Graphの抽出対象・制限・更新方法は [architecture/README.md](../architecture/README.md)、Issue開発での調査・証跡引き継ぎは[開発フローの契約](../.ai/skills/issue-dev-orchestrate/references/architecture-context.md)を参照する。Graphで候補を絞った後、コード・型・テストと本書の契約で再確認する。Graph対象外の文書・UI・教材も、仕様確認や通常の検索の対象から外さない。
 
 設計文書の一次ソースは本ファイル（`docs/design.md`）の Markdown のみとし、全文の HTML ミラーは持たない。HTML は実装時に参照しやすい形へ再構成した補助資料（[`docs/api-spec.html`](./api-spec.html)・[`docs/frontend-architecture.html`](./frontend-architecture.html)・[`docs/backend-architecture.html`](./backend-architecture.html)・[`docs/authentication-architecture.html`](./authentication-architecture.html)）に限る。
 
@@ -46,19 +57,7 @@
 
 pnpm workspaces による monorepo。
 
-```
-tech-study-lab/
-├── apps/
-│   ├── web/          # Next.js（App Router）— 画面
-│   │   └── src/      # App Router ファイル（src/ 構成）
-│   └── api/          # Hono — 主要API（Cloudflare Workers）
-├── packages/
-│   └── shared/       # Drizzleスキーマ・Zodスキーマ・共有型（単一ソース）
-├── content/          # 教材・問題（Markdown + frontmatter）= 一次ソース
-├── docs/
-│   └── design.md     # 本書
-└── CLAUDE.md         # AI駆動開発のコンテキスト・規約
-```
+現在のファイル配置はコードと [Knowledge Graph](../architecture/README.md) を参照する。ここでは配置の責務と命名規則を定義する。
 
 `apps/web/src` 配下のより詳細な構成（`features` / `components/ui` / `lib` 等）は第8.1章で確定する。
 
@@ -87,6 +86,8 @@ tech-study-lab/
 - web 側の wrangler 設定に `services: [{ "binding": "API", "service": "<API Worker 名>", "entrypoint": "InternalApi" }]` を宣言し、Server 側の `hc` には `getCloudflareContext().env.API.fetch` をカスタム `fetch` として渡す。
 - Service Binding 経由でも `hc<AppType>` の型安全 RPC はそのまま維持される（差し替わるのは fetch 実装のみで、パス・メソッド・型は不変。baseURL のホスト名はダミーでよい）。
 - web Worker の Next.js Cache Components / PPR が使う Incremental Cache は、API や D1 とは分離した専用 R2 bucket を `NEXT_INC_CACHE_R2_BUCKET` として bind する。時間ベース再検証は SQLite Durable Object の `NEXT_CACHE_DO_QUEUE` で処理し、`WORKER_SELF_REFERENCE` から同じ web Worker の再検証 entrypoint を呼ぶ。OpenNext の dummy cache / queue は本番で使用しない。
+
+`'use cache'` の既定profileによる15分の時間ベース再検証があるためQueueは省略しない。on-demand revalidationは採用しないためTag Cacheは追加しない。将来 `revalidateTag` / `revalidatePath` を導入する場合は、対応するTag Cacheとcache purgeを同時に設計する。
 
 #### 本番アクセス境界（Issue #112）
 
@@ -127,7 +128,7 @@ tech-study-lab/
 - 初期は **4択（多肢選択）に統一**。自動採点でき、解答ログが構造化され、SRSが即動く。
 - 記述式・コード問題は `question.type` フィールドで**後から追加できる拡張ポイント**として確保する。
 
-### 4.4 スキーマ草案（確定は実装時）
+### 4.4 データの意味と整合性
 
 content（frontmatter）側:
 
@@ -140,7 +141,7 @@ D1 側（動的データ）:
 
 - `users`: 将来公開用。初期は単一ユーザーでも user_id を持つ
 - `answer_logs`: `{ id, user_id, question_id, is_correct, answered_at, response_time_ms? }`（`response_time_ms` は §7 アナリティクス画面の「平均反応時間」向け。Quiz クライアントが選択肢表示から解答確定までを計測して送信する任意項目）
-- `srs_states`: `{ user_id, question_id, ease, interval_days, due_at, reps, lapses, version }`（SRSパラメータ。`version` は同時解答による更新消失を防ぐ楽観的ロック用。アルゴリズムは実装時に SM-2 ベースを想定）
+- `srs_states`: `{ user_id, question_id, ease, interval_days, due_at, reps, lapses, version }`（SRSパラメータ。`version` は同時解答による更新消失を防ぐ楽観的ロック用。アルゴリズムは SM-2 ベースとする）
 - `lesson_views`: `{ id, user_id, lesson_id, viewed_at }`（アナリティクス画面の「学習時間」「最近のアクティビティ」向け。教材本文ページ表示時に fire-and-forget で記録する最小ログ。学習時間は「閲覧したレッスンの frontmatter 所要時間（例：約18分）の合計」＋「`answer_logs.response_time_ms` の合計」で近似する簡易集計とし、精緻な計測は行わない）
 
 アナリティクスの集計境界は UTC とする。`GET /analytics/weekly` は当日を含む直近7日を古い順に返し、`thisWeekStudyTimeMs` の「今週」は UTC の月曜 00:00 から現在までとする。連続学習日は UTC 日付単位で教材閲覧または解答が1件以上ある日とし、当日が未活動の場合は前日から遡って直近の連続日数を返す。SRS 定着度分布は `due_at <= now` を `due` として先に分類し、未 due のうち `interval_days >= 21` を `mastered`、残りを `learning` とする排他的な3区分である。誤答ランキングは2回答以上の問題だけを対象に、誤答率降順・回答数降順・`questionId` 昇順で並べて上位10件を返す。
@@ -153,13 +154,13 @@ content sync は、現在の content に含まれる問題の metadata と `answ
 
 ### 4.5 出題ルール（SRS 運用仕様）
 
-SM-2 の計算式（`packages/shared/src/srs/sm2.ts`）の周辺で、実装時に判断を迫られるルールをここで確定する。
+SM-2 の計算式は [sm2.ts](../packages/shared/src/srs/sm2.ts)、その周辺の出題・記録ルールは本節を参照する。
 
 **前提**：新規問題は学習フロー（教材 → `/quiz`）で必ず解答する。したがって `/review` は解答済み問題（`srs_states` を持つ問題）のみを扱い、SRS のサイクルは初回解答から始まる。
 
 - **SRS 更新の入口は 1 つ**：`POST /answers` は呼び出し元（`/quiz`・`/review`・`wrongOnly`）を区別せず、1 解答ごとに `answer_log` 記録と SRS 更新を必ず行う。演習と復習で採点・記録の仕様差を作らない（API はリクエストの文脈を持たない）。演習（`/quiz`）で正解した問題が SM-2 に従い翌日 due になるのは意図した挙動である。
 - **due queue の順序と上限**：API が `dueAt` 昇順（滞留が古いものから）で返す。1 回のレスポンスは**最大 20 件**で、`hasMore` で残バッチの有無を返す。フロントは順序を並べ替えず、完了後に `hasMore` が真なら `router.refresh()` で次のバッチを取得する（§9.2 の再取得動線と整合）。
-- **due 件数の意味と content 不整合**：ダッシュボードの `GET /dashboard/due-count` は、`srs_states` のうち `due_at` が現在時刻以前の行を数える**生の due-state 件数**であり、content との join や 20 件上限では減らさない。一方、`/review` の `ReviewViewModel.dueCount` は、現在バッチの queue を bundled content と join して実際に表示できる問題だけを数える**joined 表示件数**である。content から削除済みなどで queue ID を解決できない場合も mapper はその ID を除外する。ただし、joined 表示件数が 0 なのに `hasMore` が真なら、後続バッチを指す状態で空キューを表示して進行不能になるため、`ReviewUserContent` は content 整合性エラーを throw して route error boundary に渡す。`hasMore` が偽の joined 表示件数 0 は通常の空キューとして表示する。
+- **due件数の意味**：`GET /dashboard/due-count` は `due_at <= now` の生のdue-state件数であり、contentとのjoinや20件上限では減らさない。`ReviewViewModel.dueCount` は現在バッチをbundled contentとjoinして表示できる問題数。contentから削除されたIDはmapperで除外する。表示件数と `hasMore` による空キュー・整合性エラーの分岐は §9.2に従う。
 - **同一問題の複数回解答**：制御しない。解答のたびに SRS を更新する（最後の解答が次回出題日を決める）。`answer_logs` には全解答が残るため、事後分析は可能。
 - **正解データの修正**：content の `answerIndex` を修正しても、過去の `answer_logs` は再評価しない（記録時点の判定を保持する）。
 
@@ -184,17 +185,11 @@ SM-2 の計算式（`packages/shared/src/srs/sm2.ts`）の周辺で、実装時�
 
 ### 依存境界の機械検証（dependency-cruiser）
 
-`.dependency-cruiser.cjs` の forbidden ルールは `pnpm lint` の一部として実行され、CI の PR ゲートに含まれる。Biome（`biome check .`）は lint/format を、dependency-cruiser はレイヤー間の import 境界を担当する分業とし、`biome.json` の linter 設定はこの分業のために変更しない。
+依存方向の規範は §8.1（フロントエンド）と §10.1（バックエンド）に定義する。dependency-cruiser は [.dependency-cruiser.cjs](../.dependency-cruiser.cjs) により import 境界を検証し、Biome は lint/format を担う。設定のルールには対応する設計節を示す。
 
-- **ルールの一次ソースは §8.1（フロントエンドの依存方向）と §10.1（バックエンドの import 許可）**。この2節と `.dependency-cruiser.cjs` が乖離した場合は、まず本書（§8.1・§10.1）を更新してからルールを直す（仕様駆動開発）。ルールの `comment` には対応する design.md の節番号を含め、違反時のエラーメッセージから参照すべき節が分かるようにする。
-- **機械検証できる範囲**：`app` → content ローダー・feature 内部層（api / mapper / client hooks）、`mapper` → content ローダー・API client・React、`client` → server・content ローダー、`components/ui` → 上位レイヤー、`components`（root） → feature 内部層・content・API、`lib` → app・features、`features/shared` → content ローダー・API client・React、feature 間の internals（server / api / mapper.ts / client/hooks）直接 import（他 feature の `client/components` は公開表示 component として許可）、`server` → `client/hooks`（同 feature・他 feature を問わず禁止）、`service` → routes・dal・Hono・Drizzle、`dal` → routes・Hono、`dal` → `services`（deps 型の `import type` を除く値 import）、`middleware` → routes・services・dal、`content-sync` → routes・services・dal・middleware。なお `server` が `client/components`（同 feature・他 feature のいずれも）を props 契約経由で子として描画すること（合成）は禁止しない。禁止するのは `client/hooks`（mutation・通信 state ロジック）の取り込みである。テストコード（`*.test.ts(x)`・`*.integration.test.ts`）は検証対象外とし、依存方向の代表とはみなさない。
-- **lint では担保できず、レビューに委ねる範囲**（import グラフの検証では表現できない）：
-  1. **service → D1 型**：`D1Database` 等は `@cloudflare/workers-types` が提供する ambient 型で、import 文を伴わない。import グラフに現れないため検証対象にできない。
-  2. **route → dal repository 関数の直接呼び出し**：route は deps factory を取得するために dal を import すること自体は許可されており（§10.1）、import の有無では「deps factory 経由の呼び出し」と「repository 関数の直接呼び出し」を区別できない。「呼び出し方」の制約はレビューで担保する。
+機械検証の具体的な対象は設定を参照する。import を伴わない ambient 型への依存や、許可された import の呼び出し方は、型・コード・レビューで契約と照合する。Graphの鮮度・抽出器の検証は [architecture/README.md](../architecture/README.md) を参照する。
 
 ## 6. 最初のマイルストーン（Walking Skeleton）
-
-> **Knowledge Graphによる構造参照（Issue #164）**：`develop` を統合ブランチとするIssue開発では、Worker binding、API endpoint と route・service・DAL・共有schema、Web loader の現在の対応関係を `architecture/` と `scripts/architecture*.mjs` で抽出・照合する。開始時のsnapshot鮮度確認後、Issue内の具体語をseedに広域コード検索より先に近傍queryを行い、結果から確認対象を絞る。Graph結果はコード・型・テスト・本書で再確認し、抽出対象外・空結果・曖昧な結果の場合だけLSPやテキスト検索へフォールバックする。coverage、query evidence、解析上の制限、一次ソースでの再確認結果を全開発フェーズへ引き継ぐ。変更後のsnapshot差分確認を通常の開発フローへ組み込み、`architecture:check` と `architecture:test` を既存のtypecheck・lint・test・buildに追加する。コード／設定から導ける現在構造は抽出結果を参照し、本書は設計意図・振る舞い・許可する依存方向の一次ソースとして残す。保存済み抽出結果はコードの代替仕様ではなく、再抽出との差分で古さを検知する参照用データである。出典と未対応の解析範囲を明記し、静的解析結果だけで実行時の正確性を保証しない。既存dependency-cruiserの制約は再実装せず参照する。本番Server loaderのService Binding必須と、ローカルURL fallback・ブラウザ公開URLの例外は§3.1・§8.4に従う。Knowledge Graphを前提とする開発は`develop`系統で行う。
 
 スタック全体が繋がることを最小構成で実証する「歩ける骨格」。
 
@@ -217,13 +212,13 @@ SM-2 の計算式（`packages/shared/src/srs/sm2.ts`）の周辺で、実装時�
 | ルート | 役割 | データ経路 | レンダリング／キャッシュ方針 | 主導線 |
 | --- | --- | --- | --- | --- |
 | `/` 公開トップ | 個人開発者向けの AI 駆動ソフトウェア学習ラボを説明し、「教材を読む → 4択で確かめる → SRSで復習する」学習ループを示す。明確なログイン CTA から `/home` へ進む | なし。プロダクト説明だけを静的に表示する | 静的 RSC。`AppShell`・dashboard loader・API client・Service Binding・due-count Client hook/provider を import せず、ユーザー固有データを読まない | 「ログインして学習を始める」→ `/home` |
-| `/home` ダッシュボード | **今日の復習（due）が主役**。学習統計（正答率・学習時間・連続学習日数）・学習コントリビューション（草＝日次解答数ヒートマップ）・領域別習得状況・最近のアクティビティ・次のレッスン導線を併せ持つ | due 件数は独立した API（Server loader → `hc`）。summary・heatmap・domains・recent activity は同一の非キャッシュ loader が同じ API client から並列取得し、`/home` で実データを表示する | PPR streaming 対象。静的 shell の内側で、due 件数カードとダッシュボード本体（ユーザー固有データ）をそれぞれ `<Suspense>` で分離する。取得失敗は `/home` の route error boundary で扱う | 「復習を始める」→ `/review`、「続きから」→ `/learn/...` |
-| `/domains` スキルツリー | 現行は `GET /domains` の実データを使い、4つの学習領域をカードで俯瞰する。各カードに習得率・習得済み/全問題数・トピック数・レッスン数と、コンテンツ上の先頭トピックへの導線（該当しない場合は「準備中」）を表示する。詳細な done ✓ / current ▶ / locked 🔒 のディレクトリツリーは後続スコープとする（§8.7）。 | 領域別集計は API（`GET /domains`）。領域カードは `/domains` と `/home` が共通の props 境界を介して表示する | PPR streaming 対象。静的 shell の内側で、非キャッシュのユーザー固有 `loadDomains` を `<Suspense fallback={<DomainProgressFallback />}>` で分離する。取得失敗は `/domains` の route error boundary で扱う | 先頭トピックあり → `/learn/[domain]/[topic]`、なし → 「準備中」 |
+| `/home` ダッシュボード | **今日の復習（due）が主役**。学習統計（正答率・学習時間・連続学習日数）・学習コントリビューション（草＝日次解答数ヒートマップ）・領域別習得状況・最近のアクティビティ・次のレッスン導線を併せ持つ | due 件数は独立した API（Server loader → `hc`）。summary・heatmap・domains・recent activity は同一の非キャッシュ loader が同じ API client から並列取得し、`/home` で実データを表示する | RSC。PPR・キャッシュは §8.3に従う | 「復習を始める」→ `/review`、「続きから」→ `/learn/...` |
+| `/domains` スキルツリー | 現行は `GET /domains` の実データを使い、4つの学習領域をカードで俯瞰する。各カードに習得率・習得済み/全問題数・トピック数・レッスン数と、コンテンツ上の先頭トピックへの導線（該当しない場合は「準備中」）を表示する。詳細な done ✓ / current ▶ / locked 🔒 のディレクトリツリーは後続スコープとする（§8.7）。 | 領域別集計は API（`GET /domains`）。領域カードは `/domains` と `/home` が共通の props 境界を介して表示する | RSC。PPR・キャッシュは §8.3に従う | 先頭トピックあり → `/learn/[domain]/[topic]`、なし → 「準備中」 |
 | `/learn/[domain]/[topic]` レッスン一覧 | トピック内のレッスン一覧（初期は XSS 1本） | ビルド時バンドル済み content（RSC） | `generateStaticParams` と `'use cache'` で全件を build 時に prerender。PPR streaming 対象外 | 各レッスンへ |
 | `/learn/[domain]/[topic]/[lesson]` 教材本文 | Markdown 本文表示 | ビルド時バンドル済み content（RSC。本文の初期取得・描画にはAPI不要）・閲覧記録のみAPI（最小Client recorder） | `generateStaticParams` と `'use cache'` で全件を build 時に prerender。PPR streaming 対象外 | 「問題を解く →」`/quiz/[lesson]` |
 | `/quiz/[lesson]` 演習 | イントロ（レッスン概要の確認）→ 全問を 1 問ずつ即時採点 → 結果サマリ、を 1 画面内のクライアント状態遷移（`intro → exercise → result`）で完結。演習ナビ・教材本文の両方から入れる | 問題＝content（RSC で初期化）/ 解答記録＝API | `generateStaticParams` と `'use cache'` で全件を build 時に prerender。PPR streaming 対象外 | 完了 → 「次のレッスンへ」／「再挑戦」 |
-| `/review` 復習 | イントロ（本日の due キューを dueAt 昇順・滞留日数付きでプレビュー）→ due 問題をレッスン横断で 1 問ずつ即時採点 → 結果サマリ、を 1 画面内のクライアント状態遷移で完結 | queue＝API（`GET /review/queue`）/ 問題本文＝content / 記録＝API | PPR streaming 対象（実装済み）。静的シェル `ReviewPageShell` に `ReviewQueueFallback` と due バッジ fallback を表示し、queue 完了後に非キャッシュの `ReviewUserContent` / `ReviewDueBadge` をストリーミングする | 完了 → 「ホームへ」／「間違えた問題だけ再挑戦」 |
-| `/analytics` アナリティクス | 解答ログ・SRS状態を集計した学習分析ビュー（総解答数・正答率・平均反応時間・習得済み問題数・週次アクティビティ・SRS定着度分布・間違えやすい問題ランキング） | 集計値は API（§7.3） | 実装済み。静的シェルと非キャッシュのユーザー固有領域を `<Suspense>` で分離する。忘却曲線・復習タイミングは対象外 | サイドバーの「アナリティクス」→ `/analytics` |
+| `/review` 復習 | イントロ（本日の due キューを dueAt 昇順・滞留日数付きでプレビュー）→ due 問題をレッスン横断で 1 問ずつ即時採点 → 結果サマリ、を 1 画面内のクライアント状態遷移で完結 | queue＝API（`GET /review/queue`）/ 問題本文＝content / 記録＝API | 初回取得とバッチ表示は §9.2、PPRは §8.3に従う | 完了 → 「ホームへ」／「間違えた問題だけ再挑戦」 |
+| `/analytics` アナリティクス | 解答ログ・SRS状態を集計した学習分析ビュー（総解答数・正答率・平均反応時間・習得済み問題数・週次アクティビティ・SRS定着度分布・間違えやすい問題ランキング） | 集計値は API（§7.3） | RSC。PPR・キャッシュは §8.3に従う。忘却曲線・復習タイミングは対象外 | サイドバーの「アナリティクス」→ `/analytics` |
 
 ### 7.2 横断する設計判断
 
@@ -237,9 +232,9 @@ SM-2 の計算式（`packages/shared/src/srs/sm2.ts`）の周辺で、実装時�
 - **イントロ・演習・結果の状態遷移（URL は変えない）**：演習・復習とも 1 ルート内で `intro → exercise → result` のクライアント状態遷移を持つ（別 URL に切らない。モックの実装モデルに一致）。`intro` は開始前の確認（対象レッスンの概要／due 件数・滞留日数のプレビュー）に専念し、`exercise` は 1 問ずつ即時採点、`result` はスコア・問題ごとの正誤一覧・出し分けアクションを表示する。初回データ（問題・解説、`/review` は due queue）は Server loader で ViewModel 化して props で渡し、状態遷移そのものは Client Component が持つ（§8.5・§9.4 の `QuizInteractive` と同じ設計）。結果表示は `/quiz` と `/review` で共通コンポーネントとして再利用する。
 - **ID 設計**：`lessonId` / `questionId` は**グローバル一意**。学習導線は階層 URL（`/learn/...`）、演習・復習はフラット URL（`/quiz/[lesson]`・`/review`）。
 - **レイアウト（サイドバー / ボトムタブ）**：`/home` 以下の学習画面では、PC は左サイドバー（ロゴ＋テーマトグル＋ダッシュボード／教材／演習／復習（due件数バッジ）／アナリティクス／スキルツリー）、本文は右側 1 カラム。SP は上部アプリバー（ロゴ＋ストリーク表示＋テーマトグル）＋下部固定タブバー（**ホーム／教材／演習／復習（dueバッジ）／ツリーの5項目**）。ダッシュボード／ホームのナビゲーション先は `/home` とする。「演習」「復習」ナビ項目は直前に扱っていたレッスン（未着手なら先頭レッスン）を対象とする簡易ヒューリスティックで遷移先を決定する（MVP は XSS 1本のため実質固定）。SP のタブバーはスペース都合で 5 項目に絞り、「アナリティクス（`/analytics`）」へはダッシュボードの「すべて表示」リンクから遷移する。「設定」は将来の公開機能（認証等、§1 スコープ外）向けで、MVP ではナビに置かない。
-- **公開・認証境界**：`/` は公開の静的プロダクト入口である。`/home` とユーザー向け学習ルート（`/learn/...`・`/quiz/...`・`/review`・`/domains`・`/analytics`）は本番で Cloudflare Access により保護する。この issue ではアプリ内のログイン・セッションを実装せず、公開トップの「ログインして学習を始める」は `/home` へリンクするだけとする。Cloudflare Access Application/Policy と route pattern（`/` は公開、`/home` とユーザー向け route は保護）の設定・デプロイ後検証は Issue #35 の責務である。
+- **公開・認証境界**：`/` は公開の静的プロダクト入口である。`/home` とユーザー向け学習ルート（`/learn/...`・`/quiz/...`・`/review`・`/domains`・`/analytics`）は本番で Cloudflare Access により保護する。アプリ内のログイン・セッションは持たず、公開トップの「ログインして学習を始める」は `/home` へリンクするだけとする。Cloudflare Access Application/Policy と route pattern（`/` は公開、`/home` とユーザー向け route は保護）の設定・デプロイ後検証は Issue #35 の責務である。
 - **ユーザー**：アプリ管理のログイン UI・セッションは持たない。API（Hono）側が固定 `user_id` を権威的に注入する。将来公開時は「固定値を返す関数」を「認証から `user_id` を引く関数」に差し替えるだけで、画面・API 契約は不変。
-- **`cacheComponents` / PPR**：`cacheComponents` は NextConfig のアプリケーション全体に効く top-level switch であり、有効化済みである。**PPR streaming の対象は `/home`・`/review`・`/domains`・`/analytics`**とするが、この限定は他の App Router route を Cache Components の build ルールから除外しない（§12.8）。`/` はユーザー固有データを読まない静的 RSC とする。`/home`・`/review`・`/domains`・`/analytics` は静的 shell の内側でユーザー固有データを `<Suspense>` によりストリーミング分離する。`/home` は due 件数カードを `<Suspense fallback={<DashboardDueCardFallback />}>`、summary・heatmap・domains・recent activity を含むダッシュボード本体を `<Suspense fallback={<DashboardFallback />}>` でそれぞれ分離する。`/home` の本体 loader の取得失敗は `app/home/error.tsx` の route error boundary で扱う。`/review` は `<Suspense fallback={<ReviewQueueFallback />}>` の内側で async Server Component を読む。due 件数・統計・review queue・domains 集計は API が `user_id` を権威的に注入し、web の共有キャッシュキーに `user_id` を含められないため、`'use cache'`・`cacheLife`・`cacheTag`・`revalidateTag` を使わない。共有キャッシュによるユーザー間データ混入を防ぐためであり、解答後の鮮度回復は既存方針どおり Client Component の `router.refresh()` で行う。`/domains` は4領域の `GET /domains` を読む非キャッシュのユーザー固有領域を静的 shell 内の `<Suspense fallback={<DomainProgressFallback />}>` に分離する。取得失敗は `/domains` の route error boundary で扱う。`/analytics` は `GET /analytics/summary`・`GET /analytics/weekly`・`GET /analytics/mistakes` を読む非キャッシュのユーザー固有領域を静的 shell 内の `<Suspense fallback={<AnalyticsFallback />}>` に分離し、取得失敗は `/analytics` の route error boundary で扱う。忘却曲線・復習タイミングは対象外とする。
+- **`cacheComponents` / PPR**：対象画面・キャッシュ境界・再取得方式は §8.3、復習バッチの表示契約は §9.2に従う。
 - **スタイリング**：Tailwind CSS ＋ Dev-Native Neo Flat × Terminal デザインシステム（ダークファースト）。詳細トークン・コンポーネント文法・ゲーミフィケーション表現の実装区分は §8.7。
 
 ### 7.3 画面構成から要請される API（参考）
@@ -275,39 +270,7 @@ HTTP 入出力、リクエスト・レスポンスの実例（JSON）、Zod ス�
 
 `features + components/ui` 型を採用。`src/app` は薄く保ち、ロジックは `features` に寄せる。
 
-```
-apps/web/src/
-├── app/                      # ルート（page.tsx / layout.tsx）と、ルートが共有する composition layer。薄く保つ
-│   ├── _components/          # 全画面共通 shell と feature の表示部品を props 契約で合成する composition layer（app-shell.tsx）。private folder なので route にならない
-│   ├── layout.tsx            # サイドバー（PC）/ ボトムタブ（SP）＋本文1カラム（§7.2）
-│   ├── page.tsx              # / 公開トップ（静的・APIなし）
-│   ├── home/page.tsx         # /home ダッシュボード（PPR、ユーザー固有領域は Suspense）
-│   ├── domains/              # スキルツリー（学習領域の俯瞰）
-│   ├── learn/[domain]/[topic]/...   # レッスン一覧・教材本文（RSC）
-│   ├── quiz/[lesson]/        # 演習（page が Server loader で初期化 → Client が intro/exercise/result 状態を持つ）
-│   ├── review/               # 復習（同上。初回 due queue は Server loader）
-│   └── analytics/            # アナリティクス
-├── features/                 # 機能単位。実行環境は各 feature の client / server で分離
-│   ├── dashboard/
-│   ├── domains/
-│   ├── lesson/                # server / mapper / view-model / api / client（教材本文は RSC、閲覧記録の最小 recorder のみ Client）
-│   ├── quiz/                 # 下記の feature 標準構成に従う
-│   │   ├── client/
-│   │   │   ├── components/  # Client Components。表示と表示操作 state
-│   │   │   └── hooks/       # mutation・通信 state
-│   │   ├── server/
-│   │   │   ├── components/  # feature 固有の Server Components（必要な場合のみ）
-│   │   │   └── load-quiz.ts # 初回取得・join・ViewModel 生成
-│   │   ├── api/              # Server / Client 共用の環境非依存 endpoint アダプター
-│   │   ├── mapper.ts         # 環境非依存の純粋変換
-│   │   └── view-model.ts     # Server / Client 間の表示契約
-│   ├── review/               # client / server / api / mapper / view-model
-│   ├── analytics/
-│   └── shared/                # feature 横断の小さい純粋変換のみ（例: quiz-question.ts）
-├── components/                # 全画面共通のレイアウト shell・テーマ切替（dashboard-shell.tsx / theme-toggle.tsx）
-│   └── ui/                    # 汎用UI（Button / Card / Badge / ProgressBar / TermWin / Keycap 等）。デザイントークンを土台に Tailwind で実装（§8.7）
-└── lib/                      # hc クライアントファクトリ / API response helper / content ローダー / env
-```
+`apps/web` は画面、`apps/api` はAPI、`packages/shared` は共有schema・型・純粋ドメインロジック、`content` は教材、`docs` は設計文書を所有する。現在の詳細なファイル配置はコードと [Knowledge Graph](../architecture/README.md) を参照する。
 
 - **Quiz 表示コンポーネント**は `apps/web/src/features/quiz/client/components` に置く。問題・解説・intro 内容・結果導線を表示 props で受け取り、画面フェーズと問題送りを管理する再利用可能な Client Component とする。`/quiz`（レッスン全問）・`/review`（due 問題）・`wrongOnly`（間違えた問題だけ）は供給する ViewModel / 表示 props だけを差し替え、解答 mutation は `client/hooks` の共通 hook を通す（7.2 の方針を実体化）。
 - feature 内の実行環境固有処理は `client/`・`server/` に分ける。`client/components` は Client Component、`client/hooks` は mutation と通信 state、`server/` は page / Server Component から呼ぶ初回取得・join・ViewModel 化を担当する。両環境から使える `api/`・`mapper.ts`・`view-model.ts` は feature 直下に置き、client/server のどちらかへ重複配置しない。`server/` 配下には `import 'server-only'`、Client Component の入口には `'use client'` を置き、ディレクトリ名だけに境界の強制を任せない。
@@ -352,13 +315,25 @@ apps/web/src/
 
 ### 8.3 Server / Client コンポーネント境界
 
-- **公開トップ・教材・集計系（`/`・`/home`・`/learn/...`・`/domains`・`/analytics`）= RSC**。`/` はプロダクト説明と `/home` への CTA だけを静的に描画し、Server loader・API・Service Binding・due-count hook/provider を使わない。`/home` は due 件数を独立した loader から、summary・heatmap・domains・recent activity を同一の非キャッシュ loader から `hc` で読む。`/home` の静的 shell は due 件数を `DashboardDueCard` と `DashboardDueCardFallback` の Suspense 境界、本体データを `DashboardUserContent` と `DashboardFallback` の Suspense 境界に分離し、`app/home/error.tsx` が本体 loader の取得失敗を route error boundary として扱う。`/domains` は4領域カードの習得率、`/analytics` は summary・weekly・mistakes を、それぞれの Server loader から読む。`/home` のユーザー固有 loader は `connection()` 後に同じ client を使って並列取得し、共有キャッシュを使わない。領域別習得状況の表示は `/domains` と `/home` が同じ表示部品の props 境界を再利用する。教材本文ページは、本文の初期取得・描画には **API 不要**であり、閲覧記録だけは最小Client recorderからAPIを呼ぶ。
-- **演習系（Quiz / Review）= Client Component**。イントロ・演習・結果の画面フェーズと現在問題を持ち、Client hook が返す採点結果・通信状態を表示へ反映するため。初回データは Server loader（`/quiz` は content、`/review` は due queue）で ViewModel 化し props で渡す（§9.2）。
-- **レイアウト / ヘッダー = Server**。
-- 実行場所はディレクトリ名ではなく import 境界で決まる。`apps/web/src/features/*/server` は `apps/web/src/app/**/page.tsx` など Server Component から import する限りサーバー側で実行される。誤用防止のため `import 'server-only'` を必須にする。
-- Server Actions は使わず、動的データは Hono API に一本化する。初回取得は Server loader、mutation は Client hook から `hc` で実行する。Server data の再取得は Client Component が `router.refresh()` で Server loader を再実行する（API 契約を `apps/api` に一本化し、RPC 型を素直に効かせる）。
-  - **不採用の根拠**：変更系を Hono に一本化することで ①契約（`AppType`）と `user_id` 注入点（§7.2）を単一ソースに保てる、②Hono+Cloudflare の学習目的（§2）を素通りしない。Server Actions の利点（フォームのプログレッシブエンハンスメント等）は、即時採点の Client 主導 Quiz・変更系が `POST /answers` ほぼ一択の本アプリでは恩恵が小さい。重いフォームが必要になった時点で再検討する。
-- **キャッシュ方針**：`cacheComponents` を有効化済みである。`export const dynamic` と `export const dynamicParams` は Cache Components と併用できないため、**page-level の route segment config を置かない**。ユーザー固有データを読む Server loader は先頭で `connection()` を呼び、リクエスト時実行であることを宣言する（Cloudflare context の解決と現在時刻の読み取りは prerender 中に行えない）。PPR streaming の対象は `/home`・`/review`・`/domains`・`/analytics` であり、`/home` は静的な dashboard composition の内側で due 件数を読む Server Component を `<Suspense>` に分離する。`/review` では静的シェルの内側に `<Suspense fallback={<ReviewQueueFallback />}>` を置く。fallback の後に、非キャッシュの `ReviewUserContent` がストリーミングされ、joined 表示件数と `hasMore` に応じて route error boundary、通常の空キュー、または表示可能な問題が1件以上ある場合のみ `ReviewRunner` を選ぶ（§7.1・§9.2・§9.4）。`/domains` は静的 shell の内側に `<Suspense fallback={<DomainProgressFallback />}>` を置き、非キャッシュの `loadDomains` が読む4領域カードを表示する。取得失敗は `/domains` の route error boundary で扱う。`/analytics` は静的 shell の内側に `<Suspense fallback={<AnalyticsFallback />}>` を置き、非キャッシュの `loadAnalytics` が読む summary・weekly・mistakes を表示する。取得失敗は `/analytics` の route error boundary で扱う。`/` は静的 RSC のままとする。due 件数・統計・review queue・domains 集計・analytics 集計には `'use cache'`・`cacheLife`・`cacheTag`・`revalidateTag` を使わない。API 側で権威的に注入する `user_id` が web の共有キャッシュキーに含まれず、共有キャッシュでユーザー間データが混入し得るためである。feature の `api/` adapter にキャッシュ方針を持ち込まず、解答後・画面復帰時の鮮度回復は Client 側の `router.refresh()` で RSC を再実行して担う。同一リクエスト内で複数の `<Suspense>` 境界が同じ queue を参照する場合は、React の `cache()`（リクエストスコープ）で loader を1回に畳む。これはユーザー横断の共有キャッシュではない。忘却曲線・復習タイミングは対象外とする。
+#### 実行環境とデータ取得
+
+- 公開トップ・教材・集計画面はRSCで描画し、演習・復習の操作部分はClient Componentとする。レイアウト／ヘッダーはServerとする。画面の責務・データは §7.1、演習の状態管理は §8.5。
+- Server専用のfeatureには `import 'server-only'`、Client入口には `'use client'` を置き、ディレクトリ名だけに境界の強制を任せない。依存規則は §8.1。
+- Server Actionsは採用しない。初回取得はServer loader、mutationはClient hookからHono APIを呼ぶ。API契約とuser_id注入点を単一に保ち、HonoとCloudflareを学ぶ目的に沿わせる。重いフォームなど別の要求が生じた場合に再検討する。
+- Server dataの再取得はClient Componentの `router.refresh()` によるRSC再実行に統一する。API adapterへキャッシュ方針を持ち込まない。
+
+#### キャッシュ・PPRの規範
+
+- `cacheComponents` を有効にする。全App Router routeがそのbuild条件を満たすこと。`dynamic` / `dynamicParams` を含むpage-level route segment configは置かない。
+- `/` はユーザー固有データを読まない静的RSC、教材・演習のcontent routeはビルド時params列挙とpageの `'use cache'` によるprerenderとする（content取得の契約は §8.2）。
+- PPR streamingの対象は `/home`・`/review`・`/domains`・`/analytics`。静的shellの内側でユーザー固有データをSuspenseにより分離し、fallbackを表示する。取得失敗は各routeのerror boundaryへ渡す。
+- `/home` はdue件数カードと本体（summary・heatmap・domains・recent activity）に別々のSuspense境界を持つ。本体は一つの非キャッシュloaderが同じAPI clientで並列取得する。`/domains` は4領域の集計、`/analytics` はsummary・weekly・mistakesを読む。忘却曲線・復習タイミングは対象外。
+- ユーザー固有loaderは先頭で `connection()` を呼ぶ。Cloudflare contextや現在時刻をprerender中に解決しない。現在時刻はuncached dataの取得後に読み、既定引数で先行評価しない。
+- due件数・統計・review queue・domains／analytics集計には `'use cache'`・`cacheLife`・`cacheTag`・`revalidateTag` を使わない。APIが注入するuser_idをwebの共有キャッシュキーに含められず、ユーザー間の混入が起こり得るためである。
+- Reactの `cache()` によるリクエスト内の取得共有は許可する。ユーザー横断の共有キャッシュとは区別する。復習のdueバッジと本文の取得共有・表示分岐・次バッチへの遷移は §9.2で定義する。
+- 解答後や画面復帰時は `router.refresh()` で鮮度を回復する。復習のバッチ完了時の条件は §9.2。
+- OpenNextの本番cache基盤は §3.1、デプロイは §12.4、実行確認は §12.8に従う。
+
 ### 8.4 `hc` クライアントの取り回し
 
 - `apps/api` が `AppType` をエクスポート → `apps/web` は `hc<AppType>` で型安全クライアントを生成（既存 `apps/api/src/client.ts` のファクトリを利用。Service Binding の fetch を渡せるよう、ファクトリは `hc` の第2引数（`fetch` オプション等）を受け取れる形に拡張する）。
@@ -375,9 +350,10 @@ apps/web/src/
 
 - **クライアント state のみ**（`useState` と専用 hook で feature 内に閉じる）。MVP として最小化する。Client Component は画面フェーズ（`intro → exercise → result`）・現在の問題インデックス・`wrongOnly`・キーボード操作を保持し、`useAnswerSubmit` hook は mutation・`submitting`・送信エラー・API から返った解答結果を保持する（§7.2）。初期 ViewModel は immutable な props として参照し、Client state に複製しない。
   - MVP フローは「イントロ確認 → 1 問表示 → 選択 → 即時採点 → ロック → 解説表示 → 次問 → 結果」で線形・シンプルなため、`useState` で充分。複雑な状態遷移が出現（例：問題セット内での再検索・フィルタ等）したら、その時点で `useReducer` へ段階的にリファクタリング。
+- 同一tickを含む二重送信を防止する。試行のリセット後に到着した古い非同期応答は、解答結果・エラー・送信状態へ反映しない。API clientは初回送信時に遅延生成する。hookはAPIの採点結果と選択したindexを保持し、選択肢ロックと結果サマリに使う。
 - **リロードで進捗はリセット（許容）**。リロードすると `intro` フェーズに戻る。ただし「1 問解答＝1 `answer_log` POST」（7.2 で定義済みの原則）なので、解答そのものは即サーバーに残る。途中復帰（sessionStorage）やサーバー復元は将来拡張ポイントとして留保。
 - フロー：イントロ（概要／due プレビュー）→ 1 問表示 → 即時採点（正誤＋解説）→ 選択肢ロック → 末尾に結果サマリ → 出し分け動線（`/quiz`=次のレッスンへ／`/review`=ホームへ、両者「間違えた問題だけ」提供）。
-- `/review` の空キュー・content 整合性の分岐は、Client state ではなく Server Component が joined 済み ViewModel を受け取った時点で確定する。`ReviewRunner` は joined 表示件数が 1 以上の場合だけ描画するため、通常の空キューを `QuizInteractive` の空問題表示に読み替えない。
+- 復習の空キュー・content整合性分岐は §9.2に従い、Client stateへ重複させない。
 - 解答の反応時間（`responseTimeMs`）は Client Component が選択肢の表示開始時刻からの経過時間として計測し、`submitAnswer` の引数として Client hook へ渡す。Client hook は時刻を計測せず、受け取った値をそのまま API へ転送する。
 
 ### 8.6 `packages/shared` の Zod 利用パターン
@@ -436,7 +412,7 @@ apps/web/src/
 - **MVP 実装対象**：学習コントリビューション（草。`answer_logs` の日次集計から導出）、テストランナー風の結果表示、ターミナルパンくず、ディレクトリツリー型スキルツリー、コンボ演出（**クライアント状態のみ・永続化しない**）。
 - **スコープ外（§1 準拠・将来）**：XP / レベル / 実績バッジ / デイリークエスト。モックでは演出として表示しているが、データモデル追加（§4）が必要なため公開機能の検討時に併せて設計する。UI 上は該当要素を出さない（またはプレースホルダ非活性）。
 
-- **Tailwind CSS を導入**し、スタイルを Tailwind に寄せる。現状の scaffold 残骸（`*.module.css`、`*.disabled` ファイル群）は**撤去対象**として整理する。共通スタイルは `components/ui`（Card・Button・Badge・ProgressBar・TermWin・Keycap・Tree 等）に集約し、ページ側はユーティリティクラスで組む。
+- スタイルはTailwind、共通の表示部品は `components/ui` に集約し、ページ側はユーティリティクラスで組む。
 
 ### 8.8 → 第9章へ
 
@@ -478,262 +454,29 @@ Server loader は初回データの fetch と Mapper 呼び出しを統括する
 
 ### 9.2 二系統：Server loader と Client hook
 
-#### Server 系（教材系）
+初回データは Server loader が形成し、page から表示 component へ ViewModel を渡す。責務・依存境界は §8.1、表示状態と通信状態の所有者は §8.5、キャッシュとPPRは §8.3に従う。
 
-`/learn/[domain]/[topic]/[lesson]` など RSC ページ：
+| 画面 | 初回データ | ユーザー操作後 |
+| --- | --- | --- |
+| 教材 | ビルド時contentをmapperに渡して表示。API GET不要 | 閲覧記録のみ最小Client recorderから送信 |
+| 演習 | ビルド時contentから問題・解説をVM化。API GET不要 | Client hookが解答を送信 |
+| 復習 | API queueのIDをサーバーでbundled contentへjoinしてVM化 | 次バッチ取得はClient Componentから `router.refresh()` でServer loaderを再実行 |
 
-```typescript
-// features/lesson/server/load-lesson.ts
-import 'server-only';
+#### 復習の表示契約
 
-export function loadLesson(lessonId: string): LessonViewModel {
-  const content = getLessonContent(lessonId); // ビルド時バンドル済み content
-  return lessonContentToViewModel(content);
-}
+- 正解情報の境界は §7.2に従う。content loaderや全教材データをClient bundleへimportしない。
+- 静的シェルはユーザー固有データを保持せず、dueバッジと本文をそれぞれSuspense境界内で取得する。両者は唯一のloader入口 `loadReviewOnce` を通し、Reactの `cache()` によって同一リクエスト内のqueue取得を1回に畳む。未ラップのloaderはexportしない。共有キャッシュとの違いは §8.3。
+- APIの生のdue件数とjoin後の表示件数の意味は §4.5。join後の表示可能な問題が0件で `hasMore=true` ならcontent整合性エラー、0件でfalseなら通常の空キュー、1件以上なら現在バッチを表示する。空キューをQuizの空問題表示へ委ねない。
+- 表示再利用の境界は §9.7。次バッチがある場合の完了操作で再取得し、mapperが導出した `batchKey` をinteractive subtreeのkeyにして、新しいバッチでは解答結果・画面フェーズをintroへリセットする。
+- 取得・整合性エラーと再試行導線は §9.6。
 
-// app/learn/[domain]/[topic]/[lesson]/page.tsx
-export default function LessonPage({ params }: Props) {
-  const vm = loadLesson(params.lesson);
-  return <LessonDisplay viewModel={vm} />;
-}
-```
-
-- loader はビルド時バンドル済み content を取得し、mapper を噛ませて ViewModel を page へ返す。page はその ViewModel を feature component へ渡す。教材本文データは静的 RSC であり API を呼ばない。閲覧記録だけは `LessonDisplay` に合成する小さな Client Component が mount 後に `POST /lesson-views` を fire-and-forget で送信し、失敗を UI へ波及させない。
-- page は loader を呼ぶだけに留める。`params` の取り出し、`metadata`、`notFound()` など App Router 固有の関心事は page 側に残し、feature のデータ形成や ViewModel 化は `features/*/server` に置く。
-- エラーは throw → `error.tsx`・`Suspense` で処理。
-
-#### Client 系（演習・復習系）
-
-`/quiz/[lesson]`・`/review` などインタラクションを持つページ。**初回データは Server loader で ViewModel 化し、page はその VM を feature component へ props で渡すだけに留める。Client Component は props の VM をそのまま描画に使い、画面フェーズ・現在問題・`wrongOnly`・キーボード操作を state として持つ。Client hook は mutation・`submitting`・送信エラー・API 由来の解答結果を持つ**（＝初回レンダリング時にスピナーを出さない。VM 自体を state に複製しない）。
-
-- `/quiz`：content から問題・解説を解決し、API GET はしない。Client hook は `POST /answers` と、その通信状態・API 由来の解答結果だけを担当する。VM は content のみで再取得不要であり、Client Component は props の ViewModel をそのまま参照する。
-  - `/review`：Server loader で `GET /review/queue` を呼び、返却された `question_id` を content の問題本文・解説へ join して VM 化する。**join は Server loader 内でのみ行い、contentローダーや全教材データをClient bundleへimportしない**。Clientへ渡すVMには表示に必要な問題文・選択肢・解説だけを含め、`answerIndex`は含めない。解答完了後に次の due を引き直す場面では、Client から API を再度叩いて join し直すのではなく `router.refresh()` で Server Component を再実行し、Server loader が新しい VM を props として渡し直す（§8.3 のキャッシュ方針）。
-
-```typescript
-// lib/api.ts（client factory と共通 response helper を同じファイルで管理）
-export async function requestJson(
-  request: () => Promise<Response>,
-  errorMessage: string,
-): Promise<unknown> {
-  const res = await request();
-  if (!res.ok) throw new Error(errorMessage);
-  return res.json();
-}
-
-// features/review/api/review-api.ts — requestJson の戻り値を共有 Zod で parse してから返す
-import { type ReviewQueueResponse, reviewQueueResponseSchema } from '@tsl/shared';
-
-export async function fetchReviewQueue(client: ApiClient): Promise<ReviewQueueResponse> {
-  const response = await requestJson(
-    () => client.review.queue.$get(),
-    'Failed to fetch review queue',
-  );
-  return reviewQueueResponseSchema.parse(response);
-}
-
-// features/review/server/load-review.ts
-import 'server-only';
-import { connection } from 'next/server';
-import { cache } from 'react';
-
-// export しない。畳み込み前の loader を外から選べると、取り違えても型で気づけない
-async function loadReview(now?: number): Promise<ReviewViewModel> {
-  // Cache Components 下ではリクエスト時実行を宣言してからでないと、Cloudflare context の解決も
-  // 現在時刻の読み取りもできない。Date.now() を既定引数で先に評価しないこと。
-  await connection();
-
-  const dto = await fetchReviewQueue(await createServerApiClient());
-  return reviewQueueToViewModel(dto, getBundledQuestions(), now ?? Date.now());  // join はサーバー側のみ
-}
-
-// この feature の唯一の loader 入口。due バッジと本文が別々の <Suspense> 境界から
-// 同じ queue を読むため、リクエスト内で1回に畳む（畳まないと件数と中身が食い違いうる）。
-// React の cache() はリクエストスコープであり、user_id を含められない共有キャッシュではない。
-export const loadReviewOnce = cache((): Promise<ReviewViewModel> => loadReview());
-
-// features/review/server/components/review-user-content.tsx
-async function ReviewUserContent() {
-  // Suspense 内でのみ実行する。API が user_id を権威的に注入するため、ここには 'use cache' を置かない。
-  const viewModel = await loadReviewOnce();
-
-  if (viewModel.dueCount === 0 && viewModel.hasMore) {
-    // queue の ID を bundled content へ join できず、次バッチだけが残る状態。error.tsx へ送る。
-    throw new Error('Review queue has no displayable content while more items remain');
-  }
-  if (viewModel.dueCount === 0) {
-    return <ReviewEmptyQueue />;
-  }
-  return <ReviewRunner viewModel={viewModel} />;  // hasMore の値を問わず現在バッチを表示する
-}
-
-// app/review/page.tsx（Server）— 静的シェルと動的領域の分離
-import { Suspense } from 'react';
-import { ReviewDueBadge } from '@/features/review/server/components/review-due-badge';
-import { ReviewPageShell } from '@/features/review/server/components/review-page-shell';
-import {
-  ReviewDueBadgeFallback,
-  ReviewQueueFallback,
-} from '@/features/review/server/components/review-queue-fallback';
-import { ReviewUserContent } from '@/features/review/server/components/review-user-content';
-
-// route segment config（dynamic / dynamicParams）は Cache Components と併用不可
-export default function ReviewPage() {
-  return (
-    <ReviewPageShell
-      dueBadge={
-        <Suspense fallback={<ReviewDueBadgeFallback />}>
-          <ReviewDueBadge />
-        </Suspense>
-      }
-    >
-      <Suspense fallback={<ReviewQueueFallback />}>
-        <ReviewUserContent />
-      </Suspense>
-    </ReviewPageShell>
-  );
-}
-
-// features/quiz/client/hooks/use-answer-submit.ts（Client）— Quiz / Review 共用の hook。VM は保持しない。mutation のみ担当
-'use client';
-import type { AnswerRequest } from '@tsl/shared';
-import { useCallback, useRef, useState } from 'react';
-import { type ApiClient, createBrowserApiClient } from '@/lib/api';
-import { submitAnswer as postAnswer } from '../../api/quiz-api';
-import type { SubmittedAnswer } from '../../view-model';
-
-export function useAnswerSubmit() {
-  // 生成は初回送信まで遅らせる。render 時に作ると SSR・prerender でも評価され、
-  // ブラウザ専用の設定（NEXT_PUBLIC_API_BASE_URL）が無い経路で throw する。
-  const clientRef = useRef<ApiClient>(undefined);
-  const [error, setError] = useState<string>();  // 表示用の文言。Error は持ち回さない
-  const [results, setResults] = useState<Record<string, SubmittedAnswer>>({});
-  const [submitting, setSubmitting] = useState(false);
-  const submittingRef = useRef(false);  // 同一 tick の二重送信も同期的に防ぐ
-  const generationRef = useRef(0);  // reset 後に古い非同期応答を無効化する
-
-  // responseTimeMs は Client Component が計測して input に含める（§8.5）。hook 側では計測しない
-  const submitAnswer = useCallback(async (input: AnswerRequest) => {
-    if (submittingRef.current) return;
-    const generation = generationRef.current;
-    submittingRef.current = true;
-    setSubmitting(true);
-    setError(undefined);
-    try {
-      clientRef.current ??= createBrowserApiClient();
-      const response = await postAnswer(clientRef.current, input);
-      // API の採点結果に選択肢を足して SubmittedAnswer にする。選択肢のロックと
-      // 結果サマリが「どれを選んだか」を必要とするため（§8.5・§9.4）。
-      if (generation === generationRef.current) {
-        setResults(prev => ({
-          ...prev,
-          [input.questionId]: { ...response, selectedIndex: input.selectedIndex },
-        }));
-      }
-    } catch (caughtError) {
-      if (generation === generationRef.current) {
-        setError(caughtError instanceof Error ? caughtError.message : '解答の送信に失敗しました。');
-      }
-    } finally {
-      if (generation === generationRef.current) {
-        submittingRef.current = false;
-        setSubmitting(false);
-      }
-    }
-  }, []);
-
-  const resetAnswers = useCallback(() => {
-    generationRef.current += 1;
-    submittingRef.current = false;
-    setError(undefined);
-    setResults({});
-    setSubmitting(false);
-  }, []);
-
-  return { error, resetAnswers, results, submitAnswer, submitting };
-}
-
-// features/review/client/components/review-runner.tsx（Client）
-'use client';
-export function ReviewRunner({ viewModel }: Props) {
-  const router = useRouter();
-  const { results, error, submitting, submitAnswer, resetAnswers } = useAnswerSubmit();
-
-  const handleAllAnswered = () => {
-    resetAnswers();
-    router.refresh();  // Server loader を再実行し、次の due queue を VM ごと props で受け直す
-  };
-
-  if (error) {
-    return (
-      <ErrorDisplay
-        error={error}
-        retry={() => {
-          resetAnswers();
-          router.refresh();
-        }}
-      />
-    );
-  }
-  return (
-    <QuizRenderer
-      viewModel={viewModel}       // props をそのまま描画に使う。state に複製しない
-      results={results}
-      submitting={submitting}
-      onAnswer={submitAnswer}
-      onAttemptStart={resetAnswers}
-      onWrongOnlyStart={resetAnswers}
-      onComplete={handleAllAnswered}
-    />
-  );
-}
-```
-
-- **初回＝Server loader で VM 化し、page は feature component への props 渡しのみ**。`/quiz` は content のみ、`/review` は API queue + content join。`/review` は静的 `ReviewPageShell` の内部に `<Suspense fallback={<ReviewQueueFallback />}>` で囲んだ `ReviewUserContent` を置き、fallback を表示してから queue 完了後に結果をストリーミングする。後者はユーザー固有の queue を読むため非キャッシュとする（§9.1 の原則どおり整形ロジックは mapper 一本のまま）。`ReviewUserContent` は joined 表示件数と `hasMore` を三分岐し、0/true は content 整合性エラー、0/false は空キュー、1以上は `hasMore` の値を問わず `ReviewRunner` とする（§4.5）。
-- **VM はクライアント state に複製しない**。`ReviewRunner` は Review VM を Quiz 表示コンポーネントの props へ変換して渡す。`useAnswerSubmit` hook が解答結果（`results`）・`submitting`・送信エラーを保持し、Client Component は画面フェーズ・現在問題などの表示操作 state だけを保持する。due queue の再取得は `router.refresh()` による Server Component 再実行に一本化し、content との join を常にサーバー側に閉じ込める。
-- **RPC 呼び出しは `apps/web/src/features/*/api` の endpoint アダプター経由**。Server loader と Client hook は同じアダプターへ実行環境に合った `ApiClient` を渡す。HTTP レスポンス処理は `requestJson` に寄せ、feature 側では重複させない。
-- **初回ローディング表示の条件**：`/review` は静的シェルに `ReviewQueueFallback` と due バッジ fallback を表示し、queue 完了後は `ReviewUserContent` が joined 表示件数と `hasMore` に応じて route error boundary、空キュー、または `ReviewRunner`（1件以上の場合のみ）を選ぶ。`router.refresh()` 中の待機表示が必要なら `loading.tsx` かローカルな `isRefreshing` フラグで扱う。
-- **将来：**TanStack Query 等へ置き換える際、mapper・ViewModel 型・page は変わらず、hook（`useAnswerSubmit` 相当）内部だけ差し替わる（契約保証）。
+現在のloaderは [load-review.ts](../apps/web/src/features/review/server/load-review.ts)、表示側は [review-runner.tsx](../apps/web/src/features/review/client/components/review-runner.tsx) を参照する。Graphはloader周辺の構造探索に使い、対象外のClient Componentは実コードを確認する。
 
 ### 9.3 DTO / ViewModel の分離と配置
 
 #### 型の配置
 
-```
-packages/shared/src/
-├── schema/api.ts      # API レスポンス Zod（DTO型推論元）。API チーム＝contract
-├── schema/content.ts  # content frontmatter Zod（Content data 型推論元）
-└── ...
-
-apps/web/src/
-├── features/
-│   └── quiz/
-│       ├── view-model.ts           # type QuizViewModel = { ... }
-│       ├── mapper.ts               # quizContentToViewModel(content) {...}
-│       ├── api/
-│       │   └── quiz-api.ts         # Server / Client 共用 endpoint アダプター
-│       ├── client/
-│       │   ├── hooks/
-│       │   │   └── use-answer-submit.ts # Browser client・mutation・通信 state
-│       │   └── components/
-│       │       └── quiz-interactive.tsx # 表示・表示操作 state
-│       └── server/
-│           ├── components/         # Server Component が必要な場合だけ作る
-│           └── load-quiz.ts        # 初回取得・join・ViewModel 化
-│   └── lesson/
-│       ├── api/
-│       │   └── lesson-api.ts        # POST /lesson-views の endpoint adapter
-│       ├── client/
-│       │   └── components/
-│       │       └── lesson-view-recorder.tsx # mount 後の fire-and-forget 記録
-│       └── server/
-│           └── components/
-│               └── lesson-display.tsx # 静的本文 + recorder leaf の合成
-├── features/shared/
-│   └── quiz-question.ts            # content question -> quiz表示用データの小さい純粋変換
-└── lib/
-    ├── api.ts                      # API client factory / requestJson
-    └── content.ts                  # content loader / question index
-```
+現在のファイル配置はコードと [Knowledge Graph](../architecture/README.md) を参照する。ここでは配置の責務と命名規則を定義する。
 
 - **Content data / DTO は shared**（複数パッケージで共有、単一ソース）。
 - **ViewModel は `apps/web/src/features` 配下**（表示都合なので web 固有）。
@@ -751,231 +494,13 @@ apps/web/src/
 
 ### 9.4 共通パターンと例
 
-#### 教材（Server）
+共通のデータフローは §9.1、画面ごとの取得・復習バッチ契約は §9.2、表示状態は §8.5を参照する。具体的な実装例は現在のコードを読む。
 
-```typescript
-// features/lesson/view-model.ts
-export type LessonViewModel = {
-  id: string;
-  title: string;
-  markdownBody: string;
-  questions: Array<{
-    id: string;
-    prompt: string;
-    choices: string[];
-  }>;  // 教材本文ページでは解説を表示しない。Quiz/Review VM は content 由来の解説を持つ。
-};
+- 教材：[load-lesson.ts](../apps/web/src/features/lesson/server/load-lesson.ts)
+- 演習：[load-quiz.ts](../apps/web/src/features/quiz/server/load-quiz.ts)
+- 解答送信：[use-answer-submit.ts](../apps/web/src/features/quiz/client/hooks/use-answer-submit.ts)
 
-// features/lesson/mapper.ts
-import type { BundledLesson } from '@tsl/shared';
-
-export function lessonContentToViewModel(content: BundledLesson): LessonViewModel {
-  return {
-    id: content.lessonId,
-    title: content.title,
-    markdownBody: content.body,
-    questions: content.questions.map(q => ({
-      id: q.id,
-      prompt: q.prompt,
-      choices: q.choices,
-    })),
-  };
-}
-
-// features/lesson/server/load-lesson.ts
-import 'server-only';
-
-export function loadLesson(lessonId: string): LessonViewModel {
-  const content = getLessonContent(lessonId);  // ビルド時バンドル
-  return lessonContentToViewModel(content);
-}
-
-// features/lesson/server/components/lesson-display.tsx
-import 'server-only';
-
-export function LessonDisplay({ viewModel }: { viewModel: LessonViewModel }) {
-  return (
-    <article className="prose">
-      <LessonViewRecorder lessonId={viewModel.id} />
-      <h1>{viewModel.title}</h1>
-      <ReactMarkdown>{viewModel.markdownBody}</ReactMarkdown>
-    </article>
-  );
-}
-
-// app/learn/[domain]/[topic]/[lesson]/page.tsx
-export default function LessonPage({ params }: Props) {
-  const viewModel = loadLesson(params.lesson);
-  return <LessonDisplay viewModel={viewModel} />;
-}
-```
-
-#### 演習（Client）
-
-`/quiz` は問題自体がビルド時バンドル（§8.2）なので初回 GET は不要。Server loader で VM を組み立て、page は props で渡し、Client は解答（`POST /answers`）だけを担当する。
-
-```typescript
-// features/quiz/view-model.ts
-export type QuizViewModel = {
-  questions: Array<{
-    id: string;
-    prompt: string;
-    choices: string[];
-  }>;
-  explanations: Record<string, string>;  // questionId → 解説
-};
-
-// features/shared/quiz-question.ts
-import type { McqQuestion } from '@tsl/shared';
-
-export function contentQuestionToQuizQuestion(question: McqQuestion) {
-  return {
-    id: question.id,
-    prompt: question.prompt,
-    choices: question.choices,
-  };
-}
-
-// features/quiz/mapper.ts — 入力はビルド時バンドルの content データ
-import type { BundledLesson } from '@tsl/shared';
-
-export function quizContentToViewModel(content: BundledLesson): QuizViewModel {
-  return {
-    questions: content.questions.map(contentQuestionToQuizQuestion),
-    explanations: Object.fromEntries(
-      content.questions.map(q => [q.id, q.explanation])
-    ),
-  };
-}
-
-// features/quiz/server/load-quiz.ts
-import 'server-only';
-
-export function loadQuiz(lessonId: string): QuizViewModel {
-  const content = getLessonContent(lessonId);   // ビルド時バンドル
-  return quizContentToViewModel(content);
-}
-
-// app/quiz/[lesson]/page.tsx（Server）— page は loader を呼んで props 渡し
-export default function QuizPage({ params }: Props) {
-  const viewModel = loadQuiz(params.lesson);
-  return (
-    <>
-      <QuizHeader viewModel={viewModel} />        {/* feature 固有の Server UI */}
-      <QuizInteractive                            {/* 表示操作 state を持つ Client */}
-        explanations={viewModel.explanations}
-        questions={viewModel.questions}
-        resultHomeLabel="レッスン一覧へ"
-        title={viewModel.title}
-        resultHomeHref={`/learn/${viewModel.domain}/${viewModel.topic}`}
-      />
-    </>
-  );
-}
-
-// features/quiz/client/components/quiz-interactive.tsx（Client）
-'use client';
-export function QuizInteractive({
-  explanations,
-  questions,
-  resultHomeHref,
-  resultHomeLabel,
-  title,
-}: QuizInteractiveProps) {
-  // 表示操作 state は component が持つ。
-  const [phase, setPhase] = useState<'intro' | 'exercise' | 'result'>('intro');
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [wrongOnlyQuestionIds, setWrongOnlyQuestionIds] = useState<string[]>();
-  const [questionStartedAt, setQuestionStartedAt] = useState(0);  // responseTimeMs の計測起点（§8.5）
-
-  // mutation・通信 state・API 由来の結果は hook が持つ。
-  const { submitAnswer, resetAnswers, results, submitting, error } = useAnswerSubmit();
-
-  // ViewModel は immutable な props として参照し、state に複製しない。
-  const activeQuestions = wrongOnlyQuestionIds
-    ? questions.filter(q => wrongOnlyQuestionIds.includes(q.id))
-    : questions;
-  const question = activeQuestions[currentIndex];
-
-  // 選択肢の表示開始時刻は Client Component が記録する（§8.5）。hook 側では計測しない。
-  useEffect(() => {
-    if (phase === 'exercise' && question) setQuestionStartedAt(Date.now());
-  }, [phase, question]);
-
-  if (questions.length === 0) {
-    return (
-      <Card>
-        <p>出題できる問題がありません</p>
-        <Link href={resultHomeHref}>{resultHomeLabel}</Link>
-      </Card>
-    );
-  }
-
-  if (phase === 'intro') {
-    return (
-      <QuizIntro
-        title={title}
-        questionCount={activeQuestions.length}
-        onStart={() => {
-          resetAnswers();
-          setPhase('exercise');
-        }}
-      />
-    );
-  }
-  if (phase === 'result' || !question) {
-    return (
-      <QuizSummary
-        questions={activeQuestions}
-        results={results}
-        onWrongOnly={questionIds => {
-          resetAnswers();
-          setWrongOnlyQuestionIds(questionIds);
-          setCurrentIndex(0);
-          setPhase('exercise');
-        }}
-      />
-    );
-  }
-
-  const isLast = currentIndex === activeQuestions.length - 1;
-
-  return (
-    <QuestionCard
-      question={question}
-      explanation={explanations[question.id]}
-      onAnswer={selectedIndex => submitAnswer({
-        questionId: question.id,
-        responseTimeMs: Math.max(0, Date.now() - (questionStartedAt || Date.now())),
-        selectedIndex,
-      })}
-      result={results[question.id]}                 // 判定結果を受けて選択肢ロック・解説表示（§8.5）
-      submitting={submitting}
-      error={error}
-      onNext={() => {
-        if (isLast) setPhase('result');
-        else setCurrentIndex(i => i + 1);
-      }}
-    />
-  );
-}
-```
-
-- `/quiz` の初回は **API GET なし**（問題はビルド時バンドル、Server loader で VM 化）。Client hook は `POST /answers` と、それに伴う `submitting`・`error`・API 由来の結果 state だけを持つ。
-- `QuizInteractive` は全問を一括レンダリングせず、`currentIndex` で 1 問ずつ描画する（§8.5 のフローと整合）。`/review` の `ReviewRunner`（§9.2）も同じ `QuestionCard` を 1 問ずつ回す構成にする。
-- `/review` の初回は **Server loader で GET**（due queue）→ props 渡し（§9.2 参照）。
-
-#### 復習（PPR streaming 対象）
-
-`/review` は queue 取得そのものをキャッシュしない。静的シェルに `<Suspense fallback={<ReviewQueueFallback />}>` の fallback を表示し、ユーザー固有の async Server Component `ReviewUserContent` が queue 完了後に joined 表示件数と `hasMore` に応じて route error boundary、空キュー、または `ReviewRunner`（1件以上の場合のみ）を選ぶ。解答後は `router.refresh()` で最新 queue を Server loader から再取得する。`'use cache'`・`cacheLife`・`cacheTag`・`revalidateTag` は使わない。
-
-構成の実コード例は §9.2 に一本化する（重複させると実装との同期漏れが起きるため）。要点は次の3つ。
-
-- 静的シェル `ReviewPageShell` はユーザー固有データを受け取らない。due バッジは `dueBadge` slot に `<Suspense>` ごと渡す。
-- ユーザー固有データを読むのは `ReviewDueBadge` と `ReviewUserContent` だけで、どちらも `<Suspense>` の内側に置く。
-- 両者は `loadReviewOnce()`（React の `cache()` によるリクエストスコープの畳み込み）を通し、同一リクエストで queue を2回取得しない。
-
-`ReviewRunner` は `key={viewModel.batchKey}` で `QuizInteractive` を包む。`router.refresh()` で Server Component が新しい queue を返すと `batchKey` が変わり、React が interactive subtree を再マウントして解答結果・画面フェーズを次バッチの intro へリセットする。`batchKey` の導出は mapper の責務であり、回帰テストは `features/review/mapper.test.ts` に置く。
+コード例のコピーは維持しない。改修時はGraphで関連するadapter・loader・schemaを絞り、mapper・ViewModel・UIなど抽出対象外の関係はコードとテストで補う。
 
 ### 9.5 content / API 変更時の対応フロー
 
@@ -997,65 +522,16 @@ API DTO が変わった場合（例：review queue に `dueAt` が追加）：
 
 ### 9.6 エラー・ローディング処理
 
-#### Server（教材系）
-
-```typescript
-// app/learn/[domain]/[topic]/[lesson]/error.tsx
-'use client';
-export default function Error({ error }: { error: Error }) {
-  return <ErrorPage message={error.message} />;
-}
-
-// features/lesson/server/load-lesson.ts の content 未検出・検証失敗 throw が自動で error.tsx へ
-```
-
-#### Client（演習・復習系）
-
-`/review` は静的シェルに `ReviewQueueFallback` を表示し、queue 完了後は `ReviewUserContent` が joined 表示件数と `hasMore` に応じて route error boundary、空キュー、または `ReviewRunner`（1件以上の場合のみ）を選ぶ（§9.2・§9.4 参照）。Client 側で扱うのは以下の 2 つ：
-
-- **初回データ形成の失敗**：content 未検出・検証失敗、`/review` の初回 queue 取得失敗、または queue と bundled content の join 後に表示可能な問題が 0 件かつ `hasMore` が真である content 整合性エラー → ルートの `error.tsx` で捕捉（Server 系と同じ経路）。
-- **mutation の失敗/待機**：hook が返す `error`・`submitting` を component で出し分ける。`router.refresh()` による再取得中の表示が必要なら、component の `isRefreshing` または route の `loading.tsx` で扱う。
-- `/review/error.tsx` は本番の Server Component error message が redact され得るため、`error.message` による失敗種別の判定をしない。API/通信の一時的失敗と、bundled content と保存済み review state の不整合の両方を含む案内を常に表示する。`reset` による再試行に加え、恒久的な不整合で再試行ループに閉じ込めないようホームへの Link を必ず提供する。
-
-```typescript
-// features/review/client/components/review-runner.tsx
-'use client';
-export function ReviewRunner({ viewModel }: Props) {
-  const router = useRouter();
-  const { results, error, submitAnswer, resetAnswers } = useAnswerSubmit();
-
-  // 初回は props で描画済み。ここで扱うのは解答送信エラーのみ
-  if (error) {
-    return (
-      <ErrorDisplay
-        error={error}
-        retry={() => {
-          resetAnswers();
-          router.refresh();
-        }}
-      />
-    );
-  }
-
-  return <QuizRenderer viewModel={viewModel} results={results} onAnswer={submitAnswer} />;  // 初回からスピナーなしで描画
-}
-```
+- 初回データの取得・検証失敗はServer側でthrowし、routeの `error.tsx` で扱う。PPRの待機表示は §8.3、復習のcontent整合性分岐は §9.2に従う。
+- mutationの待機・失敗はhookの `submitting`・`error` を表示componentへ渡して扱う。再取得中の表示が必要なら `isRefreshing` またはrouteの `loading.tsx` を用いる。
+- `/review/error.tsx` は本番で秘匿され得るServer Componentの `error.message` から失敗種別を判定しない。API/通信の一時的失敗とcontent不整合の両方を含む案内を表示する。`reset` による再試行と、恒久的な不整合で再試行ループに閉じ込めないためのホームへのLinkを提供する。
+- 教材閲覧のfire-and-forget記録は、失敗しても本文表示やroute error boundaryへ波及させない（§9.7）。
 
 ### 9.7 mapper・ViewModel の共有戦略
 
 同じ content data / DTO を複数ページが使う場合（例：復習（`/review`）と演習（`/quiz`）が同じ bundled questions を使用）：
 
-```
-apps/web/src/features/
-├── quiz/
-│   ├── view-model.ts           # QuizViewModel（演習特有）
-│   └── mapper.ts
-├── review/
-│   ├── view-model.ts           # ReviewViewModel（復習特有、異なるページ 組成）
-│   └── mapper.ts
-└── shared/
-    └── quiz-question.ts        # 小さい純粋変換のみ
-```
+現在のファイル配置はコードと [Knowledge Graph](../architecture/README.md) を参照する。ここでは配置の責務と命名規則を定義する。
 
 `LessonViewRecorder` は `'use client'` の最小 leaf とし、mount 後に Browser API client を遅延生成して `POST /lesson-views` を送信する。本文データを取得・保持せず、通信失敗は無視するため教材の表示やエラー境界に影響しない。
 
@@ -1134,52 +610,19 @@ dal      ──→ @tsl/shared          # db 名前空間の Drizzle schema（im
 - クリーンアーキテクチャ流の ports/adapters ディレクトリ分離 → 「service が deps 型（interface）を定義し、dal が `import type` して実装する」という最小の依存逆転だけで同じ効果を得る
 - OpenAPI スキーマ生成 → `hc`（`AppType`）が型契約を担うため不要（§8.4）
 
-**スコープの段階性**：本章のコード例・ディレクトリ構成は Walking Skeleton 中核の 3 エンドポイント（§7.3 の `POST /answers`・`GET /review/queue`・`GET /dashboard/due-count`）を基準に確定し、`GET /domains` と Issue #32 の `GET /analytics/summary`・`GET /analytics/weekly`・`GET /analytics/mistakes`、Issue #33 の `GET /analytics/heatmap`・`GET /activity/recent` も同じ route → service → deps（dal 実装）の処理パターンで追加済みである。数エンドポイントの規模で抽象を増やすと、AI 駆動開発のレビュー可能性がむしろ下がる。層の責務と import 境界が守られていれば十分とする。
+数エンドポイントの規模では抽象を増やさず、層の責務とimport境界を優先する。
 
 ### 10.2 ディレクトリ構成
 
-```
-apps/api/
-├── src/
-│   ├── index.ts                 # エントリ。app と InternalApi の再エクスポート
-│   ├── app.ts                   # middleware 適用・ルート合成・AppType 定義
-│   ├── client.ts                # hc クライアントファクトリ（既存）
-│   ├── env.ts                   # Bindings（D1 / vars）・Variables（userId）の型定義
-│   ├── middleware/
-│   │   └── user-context.ts      # 固定 user_id の権威的注入（§7.2。将来は認証実装に差し替え）
-│   ├── routes/
-│   │   ├── answers.ts           # POST /answers
-│   │   ├── review.ts            # GET /review/queue
-│   │   ├── dashboard.ts         # GET /dashboard/due-count
-│   │   ├── domains.ts           # GET /domains
-│   │   ├── analytics.ts         # GET /analytics/summary・weekly・heatmap・mistakes
-│   │   └── activity.ts          # GET /activity/recent
-│   ├── services/
-│   │   ├── answer-service.ts    # 採点 → 記録 → SRS 更新のユースケース
-│   │   ├── review-service.ts    # due 問題の収集・件数集計
-│   │   ├── domains-service.ts   # 4領域の集計結果補完・習得率計算
-│   │   ├── analytics-service.ts  # 解答・閲覧・SRSの学習分析集計（weekly・heatmapを含む）
-│   │   ├── activity-service.ts   # lesson view / answer log の最近の活動統合
-│   │   └── errors.ts            # ドメインエラー（QuestionNotFoundError 等）
-│   ├── dal/
-│   │   ├── answer-repository.ts # AnswerDeps 実装（questions 照合・srs 取得・batch 書き込み）
-│   │   ├── review-repository.ts # ReviewDeps 実装（due queue・due count）
-│   │   ├── domains-repository.ts # DomainsDeps 実装（ユーザー別の領域集計）
-│   │   ├── analytics-repository.ts # AnalyticsDeps 実装（ユーザー別の学習分析集計）
-│   │   └── activity-repository.ts # ActivityDeps 実装（ユーザー別の最近の活動）
-│   ├── content-sync.ts          # content → 同期ペイロード/SQL への純粋変換（gray-matter・shared のみに依存。§10.8）
-│   └── dev-seed.ts               # 固定ユーザー用の動的開発 seed の純粋モデル/SQL 変換（§10.8）
-└── scripts/
-    ├── sync-content.ts           # `src/content-sync.ts` の純粋関数を呼ぶ Node CLI（fs 読み取り・wrangler 実行。§10.8）
-    └── seed-dev.ts               # `src/dev-seed.ts` の純粋関数を呼ぶローカル専用 Node CLI（§10.8）
-```
+現在のファイル配置はコードと [Knowledge Graph](../architecture/README.md) を参照する。ここでは配置の責務と命名規則を定義する。
 
-- 上記は Walking Skeleton 中核 3 エンドポイントに、同じ処理パターンで実装済みの `GET /domains`、Issue #32 の `/analytics/*`（summary / weekly / mistakes）、Issue #33 の heatmap / activity を加えた構成（§10.1）。アナリティクスは集計クエリ主体（読み取りのみ）のため service 層は薄く、activity は既存ログの読み取りと安定ソートに限定する。
 - **dal はテーブル単位ではなくユースケース単位**で置く。「service が要求する deps 型」を 1 ファイルで実装する形にすると、service ⇔ dal の対応が 1:1 で追いやすく、テーブル単位 repository の細切れ合成（と、それを束ねる工数）を避けられる。テーブル単位の共有が必要になった時点で分割する。
 - **`src/content-sync.ts` は `gray-matter` と `packages/shared` のみに依存する純粋ロジック**（frontmatter パース・同期ペイロード生成・upsert SQL 生成）。`scripts/sync-content.ts` は Node の `fs` 読み取りと `wrangler d1 execute` 実行を担う CLI 部で、`content-sync.ts` の純粋関数を呼び出すだけに留める（routes・services・dal・middleware は import しない）。
 - **`src/dev-seed.ts` は content sync で検証済みの question ID を入力として、固定ユーザーの動的開発データを生成する純粋ロジック**にする。`scripts/seed-dev.ts` は content 読み取り・時刻取得・一時 SQL ファイル作成・Wrangler 実行だけを担い、任意の CLI 引数を転送しない。
 
 ### 10.3 リクエストの流れ（`POST /answers` を例に）
+
+serviceが要求するdepsはフラットな関数の束とし、テストではfakeに差し替える。時刻はservice内で取得せず、呼び出し側から注入する。正確な型と処理は [answer-service.ts](../apps/api/src/services/answer-service.ts) を参照する。
 
 Walking Skeleton の中核となる 1 リクエストの処理フロー：
 
@@ -1195,102 +638,6 @@ zValidator（shared の answerRequestSchema で入力検証）
       4. reviewSrs(state, isCorrect, now) で次状態を算出（純粋関数 @tsl/shared）
       5. answer_log 挿入 ＋ srs_state upsert を db.batch で原子的に書き込み
   → { isCorrect, correctIndex } を JSON で返す
-```
-
-```typescript
-// services/answer-service.ts — Hono・D1・Drizzle に依存しない純 TS
-import { initialSrs, reviewSrs, type SrsInput, type SrsResult } from '@tsl/shared'
-import { QuestionNotFoundError } from './errors'
-
-// service が要求する依存（deps）。フラットな関数の束にし、テストでは素朴な fake で差し替える
-export type AnswerDeps = {
-  findAnswerIndex(questionId: string): Promise<number | null>
-  findSrsState(userId: string, questionId: string): Promise<SrsInput | null>
-  recordAnswer(params: {
-    userId: string
-    questionId: string
-    isCorrect: boolean
-    answeredAt: number
-    nextSrs: SrsResult
-  }): Promise<void>
-}
-
-export type SubmitAnswerInput = {
-  userId: string
-  questionId: string
-  selectedIndex: number
-  now: number  // 時刻は service 内で取得せず引数注入（sm2 と同じ設計。テストで固定できる）
-}
-
-export async function submitAnswer(deps: AnswerDeps, input: SubmitAnswerInput) {
-  const answerIndex = await deps.findAnswerIndex(input.questionId)
-  if (answerIndex === null) throw new QuestionNotFoundError(input.questionId)
-
-  const isCorrect = answerIndex === input.selectedIndex
-  const current =
-    (await deps.findSrsState(input.userId, input.questionId)) ?? initialSrs()
-  const nextSrs = reviewSrs(current, isCorrect, input.now)
-
-  await deps.recordAnswer({
-    userId: input.userId,
-    questionId: input.questionId,
-    isCorrect,
-    answeredAt: input.now,
-    nextSrs,
-  })
-
-  return { isCorrect, correctIndex: answerIndex }
-}
-```
-
-```typescript
-// routes/answers.ts — HTTP 契約と deps の組成。業務ロジックは service へ委譲
-import { Hono } from 'hono'
-import { zValidator } from '@hono/zod-validator'
-import { drizzle } from 'drizzle-orm/d1'
-import { answerRequestSchema, type AnswerResponse } from '@tsl/shared'
-import type { AppEnv } from '../env'
-import { createAnswerDeps } from '../dal/answer-repository'
-import { submitAnswer } from '../services/answer-service'
-
-export const answersRoute = new Hono<AppEnv>().post(
-  '/',
-  zValidator('json', answerRequestSchema),
-  async (c) => {
-    const { questionId, selectedIndex } = c.req.valid('json')
-    const result = await submitAnswer(createAnswerDeps(drizzle(c.env.DB)), {
-      userId: c.get('userId'),
-      questionId,
-      selectedIndex,
-      now: Date.now(),
-    })
-    return c.json(result satisfies AnswerResponse)
-  },
-)
-```
-
-```typescript
-// dal/answer-repository.ts — Drizzle・db.batch をここに閉じ込める
-import { and, eq } from 'drizzle-orm'
-import type { DrizzleD1Database } from 'drizzle-orm/d1'
-import { db as schema } from '@tsl/shared'
-import type { AnswerDeps } from '../services/answer-service'
-
-export function createAnswerDeps(db: DrizzleD1Database): AnswerDeps {
-  return {
-    async findAnswerIndex(questionId) { /* questions を select */ },
-    async findSrsState(userId, questionId) { /* srs_states を select */ },
-    async recordAnswer(p) {
-      await db.batch([
-        db.insert(schema.answerLogs).values({ id: crypto.randomUUID(), /* ... */ }),
-        db.insert(schema.srsStates).values({ /* ... */ }).onConflictDoUpdate({
-          target: [schema.srsStates.userId, schema.srsStates.questionId],
-          set: { /* nextSrs の各値 */ },
-        }),
-      ])
-    },
-  }
-}
 ```
 
 `GET /review/queue`・`GET /dashboard/due-count` も同型（route → `review-service` → `review-repository`）。due 判定は `dueAt <= now` を SQL の where 句で行い、`isDue`（sm2）と意味を一致させる。
@@ -1314,63 +661,10 @@ export function createAnswerDeps(db: DrizzleD1Database): AnswerDeps {
 
 §7.2 の「API が固定 `user_id` を権威的に注入する」を Hono middleware として実体化する。
 
-```typescript
-// middleware/user-context.ts
-import { createMiddleware } from 'hono/factory'
-import type { AppEnv } from '../env'
-
-const FIXED_USER_ID = 'user-local-001'
-
-// 将来公開時は、この middleware を「認証情報から userId を解決する実装」に
-// 差し替えるだけ。route・service・API 契約は不変（§7.2）
-export const userContext = createMiddleware<AppEnv>(async (c, next) => {
-  c.set('userId', FIXED_USER_ID)
-  await next()
-})
-```
-
-- route・service は `userId` を「middleware が保証済みの値」として受け取るだけにし、固定値の知識を `user-context.ts` の 1 箇所に閉じ込める。
+- route・service は `userId` を「middleware が保証済みの値」として受け取るだけにし、固定値は共通定数を参照し、ユーザーの解決責務をmiddlewareへ閉じ込める。
 - クライアントから送られた `user_id` は**一切信用しない**（リクエストボディにも含めない。§7.3 の契約に `userId` が無いのはこのため）。
 
 ### 10.5 Hono アプリの合成と `AppType`
-
-```typescript
-// env.ts
-export type Bindings = {
-  DB: D1Database
-  ANSWERS_RATE_LIMITER: RateLimit
-  LESSON_VIEWS_RATE_LIMITER: RateLimit
-  WEB_ORIGIN: string  // CORS 許可オリジン（wrangler.toml の vars で環境ごとに設定）
-  ACCESS_ISSUER?: string  // Cloudflare Access JWT の完全一致 issuer（本番のみ必須）
-  ACCESS_AUDIENCE?: string  // Cloudflare Access application の AUD（本番のみ必須）
-}
-export type Variables = {
-  userId: string
-}
-export type AppEnv = { Bindings: Bindings; Variables: Variables }
-```
-
-```typescript
-// app.ts — middleware 適用・ルート合成・AppType エクスポート
-const app = new Hono<AppEnv>()
-
-// CORS はブラウザ経路（§3.1）用。credentials と GET/POST/OPTIONS、Content-Type だけを許可する。
-// Service Binding 経由の呼び出しには関与しない。
-app.use('*', cors({ origin: (origin, c) => origin === c.env.WEB_ORIGIN ? origin : null, credentials: true }))
-.get('/health', (c) => c.json({ status: 'ok' as const }))
-.use('*', accessBoundary)
-.use('*', userContext)
-app.onError(errorHandler)  // §10.6
-
-const routes = app
-  .route('/answers', answersRoute)
-  .route('/review', reviewRoute)
-  .route('/dashboard', dashboardRoute)
-  .route('/domains', domainsRoute)
-
-export type AppType = typeof routes
-export default app
-```
 
 - **`hc` の型推論を保つため、ルート定義はメソッドチェーンで書く**。各サブルーターは `new Hono<AppEnv>().post(...)` のチェーンで定義・export し、`app.ts` では `.route()` のチェーンで合成する。チェーンを分断（`app.post(...)` を文として並べる等）すると `AppType` からエンドポイント型が消える。
 - パス設計は §7.3 の契約（`POST /answers`・`GET /review/queue`・`GET /dashboard/due-count`・`GET /domains`・`GET /analytics/*`・`GET /activity/recent`）をそのまま `.route()` のプレフィックス＋サブルーター内パスで構成する。
@@ -1378,54 +672,18 @@ export default app
 
 ### 10.6 バリデーション・DTO・エラー処理
 
-**入出力スキーマは `packages/shared/src/schema/api.ts` に新設**する（§9.3 で予告済み）。同一スキーマを「API 入力の `zValidator`」「route 返り値の契約固定（`satisfies`）」「フロントの型（`z.infer`）」の 3 経路で共有する（§8.6 と同じパターン）。
-
-```typescript
-// packages/shared/src/schema/api.ts（抜粋）
-export const answerRequestSchema = z.object({
-  questionId: z.string().min(1),
-  selectedIndex: z.number().int().min(0).max(5),  // choices は最大6（schema/content と整合）
-})
-export type AnswerRequest = z.infer<typeof answerRequestSchema>
-
-export const answerResponseSchema = z.object({
-  isCorrect: z.boolean(),
-  correctIndex: z.number().int().min(0).max(5),  // choices は最大6（schema/content と整合）
-})
-export type AnswerResponse = z.infer<typeof answerResponseSchema>
-
-export const reviewQueueResponseSchema = z.object({
-  hasMore: z.boolean(),
-  items: z.array(z.object({ questionId: z.string().min(1), dueAt: z.number().int().nonnegative() })).max(20),  // dueAt は Unixエポックミリ秒
-})
-export const dueCountResponseSchema = z.object({
-  dueCount: z.number().int().nonnegative(),
-})
-```
+**入出力スキーマは `packages/shared/src/schema/api.ts` に集約**する。同一スキーマを「API 入力の `zValidator`」「route 返り値の契約固定（`satisfies`）」「フロントの型（`z.infer`）」の 3 経路で共有する（§8.6 と同じパターン）。
 
 - `POST /answers` の入力は任意の反応時間を含める：`answerRequestSchema` に `responseTimeMs: z.number().int().nonnegative().optional()` を追加する（§7.3・§4.4。アナリティクスの平均反応時間用。未送信でも採点は成立する）。
-- `GET /domains` は `domainSummarySchema`（domain・習得済み/全問題数・整数の習得率・topic数・lesson数）と、4領域を包む `domainsResponseSchema` を同じ `api.ts` に実装済みである。`GET /analytics/summary`・`GET /analytics/weekly`・`GET /analytics/heatmap`・`GET /analytics/mistakes` はそれぞれ対応する共有レスポンススキーマを実装済みであり、`recentActivityResponseSchema` は lesson view / answer log の種別付き union として実装済みである。
+- 正確な入出力型・検証定義は [API schema](../packages/shared/src/schema/api.ts) を参照する。endpointごとの意味・集計条件は §7.3に従う。
 
 **エラー処理の方針**：
 
 - service は **HTTP を知らないドメインエラー**（`services/errors.ts` の `QuestionNotFoundError` 等）を throw する。
+- `QuestionNotFoundError` は404と `QUESTION_NOT_FOUND` に写像する。既知のドメインエラーのmessageを返し、未知の例外はWorkers Logsへ記録する。
 - route 層の `app.onError` がドメインエラーを HTTP ステータスへ写像し、レスポンス形を `{ error: { code, message } }` に統一する。未知のエラーは 500（`INTERNAL`）とし、詳細メッセージを外に漏らさない。
 - Hono や middleware が意図して throw した `HTTPException` は、例外が持つステータスとレスポンスを保持する。未知の例外として 500 に上書きしない。
 - レート制限の 429 と limiter failure の 503 も shared の error response schema を使い、route から type-safe に返す。前者には `Retry-After: 60` を必ず付ける（§10.3.1）。
-
-```typescript
-// app.ts（抜粋）
-app.onError((err, c) => {
-  if (err instanceof QuestionNotFoundError) {
-    return c.json({ error: { code: 'QUESTION_NOT_FOUND', message: err.message } }, 404)
-  }
-  if (err instanceof HTTPException) {
-    return err.getResponse()
-  }
-  console.error(err)  // Workers Logs で観測
-  return c.json({ error: { code: 'INTERNAL', message: 'Internal Server Error' } }, 500)
-})
-```
 
 - `zValidator` の検証失敗（400）はデフォルト挙動のまま使う（MVP）。フロントは `requestJson`（§8.4）が `res.ok` で弾くため、エラーボディの形に依存しない。
 
@@ -1443,7 +701,7 @@ app.onError((err, c) => {
 - **パース経路は §8.2 と共有**：`gray-matter` でパースし `packages/shared` の content Zod（`validatedMcqSchema` 含む）で検証する。フロントのビルド時バンドルと同じ検証を通った内容だけが D1 に入る。
 - 同期対象は `questions` テーブルの**最小フィールドのみ**（`question_id`, `answer_index`, `domain`, `topic`, `lesson_id`, `is_active`。§4.4）。本文・選択肢・解説は D1 に入れない。
 - 検証済みデータから upsert SQL（`INSERT ... ON CONFLICT(question_id) DO UPDATE`）を生成し、`wrangler d1 execute tech-study-lab --local|--remote --file <generated-sql>` の固定引数で流す。`content:sync` は `--local` 固定、`content:sync:remote` は `--remote` 固定とし、CLI はこのいずれかの完全一致モード以外（任意引数・追加引数を含む）を SQL 生成・Wrangler 実行の前に拒否する。**冪等**（何度実行しても同じ結果）にする。
-- 固定ユーザー行（`users`）の seed も同スクリプトで行う（`user-context.ts` の `FIXED_USER_ID` と同じ値）。
+- 固定ユーザー行（`users`）の seed も同スクリプトで行う（共通の `FIXED_USER_ID` と同じ値）。
 - content から削除された問題は**物理削除しない**（`answer_logs`・`srs_states` が参照するため）。同期の最後に `is_active = 0` とし、`GET /domains` の集計対象から外す。出題対象からも自然に外れる（フロントのバンドルに含まれず、due queue の join でも解決されない）。
 - 実行タイミング：現在の MVP は §12.4 の手動フローで実行する。`content:sync:remote` は外部 D1 を変更するため、実行ごとに対象データベース・生成 SQL・実行順を確認し、明示的な承認を得てから実行する。Walking Skeleton の本番確認後に CI 化を検討する場合も、remote D1 の変更または deploy の前に、保護された production 環境での明示的な承認ゲートを必須とする。
 
@@ -1462,7 +720,7 @@ app.onError((err, c) => {
 
 | 対象 | 方法 | ランタイム |
 | --- | --- | --- |
-| SRS（`sm2`） | 純粋関数の単体テスト（**実装済み**） | Node |
+| SRS（`sm2`） | 純粋関数の単体テスト | Node |
 | service | deps をインメモリ fake に差し替えた単体テスト。採点の正誤・SRS 遷移の呼び出し・エラー系（問題未存在）を重点 | Node |
 | 永続書き込みの rate limit | platform limiter interface を固定時計の fake に差し替えた単体テスト。Wrangler の enforcement 設定（binding 名・受理上限・window）は `wrangler.toml` を一次ソースとし、テストの境界 fixture はその値を明示する。N-1 / N / N+1、次 fixed window の reset、key の endpoint 分離、binding failure を重点 | Node |
 | route + dal | `@cloudflare/vitest-pool-workers`（ローカル D1 に対する実クエリ）で happy path を最低 1 本（`POST /answers` の貫通） | workerd |
@@ -1471,27 +729,9 @@ app.onError((err, c) => {
 - rate limiter も Workers binding を小さい interface に隔離し、route integration では deny / throw fake を渡して 429 / 503 時の D1 無変更を確認する。実 platform の PoP-local な eventual consistency 自体をローカル test の正確な quota と取り違えない。
 - 現在の `@cloudflare/vitest-pool-workers@0.8.0` は内部で Wrangler `4.0.0` を使い、`ratelimits` を未知の top-level field として扱うため、workerd integration test で実 Rate Limit binding の happy path を供給できない。この制限下では integration test の fake で route の 429 / 503 契約を検証する。production 用 Wrangler `4.103.0` による `pnpm --filter @tsl/api build` の dry-run を必須とし、その出力で `ANSWERS_RATE_LIMITER`（60 / 60 秒）と `LESSON_VIEWS_RATE_LIMITER`（30 / 60 秒）の両 binding が解決されることを確認する。
 
-```typescript
-// services/answer-service.test.ts（fake deps の例）
-const recorded: unknown[] = []
-const deps: AnswerDeps = {
-  findAnswerIndex: async () => 2,
-  findSrsState: async () => null,
-  recordAnswer: async (p) => { recorded.push(p) },
-}
-const result = await submitAnswer(deps, {
-  userId: 'u1', questionId: 'q1', selectedIndex: 2, now: 0,
-})
-// → result.isCorrect === true、recorded[0].nextSrs.reps === 1 などを検証
-```
+### 10.10 実装の参照先
 
-### 10.10 既存コードとの差分（本章から発生する実装タスク）
-
-- `packages/shared/src/db/schema.ts`：`questions` テーブル（§4.4 の content 同期キャッシュ）を追加。`srs_states` に複合主キー `(user_id, question_id)` を追加。`answer_logs` に `response_time_ms`（任意列）を追加。`lesson_views` テーブル（§4.4。アナリティクス用）を追加
-- `packages/shared/src/schema/api.ts`：Walking Skeleton 分（answer / reviewQueue / dueCount）・domains・analytics（summary / weekly / heatmap / mistakes）・activity の入出力契約を実装
-- `apps/api/wrangler.toml`：`name` を `tech-study-lab-api` へ変更（web Worker と区別する。§3.1 の Service Binding が参照する `service` 名になる）。`vars` に `WEB_ORIGIN` を追加
-- `apps/api/src/`：`env.ts` / `middleware/` / `routes/` / `services/` / `dal/` を §10.2 の構成で新設し、`app.ts` でルートを合成し、`index.ts` から再エクスポート。`/domains` と analytics（summary / weekly / heatmap / mistakes）、activity（recent）の route/service/dal を同パターンで実装
-- `apps/api/scripts/sync-content.ts`：新設（§10.8。package.json の `content:sync` は定義済み）
+実装状況と残タスクはGitHub Issue / PRで管理する。現在のendpoint・route・service・DAL・schemaの対応は [Knowledge Graph](../architecture/README.md) から探索し、コードと設定を確認する。新しい実装は本章の契約を満たすこと。
 
 ### 10.11 将来拡張ポイント
 
@@ -1551,12 +791,9 @@ content/
 
 topic frontmatter の `order` も同様に表示順（0 以上の整数、小さいほど先）とする。
 
-### 11.4 実装タスク
+### 11.4 スキーマ・検証の参照先
 
-- `packages/shared/src/schema/content.ts`：topic index 用の Zod（`topicFrontmatterSchema`）と、lessonId / questionId の形式検証（regex・`questionId` が `lessonId` を接頭辞に持つこと）を追加
-- lesson frontmatter の `estimatedMinutes`（0より大きい整数）を全レッスンに設定し、学習時間集計の入力として扱う
-- `packages/shared`：`DOMAIN_LABELS` を追加
-- ビルド時パース（§8.2）と `content:sync`（§10.8）：パス⇔frontmatter⇔ID の整合検証を実装
+現在の宣言は [content schema](../packages/shared/src/schema/content.ts)、パス・frontmatter・IDの整合検証は [共通parser](../packages/shared/src/content-parser.ts) を参照する。規範は §11.1〜§11.3と §4.4に定義し、追加作業や完了状況はIssue / PRで管理する。
 
 ### 11.5 レッスンあたりの問題数
 
@@ -1632,33 +869,12 @@ content は「web のビルド時バンドル（§8.2）」と「D1 の `questio
 - **バックアップ**：教材・問題は Git にあるため、守る対象は D1 の動的データ（`answer_logs` / `srs_states` / `lesson_views`）のみ。当面は必要時に `wrangler d1 export` を手動実行し、マルチユーザー公開時に定期化（Cron 等）を検討する。
 - **観測**：§10.3.1 の rate limit / 永続書き込みでは、429・limiter failure・成功した永続書き込みごとに `event`・`endpoint`・`writeUnit` だけを含む PII-free の構造化 Worker log を出す。運用時は Workers Logs の event 別件数と D1 dashboard の `answer_logs` / `lesson_views` / `srs_states` の書き込み・容量メトリクスを同じ時間帯で突合する。`console.error` は §10.6 の未処理エラー出力に限る。Analytics Engine を含む外部監視は、既存のログと D1 メトリクスでは不足すると判断された場合に別 issue で検討する。
 
-### 12.8 `cacheComponents` の適用条件と検証結果
+### 12.8 `cacheComponents` の実行確認
 
-`cacheComponents` は NextConfig のアプリケーション全体に効く top-level switch である。PPR streaming の対象を `/home`・`/review`・`/domains` に限定しても、**全 App Router route が Cache Components の build ルールを満たす必要がある**。`/` はユーザー固有データを読まない静的 RSC とする。有効化にあたって実際に必要だった対応は次のとおり（issue #93 の技術スパイクで確認）。
+キャッシュ・PPRの規範は §8.3、本番のR2・DO Queue構成は §3.1、設定とデプロイは §12.2・§12.4に従う。Client hookのAPI clientは最初の送信まで遅延生成し、render／prerender時のブラウザ専用設定への依存を避ける。
 
-本番の OpenNext runtime では `open-next.config.ts` に R2 Incremental Cache と Durable Object Queue を明示し、web Worker の `wrangler.jsonc` に `NEXT_INC_CACHE_R2_BUCKET`・`NEXT_CACHE_DO_QUEUE`・`WORKER_SELF_REFERENCE` を常設する。未設定時の既定値である dummy cache は読み書き時に失敗し、Cache Components が生成する RSC navigation / prefetch が完了しないため使用禁止とする。`'use cache'` の既定 profile は15分の時間ベース再検証を持つため Queue を省略できない。現状は `revalidateTag` / `revalidatePath` による on-demand revalidation を使わないため Tag Cache は追加しない。将来それらを導入する場合は、その変更と同時に対応する Tag Cache と cache purge を設計する。
-
-- `export const dynamic` / `export const dynamicParams` は併用不可。page-level の route segment config を置かない。
-- 動的セグメントを持つ content route（`/learn/...`・`/quiz/...`）は `generateStaticParams` で全 params を列挙し、page 本体に `'use cache'` を置く。両方が無いと `Uncached data was accessed outside of <Suspense>` で prerender が停止する。
-- 現在時刻（`Date.now()` / `new Date()`）は uncached data を読んだ後にしか参照できない。`loadReview` は既定引数での先行評価をやめ、queue 取得後に解決する。
-- `getCloudflareContext()` は prerender 中に解決できない。ユーザー固有 loader の先頭で `connection()` を呼び、リクエスト時実行を宣言する。
-- Client hook が render 時に API クライアントを生成すると prerender でも評価され、`NEXT_PUBLIC_API_BASE_URL` 不在で throw する。生成は初回送信まで遅延させる。
-
-#### 検証結果（2026-07-28・issue #93）
-
-`@opennextjs/cloudflare` の以下の upstream issue は、**本リポジトリの構成では再現しなかった**。
-
-- `opennextjs/opennextjs-cloudflare#1130`：`cacheComponents` 有効時の production-only `SyntaxError`／クラッシュと Suspense 描画失敗。
-- `opennextjs/opennextjs-cloudflare#1225`：Suspense streaming が完了せず `Connection closed` になる問題。
-
-`opennextjs-cloudflare build` と `preview`（Service Binding 接続あり）で `/review` を検証し、次を確認した。
-
-- 静的シェルに fallback を含む HTML が返り、解決済みコンテンツが `<div hidden id="S:n">` として後続で届き、`$RC()` で差し替わる（PPR streaming が成立）。
-- ブラウザで hydration が完了し、console エラーなし。intro → 出題 → 採点 → 解説まで操作できる。
-- 解答して SRS 状態が更新された後に `/review` を再取得すると動的領域が `0 due` へ変わる。**動的領域はリクエストごとに再実行され、ユーザー固有データが共有キャッシュに乗らない。**
-- `next build` は API 未設定でも通り、build 時に API を呼ばない。
-- 検証したバージョン組は `next@16.2.9` + `@opennextjs/cloudflare@1.19.11`（採用）と `next@16.2.12` + `@opennextjs/cloudflare@1.20.2`（比較）。どちらも同じ PPR 構造を出力した。ブラウザ検証は採用側でのみ実施した。
+過去の比較バージョン・再現結果は [2026-07-28の検証記録](./investigations/2026-07-28-cache-components.md) を参照する。
 
 #### 残る制約
 
-現行 CI は `next build` のみであり、OpenNext preview のストリーミングや本番 R2 cache binding の欠落を検知できない。**ビルド成功だけを回帰の根拠にしてはならない。** PPR の描画・streaming または cache binding に関わる変更では、R2 binding を含む `opennextjs-cloudflare preview` で full GET と `?_rsc=...` navigation の両方を確認する。上記 upstream issue は未 close のため、OpenNext / Next を更新した際は再確認する。
+現行 CI は `next build` のみであり、OpenNext preview のストリーミングや本番 R2 cache binding の欠落を検知できない。**ビルド成功だけを回帰の根拠にしてはならない。** PPR の描画・streaming または cache binding に関わる変更では、R2 binding を含む `opennextjs-cloudflare preview` で full GET と `?_rsc=...` navigation の両方を確認する。OpenNext / Next を更新した際は、過去の検証記録に挙げた問題も再確認する。
