@@ -1516,6 +1516,7 @@ content/
 - ディレクトリ階層は §4.1 のコンテンツ階層（domain > topic > lesson）をそのまま写す。
 - **ファイル名 = lessonId**。frontmatter の `domain` / `topic` はディレクトリパスと一致していなければならない。
 - パス⇔frontmatter⇔ID の整合は、ビルド時パース（§8.2）と `content:sync`（§10.8）の**両方で検証し、不一致はビルド失敗**にする。AI が教材を追加・改訂する際のガードレール（§5）として機能させる。
+- 教材追加・改訂時の読み取り専用preflightには `pnpm content:validate` を使う。このコマンドは共有content Zodと共通パーサーで構造・パス・IDを検証し、生成物の更新やD1同期は行わない。
 
 ### 11.2 ID 命名規則
 

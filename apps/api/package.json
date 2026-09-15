@@ -21,6 +21,7 @@
     "content:sync:remote": "tsx scripts/sync-content.ts --remote",
     "content:generate": "tsx scripts/generate-content-estimates.ts",
     "content:check": "tsx scripts/generate-content-estimates.ts --check",
+    "content:validate": "tsx scripts/generate-content-estimates.ts --validate",
     "db:seed:dev": "tsx scripts/seed-dev.ts"
   },
   "dependencies": {

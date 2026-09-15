@@ -47,8 +47,9 @@ must-fix / should-fix があれば content-author に差し戻して修正させ
 
 ### 4. 検証
 
-- `pnpm content:sync` のローカル実行、またはビルド時パースが存在すればそれで frontmatter 検証を行う。
-- 未実装の場合: frontmatter を `packages/shared/src/schema/content.ts` の `lessonFrontmatterSchema` で検証する使い捨てスクリプトを scratchpad に書いて `pnpm exec tsx` で実行する。
+- `.ai/skills/content-quality-gate/SKILL.md` を全文読み、追加・改訂した教材を対象に、共有スキーマと既存パース経路による機械検証、および本文・設問・解説の内容レビューを行う。
+- `content-quality-gate` は読み取り専用であり、検証のためにD1を書き換える `content:sync` / `content:sync:remote` を実行しない。
+- `content-quality-gate` の verdict が `fail` の場合は該当箇所を修正して再検証する。`incomplete` の場合は未確認項目と理由を完了報告へ残し、合格として扱わない。
 - `issue-dev-orchestrate`経由では検証対象・コマンド・実行条件・終了結果を後続の`test-fixer`へ渡す。同じ入力・条件の成功結果は再利用できる。変更や証跡不足があれば再検証する。単独起動では本フェーズの結果を最終検証とする。
 
 ### 5. 完了報告

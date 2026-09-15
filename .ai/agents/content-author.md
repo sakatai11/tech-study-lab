@@ -34,7 +34,7 @@ tools: Read, Write, Edit, Grep, Glob, Bash
 1. `docs/design.md` §11 と `packages/shared/src/schema/content.ts` を読む。
 2. 既存の `content/<domain>/<topic>/` を確認し、連番の次番号・既存レッスンとの重複や難易度の繋がりを把握する。
 3. 執筆する（新規トピックなら index.md も）。
-4. 自己検証: frontmatter がスキーマに一致するか、パス⇔frontmatter⇔ID が整合するか、answerIndex が choices 範囲内かを確認する。content sync / ビルド時パースの検証コマンドが存在すれば実行する（`pnpm content:sync` のローカル実行など。なければ目視チェックリストで代替し、その旨を報告する）。
+4. 自己検証: `pnpm content:validate` を実行し、frontmatter、パス⇔frontmatter⇔ID、answerIndexとchoicesの整合を確認する。この読み取り専用検証では `content:sync` / `content:sync:remote` を実行しない。実行できなければ目視チェックリストで代替し、その旨を報告する。
 
 ## 禁止事項
 
