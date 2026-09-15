@@ -21,7 +21,7 @@ description: Knowledge Graphの影響範囲を原因特定に使い、正式な�
    pnpm architecture:check
    pnpm architecture:test
    ```
-   `content/` が変更ファイルに含まれる場合は、Graph対象外でも教材固有ゲートを省略しない。`content-new` の契約に従う教材レビュー結果を確認し、`pnpm content:sync` または同等のビルド時パースを実行してfrontmatter、ID、選択肢、`answerIndex`を検証し、`sourceVerification.content`へ記録する。
+   `content/` が変更ファイルに含まれる場合は、Graph対象外でも教材固有ゲートを省略しない。`content-new` / `content-quality-gate` の契約に従う教材レビュー結果を確認し、同じ入力に対する成功結果を再利用できなければ `pnpm content:validate` を実行してfrontmatter、ID、選択肢、`answerIndex`を検証し、`sourceVerification.content`へ記録する。この検証ではD1を変更する `content:sync` / `content:sync:remote` を実行しない。
    - `pnpm typecheck` / `pnpm lint` / `pnpm test` が非0終了した場合、既存失敗だけが原因でも正式ゲートの `pass` ではない。変更起因かベースラインかを切り分け、ベースラインとして据え置いた場合も `fail（ベースライン）` として報告する。
    - `pnpm lint` は `package.json` の正式スクリプト（Biome と dependency-cruiser）を実行する。`pnpm biome check .` 単体を正式な lint ゲートとして扱わない。
    - 正式ゲートがスコープ外の既存エラー（例: `docs/mockups/*.js`、テスト未整備パッケージの「No test files found」）で失敗しても、**それは直さない**。ベースラインとして据え置き、報告で明示する。

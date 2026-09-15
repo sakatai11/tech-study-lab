@@ -70,7 +70,7 @@ git diff -- architecture/graph.json
 - 削除後の空結果は上記の削除方針で照合する。
 - 期待しないnode/edgeの消失、出典の混線、抽出不能な新構文があれば品質ゲートをpassにしない。
 - snapshot差分を照合した後、`test-fixer`が通常ゲートと`architecture:check` / `architecture:test`の結果を確認する。
-- `content/` を変更した場合はオーケストレーターが`content-new`を全文読んで起動し、同スキルに従って`content-author`へ執筆・改訂、`reviewer`へ教材観点レビューを委譲する。`test-fixer`はレビュー結果を受け取り、`pnpm content:sync`または同等のビルド時パースを正式判定する。Graphゲートで教材検証を代替せず、frontmatter、ID、選択肢、`answerIndex`、本文と解説の整合を確認し、結果は`sourceVerification.content`へ記録する。
+- `content/` を変更した場合はオーケストレーターが`content-new`を全文読んで起動し、`content-quality-gate`も全文読んだうえで、同スキルに従って`content-author`へ執筆・改訂、`reviewer`へ教材観点レビューを委譲する。`test-fixer`はレビュー結果と、同じ入力に対する `pnpm content:validate` の成功結果を受け取り、再利用できなければ同コマンドを正式判定として実行する。D1を変更する `content:sync` / `content:sync:remote` を検証用途に使わない。Graphゲートで教材検証を代替せず、frontmatter、ID、選択肢、`answerIndex`、本文と解説の整合を確認し、結果は`sourceVerification.content`へ記録する。
 - 検証結果には対象revisionまたは入力内容、コマンド、実行条件、終了結果を残す。同じ入力・条件に対する成功結果は担当交代やコミットだけで再実行せず引き継げる。コード・依存・設定・環境の変更、証跡不足、失敗があれば影響する検証を再実行する。最終HEADに必要な全ゲートの有効な証跡があることを確認する。
 
 ## エージェントへ渡す情報

@@ -7,6 +7,10 @@ description: content/ 配下の教材・問題を、共有スキーマによる�
 
 教材・問題の一次ソースである `content/` を変更せず、機械検証と内容レビューの結果を報告する。一般的なリポジトリ品質ゲートやアプリの動作確認は、このスキルでは実行しない。
 
+実行前に `.ai/runtime-compatibility.md` を全文読み、現在のランタイムに合わせてツールを読み替える。
+
+Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runtime codex --skill content-quality-gate --status started|completed` を実行して共通ログへ記録する（Claudeではhookが自動記録する）。
+
 ## 一次ソース
 
 - 物理配置、ID、問題数などの規約: `docs/design.md` §11
@@ -23,14 +27,13 @@ description: content/ 配下の教材・問題を、共有スキーマによる�
 
 ## 機械検証
 
-次の副作用のないcheckコマンドを実行する。
+次の副作用のない検証コマンドを実行する。
 
 ```bash
-pnpm --filter @tsl/api content:check
-pnpm --filter @tsl/web content:check
+pnpm content:validate
 ```
 
-両コマンドは `packages/shared` のcontent Zodと `createContentBundle` を通じて、少なくとも次を検証する。
+このコマンドは `packages/shared` のcontent Zodと `createContentBundle` を通じて、少なくとも次を検証する。
 
 - topic・lesson・questionのfrontmatter
 - 選択肢と `answerIndex`
@@ -38,7 +41,7 @@ pnpm --filter @tsl/web content:check
 - パス、domain、topic、lessonIdの対応
 - lessonIdとquestionIdの形式・対応・一意性
 
-検証のために `content:sync` や `content:sync:remote` を実行しない。これらはD1を変更する同期処理であり、この読み取り専用ゲートの責務外である。
+検証のために `content:check`、`content:sync`、`content:sync:remote` を実行しない。`content:check` は生成物の鮮度検査を含むため、生成前の正しい教材変更も失敗させる。後者2つはD1を変更する同期処理であり、いずれもこの読み取り専用ゲートの責務外である。
 
 コマンドが失敗した場合は、失敗したコマンド、終了状態、該当ファイルとエラー要旨を記録する。修正や生成コマンドへの切り替えは、呼び出し元またはユーザーの指示なしに行わない。
 
@@ -67,7 +70,7 @@ content_review: must-fix / should-fix / nit の指摘
 unverified: 未確認項目と理由
 ```
 
-- `pass`: 両方の機械検証が成功し、内容レビューにmust-fix・should-fixがない
+- `pass`: 機械検証が成功し、内容レビューにmust-fix・should-fixがない
 - `fail`: 機械検証が失敗した、またはmust-fix・should-fixがある
 - `incomplete`: 必要なコマンドまたは内容レビューを実行できていない
 
