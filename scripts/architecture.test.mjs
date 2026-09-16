@@ -282,3 +282,30 @@ test('keeps the default query projection small enough to read', () => {
   // Before the ontology work the same four seeds cost 290,790 chars at the old default.
   assert(total < 145_000, `default query projection grew to ${total} chars`)
 })
+
+test('rejects a node whose provenance disagrees with the module in its id', () => {
+  const graph = extract(sources)
+  const swap = (id, patch) =>
+    validateGraph({
+      ...graph,
+      nodes: graph.nodes.map((node) => (node.id === id ? { ...node, ...patch } : node)),
+    })
+  // A symbol kept in its module's `symbols` but re-homed by provenance would be treated as
+  // belonging to another layer by query suppression and the projection.
+  assert.throws(
+    () =>
+      swap('symbol:packages/shared/src/schema/api.ts#dueCountResponseSchema', {
+        layer: 'api-service',
+        source: { file: 'apps/api/src/services/review-service.ts', line: 1 },
+      }),
+    /Invalid ownership/,
+  )
+  assert.throws(
+    () =>
+      swap('apps/api/src/routes/dashboard.ts', {
+        layer: 'api-service',
+        source: { file: 'apps/api/src/services/review-service.ts', line: 1 },
+      }),
+    /Invalid ownership/,
+  )
+})

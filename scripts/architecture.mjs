@@ -494,6 +494,14 @@ export function validateGraph(graph) {
   const kindOf = new Map()
   for (const node of graph.nodes) {
     if (typeof node.id !== 'string' || !nodeKinds.has(node.kind)) throw new Error('Invalid node')
+    // The id names the owning module, so provenance must agree with it: layer, query
+    // suppression and the projection all read source.file, and a mismatch would let a node
+    // claim one module by id and another by provenance.
+    if (
+      (node.kind === 'module' || symbolKinds.includes(node.kind)) &&
+      moduleOf(node.id) !== node.source?.file
+    )
+      throw new Error(`Invalid ownership: ${node.id}`)
     if (node.layer !== layerOf(node.source?.file ?? ''))
       throw new Error(`Invalid layer: ${node.id}`)
     provenance(node.source)

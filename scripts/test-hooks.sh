@@ -496,7 +496,7 @@ check_order_contract "effective base follows work branch ancestry validation" "$
 check_agent_contract "architecture reference is discoverable" 'references/architecture-context.md' "$SKILL"
 check_agent_contract "architecture preflight checks snapshot" 'pnpm architecture:check' "$ARCHITECTURE_CONTEXT"
 check_agent_contract "architecture preflight tests extractor" 'pnpm architecture:test' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "query starts narrow" '最初は depth 0〜2 に絞り' "$ARCHITECTURE_CONTEXT"
+check_agent_contract "query starts narrow" '既定の depth 1 で始め、必要な関係が不足した場合だけ広げる。' "$ARCHITECTURE_CONTEXT"
 check_agent_contract "graph-first precedes broad code search" '広域のコード検索やファイル読み取りより先に query する。' "$ARCHITECTURE_CONTEXT"
 check_agent_contract "investigation records graph evidence" '`graphEvidence`' "$ARCHITECTURE_CONTEXT"
 check_agent_contract "investigation records graph limitations" '`graphLimitations`' "$ARCHITECTURE_CONTEXT"
