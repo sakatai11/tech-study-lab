@@ -236,3 +236,49 @@ test('rejects a node kind or layer outside the ontology', () => {
     /Invalid layer/,
   )
 })
+
+test('does not expand through shared contract surfaces unless they are seeded', () => {
+  const graph = extract(sources)
+  const file = 'packages/shared/src/schema/api.ts'
+  const surface = new Set(
+    graph.nodes
+      .filter((node) => node.id === file || node.id.startsWith(`symbol:${file}#`))
+      .map((node) => node.id),
+  )
+  const consumers = [...new Set(graph.edges.filter((e) => surface.has(e.to)).map((e) => e.from))]
+  assert(consumers.length > 10)
+  // Reached incidentally: present in the result, but its own consumers are not pulled in.
+  const reached = new Set(query(graph, 'load-dashboard.ts', 2).nodes.map((node) => node.id))
+  assert(reached.has(file))
+  assert(consumers.some((id) => !reached.has(id)))
+  // Seeded directly: the caller asked about the contract, so its consumers come back.
+  const seeded = new Set(query(graph, file, 1).nodes.map((node) => node.id))
+  assert(consumers.every((id) => seeded.has(id)))
+})
+
+test('projects away what the id already carries and keeps the rest', () => {
+  const graph = extract(sources)
+  const result = query(graph, 'getDueCount', 1)
+  const module = result.nodes.find((node) => node.kind === 'module')
+  // A module's provenance is always its own path at line 1.
+  assert.deepEqual(Object.keys(module).sort(), ['id', 'kind', 'layer', 'symbols'])
+  const symbol = result.nodes.find((node) => node.id.endsWith('#getDueCount'))
+  assert.equal(symbol.source, undefined)
+  assert(Number.isInteger(symbol.line))
+  for (const edge of result.edges) assert.equal(edge.source, undefined)
+  // An endpoint lives in a module its id does not name, so provenance is kept.
+  const endpoint = query(graph, 'endpoint:GET /dashboard/due-count', 0).nodes[0]
+  assert.equal(endpoint.source.file, 'apps/api/src/routes/dashboard.ts')
+  // Declaration bodies are not stored: the corpus is read from the source at that line.
+  assert(graph.nodes.every((node) => node.declaration === undefined))
+})
+
+test('keeps the default query projection small enough to read', () => {
+  const graph = extract(sources)
+  const size = (seed) => JSON.stringify(query(graph, seed), null, 2).length
+  const total = ['/dashboard/due-count', 'load-dashboard.ts', 'answer', 'review']
+    .map(size)
+    .reduce((sum, chars) => sum + chars, 0)
+  // Before the ontology work the same four seeds cost 290,790 chars at the old default.
+  assert(total < 145_000, `default query projection grew to ${total} chars`)
+})

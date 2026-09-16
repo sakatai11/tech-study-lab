@@ -193,7 +193,6 @@ export function extract(sources) {
           if (symbols.has(key)) throw new Error(`Duplicate shared declaration: ${key}`)
           const id = add(`symbol:${key}`, symbolKind(node, sf), sourceAt(sf, node), {
             layer: layerOf(file),
-            declaration: node.getText(sf),
           })
           declare(file, node.name.text)
           symbols.set(key, id)
@@ -531,27 +530,60 @@ export function assertFresh(saved, current) {
     throw new Error('Architecture snapshot is stale: run node scripts/architecture.mjs extract')
 }
 
-export function query(graph, needle, depth = 2) {
+const terminalLayers = new Set(['shared-schema', 'shared-db'])
+/** Owning module of a node id, or undefined when the id carries no module. */
+const moduleOf = (id) =>
+  id.startsWith('symbol:')
+    ? id.slice('symbol:'.length).split('#')[0]
+    : id.includes(':')
+      ? undefined
+      : id
+
+export function query(graph, needle, depth = 1) {
   if (!needle || !Number.isInteger(depth) || depth < 0 || depth > 4)
     throw new Error('query requires text and depth 0..4')
-  const selected = new Set(
+  const seeds = new Set(
     graph.nodes.filter((node) => node.id.includes(needle)).map((node) => node.id),
   )
-  if (selected.size === 0) throw new Error(`No architecture match: ${needle}`)
+  if (seeds.size === 0) throw new Error(`No architecture match: ${needle}`)
+  const layers = new Map(graph.nodes.map((node) => [node.id, node.layer]))
+  // Shared contract surfaces connect everything, so reaching one does not expand through it.
+  // Seeding one still does: the caller asked about that contract.
+  const expands = (id) => seeds.has(id) || !terminalLayers.has(layers.get(id))
+  const selected = new Set(seeds)
   for (let i = 0; i < depth; i++) {
     const next = new Set(selected)
-    for (const edge of graph.edges)
-      if (selected.has(edge.from) || selected.has(edge.to)) {
-        next.add(edge.from)
-        next.add(edge.to)
-      }
+    for (const edge of graph.edges) {
+      if (selected.has(edge.from) && expands(edge.from)) next.add(edge.to)
+      if (selected.has(edge.to) && expands(edge.to)) next.add(edge.from)
+    }
     for (const id of next) selected.add(id)
   }
+  // Projection drops anything the id already carries.
+  const projectNode = ({ id, kind, layer, symbols, source, ...rest }) => ({
+    id,
+    kind,
+    layer,
+    ...(symbols ? { symbols } : {}),
+    ...rest,
+    ...(moduleOf(id) === source.file
+      ? source.line === 1
+        ? {}
+        : { line: source.line }
+      : { source }),
+  })
+  const projectEdge = ({ from, relation, to, source, ...rest }) => ({
+    from,
+    relation,
+    to,
+    ...rest,
+    ...(moduleOf(from) === source.file ? { line: source.line } : { source }),
+  })
   return {
-    nodes: graph.nodes
-      .filter((node) => selected.has(node.id))
-      .map(({ declaration, ...node }) => node),
-    edges: graph.edges.filter((edge) => selected.has(edge.from) && selected.has(edge.to)),
+    nodes: graph.nodes.filter((node) => selected.has(node.id)).map(projectNode),
+    edges: graph.edges
+      .filter((edge) => selected.has(edge.from) && selected.has(edge.to))
+      .map(projectEdge),
   }
 }
 
@@ -569,7 +601,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
       console.log('Architecture snapshot and Worker bindings are consistent')
     } else if (command === 'query') {
       console.log(
-        JSON.stringify(query(graph, needle, depth === undefined ? 2 : Number(depth)), null, 2),
+        JSON.stringify(query(graph, needle, depth === undefined ? 1 : Number(depth)), null, 2),
       )
     } else
       throw new Error(

@@ -12,7 +12,9 @@ node scripts/architecture.mjs query 'load-dashboard.ts' 1
 node --test scripts/architecture.test.mjs
 ```
 
-`extract` は snapshot を更新する。`check` は Worker binding と graph schema を検査し、現在の再抽出結果と保存値の不一致を非0で返す。`query` は毎回コードから抽出し、指定文字列を含む endpoint/file とその近傍を出力する。既定は両方向2辺、深さ0〜4を指定可能。query は全ソースhashと宣言本文を省く。新endpointも同じ構文なら抽出器の変更なしで追従する。
+`extract` は snapshot を更新する。`check` は Worker binding と graph schema を検査し、現在の再抽出結果と保存値の不一致を非0で返す。`query` は毎回コードから抽出し、指定文字列を含む node とその近傍を出力する。既定は両方向1辺、深さ0〜4を指定可能。新endpointも同じ構文なら抽出器の変更なしで追従する。
+
+snapshotは宣言本文を保持しない。宣言の内容は各nodeの出典（file + 行番号）からコードを読む。`query` の出力は id から導出できる情報（module自身の出典、symbolの所属file、出典fileがfrom側と一致する辺）を省く。
 
 ## オントロジー
 
@@ -60,6 +62,10 @@ Graphの語彙定義。node kind・relation・`layer` は**構文とパス規約
 
 「moduleがsymbolを宣言する」関係は relation ではなく**node の所属属性**で表す。module node は自身が宣言するsymbol名を `symbols` に持ち、symbol node は `source.file` が所属moduleを示す。所属は走査のhopではないため、`query` の depth を消費しない。
 
+### 走査のハブ抑制
+
+`query` は `shared-schema` / `shared-db` の node を**参照面**として扱い、seedに一致した場合を除いて経由展開しない。契約スキーマは全layerから参照されるため、影響伝播として展開すると2辺でリポジトリ全体へ到達してしまう。seedに一致した場合は利用側を知りたい意図とみなして通常どおり展開する。
+
 ### layer
 
 各 node は所属moduleのパスから `layer` を決定的に導出する。dependency-cruiserの依存境界ルールと照合する軸でもある。
@@ -91,7 +97,7 @@ Graphの語彙定義。node kind・relation・`layer` は**構文とパス規約
 ## 制限
 
 - 型チェッカー・制御フロー解析は使わない。import edgeは呼び出しの実行証明ではない。sharedはtop-levelの変数・関数・型alias・interfaceをfile + nameで識別し、関数内ローカルを除外する。直接importは参照先fileを優先し、barrel経由は対象内で一意のexport宣言名へ限定的に解決する。同名候補が複数あるbarrel参照と同一file内の重複宣言（関数overloadを含む）はエラーにする。汎用的なbarrelの再export/alias解決器ではない。`typeof table.$inferSelect`は最左のtable宣言への由来を表し、property自体の存在や型は検証しない。
-- API service/DAL の top-level 関数・型は file + name で識別する。名前付きimportの直接呼出し（aliasを含む）と、関数引数・戻り値に明示された単純な `*Deps` 型を辿れる。shadowing、複合型、型推論は解析しない。`query 'getDueCount' 1`は関数・所属file・直接参照するroute・`ReviewDeps`を返す。DAL factoryも辿る場合はdepth 2を使う。
+- API service/DAL の top-level 関数・型は file + name で識別する。名前付きimportの直接呼出し（aliasを含む）と、関数引数・戻り値に明示された単純な `*Deps` 型を辿れる。shadowing、複合型、型推論は解析しない。`query 'getDueCount'`は関数・直接参照するroute・`ReviewDeps`を返す。所属fileはnodeのidと出典が示す。DAL factoryも辿る場合はdepth 2を使う。
 - API routeは `new Hono().get(...).post(...)` の連鎖、app側は名前付きimportしたroute（factory呼び出しを含む）の静的文字列mountを対象とする。ローカルroot `/` のwrapperは透過として扱う。変数に代入したHonoへの後付け登録、動的path、入れ子mount、aliasされたHono、`on`/`all`、条件別登録は対象外。root appに直接登録された `/health` 等の静的handlerは含むが、public/internal entrypointのendpoint差は区別しない。動的pathや非rootローカルmountは検出できた範囲でエラーにする。
 - Web endpoint呼び出しはプロパティ/文字列indexの連鎖と `$get` 等を対象とする。動的indexや実行時URLは解析しない。未一致の呼び出しはedgeを作らないため、完全性は既存型チェック・レビューで確認する。
 - Web設定はTypeScriptのJSONC parserで解析する。API TOMLは専用ライブラリを追加せず、rootの1行文字列 `name`/`main` と `[[d1_databases]]` の1行文字列を投影する限定parser。その他のsectionは無視する。環境別override、inline table、複数行文字列は未対応で、root設定に対する検証のみ。
