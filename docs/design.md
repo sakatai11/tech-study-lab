@@ -182,6 +182,7 @@ SM-2 の計算式は [sm2.ts](../packages/shared/src/srs/sm2.ts)、その周辺�
 - Zod でスキーマ駆動バリデーション（`zValidator` ＋ フロント共有）
 - 依存境界（レイヤー間の import 許可）を dependency-cruiser（`.dependency-cruiser.cjs`）で機械検証
 - GitHub Actions で型チェック・lint（Biome＋依存境界）・test・build を **PR ゲート**化
+- AIエージェントの契約（`.ai/` 配下のスキル・エージェント定義・共通契約と `docs/ai-coding-agents.md`）と hook の不変条件を `pnpm test:hooks` で機械検証し、同じ **PR ゲート**に含める。仕様・契約の文言を黙って削除・改変できないようにするための検査であり、文言変更時は期待値の更新を伴う
 
 ### 依存境界の機械検証（dependency-cruiser）
 
