@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "sources": {
     ".dependency-cruiser.cjs": {
       "sha256": "d68195ac1ecce85c073a53a959ce25b81bcef7b3e1004b7c1e543e8d58cedc6a",
@@ -233,1826 +233,2224 @@
   "nodes": [
     {
       "id": ".dependency-cruiser.cjs",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": ".dependency-cruiser.cjs",
         "line": 1
-      }
+      },
+      "layer": "config",
+      "symbols": []
     },
     {
       "id": "apps/api/src/app.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/src/app.ts",
         "line": 1
-      }
+      },
+      "layer": "api-app",
+      "symbols": []
     },
     {
       "id": "apps/api/src/client.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/src/client.ts",
         "line": 1
-      }
+      },
+      "layer": "api-app",
+      "symbols": []
     },
     {
       "id": "apps/api/src/content-estimates.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/src/content-estimates.ts",
         "line": 1
-      }
+      },
+      "layer": "api-app",
+      "symbols": []
     },
     {
       "id": "apps/api/src/content-sync.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/src/content-sync.ts",
         "line": 1
-      }
+      },
+      "layer": "api-app",
+      "symbols": []
     },
     {
       "id": "apps/api/src/dal/activity-repository.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/src/dal/activity-repository.ts",
         "line": 1
-      }
+      },
+      "layer": "api-dal",
+      "symbols": ["createActivityDeps"]
     },
     {
       "id": "apps/api/src/dal/analytics-repository.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/src/dal/analytics-repository.ts",
         "line": 1
-      }
+      },
+      "layer": "api-dal",
+      "symbols": ["AnalyticsRepositoryOptions", "createAnalyticsDeps", "toNumber"]
     },
     {
       "id": "apps/api/src/dal/answer-repository.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/src/dal/answer-repository.ts",
         "line": 1
-      }
+      },
+      "layer": "api-dal",
+      "symbols": ["createAnswerDeps"]
     },
     {
       "id": "apps/api/src/dal/domains-repository.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/src/dal/domains-repository.ts",
         "line": 1
-      }
+      },
+      "layer": "api-dal",
+      "symbols": ["createDomainsDeps"]
     },
     {
       "id": "apps/api/src/dal/lesson-view-repository.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/src/dal/lesson-view-repository.ts",
         "line": 1
-      }
+      },
+      "layer": "api-dal",
+      "symbols": ["createLessonViewDeps"]
     },
     {
       "id": "apps/api/src/dal/review-repository.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/src/dal/review-repository.ts",
         "line": 1
-      }
+      },
+      "layer": "api-dal",
+      "symbols": ["createReviewDeps"]
     },
     {
       "id": "apps/api/src/dev-seed.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/src/dev-seed.ts",
         "line": 1
-      }
+      },
+      "layer": "api-app",
+      "symbols": []
     },
     {
       "id": "apps/api/src/env.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/src/env.ts",
         "line": 1
-      }
+      },
+      "layer": "api-app",
+      "symbols": []
     },
     {
       "id": "apps/api/src/fixed-user.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/src/fixed-user.ts",
         "line": 1
-      }
+      },
+      "layer": "api-app",
+      "symbols": []
     },
     {
       "id": "apps/api/src/index.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/src/index.ts",
         "line": 1
-      }
+      },
+      "layer": "api-app",
+      "symbols": []
     },
     {
       "id": "apps/api/src/internal-api.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/src/internal-api.ts",
         "line": 1
-      }
+      },
+      "layer": "api-app",
+      "symbols": []
     },
     {
       "id": "apps/api/src/middleware/access-boundary.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/src/middleware/access-boundary.ts",
         "line": 1
-      }
+      },
+      "layer": "api-middleware",
+      "symbols": []
     },
     {
       "id": "apps/api/src/middleware/user-context.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/src/middleware/user-context.ts",
         "line": 1
-      }
+      },
+      "layer": "api-middleware",
+      "symbols": []
     },
     {
       "id": "apps/api/src/persistent-write-observability.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/src/persistent-write-observability.ts",
         "line": 1
-      }
+      },
+      "layer": "api-app",
+      "symbols": []
     },
     {
       "id": "apps/api/src/persistent-write-rate-limit-guard.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/src/persistent-write-rate-limit-guard.ts",
         "line": 1
-      }
+      },
+      "layer": "api-app",
+      "symbols": []
     },
     {
       "id": "apps/api/src/persistent-write-rate-limit.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/src/persistent-write-rate-limit.ts",
         "line": 1
-      }
+      },
+      "layer": "api-app",
+      "symbols": []
     },
     {
       "id": "apps/api/src/routes/activity.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/src/routes/activity.ts",
         "line": 1
-      }
+      },
+      "layer": "api-route",
+      "symbols": []
     },
     {
       "id": "apps/api/src/routes/analytics.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/src/routes/analytics.ts",
         "line": 1
-      }
+      },
+      "layer": "api-route",
+      "symbols": []
     },
     {
       "id": "apps/api/src/routes/answers.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/src/routes/answers.ts",
         "line": 1
-      }
+      },
+      "layer": "api-route",
+      "symbols": []
     },
     {
       "id": "apps/api/src/routes/dashboard.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/src/routes/dashboard.ts",
         "line": 1
-      }
+      },
+      "layer": "api-route",
+      "symbols": []
     },
     {
       "id": "apps/api/src/routes/domains.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/src/routes/domains.ts",
         "line": 1
-      }
+      },
+      "layer": "api-route",
+      "symbols": []
     },
     {
       "id": "apps/api/src/routes/lesson-views.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/src/routes/lesson-views.ts",
         "line": 1
-      }
+      },
+      "layer": "api-route",
+      "symbols": []
     },
     {
       "id": "apps/api/src/routes/review.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/src/routes/review.ts",
         "line": 1
-      }
+      },
+      "layer": "api-route",
+      "symbols": []
     },
     {
       "id": "apps/api/src/services/activity-service.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/src/services/activity-service.ts",
         "line": 1
-      }
+      },
+      "layer": "api-service",
+      "symbols": ["ActivityDeps", "ActivityInput", "getRecentActivity"]
     },
     {
       "id": "apps/api/src/services/analytics-service.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/src/services/analytics-service.ts",
         "line": 1
-      }
+      },
+      "layer": "api-service",
+      "symbols": [
+        "AnalyticsDeps",
+        "AnalyticsHeatmapRow",
+        "AnalyticsInput",
+        "AnalyticsLessonViewCount",
+        "AnalyticsMistakeRow",
+        "AnalyticsSrsRow",
+        "AnalyticsSummaryData",
+        "AnalyticsWeeklyRow",
+        "currentStreakDays",
+        "getAnalyticsHeatmap",
+        "getAnalyticsMistakes",
+        "getAnalyticsSummary",
+        "getAnalyticsWeekly",
+        "recentHeatmapDays",
+        "recentUtcDays",
+        "utcDateKey",
+        "utcDayStart",
+        "utcWeekStart"
+      ]
     },
     {
       "id": "apps/api/src/services/answer-service.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/src/services/answer-service.ts",
         "line": 1
-      }
+      },
+      "layer": "api-service",
+      "symbols": ["AnswerDeps", "SubmitAnswerInput", "VersionedSrsInput", "submitAnswer"]
     },
     {
       "id": "apps/api/src/services/domains-service.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/src/services/domains-service.ts",
         "line": 1
-      }
+      },
+      "layer": "api-service",
+      "symbols": ["DomainStatsRow", "DomainsDeps", "DomainsInput", "getDomains", "toSummary"]
     },
     {
       "id": "apps/api/src/services/errors.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/src/services/errors.ts",
         "line": 1
-      }
+      },
+      "layer": "api-service",
+      "symbols": []
     },
     {
       "id": "apps/api/src/services/lesson-view-service.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/src/services/lesson-view-service.ts",
         "line": 1
-      }
+      },
+      "layer": "api-service",
+      "symbols": ["LessonViewDeps", "RecordLessonViewInput", "recordLessonView"]
     },
     {
       "id": "apps/api/src/services/review-service.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/src/services/review-service.ts",
         "line": 1
-      }
+      },
+      "layer": "api-service",
+      "symbols": [
+        "ReviewDeps",
+        "ReviewInput",
+        "ReviewQueueItem",
+        "ReviewQueueResult",
+        "getDueCount",
+        "getReviewQueue"
+      ]
     },
     {
       "id": "apps/api/wrangler.toml",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/api/wrangler.toml",
         "line": 1
-      }
+      },
+      "layer": "config",
+      "symbols": []
     },
     {
       "id": "apps/web/src/features/analytics/api/analytics-api.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/web/src/features/analytics/api/analytics-api.ts",
         "line": 1
-      }
+      },
+      "layer": "web-api",
+      "symbols": []
     },
     {
       "id": "apps/web/src/features/analytics/server/load-analytics.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/web/src/features/analytics/server/load-analytics.ts",
         "line": 1
-      }
+      },
+      "layer": "web-loader",
+      "symbols": []
     },
     {
       "id": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
         "line": 1
-      }
+      },
+      "layer": "web-api",
+      "symbols": []
     },
     {
       "id": "apps/web/src/features/dashboard/server/load-dashboard.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/web/src/features/dashboard/server/load-dashboard.ts",
         "line": 1
-      }
+      },
+      "layer": "web-loader",
+      "symbols": []
     },
     {
       "id": "apps/web/src/features/domains/api/domains-api.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/web/src/features/domains/api/domains-api.ts",
         "line": 1
-      }
+      },
+      "layer": "web-api",
+      "symbols": []
     },
     {
       "id": "apps/web/src/features/domains/server/load-domains.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/web/src/features/domains/server/load-domains.ts",
         "line": 1
-      }
+      },
+      "layer": "web-loader",
+      "symbols": []
     },
     {
       "id": "apps/web/src/features/lesson/api/lesson-api.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/web/src/features/lesson/api/lesson-api.ts",
         "line": 1
-      }
+      },
+      "layer": "web-api",
+      "symbols": []
     },
     {
       "id": "apps/web/src/features/lesson/server/load-lesson.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/web/src/features/lesson/server/load-lesson.ts",
         "line": 1
-      }
+      },
+      "layer": "web-loader",
+      "symbols": []
     },
     {
       "id": "apps/web/src/features/lesson/server/load-topic.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/web/src/features/lesson/server/load-topic.ts",
         "line": 1
-      }
+      },
+      "layer": "web-loader",
+      "symbols": []
     },
     {
       "id": "apps/web/src/features/quiz/api/quiz-api.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/web/src/features/quiz/api/quiz-api.ts",
         "line": 1
-      }
+      },
+      "layer": "web-api",
+      "symbols": []
     },
     {
       "id": "apps/web/src/features/quiz/server/load-quiz.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/web/src/features/quiz/server/load-quiz.ts",
         "line": 1
-      }
+      },
+      "layer": "web-loader",
+      "symbols": []
     },
     {
       "id": "apps/web/src/features/review/api/review-api.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/web/src/features/review/api/review-api.ts",
         "line": 1
-      }
+      },
+      "layer": "web-api",
+      "symbols": []
     },
     {
       "id": "apps/web/src/features/review/server/load-review.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/web/src/features/review/server/load-review.ts",
         "line": 1
-      }
+      },
+      "layer": "web-loader",
+      "symbols": []
     },
     {
       "id": "apps/web/src/lib/api.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/web/src/lib/api.ts",
         "line": 1
-      }
+      },
+      "layer": "web-api",
+      "symbols": []
     },
     {
       "id": "apps/web/wrangler.jsonc",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "apps/web/wrangler.jsonc",
         "line": 1
-      }
+      },
+      "layer": "config",
+      "symbols": []
     },
     {
       "id": "binding:D1:DB",
-      "kind": "binding",
+      "kind": "worker-binding",
       "source": {
         "file": "apps/api/wrangler.toml",
         "line": 7
       },
+      "layer": "config",
       "name": "tech-study-lab"
     },
     {
       "id": "endpoint:GET /activity/recent",
-      "kind": "endpoint",
+      "kind": "http-endpoint",
       "source": {
         "file": "apps/api/src/routes/activity.ts",
         "line": 10
       },
+      "layer": "api-route",
       "method": "GET",
       "path": "/activity/recent"
     },
     {
       "id": "endpoint:GET /analytics/heatmap",
-      "kind": "endpoint",
+      "kind": "http-endpoint",
       "source": {
         "file": "apps/api/src/routes/analytics.ts",
         "line": 43
       },
+      "layer": "api-route",
       "method": "GET",
       "path": "/analytics/heatmap"
     },
     {
       "id": "endpoint:GET /analytics/mistakes",
-      "kind": "endpoint",
+      "kind": "http-endpoint",
       "source": {
         "file": "apps/api/src/routes/analytics.ts",
         "line": 51
       },
+      "layer": "api-route",
       "method": "GET",
       "path": "/analytics/mistakes"
     },
     {
       "id": "endpoint:GET /analytics/summary",
-      "kind": "endpoint",
+      "kind": "http-endpoint",
       "source": {
         "file": "apps/api/src/routes/analytics.ts",
         "line": 27
       },
+      "layer": "api-route",
       "method": "GET",
       "path": "/analytics/summary"
     },
     {
       "id": "endpoint:GET /analytics/weekly",
-      "kind": "endpoint",
+      "kind": "http-endpoint",
       "source": {
         "file": "apps/api/src/routes/analytics.ts",
         "line": 35
       },
+      "layer": "api-route",
       "method": "GET",
       "path": "/analytics/weekly"
     },
     {
       "id": "endpoint:GET /dashboard/due-count",
-      "kind": "endpoint",
+      "kind": "http-endpoint",
       "source": {
         "file": "apps/api/src/routes/dashboard.ts",
         "line": 9
       },
+      "layer": "api-route",
       "method": "GET",
       "path": "/dashboard/due-count"
     },
     {
       "id": "endpoint:GET /domains",
-      "kind": "endpoint",
+      "kind": "http-endpoint",
       "source": {
         "file": "apps/api/src/routes/domains.ts",
         "line": 10
       },
+      "layer": "api-route",
       "method": "GET",
       "path": "/domains"
     },
     {
       "id": "endpoint:GET /health",
-      "kind": "endpoint",
+      "kind": "http-endpoint",
       "source": {
         "file": "apps/api/src/app.ts",
         "line": 89
       },
+      "layer": "api-app",
       "method": "GET",
       "path": "/health"
     },
     {
       "id": "endpoint:GET /review/queue",
-      "kind": "endpoint",
+      "kind": "http-endpoint",
       "source": {
         "file": "apps/api/src/routes/review.ts",
         "line": 9
       },
+      "layer": "api-route",
       "method": "GET",
       "path": "/review/queue"
     },
     {
       "id": "endpoint:POST /answers",
-      "kind": "endpoint",
+      "kind": "http-endpoint",
       "source": {
         "file": "apps/api/src/routes/answers.ts",
         "line": 18
       },
+      "layer": "api-route",
       "method": "POST",
       "path": "/answers"
     },
     {
       "id": "endpoint:POST /lesson-views",
-      "kind": "endpoint",
+      "kind": "http-endpoint",
       "source": {
         "file": "apps/api/src/routes/lesson-views.ts",
         "line": 18
       },
+      "layer": "api-route",
       "method": "POST",
       "path": "/lesson-views"
     },
     {
       "id": "packages/shared/src/content-parser.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "packages/shared/src/content-parser.ts",
         "line": 1
-      }
+      },
+      "layer": "shared-domain",
+      "symbols": [
+        "BundledLesson",
+        "BundledTopic",
+        "ContentBundle",
+        "ContentPath",
+        "ParsedContentSourceFile",
+        "contentPathFor",
+        "createContentBundle",
+        "invalidContent",
+        "lessonFor",
+        "topicFor"
+      ]
     },
     {
       "id": "packages/shared/src/db/schema.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "packages/shared/src/db/schema.ts",
         "line": 1
-      }
+      },
+      "layer": "shared-db",
+      "symbols": [
+        "AnswerLog",
+        "LessonView",
+        "QuestionRow",
+        "SrsState",
+        "User",
+        "answerLogs",
+        "lessonViews",
+        "questions",
+        "srsStates",
+        "users"
+      ]
     },
     {
       "id": "packages/shared/src/index.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "packages/shared/src/index.ts",
         "line": 1
-      }
+      },
+      "layer": "shared-domain",
+      "symbols": []
     },
     {
       "id": "packages/shared/src/schema/api.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 1
-      }
+      },
+      "layer": "shared-schema",
+      "symbols": [
+        "AnalyticsHeatmapDay",
+        "AnalyticsHeatmapResponse",
+        "AnalyticsRequest",
+        "AnalyticsSummaryResponse",
+        "AnalyticsWeeklyDay",
+        "AnalyticsWeeklyResponse",
+        "AnswerRequest",
+        "AnswerResponse",
+        "DomainSummary",
+        "DomainsRequest",
+        "DomainsResponse",
+        "DueCountResponse",
+        "LessonViewRequest",
+        "LessonViewResponse",
+        "MistakeItem",
+        "MistakesResponse",
+        "RateLimitUnavailableErrorResponse",
+        "RateLimitedErrorResponse",
+        "RecentActivityAnswerRecorded",
+        "RecentActivityItem",
+        "RecentActivityLessonViewed",
+        "RecentActivityResponse",
+        "RetentionDistribution",
+        "ReviewQueueResponse",
+        "analyticsHeatmapDaySchema",
+        "analyticsHeatmapResponseSchema",
+        "analyticsRequestSchema",
+        "analyticsSummaryResponseSchema",
+        "analyticsWeeklyDateSchema",
+        "analyticsWeeklyDaySchema",
+        "analyticsWeeklyResponseSchema",
+        "answerRequestSchema",
+        "answerResponseSchema",
+        "compareMistakeRank",
+        "compareRecentActivity",
+        "domainSummarySchema",
+        "domainsRequestSchema",
+        "domainsResponseSchema",
+        "dueCountResponseSchema",
+        "isValidCalendarDate",
+        "isoCalendarDatePattern",
+        "lessonViewRequestSchema",
+        "lessonViewResponseSchema",
+        "mistakeItemSchema",
+        "mistakesResponseSchema",
+        "rateLimitUnavailableErrorResponseSchema",
+        "rateLimitedErrorResponseSchema",
+        "recentActivityAnswerRecordedSchema",
+        "recentActivityBaseSchema",
+        "recentActivityItemSchema",
+        "recentActivityLessonViewedSchema",
+        "recentActivityResponseSchema",
+        "retentionDistributionSchema",
+        "reviewQueueResponseSchema"
+      ]
     },
     {
       "id": "packages/shared/src/schema/content.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "packages/shared/src/schema/content.ts",
         "line": 1
-      }
+      },
+      "layer": "shared-schema",
+      "symbols": [
+        "DOMAIN_LABELS",
+        "DomainKey",
+        "LessonFrontmatter",
+        "McqQuestion",
+        "Question",
+        "TopicFrontmatter",
+        "domainKeySchema",
+        "lessonFrontmatterSchema",
+        "lessonIdSchema",
+        "mcqQuestionSchema",
+        "questionIdSchema",
+        "questionSchema",
+        "topicFrontmatterSchema",
+        "validatedLessonFrontmatterSchema",
+        "validatedMcqSchema"
+      ]
     },
     {
       "id": "packages/shared/src/srs/sm2.ts",
-      "kind": "file",
+      "kind": "module",
       "source": {
         "file": "packages/shared/src/srs/sm2.ts",
         "line": 1
-      }
+      },
+      "layer": "shared-domain",
+      "symbols": [
+        "DAY_MS",
+        "INITIAL_EASE",
+        "MIN_EASE",
+        "SrsInput",
+        "SrsResult",
+        "initialSrs",
+        "isDue",
+        "reviewSrs"
+      ]
     },
     {
       "id": "symbol:apps/api/src/dal/activity-repository.ts#createActivityDeps",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "apps/api/src/dal/activity-repository.ts",
         "line": 8
-      }
+      },
+      "layer": "api-dal"
     },
     {
       "id": "symbol:apps/api/src/dal/analytics-repository.ts#AnalyticsRepositoryOptions",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "apps/api/src/dal/analytics-repository.ts",
         "line": 15
-      }
+      },
+      "layer": "api-dal"
     },
     {
       "id": "symbol:apps/api/src/dal/analytics-repository.ts#createAnalyticsDeps",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "apps/api/src/dal/analytics-repository.ts",
         "line": 31
-      }
+      },
+      "layer": "api-dal"
     },
     {
       "id": "symbol:apps/api/src/dal/analytics-repository.ts#toNumber",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "apps/api/src/dal/analytics-repository.ts",
         "line": 27
-      }
+      },
+      "layer": "api-dal"
     },
     {
       "id": "symbol:apps/api/src/dal/answer-repository.ts#createAnswerDeps",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "apps/api/src/dal/answer-repository.ts",
         "line": 9
-      }
+      },
+      "layer": "api-dal"
     },
     {
       "id": "symbol:apps/api/src/dal/domains-repository.ts#createDomainsDeps",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "apps/api/src/dal/domains-repository.ts",
         "line": 9
-      }
+      },
+      "layer": "api-dal"
     },
     {
       "id": "symbol:apps/api/src/dal/lesson-view-repository.ts#createLessonViewDeps",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "apps/api/src/dal/lesson-view-repository.ts",
         "line": 7
-      }
+      },
+      "layer": "api-dal"
     },
     {
       "id": "symbol:apps/api/src/dal/review-repository.ts#createReviewDeps",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "apps/api/src/dal/review-repository.ts",
         "line": 10
-      }
+      },
+      "layer": "api-dal"
     },
     {
       "id": "symbol:apps/api/src/services/activity-service.ts#ActivityDeps",
-      "kind": "symbol",
+      "kind": "deps-type",
       "source": {
         "file": "apps/api/src/services/activity-service.ts",
         "line": 9
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/activity-service.ts#ActivityInput",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "apps/api/src/services/activity-service.ts",
         "line": 13
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/activity-service.ts#getRecentActivity",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "apps/api/src/services/activity-service.ts",
         "line": 17
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/analytics-service.ts#AnalyticsDeps",
-      "kind": "symbol",
+      "kind": "deps-type",
       "source": {
         "file": "apps/api/src/services/analytics-service.ts",
         "line": 50
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/analytics-service.ts#AnalyticsHeatmapRow",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "apps/api/src/services/analytics-service.ts",
         "line": 39
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/analytics-service.ts#AnalyticsInput",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "apps/api/src/services/analytics-service.ts",
         "line": 65
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/analytics-service.ts#AnalyticsLessonViewCount",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "apps/api/src/services/analytics-service.ts",
         "line": 17
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/analytics-service.ts#AnalyticsMistakeRow",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "apps/api/src/services/analytics-service.ts",
         "line": 44
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/analytics-service.ts#AnalyticsSrsRow",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "apps/api/src/services/analytics-service.ts",
         "line": 12
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/analytics-service.ts#AnalyticsSummaryData",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "apps/api/src/services/analytics-service.ts",
         "line": 23
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/analytics-service.ts#AnalyticsWeeklyRow",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "apps/api/src/services/analytics-service.ts",
         "line": 34
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/analytics-service.ts#currentStreakDays",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "apps/api/src/services/analytics-service.ts",
         "line": 103
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/analytics-service.ts#getAnalyticsHeatmap",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "apps/api/src/services/analytics-service.ts",
         "line": 177
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/analytics-service.ts#getAnalyticsMistakes",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "apps/api/src/services/analytics-service.ts",
         "line": 192
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/analytics-service.ts#getAnalyticsSummary",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "apps/api/src/services/analytics-service.ts",
         "line": 116
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/analytics-service.ts#getAnalyticsWeekly",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "apps/api/src/services/analytics-service.ts",
         "line": 162
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/analytics-service.ts#recentHeatmapDays",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "apps/api/src/services/analytics-service.ts",
         "line": 89
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/analytics-service.ts#recentUtcDays",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "apps/api/src/services/analytics-service.ts",
         "line": 79
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/analytics-service.ts#utcDateKey",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "apps/api/src/services/analytics-service.ts",
         "line": 75
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/analytics-service.ts#utcDayStart",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "apps/api/src/services/analytics-service.ts",
         "line": 70
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/analytics-service.ts#utcWeekStart",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "apps/api/src/services/analytics-service.ts",
         "line": 97
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/answer-service.ts#AnswerDeps",
-      "kind": "symbol",
+      "kind": "deps-type",
       "source": {
         "file": "apps/api/src/services/answer-service.ts",
         "line": 7
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/answer-service.ts#submitAnswer",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "apps/api/src/services/answer-service.ts",
         "line": 29
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/answer-service.ts#SubmitAnswerInput",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "apps/api/src/services/answer-service.ts",
         "line": 21
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/answer-service.ts#VersionedSrsInput",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "apps/api/src/services/answer-service.ts",
         "line": 5
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/domains-service.ts#DomainsDeps",
-      "kind": "symbol",
+      "kind": "deps-type",
       "source": {
         "file": "apps/api/src/services/domains-service.ts",
         "line": 13
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/domains-service.ts#DomainsInput",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "apps/api/src/services/domains-service.ts",
         "line": 17
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/domains-service.ts#DomainStatsRow",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "apps/api/src/services/domains-service.ts",
         "line": 5
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/domains-service.ts#getDomains",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "apps/api/src/services/domains-service.ts",
         "line": 42
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/domains-service.ts#toSummary",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "apps/api/src/services/domains-service.ts",
         "line": 27
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/lesson-view-service.ts#LessonViewDeps",
-      "kind": "symbol",
+      "kind": "deps-type",
       "source": {
         "file": "apps/api/src/services/lesson-view-service.ts",
         "line": 1
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/lesson-view-service.ts#recordLessonView",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "apps/api/src/services/lesson-view-service.ts",
         "line": 15
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/lesson-view-service.ts#RecordLessonViewInput",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "apps/api/src/services/lesson-view-service.ts",
         "line": 9
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/review-service.ts#getDueCount",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "apps/api/src/services/review-service.ts",
         "line": 28
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/review-service.ts#getReviewQueue",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "apps/api/src/services/review-service.ts",
         "line": 21
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/review-service.ts#ReviewDeps",
-      "kind": "symbol",
+      "kind": "deps-type",
       "source": {
         "file": "apps/api/src/services/review-service.ts",
         "line": 6
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/review-service.ts#ReviewInput",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "apps/api/src/services/review-service.ts",
         "line": 16
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/review-service.ts#ReviewQueueItem",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "apps/api/src/services/review-service.ts",
         "line": 1
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:apps/api/src/services/review-service.ts#ReviewQueueResult",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "apps/api/src/services/review-service.ts",
         "line": 11
-      }
+      },
+      "layer": "api-service"
     },
     {
       "id": "symbol:packages/shared/src/content-parser.ts#BundledLesson",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/content-parser.ts",
         "line": 29
       },
+      "layer": "shared-domain",
       "declaration": "export type BundledLesson = Omit<LessonFrontmatter, 'questions'> & {\n  relativePath: string\n  body: string\n  questions: McqQuestion[]\n}"
     },
     {
       "id": "symbol:packages/shared/src/content-parser.ts#BundledTopic",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/content-parser.ts",
         "line": 24
       },
+      "layer": "shared-domain",
       "declaration": "export type BundledTopic = TopicFrontmatter & {\n  relativePath: string\n  body: string\n}"
     },
     {
       "id": "symbol:packages/shared/src/content-parser.ts#ContentBundle",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/content-parser.ts",
         "line": 35
       },
+      "layer": "shared-domain",
       "declaration": "export type ContentBundle = {\n  topics: BundledTopic[]\n  lessons: BundledLesson[]\n  questions: McqQuestion[]\n}"
     },
     {
       "id": "symbol:packages/shared/src/content-parser.ts#ContentPath",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/content-parser.ts",
         "line": 17
       },
+      "layer": "shared-domain",
       "declaration": "type ContentPath = {\n  domain: string\n  topic: string\n  filename: string\n  relativePath: string\n}"
     },
     {
       "id": "symbol:packages/shared/src/content-parser.ts#contentPathFor",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "packages/shared/src/content-parser.ts",
         "line": 45
       },
+      "layer": "shared-domain",
       "declaration": "function contentPathFor(relativePath: string): ContentPath {\n  const segments = relativePath.split('/')\n  const [domain, topic, filename] = segments\n\n  if (\n    segments.length !== 3 ||\n    !domain ||\n    !topic ||\n    !filename ||\n    relativePath.startsWith('/') ||\n    segments.some((segment) => segment === '.' || segment === '..' || segment.length === 0)\n  ) {\n    return invalidContent(relativePath, 'must be a file directly below <domain>/<topic>')\n  }\n\n  if (!domainKeySchema.safeParse(domain).success) {\n    return invalidContent(relativePath, `unknown domain directory \"${domain}\"`)\n  }\n\n  if (!filename.endsWith('.md')) {\n    return invalidContent(relativePath, 'must be a Markdown file')\n  }\n\n  return { domain, topic, filename, relativePath }\n}"
     },
     {
       "id": "symbol:packages/shared/src/content-parser.ts#createContentBundle",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "packages/shared/src/content-parser.ts",
         "line": 140
       },
+      "layer": "shared-domain",
       "declaration": "export function createContentBundle(files: readonly ParsedContentSourceFile[]): ContentBundle {\n  const topics: BundledTopic[] = []\n  const lessons: BundledLesson[] = []\n  const questions: McqQuestion[] = []\n  const topicPaths = new Map<string, string>()\n  const lessonPaths = new Map<string, string>()\n  const questionPaths = new Map<string, string>()\n\n  for (const file of [...files].sort((a, b) =>\n    a.relativePath.localeCompare(b.relativePath, 'en'),\n  )) {\n    const path = contentPathFor(file.relativePath)\n\n    if (path.filename === 'index.md') {\n      const topic = topicFor(path, file)\n      const topicKey = `${path.domain}/${topic.topic}`\n      const firstPath = topicPaths.get(topicKey)\n      if (firstPath) {\n        invalidContent(path.relativePath, `topic is also defined in \"${firstPath}\"`)\n      }\n\n      topicPaths.set(topicKey, path.relativePath)\n      topics.push(topic)\n      continue\n    }\n\n    const lesson = lessonFor(path, file)\n    const firstLessonPath = lessonPaths.get(lesson.lessonId)\n    if (firstLessonPath) {\n      invalidContent(\n        path.relativePath,\n        `lessonId \"${lesson.lessonId}\" is also defined in \"${firstLessonPath}\"`,\n      )\n    }\n\n    lessonPaths.set(lesson.lessonId, path.relativePath)\n    lessons.push(lesson)\n\n    for (const question of lesson.questions) {\n      const firstPath = questionPaths.get(question.id)\n      if (firstPath) {\n        invalidContent(\n          path.relativePath,\n          `questionId \"${question.id}\" is also defined in \"${firstPath}\"`,\n        )\n      }\n\n      questionPaths.set(question.id, path.relativePath)\n      questions.push(question)\n    }\n  }\n\n  topics.sort((a, b) => a.relativePath.localeCompare(b.relativePath, 'en'))\n  lessons.sort((a, b) => a.lessonId.localeCompare(b.lessonId, 'en'))\n\n  return { topics, lessons, questions }\n}"
     },
     {
       "id": "symbol:packages/shared/src/content-parser.ts#invalidContent",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "packages/shared/src/content-parser.ts",
         "line": 41
       },
+      "layer": "shared-domain",
       "declaration": "function invalidContent(relativePath: string, message: string): never {\n  throw new Error(`${relativePath}: ${message}`)\n}"
     },
     {
       "id": "symbol:packages/shared/src/content-parser.ts#lessonFor",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "packages/shared/src/content-parser.ts",
         "line": 90
       },
+      "layer": "shared-domain",
       "declaration": "function lessonFor(path: ContentPath, file: ParsedContentSourceFile): BundledLesson {\n  const lessonResult = validatedLessonFrontmatterSchema.safeParse(file.frontmatter)\n  if (!lessonResult.success) {\n    return invalidContent(\n      path.relativePath,\n      lessonResult.error.issues.map((issue) => issue.message).join('; '),\n    )\n  }\n\n  const lesson = lessonResult.data\n  if (lesson.domain !== path.domain) {\n    return invalidContent(\n      path.relativePath,\n      `domain frontmatter \"${lesson.domain}\" does not match directory \"${path.domain}\"`,\n    )\n  }\n  if (lesson.topic !== path.topic) {\n    return invalidContent(\n      path.relativePath,\n      `topic frontmatter \"${lesson.topic}\" does not match directory \"${path.topic}\"`,\n    )\n  }\n\n  const filenameLessonId = path.filename.slice(0, -'.md'.length)\n  if (lesson.lessonId !== filenameLessonId) {\n    return invalidContent(\n      path.relativePath,\n      `lessonId \"${lesson.lessonId}\" does not match filename \"${path.filename}\"`,\n    )\n  }\n\n  const questions = lesson.questions.map((question) => {\n    const questionResult = validatedMcqSchema.safeParse(question)\n    if (!questionResult.success) {\n      return invalidContent(\n        path.relativePath,\n        questionResult.error.issues.map((issue) => issue.message).join('; '),\n      )\n    }\n\n    return questionResult.data\n  })\n\n  return { ...lesson, questions, relativePath: path.relativePath, body: file.body }\n}"
     },
     {
       "id": "symbol:packages/shared/src/content-parser.ts#ParsedContentSourceFile",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/content-parser.ts",
         "line": 11
       },
+      "layer": "shared-domain",
       "declaration": "export type ParsedContentSourceFile = {\n  relativePath: string\n  frontmatter: unknown\n  body: string\n}"
     },
     {
       "id": "symbol:packages/shared/src/content-parser.ts#topicFor",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "packages/shared/src/content-parser.ts",
         "line": 71
       },
+      "layer": "shared-domain",
       "declaration": "function topicFor(path: ContentPath, file: ParsedContentSourceFile): BundledTopic {\n  const result = topicFrontmatterSchema.safeParse(file.frontmatter)\n  if (!result.success) {\n    return invalidContent(\n      path.relativePath,\n      result.error.issues.map((issue) => issue.message).join('; '),\n    )\n  }\n\n  if (result.data.topic !== path.topic) {\n    return invalidContent(\n      path.relativePath,\n      `topic frontmatter \"${result.data.topic}\" does not match directory \"${path.topic}\"`,\n    )\n  }\n\n  return { ...result.data, relativePath: path.relativePath, body: file.body }\n}"
     },
     {
       "id": "symbol:packages/shared/src/db/schema.ts#AnswerLog",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/db/schema.ts",
         "line": 63
       },
+      "layer": "shared-db",
       "declaration": "export type AnswerLog = typeof answerLogs.$inferSelect"
     },
     {
       "id": "symbol:packages/shared/src/db/schema.ts#answerLogs",
-      "kind": "symbol",
+      "kind": "db-table",
       "source": {
         "file": "packages/shared/src/db/schema.ts",
         "line": 15
       },
+      "layer": "shared-db",
       "declaration": "answerLogs = sqliteTable('answer_logs', {\n  id: text('id').primaryKey(),\n  userId: text('user_id').notNull(),\n  questionId: text('question_id').notNull(),\n  isCorrect: integer('is_correct', { mode: 'boolean' }).notNull(),\n  answeredAt: integer('answered_at', { mode: 'timestamp_ms' }).notNull(),\n  responseTimeMs: integer('response_time_ms'),\n})"
     },
     {
       "id": "symbol:packages/shared/src/db/schema.ts#LessonView",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/db/schema.ts",
         "line": 66
       },
+      "layer": "shared-db",
       "declaration": "export type LessonView = typeof lessonViews.$inferSelect"
     },
     {
       "id": "symbol:packages/shared/src/db/schema.ts#lessonViews",
-      "kind": "symbol",
+      "kind": "db-table",
       "source": {
         "file": "packages/shared/src/db/schema.ts",
         "line": 55
       },
+      "layer": "shared-db",
       "declaration": "lessonViews = sqliteTable('lesson_views', {\n  id: text('id').primaryKey(),\n  userId: text('user_id').notNull(),\n  lessonId: text('lesson_id').notNull(),\n  viewedAt: integer('viewed_at', { mode: 'timestamp_ms' }).notNull(),\n})"
     },
     {
       "id": "symbol:packages/shared/src/db/schema.ts#QuestionRow",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/db/schema.ts",
         "line": 64
       },
+      "layer": "shared-db",
       "declaration": "export type QuestionRow = typeof questions.$inferSelect"
     },
     {
       "id": "symbol:packages/shared/src/db/schema.ts#questions",
-      "kind": "symbol",
+      "kind": "db-table",
       "source": {
         "file": "packages/shared/src/db/schema.ts",
         "line": 25
       },
+      "layer": "shared-db",
       "declaration": "questions = sqliteTable('questions', {\n  questionId: text('question_id').primaryKey(),\n  answerIndex: integer('answer_index').notNull(),\n  // content の集計用 metadata。本文・選択肢・解説は保持しない。\n  domain: text('domain').notNull().default(''),\n  topic: text('topic').notNull().default(''),\n  lessonId: text('lesson_id').notNull().default(''),\n  // 直近 content sync に含まれる問題だけを active とする。\n  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(false),\n})"
     },
     {
       "id": "symbol:packages/shared/src/db/schema.ts#SrsState",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/db/schema.ts",
         "line": 65
       },
+      "layer": "shared-db",
       "declaration": "export type SrsState = typeof srsStates.$inferSelect"
     },
     {
       "id": "symbol:packages/shared/src/db/schema.ts#srsStates",
-      "kind": "symbol",
+      "kind": "db-table",
       "source": {
         "file": "packages/shared/src/db/schema.ts",
         "line": 37
       },
+      "layer": "shared-db",
       "declaration": "srsStates = sqliteTable(\n  'srs_states',\n  {\n    userId: text('user_id').notNull(),\n    questionId: text('question_id').notNull(),\n    ease: integer('ease').notNull(), // ease factor を 1000 倍した整数（2.5 → 2500）\n    intervalDays: integer('interval_days').notNull(),\n    dueAt: integer('due_at', { mode: 'timestamp_ms' }).notNull(),\n    reps: integer('reps').notNull(),\n    lapses: integer('lapses').notNull(),\n    version: integer('version').notNull().default(0),\n  },\n  (t) => ({\n    pk: primaryKey({ columns: [t.userId, t.questionId] }),\n  }),\n)"
     },
     {
       "id": "symbol:packages/shared/src/db/schema.ts#User",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/db/schema.ts",
         "line": 62
       },
+      "layer": "shared-db",
       "declaration": "export type User = typeof users.$inferSelect"
     },
     {
       "id": "symbol:packages/shared/src/db/schema.ts#users",
-      "kind": "symbol",
+      "kind": "db-table",
       "source": {
         "file": "packages/shared/src/db/schema.ts",
         "line": 9
       },
+      "layer": "shared-db",
       "declaration": "users = sqliteTable('users', {\n  id: text('id').primaryKey(),\n  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),\n})"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#AnalyticsHeatmapDay",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 198
       },
+      "layer": "shared-schema",
       "declaration": "export type AnalyticsHeatmapDay = z.infer<typeof analyticsHeatmapDaySchema>"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#analyticsHeatmapDaySchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 194
       },
+      "layer": "shared-schema",
       "declaration": "analyticsHeatmapDaySchema = z.object({\n  date: analyticsWeeklyDateSchema,\n  answerCount: z.number().int().nonnegative(),\n})"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#AnalyticsHeatmapResponse",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 228
       },
+      "layer": "shared-schema",
       "declaration": "export type AnalyticsHeatmapResponse = z.infer<typeof analyticsHeatmapResponseSchema>"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#analyticsHeatmapResponseSchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 200
       },
+      "layer": "shared-schema",
       "declaration": "analyticsHeatmapResponseSchema = z\n  .object({\n    days: z.array(analyticsHeatmapDaySchema).length(182),\n  })\n  .superRefine(({ days }, context) => {\n    const uniqueDates = new Set(days.map(({ date }) => date))\n    days.forEach((day, index) => {\n      const previous = days[index - 1]\n      if (\n        previous &&\n        Date.parse(`${day.date}T00:00:00Z`) - Date.parse(`${previous.date}T00:00:00Z`) !==\n          86_400_000\n      ) {\n        context.addIssue({\n          code: 'custom',\n          path: ['days', index, 'date'],\n          message: 'days must be consecutive and in ascending order',\n        })\n      }\n    })\n    if (uniqueDates.size !== days.length) {\n      context.addIssue({\n        code: 'custom',\n        path: ['days'],\n        message: 'days must contain unique dates',\n      })\n    }\n  })"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#AnalyticsRequest",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 107
       },
+      "layer": "shared-schema",
       "declaration": "export type AnalyticsRequest = z.infer<typeof analyticsRequestSchema>"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#analyticsRequestSchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 106
       },
+      "layer": "shared-schema",
       "declaration": "analyticsRequestSchema = z.object({}).strict()"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#AnalyticsSummaryResponse",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 125
       },
+      "layer": "shared-schema",
       "declaration": "export type AnalyticsSummaryResponse = z.infer<typeof analyticsSummaryResponseSchema>"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#analyticsSummaryResponseSchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 116
       },
+      "layer": "shared-schema",
       "declaration": "analyticsSummaryResponseSchema = z.object({\n  totalAnswerCount: z.number().int().nonnegative(),\n  correctAnswerRate: z.number().int().min(0).max(100),\n  averageResponseTimeMs: z.number().int().nonnegative(),\n  masteredQuestionCount: z.number().int().nonnegative(),\n  currentStreakDays: z.number().int().nonnegative(),\n  thisWeekStudyTimeMs: z.number().int().nonnegative(),\n  retentionDistribution: retentionDistributionSchema,\n})"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#analyticsWeeklyDateSchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 142
       },
+      "layer": "shared-schema",
       "declaration": "analyticsWeeklyDateSchema = z\n  .string()\n  .regex(isoCalendarDatePattern)\n  .refine(isValidCalendarDate, { message: 'date must be a valid calendar date' })"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#AnalyticsWeeklyDay",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 162
       },
+      "layer": "shared-schema",
       "declaration": "export type AnalyticsWeeklyDay = z.infer<typeof analyticsWeeklyDaySchema>"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#analyticsWeeklyDaySchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 147
       },
+      "layer": "shared-schema",
       "declaration": "analyticsWeeklyDaySchema = z\n  .object({\n    date: analyticsWeeklyDateSchema,\n    weekday: z.number().int().min(1).max(7),\n    answerCount: z.number().int().nonnegative(),\n  })\n  .superRefine(({ date, weekday }, context) => {\n    if (isValidCalendarDate(date) && (new Date(`${date}T00:00:00Z`).getUTCDay() || 7) !== weekday) {\n      context.addIssue({\n        code: 'custom',\n        path: ['weekday'],\n        message: 'weekday must match the UTC date',\n      })\n    }\n  })"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#AnalyticsWeeklyResponse",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 192
       },
+      "layer": "shared-schema",
       "declaration": "export type AnalyticsWeeklyResponse = z.infer<typeof analyticsWeeklyResponseSchema>"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#analyticsWeeklyResponseSchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 164
       },
+      "layer": "shared-schema",
       "declaration": "analyticsWeeklyResponseSchema = z\n  .object({\n    days: z.array(analyticsWeeklyDaySchema).length(7),\n  })\n  .superRefine(({ days }, context) => {\n    const uniqueDates = new Set(days.map(({ date }) => date))\n    days.forEach((day, index) => {\n      const previous = days[index - 1]\n      if (\n        previous &&\n        Date.parse(`${day.date}T00:00:00Z`) - Date.parse(`${previous.date}T00:00:00Z`) !==\n          86_400_000\n      ) {\n        context.addIssue({\n          code: 'custom',\n          path: ['days', index, 'date'],\n          message: 'days must be consecutive and in ascending order',\n        })\n      }\n    })\n    if (uniqueDates.size !== days.length) {\n      context.addIssue({\n        code: 'custom',\n        path: ['days'],\n        message: 'days must contain unique dates',\n      })\n    }\n  })"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#AnswerRequest",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 19
       },
+      "layer": "shared-schema",
       "declaration": "export type AnswerRequest = z.infer<typeof answerRequestSchema>"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#answerRequestSchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 11
       },
+      "layer": "shared-schema",
       "declaration": "answerRequestSchema = z\n  .object({\n    questionId: z.string().min(1),\n    // choices は最大6（schema/content の .max(6) と整合）。\n    selectedIndex: z.number().int().min(0).max(5),\n    responseTimeMs: z.number().int().nonnegative().optional(),\n  })\n  .strict()"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#AnswerResponse",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 26
       },
+      "layer": "shared-schema",
       "declaration": "export type AnswerResponse = z.infer<typeof answerResponseSchema>"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#answerResponseSchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 21
       },
+      "layer": "shared-schema",
       "declaration": "answerResponseSchema = z.object({\n  isCorrect: z.boolean(),\n  // choices は最大6（schema/content の .max(6) と整合）。\n  correctIndex: z.number().int().min(0).max(5),\n})"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#compareMistakeRank",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 316
       },
+      "layer": "shared-schema",
       "declaration": "export function compareMistakeRank(\n  left: Pick<MistakeItem, 'answerCount' | 'incorrectAnswerCount' | 'questionId'>,\n  right: Pick<MistakeItem, 'answerCount' | 'incorrectAnswerCount' | 'questionId'>,\n): number {\n  return (\n    right.incorrectAnswerCount / right.answerCount - left.incorrectAnswerCount / left.answerCount ||\n    right.answerCount - left.answerCount ||\n    left.questionId.localeCompare(right.questionId, 'en')\n  )\n}"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#compareRecentActivity",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 259
       },
+      "layer": "shared-schema",
       "declaration": "export function compareRecentActivity(left: RecentActivityItem, right: RecentActivityItem): number {\n  return right.occurredAt - left.occurredAt || left.id.localeCompare(right.id, 'en')\n}"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#DomainsRequest",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 104
       },
+      "layer": "shared-schema",
       "declaration": "export type DomainsRequest = z.infer<typeof domainsRequestSchema>"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#domainsRequestSchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 103
       },
+      "layer": "shared-schema",
       "declaration": "domainsRequestSchema = z.object({}).strict()"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#DomainsResponse",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 101
       },
+      "layer": "shared-schema",
       "declaration": "export type DomainsResponse = z.infer<typeof domainsResponseSchema>"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#domainsResponseSchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 87
       },
+      "layer": "shared-schema",
       "declaration": "domainsResponseSchema = z\n  .object({\n    domains: z.array(domainSummarySchema).length(4),\n  })\n  .superRefine(({ domains }, context) => {\n    const uniqueDomains = new Set(domains.map(({ domain }) => domain))\n    if (uniqueDomains.size !== domains.length) {\n      context.addIssue({\n        code: 'custom',\n        path: ['domains'],\n        message: 'domains must contain each domain exactly once',\n      })\n    }\n  })"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#DomainSummary",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 85
       },
+      "layer": "shared-schema",
       "declaration": "export type DomainSummary = z.infer<typeof domainSummarySchema>"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#domainSummarySchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 77
       },
+      "layer": "shared-schema",
       "declaration": "domainSummarySchema = z.object({\n  domain: domainKeySchema,\n  masteredQuestionCount: z.number().int().nonnegative(),\n  totalQuestionCount: z.number().int().nonnegative(),\n  masteryRate: z.number().int().min(0).max(100),\n  topicCount: z.number().int().nonnegative(),\n  lessonCount: z.number().int().nonnegative(),\n})"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#DueCountResponse",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 75
       },
+      "layer": "shared-schema",
       "declaration": "export type DueCountResponse = z.infer<typeof dueCountResponseSchema>"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#dueCountResponseSchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 72
       },
+      "layer": "shared-schema",
       "declaration": "dueCountResponseSchema = z.object({\n  dueCount: z.number().int().nonnegative(),\n})"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#isoCalendarDatePattern",
-      "kind": "symbol",
+      "kind": "constant",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 127
       },
+      "layer": "shared-schema",
       "declaration": "isoCalendarDatePattern = /^(\\d{4})-(\\d{2})-(\\d{2})$/"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#isValidCalendarDate",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 129
       },
+      "layer": "shared-schema",
       "declaration": "function isValidCalendarDate(value: string): boolean {\n  const match = isoCalendarDatePattern.exec(value)\n  if (!match) return false\n\n  const year = Number(match[1])\n  const month = Number(match[2])\n  const day = Number(match[3])\n  const isLeapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)\n  const daysInMonth = [31, isLeapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1]\n\n  return month >= 1 && month <= 12 && day >= 1 && day <= (daysInMonth ?? 0)\n}"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#LessonViewRequest",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 33
       },
+      "layer": "shared-schema",
       "declaration": "export type LessonViewRequest = z.infer<typeof lessonViewRequestSchema>"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#lessonViewRequestSchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 28
       },
+      "layer": "shared-schema",
       "declaration": "lessonViewRequestSchema = z\n  .object({\n    lessonId: z.string().min(1),\n  })\n  .strict()"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#LessonViewResponse",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 38
       },
+      "layer": "shared-schema",
       "declaration": "export type LessonViewResponse = z.infer<typeof lessonViewResponseSchema>"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#lessonViewResponseSchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 35
       },
+      "layer": "shared-schema",
       "declaration": "lessonViewResponseSchema = z.object({\n  recorded: z.literal(true),\n})"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#MistakeItem",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 313
       },
+      "layer": "shared-schema",
       "declaration": "export type MistakeItem = z.infer<typeof mistakeItemSchema>"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#mistakeItemSchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 290
       },
+      "layer": "shared-schema",
       "declaration": "mistakeItemSchema = z\n  .object({\n    questionId: z.string().min(1),\n    incorrectRate: z.number().min(0).max(100),\n    answerCount: z.number().int().min(2),\n    incorrectAnswerCount: z.number().int().nonnegative(),\n  })\n  .superRefine(({ answerCount, incorrectAnswerCount, incorrectRate }, context) => {\n    if (incorrectRate !== Math.round((incorrectAnswerCount / answerCount) * 1000) / 10) {\n      context.addIssue({\n        code: 'custom',\n        path: ['incorrectRate'],\n        message: 'incorrectRate must match the counts rounded to one decimal place',\n      })\n    }\n    if (incorrectAnswerCount > answerCount) {\n      context.addIssue({\n        code: 'custom',\n        path: ['incorrectAnswerCount'],\n        message: 'incorrectAnswerCount must not exceed answerCount',\n      })\n    }\n  })"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#MistakesResponse",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 343
       },
+      "layer": "shared-schema",
       "declaration": "export type MistakesResponse = z.infer<typeof mistakesResponseSchema>"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#mistakesResponseSchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 327
       },
+      "layer": "shared-schema",
       "declaration": "mistakesResponseSchema = z\n  .object({\n    items: z.array(mistakeItemSchema).max(10),\n  })\n  .superRefine(({ items }, context) => {\n    items.forEach((item, index) => {\n      const previous = items[index - 1]\n      if (previous && compareMistakeRank(previous, item) > 0) {\n        context.addIssue({\n          code: 'custom',\n          path: ['items', index],\n          message: 'items must follow mistake ranking order',\n        })\n      }\n    })\n  })"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#RateLimitedErrorResponse",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 46
       },
+      "layer": "shared-schema",
       "declaration": "export type RateLimitedErrorResponse = z.infer<typeof rateLimitedErrorResponseSchema>"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#rateLimitedErrorResponseSchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 40
       },
+      "layer": "shared-schema",
       "declaration": "rateLimitedErrorResponseSchema = z.object({\n  error: z.object({\n    code: z.literal('RATE_LIMITED'),\n    message: z.literal('Too Many Requests'),\n  }),\n})"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#RateLimitUnavailableErrorResponse",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 54
       },
+      "layer": "shared-schema",
       "declaration": "export type RateLimitUnavailableErrorResponse = z.infer<\n  typeof rateLimitUnavailableErrorResponseSchema\n>"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#rateLimitUnavailableErrorResponseSchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 48
       },
+      "layer": "shared-schema",
       "declaration": "rateLimitUnavailableErrorResponseSchema = z.object({\n  error: z.object({\n    code: z.literal('RATE_LIMIT_UNAVAILABLE'),\n    message: z.literal('Rate limit unavailable'),\n  }),\n})"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#RecentActivityAnswerRecorded",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 251
       },
+      "layer": "shared-schema",
       "declaration": "export type RecentActivityAnswerRecorded = z.infer<typeof recentActivityAnswerRecordedSchema>"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#recentActivityAnswerRecordedSchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 243
       },
+      "layer": "shared-schema",
       "declaration": "recentActivityAnswerRecordedSchema = recentActivityBaseSchema\n  .extend({\n    type: z.literal('answer_recorded'),\n    questionId: z.string().min(1),\n    lessonId: z.string().min(1).nullable(),\n    isCorrect: z.boolean(),\n  })\n  .strict()"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#recentActivityBaseSchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 230
       },
+      "layer": "shared-schema",
       "declaration": "recentActivityBaseSchema = z.object({\n  id: z.string().min(1),\n  occurredAt: z.number().int().nonnegative(),\n})"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#RecentActivityItem",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 257
       },
+      "layer": "shared-schema",
       "declaration": "export type RecentActivityItem = z.infer<typeof recentActivityItemSchema>"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#recentActivityItemSchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 253
       },
+      "layer": "shared-schema",
       "declaration": "recentActivityItemSchema = z.discriminatedUnion('type', [\n  recentActivityLessonViewedSchema,\n  recentActivityAnswerRecordedSchema,\n])"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#RecentActivityLessonViewed",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 241
       },
+      "layer": "shared-schema",
       "declaration": "export type RecentActivityLessonViewed = z.infer<typeof recentActivityLessonViewedSchema>"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#recentActivityLessonViewedSchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 235
       },
+      "layer": "shared-schema",
       "declaration": "recentActivityLessonViewedSchema = recentActivityBaseSchema\n  .extend({\n    type: z.literal('lesson_viewed'),\n    lessonId: z.string().min(1),\n  })\n  .strict()"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#RecentActivityResponse",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 288
       },
+      "layer": "shared-schema",
       "declaration": "export type RecentActivityResponse = z.infer<typeof recentActivityResponseSchema>"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#recentActivityResponseSchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 263
       },
+      "layer": "shared-schema",
       "declaration": "recentActivityResponseSchema = z\n  .object({\n    items: z.array(recentActivityItemSchema).max(10),\n  })\n  .superRefine(({ items }, context) => {\n    const uniqueIds = new Set(items.map(({ id }) => id))\n    if (uniqueIds.size !== items.length) {\n      context.addIssue({\n        code: 'custom',\n        path: ['items'],\n        message: 'items must contain unique IDs',\n      })\n    }\n\n    items.forEach((item, index) => {\n      const previous = items[index - 1]\n      if (previous && compareRecentActivity(previous, item) > 0) {\n        context.addIssue({\n          code: 'custom',\n          path: ['items', index],\n          message: 'items must follow occurredAt descending and ID ascending order',\n        })\n      }\n    })\n  })"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#RetentionDistribution",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 114
       },
+      "layer": "shared-schema",
       "declaration": "export type RetentionDistribution = z.infer<typeof retentionDistributionSchema>"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#retentionDistributionSchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 109
       },
+      "layer": "shared-schema",
       "declaration": "retentionDistributionSchema = z.object({\n  masteredCount: z.number().int().nonnegative(),\n  learningCount: z.number().int().nonnegative(),\n  dueCount: z.number().int().nonnegative(),\n})"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#ReviewQueueResponse",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 70
       },
+      "layer": "shared-schema",
       "declaration": "export type ReviewQueueResponse = z.infer<typeof reviewQueueResponseSchema>"
     },
     {
       "id": "symbol:packages/shared/src/schema/api.ts#reviewQueueResponseSchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
         "line": 58
       },
+      "layer": "shared-schema",
       "declaration": "reviewQueueResponseSchema = z.object({\n  hasMore: z.boolean(),\n  items: z\n    .array(\n      z.object({\n        questionId: z.string().min(1),\n        // Unix epoch milliseconds（SRS の dueAt と同じ表現）。\n        dueAt: z.number().int().nonnegative(),\n      }),\n    )\n    .max(20),\n})"
     },
     {
       "id": "symbol:packages/shared/src/schema/content.ts#DOMAIN_LABELS",
-      "kind": "symbol",
+      "kind": "constant",
       "source": {
         "file": "packages/shared/src/schema/content.ts",
         "line": 12
       },
+      "layer": "shared-schema",
       "declaration": "DOMAIN_LABELS: Record<DomainKey, { label: string; order: number }> = {\n  security: { label: 'セキュリティ', order: 1 },\n  frontend: { label: 'フロントエンド', order: 2 },\n  backend: { label: 'バックエンド', order: 3 },\n  architecture: { label: 'アーキテクチャ', order: 4 },\n}"
     },
     {
       "id": "symbol:packages/shared/src/schema/content.ts#DomainKey",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/content.ts",
         "line": 10
       },
+      "layer": "shared-schema",
       "declaration": "export type DomainKey = z.infer<typeof domainKeySchema>"
     },
     {
       "id": "symbol:packages/shared/src/schema/content.ts#domainKeySchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/content.ts",
         "line": 9
       },
+      "layer": "shared-schema",
       "declaration": "domainKeySchema = z.enum(['security', 'frontend', 'backend', 'architecture'])"
     },
     {
       "id": "symbol:packages/shared/src/schema/content.ts#LessonFrontmatter",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/content.ts",
         "line": 56
       },
+      "layer": "shared-schema",
       "declaration": "export type LessonFrontmatter = z.infer<typeof lessonFrontmatterSchema>"
     },
     {
       "id": "symbol:packages/shared/src/schema/content.ts#lessonFrontmatterSchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/content.ts",
         "line": 48
       },
+      "layer": "shared-schema",
       "declaration": "lessonFrontmatterSchema = z.object({\n  domain: domainKeySchema,\n  topic: z.string().min(1),\n  lessonId: lessonIdSchema,\n  title: z.string().min(1),\n  estimatedMinutes: z.number().int().positive(),\n  questions: z.array(questionSchema).min(1),\n})"
     },
     {
       "id": "symbol:packages/shared/src/schema/content.ts#lessonIdSchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/content.ts",
         "line": 26
       },
+      "layer": "shared-schema",
       "declaration": "lessonIdSchema = z\n  .string()\n  .regex(/^[a-z0-9-]+$/, 'lessonId must contain only lowercase letters, numbers, and hyphens')"
     },
     {
       "id": "symbol:packages/shared/src/schema/content.ts#McqQuestion",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/content.ts",
         "line": 42
       },
+      "layer": "shared-schema",
       "declaration": "export type McqQuestion = z.infer<typeof mcqQuestionSchema>"
     },
     {
       "id": "symbol:packages/shared/src/schema/content.ts#mcqQuestionSchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/content.ts",
         "line": 34
       },
+      "layer": "shared-schema",
       "declaration": "mcqQuestionSchema = z.object({\n  id: questionIdSchema,\n  type: z.literal('mcq'),\n  prompt: z.string().min(1),\n  choices: z.array(z.string().min(1)).min(2).max(6),\n  answerIndex: z.number().int().nonnegative(),\n  explanation: z.string().min(1),\n})"
     },
     {
       "id": "symbol:packages/shared/src/schema/content.ts#Question",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/content.ts",
         "line": 46
       },
+      "layer": "shared-schema",
       "declaration": "export type Question = z.infer<typeof questionSchema>"
     },
     {
       "id": "symbol:packages/shared/src/schema/content.ts#questionIdSchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/content.ts",
         "line": 30
       },
+      "layer": "shared-schema",
       "declaration": "questionIdSchema = z\n  .string()\n  .regex(/^[a-z0-9-]+$/, 'questionId must contain only lowercase letters, numbers, and hyphens')"
     },
     {
       "id": "symbol:packages/shared/src/schema/content.ts#questionSchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/content.ts",
         "line": 45
       },
+      "layer": "shared-schema",
       "declaration": "questionSchema = z.discriminatedUnion('type', [mcqQuestionSchema])"
     },
     {
       "id": "symbol:packages/shared/src/schema/content.ts#TopicFrontmatter",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/content.ts",
         "line": 24
       },
+      "layer": "shared-schema",
       "declaration": "export type TopicFrontmatter = z.infer<typeof topicFrontmatterSchema>"
     },
     {
       "id": "symbol:packages/shared/src/schema/content.ts#topicFrontmatterSchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/content.ts",
         "line": 19
       },
+      "layer": "shared-schema",
       "declaration": "topicFrontmatterSchema = z.object({\n  topic: z.string().min(1),\n  title: z.string().min(1),\n  order: z.number().int().nonnegative(),\n})"
     },
     {
       "id": "symbol:packages/shared/src/schema/content.ts#validatedLessonFrontmatterSchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/content.ts",
         "line": 67
       },
+      "layer": "shared-schema",
       "declaration": "validatedLessonFrontmatterSchema = lessonFrontmatterSchema.superRefine(\n  (lesson, ctx) => {\n    const questionIdPattern = new RegExp(`^${lesson.lessonId}-q\\\\d+$`)\n\n    for (const [i, question] of lesson.questions.entries()) {\n      if (!questionIdPattern.test(question.id)) {\n        ctx.addIssue({\n          code: z.ZodIssueCode.custom,\n          message: `questionId must match pattern ${lesson.lessonId}-q<number>`,\n          path: ['questions', i, 'id'],\n        })\n      }\n    }\n  },\n)"
     },
     {
       "id": "symbol:packages/shared/src/schema/content.ts#validatedMcqSchema",
-      "kind": "symbol",
+      "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/content.ts",
         "line": 59
       },
+      "layer": "shared-schema",
       "declaration": "validatedMcqSchema = mcqQuestionSchema.refine(\n  (q) => q.answerIndex < q.choices.length,\n  {\n    message: 'answerIndex must point to an existing choice',\n    path: ['answerIndex'],\n  },\n)"
     },
     {
       "id": "symbol:packages/shared/src/srs/sm2.ts#DAY_MS",
-      "kind": "symbol",
+      "kind": "constant",
       "source": {
         "file": "packages/shared/src/srs/sm2.ts",
         "line": 8
       },
+      "layer": "shared-domain",
       "declaration": "DAY_MS = 24 * 60 * 60 * 1000"
     },
     {
       "id": "symbol:packages/shared/src/srs/sm2.ts#INITIAL_EASE",
-      "kind": "symbol",
+      "kind": "constant",
       "source": {
         "file": "packages/shared/src/srs/sm2.ts",
         "line": 10
       },
+      "layer": "shared-domain",
       "declaration": "INITIAL_EASE = 2500"
     },
     {
       "id": "symbol:packages/shared/src/srs/sm2.ts#initialSrs",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "packages/shared/src/srs/sm2.ts",
         "line": 27
       },
+      "layer": "shared-domain",
       "declaration": "export function initialSrs(): SrsInput {\n  return { ease: INITIAL_EASE, intervalDays: 0, reps: 0, lapses: 0 }\n}"
     },
     {
       "id": "symbol:packages/shared/src/srs/sm2.ts#isDue",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "packages/shared/src/srs/sm2.ts",
         "line": 75
       },
+      "layer": "shared-domain",
       "declaration": "export function isDue(dueAt: number, now: number): boolean {\n  return dueAt <= now\n}"
     },
     {
       "id": "symbol:packages/shared/src/srs/sm2.ts#MIN_EASE",
-      "kind": "symbol",
+      "kind": "constant",
       "source": {
         "file": "packages/shared/src/srs/sm2.ts",
         "line": 9
       },
+      "layer": "shared-domain",
       "declaration": "MIN_EASE = 1300"
     },
     {
       "id": "symbol:packages/shared/src/srs/sm2.ts#reviewSrs",
-      "kind": "symbol",
+      "kind": "function",
       "source": {
         "file": "packages/shared/src/srs/sm2.ts",
         "line": 39
       },
+      "layer": "shared-domain",
       "declaration": "export function reviewSrs(state: SrsInput, correct: boolean, now: number): SrsResult {\n  if (!correct) {\n    // 不正解: reps をリセットし、翌日に再出題。ease は下限まで下げる。\n    const ease = Math.max(MIN_EASE, state.ease - 200)\n    return {\n      ease,\n      intervalDays: 1,\n      reps: 0,\n      lapses: state.lapses + 1,\n      dueAt: now + 1 * DAY_MS,\n    }\n  }\n\n  const reps = state.reps + 1\n  let intervalDays: number\n  if (reps === 1) {\n    intervalDays = 1\n  } else if (reps === 2) {\n    intervalDays = 6\n  } else {\n    intervalDays = Math.round(state.intervalDays * (state.ease / 1000))\n  }\n\n  // 正解時は ease を微増(SM-2 の grade=4 相当)。\n  const ease = Math.max(MIN_EASE, state.ease + 0)\n\n  return {\n    ease,\n    intervalDays,\n    reps,\n    lapses: state.lapses,\n    dueAt: now + intervalDays * DAY_MS,\n  }\n}"
     },
     {
       "id": "symbol:packages/shared/src/srs/sm2.ts#SrsInput",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/srs/sm2.ts",
         "line": 12
       },
+      "layer": "shared-domain",
       "declaration": "export type SrsInput = {\n  ease: number\n  intervalDays: number\n  reps: number\n  lapses: number\n}"
     },
     {
       "id": "symbol:packages/shared/src/srs/sm2.ts#SrsResult",
-      "kind": "symbol",
+      "kind": "type",
       "source": {
         "file": "packages/shared/src/srs/sm2.ts",
         "line": 19
       },
+      "layer": "shared-domain",
       "declaration": "export type SrsResult = {\n  ease: number\n  intervalDays: number\n  reps: number\n  lapses: number\n  dueAt: number\n}"
     }
   ],
@@ -2272,6 +2670,33 @@
     },
     {
       "from": "apps/api/src/content-sync.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/content-parser.ts#createContentBundle",
+      "source": {
+        "file": "apps/api/src/content-sync.ts",
+        "line": 3
+      }
+    },
+    {
+      "from": "apps/api/src/content-sync.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/content-parser.ts#ParsedContentSourceFile",
+      "source": {
+        "file": "apps/api/src/content-sync.ts",
+        "line": 3
+      }
+    },
+    {
+      "from": "apps/api/src/content-sync.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#DomainKey",
+      "source": {
+        "file": "apps/api/src/content-sync.ts",
+        "line": 3
+      }
+    },
+    {
+      "from": "apps/api/src/content-sync.ts",
       "relation": "imports",
       "to": "packages/shared/src/index.ts",
       "source": {
@@ -2282,39 +2707,12 @@
       "typeOnly": false
     },
     {
-      "from": "apps/api/src/content-sync.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/content-parser.ts#createContentBundle",
-      "source": {
-        "file": "apps/api/src/content-sync.ts",
-        "line": 3
-      }
-    },
-    {
-      "from": "apps/api/src/content-sync.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/content-parser.ts#ParsedContentSourceFile",
-      "source": {
-        "file": "apps/api/src/content-sync.ts",
-        "line": 3
-      }
-    },
-    {
-      "from": "apps/api/src/content-sync.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/content.ts#DomainKey",
-      "source": {
-        "file": "apps/api/src/content-sync.ts",
-        "line": 3
-      }
-    },
-    {
       "from": "apps/api/src/dal/activity-repository.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/dal/activity-repository.ts#createActivityDeps",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#RecentActivityItem",
       "source": {
         "file": "apps/api/src/dal/activity-repository.ts",
-        "line": 8
+        "line": 4
       }
     },
     {
@@ -2340,42 +2738,6 @@
       "typeOnly": false
     },
     {
-      "from": "apps/api/src/dal/activity-repository.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#RecentActivityItem",
-      "source": {
-        "file": "apps/api/src/dal/activity-repository.ts",
-        "line": 4
-      }
-    },
-    {
-      "from": "apps/api/src/dal/analytics-repository.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/dal/analytics-repository.ts#AnalyticsRepositoryOptions",
-      "source": {
-        "file": "apps/api/src/dal/analytics-repository.ts",
-        "line": 15
-      }
-    },
-    {
-      "from": "apps/api/src/dal/analytics-repository.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/dal/analytics-repository.ts#createAnalyticsDeps",
-      "source": {
-        "file": "apps/api/src/dal/analytics-repository.ts",
-        "line": 31
-      }
-    },
-    {
-      "from": "apps/api/src/dal/analytics-repository.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/dal/analytics-repository.ts#toNumber",
-      "source": {
-        "file": "apps/api/src/dal/analytics-repository.ts",
-        "line": 27
-      }
-    },
-    {
       "from": "apps/api/src/dal/analytics-repository.ts",
       "relation": "imports",
       "to": "apps/api/src/services/analytics-service.ts",
@@ -2396,15 +2758,6 @@
       },
       "specifier": "@tsl/shared",
       "typeOnly": false
-    },
-    {
-      "from": "apps/api/src/dal/answer-repository.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/dal/answer-repository.ts#createAnswerDeps",
-      "source": {
-        "file": "apps/api/src/dal/answer-repository.ts",
-        "line": 9
-      }
     },
     {
       "from": "apps/api/src/dal/answer-repository.ts",
@@ -2441,11 +2794,11 @@
     },
     {
       "from": "apps/api/src/dal/domains-repository.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/dal/domains-repository.ts#createDomainsDeps",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#domainKeySchema",
       "source": {
         "file": "apps/api/src/dal/domains-repository.ts",
-        "line": 9
+        "line": 4
       }
     },
     {
@@ -2471,24 +2824,6 @@
       "typeOnly": false
     },
     {
-      "from": "apps/api/src/dal/domains-repository.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/content.ts#domainKeySchema",
-      "source": {
-        "file": "apps/api/src/dal/domains-repository.ts",
-        "line": 4
-      }
-    },
-    {
-      "from": "apps/api/src/dal/lesson-view-repository.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/dal/lesson-view-repository.ts#createLessonViewDeps",
-      "source": {
-        "file": "apps/api/src/dal/lesson-view-repository.ts",
-        "line": 7
-      }
-    },
-    {
       "from": "apps/api/src/dal/lesson-view-repository.ts",
       "relation": "imports",
       "to": "apps/api/src/services/lesson-view-service.ts",
@@ -2512,15 +2847,6 @@
     },
     {
       "from": "apps/api/src/dal/review-repository.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/dal/review-repository.ts#createReviewDeps",
-      "source": {
-        "file": "apps/api/src/dal/review-repository.ts",
-        "line": 10
-      }
-    },
-    {
-      "from": "apps/api/src/dal/review-repository.ts",
       "relation": "imports",
       "to": "apps/api/src/services/review-service.ts",
       "source": {
@@ -2540,6 +2866,33 @@
       },
       "specifier": "@tsl/shared",
       "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/dev-seed.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/srs/sm2.ts#DAY_MS",
+      "source": {
+        "file": "apps/api/src/dev-seed.ts",
+        "line": 1
+      }
+    },
+    {
+      "from": "apps/api/src/dev-seed.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/srs/sm2.ts#initialSrs",
+      "source": {
+        "file": "apps/api/src/dev-seed.ts",
+        "line": 1
+      }
+    },
+    {
+      "from": "apps/api/src/dev-seed.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/srs/sm2.ts#reviewSrs",
+      "source": {
+        "file": "apps/api/src/dev-seed.ts",
+        "line": 1
+      }
     },
     {
       "from": "apps/api/src/dev-seed.ts",
@@ -2573,33 +2926,6 @@
       },
       "specifier": "@tsl/shared",
       "typeOnly": false
-    },
-    {
-      "from": "apps/api/src/dev-seed.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/srs/sm2.ts#DAY_MS",
-      "source": {
-        "file": "apps/api/src/dev-seed.ts",
-        "line": 1
-      }
-    },
-    {
-      "from": "apps/api/src/dev-seed.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/srs/sm2.ts#initialSrs",
-      "source": {
-        "file": "apps/api/src/dev-seed.ts",
-        "line": 1
-      }
-    },
-    {
-      "from": "apps/api/src/dev-seed.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/srs/sm2.ts#reviewSrs",
-      "source": {
-        "file": "apps/api/src/dev-seed.ts",
-        "line": 1
-      }
     },
     {
       "from": "apps/api/src/index.ts",
@@ -2713,6 +3039,24 @@
     },
     {
       "from": "apps/api/src/persistent-write-rate-limit-guard.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#RateLimitedErrorResponse",
+      "source": {
+        "file": "apps/api/src/persistent-write-rate-limit-guard.ts",
+        "line": 1
+      }
+    },
+    {
+      "from": "apps/api/src/persistent-write-rate-limit-guard.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#RateLimitUnavailableErrorResponse",
+      "source": {
+        "file": "apps/api/src/persistent-write-rate-limit-guard.ts",
+        "line": 1
+      }
+    },
+    {
+      "from": "apps/api/src/persistent-write-rate-limit-guard.ts",
       "relation": "imports",
       "to": "apps/api/src/env.ts",
       "source": {
@@ -2756,24 +3100,6 @@
       "typeOnly": true
     },
     {
-      "from": "apps/api/src/persistent-write-rate-limit-guard.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#RateLimitedErrorResponse",
-      "source": {
-        "file": "apps/api/src/persistent-write-rate-limit-guard.ts",
-        "line": 1
-      }
-    },
-    {
-      "from": "apps/api/src/persistent-write-rate-limit-guard.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#RateLimitUnavailableErrorResponse",
-      "source": {
-        "file": "apps/api/src/persistent-write-rate-limit-guard.ts",
-        "line": 1
-      }
-    },
-    {
       "from": "apps/api/src/routes/activity.ts",
       "relation": "calls-symbol",
       "to": "symbol:apps/api/src/dal/activity-repository.ts#createActivityDeps",
@@ -2789,6 +3115,24 @@
       "source": {
         "file": "apps/api/src/routes/activity.ts",
         "line": 14
+      }
+    },
+    {
+      "from": "apps/api/src/routes/activity.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#analyticsRequestSchema",
+      "source": {
+        "file": "apps/api/src/routes/activity.ts",
+        "line": 2
+      }
+    },
+    {
+      "from": "apps/api/src/routes/activity.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#RecentActivityResponse",
+      "source": {
+        "file": "apps/api/src/routes/activity.ts",
+        "line": 2
       }
     },
     {
@@ -2836,24 +3180,6 @@
       "typeOnly": false
     },
     {
-      "from": "apps/api/src/routes/activity.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#analyticsRequestSchema",
-      "source": {
-        "file": "apps/api/src/routes/activity.ts",
-        "line": 2
-      }
-    },
-    {
-      "from": "apps/api/src/routes/activity.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#RecentActivityResponse",
-      "source": {
-        "file": "apps/api/src/routes/activity.ts",
-        "line": 2
-      }
-    },
-    {
       "from": "apps/api/src/routes/analytics.ts",
       "relation": "calls-symbol",
       "to": "symbol:apps/api/src/dal/analytics-repository.ts#createAnalyticsDeps",
@@ -2896,6 +3222,51 @@
       "source": {
         "file": "apps/api/src/routes/analytics.ts",
         "line": 36
+      }
+    },
+    {
+      "from": "apps/api/src/routes/analytics.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsHeatmapResponse",
+      "source": {
+        "file": "apps/api/src/routes/analytics.ts",
+        "line": 3
+      }
+    },
+    {
+      "from": "apps/api/src/routes/analytics.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#analyticsRequestSchema",
+      "source": {
+        "file": "apps/api/src/routes/analytics.ts",
+        "line": 7
+      }
+    },
+    {
+      "from": "apps/api/src/routes/analytics.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsSummaryResponse",
+      "source": {
+        "file": "apps/api/src/routes/analytics.ts",
+        "line": 4
+      }
+    },
+    {
+      "from": "apps/api/src/routes/analytics.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsWeeklyResponse",
+      "source": {
+        "file": "apps/api/src/routes/analytics.ts",
+        "line": 5
+      }
+    },
+    {
+      "from": "apps/api/src/routes/analytics.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#MistakesResponse",
+      "source": {
+        "file": "apps/api/src/routes/analytics.ts",
+        "line": 6
       }
     },
     {
@@ -2954,51 +3325,6 @@
       "typeOnly": false
     },
     {
-      "from": "apps/api/src/routes/analytics.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsHeatmapResponse",
-      "source": {
-        "file": "apps/api/src/routes/analytics.ts",
-        "line": 3
-      }
-    },
-    {
-      "from": "apps/api/src/routes/analytics.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#analyticsRequestSchema",
-      "source": {
-        "file": "apps/api/src/routes/analytics.ts",
-        "line": 7
-      }
-    },
-    {
-      "from": "apps/api/src/routes/analytics.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsSummaryResponse",
-      "source": {
-        "file": "apps/api/src/routes/analytics.ts",
-        "line": 4
-      }
-    },
-    {
-      "from": "apps/api/src/routes/analytics.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsWeeklyResponse",
-      "source": {
-        "file": "apps/api/src/routes/analytics.ts",
-        "line": 5
-      }
-    },
-    {
-      "from": "apps/api/src/routes/analytics.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#MistakesResponse",
-      "source": {
-        "file": "apps/api/src/routes/analytics.ts",
-        "line": 6
-      }
-    },
-    {
       "from": "apps/api/src/routes/answers.ts",
       "relation": "calls-symbol",
       "to": "symbol:apps/api/src/dal/answer-repository.ts#createAnswerDeps",
@@ -3014,6 +3340,24 @@
       "source": {
         "file": "apps/api/src/routes/answers.ts",
         "line": 31
+      }
+    },
+    {
+      "from": "apps/api/src/routes/answers.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#answerRequestSchema",
+      "source": {
+        "file": "apps/api/src/routes/answers.ts",
+        "line": 2
+      }
+    },
+    {
+      "from": "apps/api/src/routes/answers.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#AnswerResponse",
+      "source": {
+        "file": "apps/api/src/routes/answers.ts",
+        "line": 2
       }
     },
     {
@@ -3094,24 +3438,6 @@
       "typeOnly": false
     },
     {
-      "from": "apps/api/src/routes/answers.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#answerRequestSchema",
-      "source": {
-        "file": "apps/api/src/routes/answers.ts",
-        "line": 2
-      }
-    },
-    {
-      "from": "apps/api/src/routes/answers.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#AnswerResponse",
-      "source": {
-        "file": "apps/api/src/routes/answers.ts",
-        "line": 2
-      }
-    },
-    {
       "from": "apps/api/src/routes/dashboard.ts",
       "relation": "calls-symbol",
       "to": "symbol:apps/api/src/dal/review-repository.ts#createReviewDeps",
@@ -3127,6 +3453,15 @@
       "source": {
         "file": "apps/api/src/routes/dashboard.ts",
         "line": 10
+      }
+    },
+    {
+      "from": "apps/api/src/routes/dashboard.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#DueCountResponse",
+      "source": {
+        "file": "apps/api/src/routes/dashboard.ts",
+        "line": 1
       }
     },
     {
@@ -3174,15 +3509,6 @@
       "typeOnly": true
     },
     {
-      "from": "apps/api/src/routes/dashboard.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#DueCountResponse",
-      "source": {
-        "file": "apps/api/src/routes/dashboard.ts",
-        "line": 1
-      }
-    },
-    {
       "from": "apps/api/src/routes/domains.ts",
       "relation": "calls-symbol",
       "to": "symbol:apps/api/src/dal/domains-repository.ts#createDomainsDeps",
@@ -3198,6 +3524,24 @@
       "source": {
         "file": "apps/api/src/routes/domains.ts",
         "line": 14
+      }
+    },
+    {
+      "from": "apps/api/src/routes/domains.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#domainsRequestSchema",
+      "source": {
+        "file": "apps/api/src/routes/domains.ts",
+        "line": 2
+      }
+    },
+    {
+      "from": "apps/api/src/routes/domains.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#DomainsResponse",
+      "source": {
+        "file": "apps/api/src/routes/domains.ts",
+        "line": 2
       }
     },
     {
@@ -3245,24 +3589,6 @@
       "typeOnly": false
     },
     {
-      "from": "apps/api/src/routes/domains.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#domainsRequestSchema",
-      "source": {
-        "file": "apps/api/src/routes/domains.ts",
-        "line": 2
-      }
-    },
-    {
-      "from": "apps/api/src/routes/domains.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#DomainsResponse",
-      "source": {
-        "file": "apps/api/src/routes/domains.ts",
-        "line": 2
-      }
-    },
-    {
       "from": "apps/api/src/routes/lesson-views.ts",
       "relation": "calls-symbol",
       "to": "symbol:apps/api/src/dal/lesson-view-repository.ts#createLessonViewDeps",
@@ -3278,6 +3604,24 @@
       "source": {
         "file": "apps/api/src/routes/lesson-views.ts",
         "line": 31
+      }
+    },
+    {
+      "from": "apps/api/src/routes/lesson-views.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#lessonViewRequestSchema",
+      "source": {
+        "file": "apps/api/src/routes/lesson-views.ts",
+        "line": 2
+      }
+    },
+    {
+      "from": "apps/api/src/routes/lesson-views.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#LessonViewResponse",
+      "source": {
+        "file": "apps/api/src/routes/lesson-views.ts",
+        "line": 2
       }
     },
     {
@@ -3358,24 +3702,6 @@
       "typeOnly": false
     },
     {
-      "from": "apps/api/src/routes/lesson-views.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#lessonViewRequestSchema",
-      "source": {
-        "file": "apps/api/src/routes/lesson-views.ts",
-        "line": 2
-      }
-    },
-    {
-      "from": "apps/api/src/routes/lesson-views.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#LessonViewResponse",
-      "source": {
-        "file": "apps/api/src/routes/lesson-views.ts",
-        "line": 2
-      }
-    },
-    {
       "from": "apps/api/src/routes/review.ts",
       "relation": "calls-symbol",
       "to": "symbol:apps/api/src/dal/review-repository.ts#createReviewDeps",
@@ -3391,6 +3717,24 @@
       "source": {
         "file": "apps/api/src/routes/review.ts",
         "line": 10
+      }
+    },
+    {
+      "from": "apps/api/src/routes/review.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#ReviewQueueResponse",
+      "source": {
+        "file": "apps/api/src/routes/review.ts",
+        "line": 1
+      }
+    },
+    {
+      "from": "apps/api/src/routes/review.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#reviewQueueResponseSchema",
+      "source": {
+        "file": "apps/api/src/routes/review.ts",
+        "line": 1
       }
     },
     {
@@ -3438,64 +3782,8 @@
       "typeOnly": false
     },
     {
-      "from": "apps/api/src/routes/review.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#ReviewQueueResponse",
-      "source": {
-        "file": "apps/api/src/routes/review.ts",
-        "line": 1
-      }
-    },
-    {
-      "from": "apps/api/src/routes/review.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#reviewQueueResponseSchema",
-      "source": {
-        "file": "apps/api/src/routes/review.ts",
-        "line": 1
-      }
-    },
-    {
       "from": "apps/api/src/services/activity-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/activity-service.ts#ActivityDeps",
-      "source": {
-        "file": "apps/api/src/services/activity-service.ts",
-        "line": 9
-      }
-    },
-    {
-      "from": "apps/api/src/services/activity-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/activity-service.ts#ActivityInput",
-      "source": {
-        "file": "apps/api/src/services/activity-service.ts",
-        "line": 13
-      }
-    },
-    {
-      "from": "apps/api/src/services/activity-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/activity-service.ts#getRecentActivity",
-      "source": {
-        "file": "apps/api/src/services/activity-service.ts",
-        "line": 17
-      }
-    },
-    {
-      "from": "apps/api/src/services/activity-service.ts",
-      "relation": "imports",
-      "to": "packages/shared/src/index.ts",
-      "source": {
-        "file": "apps/api/src/services/activity-service.ts",
-        "line": 1
-      },
-      "specifier": "@tsl/shared",
-      "typeOnly": false
-    },
-    {
-      "from": "apps/api/src/services/activity-service.ts",
-      "relation": "uses-symbol",
+      "relation": "imports-symbol",
       "to": "symbol:packages/shared/src/schema/api.ts#compareRecentActivity",
       "source": {
         "file": "apps/api/src/services/activity-service.ts",
@@ -3504,7 +3792,7 @@
     },
     {
       "from": "apps/api/src/services/activity-service.ts",
-      "relation": "uses-symbol",
+      "relation": "imports-symbol",
       "to": "symbol:packages/shared/src/schema/api.ts#RecentActivityItem",
       "source": {
         "file": "apps/api/src/services/activity-service.ts",
@@ -3513,7 +3801,7 @@
     },
     {
       "from": "apps/api/src/services/activity-service.ts",
-      "relation": "uses-symbol",
+      "relation": "imports-symbol",
       "to": "symbol:packages/shared/src/schema/api.ts#RecentActivityResponse",
       "source": {
         "file": "apps/api/src/services/activity-service.ts",
@@ -3521,165 +3809,59 @@
       }
     },
     {
+      "from": "apps/api/src/services/activity-service.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/api/src/services/activity-service.ts",
+        "line": 1
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": false
+    },
+    {
       "from": "apps/api/src/services/analytics-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/analytics-service.ts#AnalyticsDeps",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsHeatmapResponse",
       "source": {
         "file": "apps/api/src/services/analytics-service.ts",
-        "line": 50
+        "line": 2
       }
     },
     {
       "from": "apps/api/src/services/analytics-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/analytics-service.ts#AnalyticsHeatmapRow",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsSummaryResponse",
       "source": {
         "file": "apps/api/src/services/analytics-service.ts",
-        "line": 39
+        "line": 3
       }
     },
     {
       "from": "apps/api/src/services/analytics-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/analytics-service.ts#AnalyticsInput",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsWeeklyResponse",
       "source": {
         "file": "apps/api/src/services/analytics-service.ts",
-        "line": 65
+        "line": 4
       }
     },
     {
       "from": "apps/api/src/services/analytics-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/analytics-service.ts#AnalyticsLessonViewCount",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#compareMistakeRank",
       "source": {
         "file": "apps/api/src/services/analytics-service.ts",
-        "line": 17
+        "line": 6
       }
     },
     {
       "from": "apps/api/src/services/analytics-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/analytics-service.ts#AnalyticsMistakeRow",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#MistakesResponse",
       "source": {
         "file": "apps/api/src/services/analytics-service.ts",
-        "line": 44
-      }
-    },
-    {
-      "from": "apps/api/src/services/analytics-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/analytics-service.ts#AnalyticsSrsRow",
-      "source": {
-        "file": "apps/api/src/services/analytics-service.ts",
-        "line": 12
-      }
-    },
-    {
-      "from": "apps/api/src/services/analytics-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/analytics-service.ts#AnalyticsSummaryData",
-      "source": {
-        "file": "apps/api/src/services/analytics-service.ts",
-        "line": 23
-      }
-    },
-    {
-      "from": "apps/api/src/services/analytics-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/analytics-service.ts#AnalyticsWeeklyRow",
-      "source": {
-        "file": "apps/api/src/services/analytics-service.ts",
-        "line": 34
-      }
-    },
-    {
-      "from": "apps/api/src/services/analytics-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/analytics-service.ts#currentStreakDays",
-      "source": {
-        "file": "apps/api/src/services/analytics-service.ts",
-        "line": 103
-      }
-    },
-    {
-      "from": "apps/api/src/services/analytics-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/analytics-service.ts#getAnalyticsHeatmap",
-      "source": {
-        "file": "apps/api/src/services/analytics-service.ts",
-        "line": 177
-      }
-    },
-    {
-      "from": "apps/api/src/services/analytics-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/analytics-service.ts#getAnalyticsMistakes",
-      "source": {
-        "file": "apps/api/src/services/analytics-service.ts",
-        "line": 192
-      }
-    },
-    {
-      "from": "apps/api/src/services/analytics-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/analytics-service.ts#getAnalyticsSummary",
-      "source": {
-        "file": "apps/api/src/services/analytics-service.ts",
-        "line": 116
-      }
-    },
-    {
-      "from": "apps/api/src/services/analytics-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/analytics-service.ts#getAnalyticsWeekly",
-      "source": {
-        "file": "apps/api/src/services/analytics-service.ts",
-        "line": 162
-      }
-    },
-    {
-      "from": "apps/api/src/services/analytics-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/analytics-service.ts#recentHeatmapDays",
-      "source": {
-        "file": "apps/api/src/services/analytics-service.ts",
-        "line": 89
-      }
-    },
-    {
-      "from": "apps/api/src/services/analytics-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/analytics-service.ts#recentUtcDays",
-      "source": {
-        "file": "apps/api/src/services/analytics-service.ts",
-        "line": 79
-      }
-    },
-    {
-      "from": "apps/api/src/services/analytics-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/analytics-service.ts#utcDateKey",
-      "source": {
-        "file": "apps/api/src/services/analytics-service.ts",
-        "line": 75
-      }
-    },
-    {
-      "from": "apps/api/src/services/analytics-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/analytics-service.ts#utcDayStart",
-      "source": {
-        "file": "apps/api/src/services/analytics-service.ts",
-        "line": 70
-      }
-    },
-    {
-      "from": "apps/api/src/services/analytics-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/analytics-service.ts#utcWeekStart",
-      "source": {
-        "file": "apps/api/src/services/analytics-service.ts",
-        "line": 97
+        "line": 5
       }
     },
     {
@@ -3694,84 +3876,39 @@
       "typeOnly": false
     },
     {
-      "from": "apps/api/src/services/analytics-service.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsHeatmapResponse",
+      "from": "apps/api/src/services/answer-service.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/srs/sm2.ts#initialSrs",
       "source": {
-        "file": "apps/api/src/services/analytics-service.ts",
-        "line": 2
-      }
-    },
-    {
-      "from": "apps/api/src/services/analytics-service.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsSummaryResponse",
-      "source": {
-        "file": "apps/api/src/services/analytics-service.ts",
-        "line": 3
-      }
-    },
-    {
-      "from": "apps/api/src/services/analytics-service.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsWeeklyResponse",
-      "source": {
-        "file": "apps/api/src/services/analytics-service.ts",
-        "line": 4
-      }
-    },
-    {
-      "from": "apps/api/src/services/analytics-service.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#compareMistakeRank",
-      "source": {
-        "file": "apps/api/src/services/analytics-service.ts",
-        "line": 6
-      }
-    },
-    {
-      "from": "apps/api/src/services/analytics-service.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#MistakesResponse",
-      "source": {
-        "file": "apps/api/src/services/analytics-service.ts",
-        "line": 5
+        "file": "apps/api/src/services/answer-service.ts",
+        "line": 1
       }
     },
     {
       "from": "apps/api/src/services/answer-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/answer-service.ts#AnswerDeps",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/srs/sm2.ts#reviewSrs",
       "source": {
         "file": "apps/api/src/services/answer-service.ts",
-        "line": 7
+        "line": 1
       }
     },
     {
       "from": "apps/api/src/services/answer-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/answer-service.ts#submitAnswer",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/srs/sm2.ts#SrsInput",
       "source": {
         "file": "apps/api/src/services/answer-service.ts",
-        "line": 29
+        "line": 1
       }
     },
     {
       "from": "apps/api/src/services/answer-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/answer-service.ts#SubmitAnswerInput",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/srs/sm2.ts#SrsResult",
       "source": {
         "file": "apps/api/src/services/answer-service.ts",
-        "line": 21
-      }
-    },
-    {
-      "from": "apps/api/src/services/answer-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/answer-service.ts#VersionedSrsInput",
-      "source": {
-        "file": "apps/api/src/services/answer-service.ts",
-        "line": 5
+        "line": 1
       }
     },
     {
@@ -3797,84 +3934,30 @@
       "typeOnly": false
     },
     {
-      "from": "apps/api/src/services/answer-service.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/srs/sm2.ts#initialSrs",
+      "from": "apps/api/src/services/domains-service.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#DomainsResponse",
       "source": {
-        "file": "apps/api/src/services/answer-service.ts",
-        "line": 1
+        "file": "apps/api/src/services/domains-service.ts",
+        "line": 3
       }
     },
     {
-      "from": "apps/api/src/services/answer-service.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/srs/sm2.ts#reviewSrs",
+      "from": "apps/api/src/services/domains-service.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#DOMAIN_LABELS",
       "source": {
-        "file": "apps/api/src/services/answer-service.ts",
-        "line": 1
-      }
-    },
-    {
-      "from": "apps/api/src/services/answer-service.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/srs/sm2.ts#SrsInput",
-      "source": {
-        "file": "apps/api/src/services/answer-service.ts",
-        "line": 1
-      }
-    },
-    {
-      "from": "apps/api/src/services/answer-service.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/srs/sm2.ts#SrsResult",
-      "source": {
-        "file": "apps/api/src/services/answer-service.ts",
+        "file": "apps/api/src/services/domains-service.ts",
         "line": 1
       }
     },
     {
       "from": "apps/api/src/services/domains-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/domains-service.ts#DomainsDeps",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#DomainKey",
       "source": {
         "file": "apps/api/src/services/domains-service.ts",
-        "line": 13
-      }
-    },
-    {
-      "from": "apps/api/src/services/domains-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/domains-service.ts#DomainsInput",
-      "source": {
-        "file": "apps/api/src/services/domains-service.ts",
-        "line": 17
-      }
-    },
-    {
-      "from": "apps/api/src/services/domains-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/domains-service.ts#DomainStatsRow",
-      "source": {
-        "file": "apps/api/src/services/domains-service.ts",
-        "line": 5
-      }
-    },
-    {
-      "from": "apps/api/src/services/domains-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/domains-service.ts#getDomains",
-      "source": {
-        "file": "apps/api/src/services/domains-service.ts",
-        "line": 42
-      }
-    },
-    {
-      "from": "apps/api/src/services/domains-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/domains-service.ts#toSummary",
-      "source": {
-        "file": "apps/api/src/services/domains-service.ts",
-        "line": 27
+        "line": 1
       }
     },
     {
@@ -3900,116 +3983,8 @@
       "typeOnly": true
     },
     {
-      "from": "apps/api/src/services/domains-service.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#DomainsResponse",
-      "source": {
-        "file": "apps/api/src/services/domains-service.ts",
-        "line": 3
-      }
-    },
-    {
-      "from": "apps/api/src/services/domains-service.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/content.ts#DOMAIN_LABELS",
-      "source": {
-        "file": "apps/api/src/services/domains-service.ts",
-        "line": 1
-      }
-    },
-    {
-      "from": "apps/api/src/services/domains-service.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/content.ts#DomainKey",
-      "source": {
-        "file": "apps/api/src/services/domains-service.ts",
-        "line": 1
-      }
-    },
-    {
-      "from": "apps/api/src/services/lesson-view-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/lesson-view-service.ts#LessonViewDeps",
-      "source": {
-        "file": "apps/api/src/services/lesson-view-service.ts",
-        "line": 1
-      }
-    },
-    {
-      "from": "apps/api/src/services/lesson-view-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/lesson-view-service.ts#recordLessonView",
-      "source": {
-        "file": "apps/api/src/services/lesson-view-service.ts",
-        "line": 15
-      }
-    },
-    {
-      "from": "apps/api/src/services/lesson-view-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/lesson-view-service.ts#RecordLessonViewInput",
-      "source": {
-        "file": "apps/api/src/services/lesson-view-service.ts",
-        "line": 9
-      }
-    },
-    {
-      "from": "apps/api/src/services/review-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/review-service.ts#getDueCount",
-      "source": {
-        "file": "apps/api/src/services/review-service.ts",
-        "line": 28
-      }
-    },
-    {
-      "from": "apps/api/src/services/review-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/review-service.ts#getReviewQueue",
-      "source": {
-        "file": "apps/api/src/services/review-service.ts",
-        "line": 21
-      }
-    },
-    {
-      "from": "apps/api/src/services/review-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/review-service.ts#ReviewDeps",
-      "source": {
-        "file": "apps/api/src/services/review-service.ts",
-        "line": 6
-      }
-    },
-    {
-      "from": "apps/api/src/services/review-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/review-service.ts#ReviewInput",
-      "source": {
-        "file": "apps/api/src/services/review-service.ts",
-        "line": 16
-      }
-    },
-    {
-      "from": "apps/api/src/services/review-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/review-service.ts#ReviewQueueItem",
-      "source": {
-        "file": "apps/api/src/services/review-service.ts",
-        "line": 1
-      }
-    },
-    {
-      "from": "apps/api/src/services/review-service.ts",
-      "relation": "implements",
-      "to": "symbol:apps/api/src/services/review-service.ts#ReviewQueueResult",
-      "source": {
-        "file": "apps/api/src/services/review-service.ts",
-        "line": 11
-      }
-    },
-    {
       "from": "apps/api/wrangler.toml",
-      "relation": "binds",
+      "relation": "binds-database",
       "to": "binding:D1:DB",
       "source": {
         "file": "apps/api/wrangler.toml",
@@ -4045,6 +4020,69 @@
     },
     {
       "from": "apps/web/src/features/analytics/api/analytics-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#analyticsRequestSchema",
+      "source": {
+        "file": "apps/web/src/features/analytics/api/analytics-api.ts",
+        "line": 5
+      }
+    },
+    {
+      "from": "apps/web/src/features/analytics/api/analytics-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsSummaryResponse",
+      "source": {
+        "file": "apps/web/src/features/analytics/api/analytics-api.ts",
+        "line": 2
+      }
+    },
+    {
+      "from": "apps/web/src/features/analytics/api/analytics-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#analyticsSummaryResponseSchema",
+      "source": {
+        "file": "apps/web/src/features/analytics/api/analytics-api.ts",
+        "line": 6
+      }
+    },
+    {
+      "from": "apps/web/src/features/analytics/api/analytics-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsWeeklyResponse",
+      "source": {
+        "file": "apps/web/src/features/analytics/api/analytics-api.ts",
+        "line": 3
+      }
+    },
+    {
+      "from": "apps/web/src/features/analytics/api/analytics-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#analyticsWeeklyResponseSchema",
+      "source": {
+        "file": "apps/web/src/features/analytics/api/analytics-api.ts",
+        "line": 7
+      }
+    },
+    {
+      "from": "apps/web/src/features/analytics/api/analytics-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#MistakesResponse",
+      "source": {
+        "file": "apps/web/src/features/analytics/api/analytics-api.ts",
+        "line": 4
+      }
+    },
+    {
+      "from": "apps/web/src/features/analytics/api/analytics-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#mistakesResponseSchema",
+      "source": {
+        "file": "apps/web/src/features/analytics/api/analytics-api.ts",
+        "line": 8
+      }
+    },
+    {
+      "from": "apps/web/src/features/analytics/api/analytics-api.ts",
       "relation": "imports",
       "to": "apps/web/src/lib/api.ts",
       "source": {
@@ -4064,69 +4102,6 @@
       },
       "specifier": "@tsl/shared",
       "typeOnly": false
-    },
-    {
-      "from": "apps/web/src/features/analytics/api/analytics-api.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#analyticsRequestSchema",
-      "source": {
-        "file": "apps/web/src/features/analytics/api/analytics-api.ts",
-        "line": 5
-      }
-    },
-    {
-      "from": "apps/web/src/features/analytics/api/analytics-api.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsSummaryResponse",
-      "source": {
-        "file": "apps/web/src/features/analytics/api/analytics-api.ts",
-        "line": 2
-      }
-    },
-    {
-      "from": "apps/web/src/features/analytics/api/analytics-api.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#analyticsSummaryResponseSchema",
-      "source": {
-        "file": "apps/web/src/features/analytics/api/analytics-api.ts",
-        "line": 6
-      }
-    },
-    {
-      "from": "apps/web/src/features/analytics/api/analytics-api.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsWeeklyResponse",
-      "source": {
-        "file": "apps/web/src/features/analytics/api/analytics-api.ts",
-        "line": 3
-      }
-    },
-    {
-      "from": "apps/web/src/features/analytics/api/analytics-api.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#analyticsWeeklyResponseSchema",
-      "source": {
-        "file": "apps/web/src/features/analytics/api/analytics-api.ts",
-        "line": 7
-      }
-    },
-    {
-      "from": "apps/web/src/features/analytics/api/analytics-api.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#MistakesResponse",
-      "source": {
-        "file": "apps/web/src/features/analytics/api/analytics-api.ts",
-        "line": 4
-      }
-    },
-    {
-      "from": "apps/web/src/features/analytics/api/analytics-api.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#mistakesResponseSchema",
-      "source": {
-        "file": "apps/web/src/features/analytics/api/analytics-api.ts",
-        "line": 8
-      }
     },
     {
       "from": "apps/web/src/features/analytics/server/load-analytics.ts",
@@ -4197,6 +4172,105 @@
     },
     {
       "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsHeatmapResponse",
+      "source": {
+        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+        "line": 2
+      }
+    },
+    {
+      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#analyticsHeatmapResponseSchema",
+      "source": {
+        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+        "line": 7
+      }
+    },
+    {
+      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#analyticsRequestSchema",
+      "source": {
+        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+        "line": 8
+      }
+    },
+    {
+      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsSummaryResponse",
+      "source": {
+        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+        "line": 3
+      }
+    },
+    {
+      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#analyticsSummaryResponseSchema",
+      "source": {
+        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+        "line": 9
+      }
+    },
+    {
+      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#DomainsResponse",
+      "source": {
+        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+        "line": 4
+      }
+    },
+    {
+      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#domainsResponseSchema",
+      "source": {
+        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+        "line": 10
+      }
+    },
+    {
+      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#DueCountResponse",
+      "source": {
+        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+        "line": 5
+      }
+    },
+    {
+      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#dueCountResponseSchema",
+      "source": {
+        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+        "line": 11
+      }
+    },
+    {
+      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#RecentActivityResponse",
+      "source": {
+        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+        "line": 6
+      }
+    },
+    {
+      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#recentActivityResponseSchema",
+      "source": {
+        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+        "line": 12
+      }
+    },
+    {
+      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
       "relation": "imports",
       "to": "apps/web/src/lib/api.ts",
       "source": {
@@ -4218,102 +4292,12 @@
       "typeOnly": false
     },
     {
-      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsHeatmapResponse",
+      "from": "apps/web/src/features/dashboard/server/load-dashboard.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#domainKeySchema",
       "source": {
-        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-        "line": 2
-      }
-    },
-    {
-      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#analyticsHeatmapResponseSchema",
-      "source": {
-        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-        "line": 7
-      }
-    },
-    {
-      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#analyticsRequestSchema",
-      "source": {
-        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-        "line": 8
-      }
-    },
-    {
-      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsSummaryResponse",
-      "source": {
-        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+        "file": "apps/web/src/features/dashboard/server/load-dashboard.ts",
         "line": 3
-      }
-    },
-    {
-      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#analyticsSummaryResponseSchema",
-      "source": {
-        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-        "line": 9
-      }
-    },
-    {
-      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#DomainsResponse",
-      "source": {
-        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-        "line": 4
-      }
-    },
-    {
-      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#domainsResponseSchema",
-      "source": {
-        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-        "line": 10
-      }
-    },
-    {
-      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#DueCountResponse",
-      "source": {
-        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-        "line": 5
-      }
-    },
-    {
-      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#dueCountResponseSchema",
-      "source": {
-        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-        "line": 11
-      }
-    },
-    {
-      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#RecentActivityResponse",
-      "source": {
-        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-        "line": 6
-      }
-    },
-    {
-      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#recentActivityResponseSchema",
-      "source": {
-        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-        "line": 12
       }
     },
     {
@@ -4350,21 +4334,30 @@
       "typeOnly": false
     },
     {
-      "from": "apps/web/src/features/dashboard/server/load-dashboard.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/content.ts#domainKeySchema",
-      "source": {
-        "file": "apps/web/src/features/dashboard/server/load-dashboard.ts",
-        "line": 3
-      }
-    },
-    {
       "from": "apps/web/src/features/domains/api/domains-api.ts",
       "relation": "calls-endpoint",
       "to": "endpoint:GET /domains",
       "source": {
         "file": "apps/web/src/features/domains/api/domains-api.ts",
         "line": 7
+      }
+    },
+    {
+      "from": "apps/web/src/features/domains/api/domains-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#DomainsResponse",
+      "source": {
+        "file": "apps/web/src/features/domains/api/domains-api.ts",
+        "line": 1
+      }
+    },
+    {
+      "from": "apps/web/src/features/domains/api/domains-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#domainsResponseSchema",
+      "source": {
+        "file": "apps/web/src/features/domains/api/domains-api.ts",
+        "line": 1
       }
     },
     {
@@ -4390,21 +4383,12 @@
       "typeOnly": false
     },
     {
-      "from": "apps/web/src/features/domains/api/domains-api.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#DomainsResponse",
+      "from": "apps/web/src/features/domains/server/load-domains.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#domainKeySchema",
       "source": {
-        "file": "apps/web/src/features/domains/api/domains-api.ts",
-        "line": 1
-      }
-    },
-    {
-      "from": "apps/web/src/features/domains/api/domains-api.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#domainsResponseSchema",
-      "source": {
-        "file": "apps/web/src/features/domains/api/domains-api.ts",
-        "line": 1
+        "file": "apps/web/src/features/domains/server/load-domains.ts",
+        "line": 3
       }
     },
     {
@@ -4441,21 +4425,48 @@
       "typeOnly": false
     },
     {
-      "from": "apps/web/src/features/domains/server/load-domains.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/content.ts#domainKeySchema",
-      "source": {
-        "file": "apps/web/src/features/domains/server/load-domains.ts",
-        "line": 3
-      }
-    },
-    {
       "from": "apps/web/src/features/lesson/api/lesson-api.ts",
       "relation": "calls-endpoint",
       "to": "endpoint:POST /lesson-views",
       "source": {
         "file": "apps/web/src/features/lesson/api/lesson-api.ts",
         "line": 15
+      }
+    },
+    {
+      "from": "apps/web/src/features/lesson/api/lesson-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#LessonViewRequest",
+      "source": {
+        "file": "apps/web/src/features/lesson/api/lesson-api.ts",
+        "line": 2
+      }
+    },
+    {
+      "from": "apps/web/src/features/lesson/api/lesson-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#lessonViewRequestSchema",
+      "source": {
+        "file": "apps/web/src/features/lesson/api/lesson-api.ts",
+        "line": 4
+      }
+    },
+    {
+      "from": "apps/web/src/features/lesson/api/lesson-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#LessonViewResponse",
+      "source": {
+        "file": "apps/web/src/features/lesson/api/lesson-api.ts",
+        "line": 3
+      }
+    },
+    {
+      "from": "apps/web/src/features/lesson/api/lesson-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#lessonViewResponseSchema",
+      "source": {
+        "file": "apps/web/src/features/lesson/api/lesson-api.ts",
+        "line": 5
       }
     },
     {
@@ -4481,39 +4492,12 @@
       "typeOnly": false
     },
     {
-      "from": "apps/web/src/features/lesson/api/lesson-api.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#LessonViewRequest",
+      "from": "apps/web/src/features/lesson/server/load-topic.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#domainKeySchema",
       "source": {
-        "file": "apps/web/src/features/lesson/api/lesson-api.ts",
-        "line": 2
-      }
-    },
-    {
-      "from": "apps/web/src/features/lesson/api/lesson-api.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#lessonViewRequestSchema",
-      "source": {
-        "file": "apps/web/src/features/lesson/api/lesson-api.ts",
-        "line": 4
-      }
-    },
-    {
-      "from": "apps/web/src/features/lesson/api/lesson-api.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#LessonViewResponse",
-      "source": {
-        "file": "apps/web/src/features/lesson/api/lesson-api.ts",
+        "file": "apps/web/src/features/lesson/server/load-topic.ts",
         "line": 3
-      }
-    },
-    {
-      "from": "apps/web/src/features/lesson/api/lesson-api.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#lessonViewResponseSchema",
-      "source": {
-        "file": "apps/web/src/features/lesson/api/lesson-api.ts",
-        "line": 5
       }
     },
     {
@@ -4526,15 +4510,6 @@
       },
       "specifier": "@tsl/shared",
       "typeOnly": false
-    },
-    {
-      "from": "apps/web/src/features/lesson/server/load-topic.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/content.ts#domainKeySchema",
-      "source": {
-        "file": "apps/web/src/features/lesson/server/load-topic.ts",
-        "line": 3
-      }
     },
     {
       "from": "apps/web/src/features/quiz/api/quiz-api.ts",
@@ -4547,6 +4522,42 @@
     },
     {
       "from": "apps/web/src/features/quiz/api/quiz-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#AnswerRequest",
+      "source": {
+        "file": "apps/web/src/features/quiz/api/quiz-api.ts",
+        "line": 2
+      }
+    },
+    {
+      "from": "apps/web/src/features/quiz/api/quiz-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#answerRequestSchema",
+      "source": {
+        "file": "apps/web/src/features/quiz/api/quiz-api.ts",
+        "line": 4
+      }
+    },
+    {
+      "from": "apps/web/src/features/quiz/api/quiz-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#AnswerResponse",
+      "source": {
+        "file": "apps/web/src/features/quiz/api/quiz-api.ts",
+        "line": 3
+      }
+    },
+    {
+      "from": "apps/web/src/features/quiz/api/quiz-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#answerResponseSchema",
+      "source": {
+        "file": "apps/web/src/features/quiz/api/quiz-api.ts",
+        "line": 5
+      }
+    },
+    {
+      "from": "apps/web/src/features/quiz/api/quiz-api.ts",
       "relation": "imports",
       "to": "apps/web/src/lib/api.ts",
       "source": {
@@ -4568,48 +4579,30 @@
       "typeOnly": false
     },
     {
-      "from": "apps/web/src/features/quiz/api/quiz-api.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#AnswerRequest",
-      "source": {
-        "file": "apps/web/src/features/quiz/api/quiz-api.ts",
-        "line": 2
-      }
-    },
-    {
-      "from": "apps/web/src/features/quiz/api/quiz-api.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#answerRequestSchema",
-      "source": {
-        "file": "apps/web/src/features/quiz/api/quiz-api.ts",
-        "line": 4
-      }
-    },
-    {
-      "from": "apps/web/src/features/quiz/api/quiz-api.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#AnswerResponse",
-      "source": {
-        "file": "apps/web/src/features/quiz/api/quiz-api.ts",
-        "line": 3
-      }
-    },
-    {
-      "from": "apps/web/src/features/quiz/api/quiz-api.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#answerResponseSchema",
-      "source": {
-        "file": "apps/web/src/features/quiz/api/quiz-api.ts",
-        "line": 5
-      }
-    },
-    {
       "from": "apps/web/src/features/review/api/review-api.ts",
       "relation": "calls-endpoint",
       "to": "endpoint:GET /review/queue",
       "source": {
         "file": "apps/web/src/features/review/api/review-api.ts",
         "line": 7
+      }
+    },
+    {
+      "from": "apps/web/src/features/review/api/review-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#ReviewQueueResponse",
+      "source": {
+        "file": "apps/web/src/features/review/api/review-api.ts",
+        "line": 1
+      }
+    },
+    {
+      "from": "apps/web/src/features/review/api/review-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#reviewQueueResponseSchema",
+      "source": {
+        "file": "apps/web/src/features/review/api/review-api.ts",
+        "line": 1
       }
     },
     {
@@ -4633,24 +4626,6 @@
       },
       "specifier": "@tsl/shared",
       "typeOnly": false
-    },
-    {
-      "from": "apps/web/src/features/review/api/review-api.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#ReviewQueueResponse",
-      "source": {
-        "file": "apps/web/src/features/review/api/review-api.ts",
-        "line": 1
-      }
-    },
-    {
-      "from": "apps/web/src/features/review/api/review-api.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#reviewQueueResponseSchema",
-      "source": {
-        "file": "apps/web/src/features/review/api/review-api.ts",
-        "line": 1
-      }
     },
     {
       "from": "apps/web/src/features/review/server/load-review.ts",
@@ -4687,7 +4662,7 @@
     },
     {
       "from": "apps/web/wrangler.jsonc",
-      "relation": "binds",
+      "relation": "binds-service",
       "to": "apps/api/src/internal-api.ts",
       "source": {
         "file": "apps/web/wrangler.jsonc",
@@ -4798,92 +4773,65 @@
     },
     {
       "from": "packages/shared/src/content-parser.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/content-parser.ts#BundledLesson",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#domainKeySchema",
       "source": {
         "file": "packages/shared/src/content-parser.ts",
-        "line": 29
+        "line": 5
       }
     },
     {
       "from": "packages/shared/src/content-parser.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/content-parser.ts#BundledTopic",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#LessonFrontmatter",
       "source": {
         "file": "packages/shared/src/content-parser.ts",
-        "line": 24
+        "line": 2
       }
     },
     {
       "from": "packages/shared/src/content-parser.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/content-parser.ts#ContentBundle",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#McqQuestion",
       "source": {
         "file": "packages/shared/src/content-parser.ts",
-        "line": 35
+        "line": 3
       }
     },
     {
       "from": "packages/shared/src/content-parser.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/content-parser.ts#ContentPath",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#TopicFrontmatter",
       "source": {
         "file": "packages/shared/src/content-parser.ts",
-        "line": 17
+        "line": 4
       }
     },
     {
       "from": "packages/shared/src/content-parser.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/content-parser.ts#contentPathFor",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#topicFrontmatterSchema",
       "source": {
         "file": "packages/shared/src/content-parser.ts",
-        "line": 45
+        "line": 6
       }
     },
     {
       "from": "packages/shared/src/content-parser.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/content-parser.ts#createContentBundle",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#validatedLessonFrontmatterSchema",
       "source": {
         "file": "packages/shared/src/content-parser.ts",
-        "line": 140
+        "line": 7
       }
     },
     {
       "from": "packages/shared/src/content-parser.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/content-parser.ts#invalidContent",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#validatedMcqSchema",
       "source": {
         "file": "packages/shared/src/content-parser.ts",
-        "line": 41
-      }
-    },
-    {
-      "from": "packages/shared/src/content-parser.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/content-parser.ts#lessonFor",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 90
-      }
-    },
-    {
-      "from": "packages/shared/src/content-parser.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/content-parser.ts#ParsedContentSourceFile",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 11
-      }
-    },
-    {
-      "from": "packages/shared/src/content-parser.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/content-parser.ts#topicFor",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 71
+        "line": 8
       }
     },
     {
@@ -4896,159 +4844,6 @@
       },
       "specifier": "./schema/content",
       "typeOnly": false
-    },
-    {
-      "from": "packages/shared/src/content-parser.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/content.ts#domainKeySchema",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 5
-      }
-    },
-    {
-      "from": "packages/shared/src/content-parser.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/content.ts#LessonFrontmatter",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 2
-      }
-    },
-    {
-      "from": "packages/shared/src/content-parser.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/content.ts#McqQuestion",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 3
-      }
-    },
-    {
-      "from": "packages/shared/src/content-parser.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/content.ts#TopicFrontmatter",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 4
-      }
-    },
-    {
-      "from": "packages/shared/src/content-parser.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/content.ts#topicFrontmatterSchema",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 6
-      }
-    },
-    {
-      "from": "packages/shared/src/content-parser.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/content.ts#validatedLessonFrontmatterSchema",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 7
-      }
-    },
-    {
-      "from": "packages/shared/src/content-parser.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/content.ts#validatedMcqSchema",
-      "source": {
-        "file": "packages/shared/src/content-parser.ts",
-        "line": 8
-      }
-    },
-    {
-      "from": "packages/shared/src/db/schema.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/db/schema.ts#AnswerLog",
-      "source": {
-        "file": "packages/shared/src/db/schema.ts",
-        "line": 63
-      }
-    },
-    {
-      "from": "packages/shared/src/db/schema.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/db/schema.ts#answerLogs",
-      "source": {
-        "file": "packages/shared/src/db/schema.ts",
-        "line": 15
-      }
-    },
-    {
-      "from": "packages/shared/src/db/schema.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/db/schema.ts#LessonView",
-      "source": {
-        "file": "packages/shared/src/db/schema.ts",
-        "line": 66
-      }
-    },
-    {
-      "from": "packages/shared/src/db/schema.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/db/schema.ts#lessonViews",
-      "source": {
-        "file": "packages/shared/src/db/schema.ts",
-        "line": 55
-      }
-    },
-    {
-      "from": "packages/shared/src/db/schema.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/db/schema.ts#QuestionRow",
-      "source": {
-        "file": "packages/shared/src/db/schema.ts",
-        "line": 64
-      }
-    },
-    {
-      "from": "packages/shared/src/db/schema.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/db/schema.ts#questions",
-      "source": {
-        "file": "packages/shared/src/db/schema.ts",
-        "line": 25
-      }
-    },
-    {
-      "from": "packages/shared/src/db/schema.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/db/schema.ts#SrsState",
-      "source": {
-        "file": "packages/shared/src/db/schema.ts",
-        "line": 65
-      }
-    },
-    {
-      "from": "packages/shared/src/db/schema.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/db/schema.ts#srsStates",
-      "source": {
-        "file": "packages/shared/src/db/schema.ts",
-        "line": 37
-      }
-    },
-    {
-      "from": "packages/shared/src/db/schema.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/db/schema.ts#User",
-      "source": {
-        "file": "packages/shared/src/db/schema.ts",
-        "line": 62
-      }
-    },
-    {
-      "from": "packages/shared/src/db/schema.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/db/schema.ts#users",
-      "source": {
-        "file": "packages/shared/src/db/schema.ts",
-        "line": 9
-      }
     },
     {
       "from": "packages/shared/src/index.ts",
@@ -5107,488 +4902,11 @@
     },
     {
       "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsHeatmapDay",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#domainKeySchema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 198
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#analyticsHeatmapDaySchema",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 194
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsHeatmapResponse",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 228
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#analyticsHeatmapResponseSchema",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 200
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsRequest",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 107
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#analyticsRequestSchema",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 106
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsSummaryResponse",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 125
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#analyticsSummaryResponseSchema",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 116
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#analyticsWeeklyDateSchema",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 142
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsWeeklyDay",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 162
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#analyticsWeeklyDaySchema",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 147
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsWeeklyResponse",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 192
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#analyticsWeeklyResponseSchema",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 164
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#AnswerRequest",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 19
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#answerRequestSchema",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 11
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#AnswerResponse",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 26
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#answerResponseSchema",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 21
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#compareMistakeRank",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 316
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#compareRecentActivity",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 259
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#DomainsRequest",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 104
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#domainsRequestSchema",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 103
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#DomainsResponse",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 101
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#domainsResponseSchema",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 87
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#DomainSummary",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 85
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#domainSummarySchema",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 77
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#DueCountResponse",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 75
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#dueCountResponseSchema",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 72
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#isoCalendarDatePattern",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 127
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#isValidCalendarDate",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 129
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#LessonViewRequest",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 33
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#lessonViewRequestSchema",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 28
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#LessonViewResponse",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 38
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#lessonViewResponseSchema",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 35
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#MistakeItem",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 313
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#mistakeItemSchema",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 290
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#MistakesResponse",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 343
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#mistakesResponseSchema",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 327
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#RateLimitedErrorResponse",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 46
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#rateLimitedErrorResponseSchema",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 40
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#RateLimitUnavailableErrorResponse",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 54
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#rateLimitUnavailableErrorResponseSchema",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 48
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#RecentActivityAnswerRecorded",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 251
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#recentActivityAnswerRecordedSchema",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 243
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#recentActivityBaseSchema",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 230
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#RecentActivityItem",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 257
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#recentActivityItemSchema",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 253
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#RecentActivityLessonViewed",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 241
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#recentActivityLessonViewedSchema",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 235
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#RecentActivityResponse",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 288
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#recentActivityResponseSchema",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 263
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#RetentionDistribution",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 114
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#retentionDistributionSchema",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 109
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#ReviewQueueResponse",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 70
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/api.ts#reviewQueueResponseSchema",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 58
+        "line": 3
       }
     },
     {
@@ -5601,222 +4919,6 @@
       },
       "specifier": "./content",
       "typeOnly": false
-    },
-    {
-      "from": "packages/shared/src/schema/api.ts",
-      "relation": "uses-symbol",
-      "to": "symbol:packages/shared/src/schema/content.ts#domainKeySchema",
-      "source": {
-        "file": "packages/shared/src/schema/api.ts",
-        "line": 3
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/content.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/content.ts#DOMAIN_LABELS",
-      "source": {
-        "file": "packages/shared/src/schema/content.ts",
-        "line": 12
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/content.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/content.ts#DomainKey",
-      "source": {
-        "file": "packages/shared/src/schema/content.ts",
-        "line": 10
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/content.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/content.ts#domainKeySchema",
-      "source": {
-        "file": "packages/shared/src/schema/content.ts",
-        "line": 9
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/content.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/content.ts#LessonFrontmatter",
-      "source": {
-        "file": "packages/shared/src/schema/content.ts",
-        "line": 56
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/content.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/content.ts#lessonFrontmatterSchema",
-      "source": {
-        "file": "packages/shared/src/schema/content.ts",
-        "line": 48
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/content.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/content.ts#lessonIdSchema",
-      "source": {
-        "file": "packages/shared/src/schema/content.ts",
-        "line": 26
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/content.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/content.ts#McqQuestion",
-      "source": {
-        "file": "packages/shared/src/schema/content.ts",
-        "line": 42
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/content.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/content.ts#mcqQuestionSchema",
-      "source": {
-        "file": "packages/shared/src/schema/content.ts",
-        "line": 34
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/content.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/content.ts#Question",
-      "source": {
-        "file": "packages/shared/src/schema/content.ts",
-        "line": 46
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/content.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/content.ts#questionIdSchema",
-      "source": {
-        "file": "packages/shared/src/schema/content.ts",
-        "line": 30
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/content.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/content.ts#questionSchema",
-      "source": {
-        "file": "packages/shared/src/schema/content.ts",
-        "line": 45
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/content.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/content.ts#TopicFrontmatter",
-      "source": {
-        "file": "packages/shared/src/schema/content.ts",
-        "line": 24
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/content.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/content.ts#topicFrontmatterSchema",
-      "source": {
-        "file": "packages/shared/src/schema/content.ts",
-        "line": 19
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/content.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/content.ts#validatedLessonFrontmatterSchema",
-      "source": {
-        "file": "packages/shared/src/schema/content.ts",
-        "line": 67
-      }
-    },
-    {
-      "from": "packages/shared/src/schema/content.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/schema/content.ts#validatedMcqSchema",
-      "source": {
-        "file": "packages/shared/src/schema/content.ts",
-        "line": 59
-      }
-    },
-    {
-      "from": "packages/shared/src/srs/sm2.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/srs/sm2.ts#DAY_MS",
-      "source": {
-        "file": "packages/shared/src/srs/sm2.ts",
-        "line": 8
-      }
-    },
-    {
-      "from": "packages/shared/src/srs/sm2.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/srs/sm2.ts#INITIAL_EASE",
-      "source": {
-        "file": "packages/shared/src/srs/sm2.ts",
-        "line": 10
-      }
-    },
-    {
-      "from": "packages/shared/src/srs/sm2.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/srs/sm2.ts#initialSrs",
-      "source": {
-        "file": "packages/shared/src/srs/sm2.ts",
-        "line": 27
-      }
-    },
-    {
-      "from": "packages/shared/src/srs/sm2.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/srs/sm2.ts#isDue",
-      "source": {
-        "file": "packages/shared/src/srs/sm2.ts",
-        "line": 75
-      }
-    },
-    {
-      "from": "packages/shared/src/srs/sm2.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/srs/sm2.ts#MIN_EASE",
-      "source": {
-        "file": "packages/shared/src/srs/sm2.ts",
-        "line": 9
-      }
-    },
-    {
-      "from": "packages/shared/src/srs/sm2.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/srs/sm2.ts#reviewSrs",
-      "source": {
-        "file": "packages/shared/src/srs/sm2.ts",
-        "line": 39
-      }
-    },
-    {
-      "from": "packages/shared/src/srs/sm2.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/srs/sm2.ts#SrsInput",
-      "source": {
-        "file": "packages/shared/src/srs/sm2.ts",
-        "line": 12
-      }
-    },
-    {
-      "from": "packages/shared/src/srs/sm2.ts",
-      "relation": "implements",
-      "to": "symbol:packages/shared/src/srs/sm2.ts#SrsResult",
-      "source": {
-        "file": "packages/shared/src/srs/sm2.ts",
-        "line": 19
-      }
     },
     {
       "from": "symbol:apps/api/src/dal/activity-repository.ts#createActivityDeps",

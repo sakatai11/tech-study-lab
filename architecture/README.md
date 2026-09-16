@@ -47,6 +47,7 @@ Graphの語彙定義。node kind・relation・`layer` は**構文とパス規約
 | `returns-deps` | `function` | `deps-type` | 関数戻り値に明示されたDeps型 |
 | `mounts` | `module` | `module` | appによるrouteの静的mount |
 | `implements` | `http-endpoint` | `module` | endpointを実装するroute module |
+| `calls-endpoint` | `module` | `http-endpoint` | Web の Hono client による endpoint 呼び出し |
 | `derives-schema` | `type` | `db-table` / `contract-schema` | `typeof` による実行時宣言からの型由来 |
 | `binds-service` | `module` | `module` | Worker設定のservice binding |
 | `binds-database` | `module` | `worker-binding` | Worker設定のD1 binding |
@@ -76,16 +77,6 @@ Graphの語彙定義。node kind・relation・`layer` は**構文とパス規約
 | `web-api` | `apps/web/src/features/*/api/`、`apps/web/src/lib/api.ts` |
 | `web-loader` | `apps/web/src/features/*/server/load-*` |
 | `config` | dependency-cruiser設定、Worker設定 |
-
-### 既知の乖離
-
-本節の定義に対し、現在の抽出器と snapshot は次の点で未追従である。解消は issue #179（抽出器・検証の追従）と #180（query投影の最適化）で行う。
-
-- `implements` が `module → symbol`（宣言）と `http-endpoint → module`（実装）の二重定義になっている。前者は所属属性へ降格する。
-- symbol を単一の `symbol` kind に圧縮しており、`db-table` / `contract-schema` / `type` / `function` / `constant` / `deps-type` を区別していない。
-- `imports-symbol` が `uses-symbol` という名前で、使用を意味するかのように読める。
-- `layer` 属性が存在しない。
-- `validateGraph` が relation 名の存在しか検査しておらず、domain / range を検査していない。
 
 ## 抽出対象
 
