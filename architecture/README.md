@@ -14,6 +14,79 @@ node --test scripts/architecture.test.mjs
 
 `extract` は snapshot を更新する。`check` は Worker binding と graph schema を検査し、現在の再抽出結果と保存値の不一致を非0で返す。`query` は毎回コードから抽出し、指定文字列を含む endpoint/file とその近傍を出力する。既定は両方向2辺、深さ0〜4を指定可能。query は全ソースhashと宣言本文を省く。新endpointも同じ構文なら抽出器の変更なしで追従する。
 
+## オントロジー
+
+Graphの語彙定義。node kind・relation・`layer` は**構文とパス規約から決定的に導出**し、人手の判断を挟まない。抽出器と `validateGraph` はこの定義を実装する。設計意図・振る舞いの契約は `docs/design.md` が所有し、本節は「Graphがどの種類の物をどの関係で表すか」だけを定める。
+
+### node kind
+
+| kind | 導出規則 |
+| --- | --- |
+| `module` | 抽出対象のファイル（`.ts` / `.tsx` / `.cjs` と固定の設定ファイル） |
+| `http-endpoint` | Hono chain の `.get` / `.post` 等の呼び出し |
+| `db-table` | 変数宣言のうち初期化子が `sqliteTable(...)` 呼び出し |
+| `contract-schema` | 変数宣言のうち初期化子が `z.` で始まるか、名前が `Schema` で終わるもの |
+| `deps-type` | 型alias・interfaceのうち名前が `Deps` で終わるもの |
+| `type` | 上記以外の型alias・interface |
+| `function` | 関数宣言 |
+| `constant` | 上記以外の変数宣言 |
+| `worker-binding` | Worker設定が宣言する binding |
+
+判定は上から順に適用し、最初に一致した kind を採る。`db-table` は `contract-schema` より優先し、`deps-type` は `type` より優先する。`createReviewDeps` のような**関数**は名前が `Deps` で終わっても `function` であり、`deps-type` にはしない。
+
+### relation
+
+各 relationは**1つの意味と1つの方向**だけを持つ。同じ語を逆向きや別の意味で使わない。
+
+| relation | domain | range | 意味 |
+| --- | --- | --- | --- |
+| `imports` | `module` | `module` | import / export 宣言によるモジュール参照 |
+| `imports-symbol` | `module` | 任意のsymbol kind | `packages/shared` からの名前付きimport binding |
+| `calls-symbol` | `module` | `function` | routeがimportした関数の直接呼び出し |
+| `accepts-deps` | `function` | `deps-type` | 関数引数に明示されたDeps型 |
+| `returns-deps` | `function` | `deps-type` | 関数戻り値に明示されたDeps型 |
+| `mounts` | `module` | `module` | appによるrouteの静的mount |
+| `implements` | `http-endpoint` | `module` | endpointを実装するroute module |
+| `derives-schema` | `type` | `db-table` / `contract-schema` | `typeof` による実行時宣言からの型由来 |
+| `binds-service` | `module` | `module` | Worker設定のservice binding |
+| `binds-database` | `module` | `worker-binding` | Worker設定のD1 binding |
+
+ここでいうsymbol kindは `db-table` / `contract-schema` / `deps-type` / `type` / `function` / `constant` を指す。`imports-symbol` は import binding の存在だけを表し、呼び出しや実行を意味しない。実行経路の証明にはコードと型を確認する。
+
+`validateGraph` は relationごとに domain / range を検査し、違反を非0で落とす。未知の kind、未知の relation、domain / range 違反はすべてエラーとする。
+
+### 所属（containment）
+
+「moduleがsymbolを宣言する」関係は relation ではなく**node の所属属性**で表す。module node は自身が宣言するsymbol名を `symbols` に持ち、symbol node は `source.file` が所属moduleを示す。所属は走査のhopではないため、`query` の depth を消費しない。
+
+### layer
+
+各 node は所属moduleのパスから `layer` を決定的に導出する。dependency-cruiserの依存境界ルールと照合する軸でもある。
+
+| layer | パス |
+| --- | --- |
+| `api-route` | `apps/api/src/routes/` |
+| `api-service` | `apps/api/src/services/` |
+| `api-dal` | `apps/api/src/dal/` |
+| `api-middleware` | `apps/api/src/middleware/` |
+| `api-app` | `apps/api/src/` のその他 |
+| `shared-schema` | `packages/shared/src/schema/` |
+| `shared-db` | `packages/shared/src/db/` |
+| `shared-domain` | `packages/shared/src/` のその他 |
+| `web-api` | `apps/web/src/features/*/api/`、`apps/web/src/lib/api.ts` |
+| `web-loader` | `apps/web/src/features/*/server/load-*` |
+| `config` | dependency-cruiser設定、Worker設定 |
+
+### 既知の乖離
+
+本節の定義に対し、現在の抽出器と snapshot は次の点で未追従である。解消は issue #179（抽出器・検証の追従）と #180（query投影の最適化）で行う。
+
+- `implements` が `module → symbol`（宣言）と `http-endpoint → module`（実装）の二重定義になっている。前者は所属属性へ降格する。
+- symbol を単一の `symbol` kind に圧縮しており、`db-table` / `contract-schema` / `type` / `function` / `constant` / `deps-type` を区別していない。
+- `imports-symbol` が `uses-symbol` という名前で、使用を意味するかのように読める。
+- `layer` 属性が存在しない。
+- `validateGraph` が relation 名の存在しか検査しておらず、domain / range を検査していない。
+
 ## 抽出対象
 
 - `apps/api/src`、`packages/shared/src` の非テスト `.ts/.tsx`。
