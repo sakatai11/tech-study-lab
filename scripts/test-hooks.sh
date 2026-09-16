@@ -1,4 +1,16 @@
 #!/bin/sh
+# hookの動作検証と、エージェント契約文書の不変条件チェックを行うゲート。
+#
+# 1. hook fixture / 共通ログ / `sync:agents --check` による生成物の同期検証。
+# 2. `.ai/` 配下のスキル・エージェント定義・共通契約と `docs/ai-coding-agents.md` に対する
+#    完全一致 grep（check_agent_contract / check_absent_contract /
+#    check_section_contract / check_order_contract）による契約検査。件数は後者が大半を占める。
+#
+# 2 はレビューの成立条件、外部送信の同意、ブランチ規約、役割別モデル方針、手順の順序が
+# 黙って削除・改変されないよう固定する。契約文書の文言を変えた場合はここの期待値も同じ変更で
+# 更新する。検査を削って通すことはしない。
+#
+# PR CI（.github/workflows/ci.yml）から実行される。`jq` を必要とする。
 set -eu
 
 repo_root=$(git rev-parse --show-toplevel)

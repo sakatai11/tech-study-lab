@@ -46,6 +46,14 @@ jobs:
       - name: Lint (Biome + dependency boundaries)
         run: pnpm lint
 
+      - name: Agent contract check (hooks, sync, contract docs)
+        run: |
+          command -v jq >/dev/null 2>&1 || {
+            echo "::error::jq is required by scripts/test-hooks.sh but was not found on the runner"
+            exit 1
+          }
+          pnpm test:hooks
+
       - name: Test
         run: pnpm test
 

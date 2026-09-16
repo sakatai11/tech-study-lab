@@ -18,7 +18,7 @@ GitHub issue の仕様を、レビュー済み・品質ゲート通過済みの�
 
 - 今回の作業用checkoutに未コミット変更がない。隔離元のユーザー変更は保持する。
 - `develop..HEAD` の全コミットが、current HEAD の有効な verification 経路を通過している。経路の判定、Finding、レビュー境界は `.ai/cross-model-reviewer-common.md` に従う。
-- ローカルの typecheck / lint / test / architecture check / architecture test と、PR CI の typecheck / lint / test / build（`develop` 向けPRでは architecture check / architecture test も含む）が通過している。
+- ローカルの typecheck / lint / test / architecture check / architecture test と、PR CI の typecheck / lint / agent contract check（`pnpm test:hooks`）/ test / build（`develop` 向けPRでは architecture check / architecture test も含む）が通過している。エージェント契約文書を変更した場合は、ローカルでも `pnpm test:hooks` が通過している。
 - `develop` 向けPRを作成し、URLをユーザーへ報告している。
 - スパイクまたはフェーズ分割を伴う作業では、明示された関連Issue・撤回／置換PRの状態照合が完了している（[references/phase-reconciliation.md](references/phase-reconciliation.md)）。
 
@@ -68,7 +68,7 @@ GitHub issue の仕様を、レビュー済み・品質ゲート通過済みの�
 | 調査・方針 | `.ai/agents/issue-investigator.md`、`docs/design.md` | 仕様、設計整合、影響、方針、テスト観点 |
 | discovery / verification 前 | `.ai/review-guidelines.md`、`.ai/cross-model-reviewer-common.md` | 範囲、分類、Finding、判定、同意、境界 |
 | 外部CLI実行前 | `.ai/runtime-compatibility.md`、`.ai/cross-model-reviewer-common.md` | CLI、認証、read-only、監視、送信契約 |
-| 品質ゲート | `.ai/agents/test-fixer.md` | typecheck、lint（depcruise含む）、test、既存失敗の扱い |
+| 品質ゲート | `.ai/agents/test-fixer.md` | typecheck、lint（depcruise含む）、test、契約ゲート（`pnpm test:hooks`）、既存失敗の扱い |
 | phase / spike | `references/phase-reconciliation.md` | 関連Issue・撤回／置換PRの状態照合 |
 | Knowledge Graph | `references/architecture-context.md` | 基盤確認、対象クエリ、evidence、snapshot、追加ゲート |
 | PR作成前 | `.github/pull_request_template.md`、common の CodeRabbit 節 | PR形式と補助レビュー条件 |
@@ -109,7 +109,7 @@ Issueの内容を把握し、次の順序で `develop` 起点のIssue作業ブ�
 
 ### フェーズ4: 品質ゲートと初期コミット
 
-オーケストレーターは`references/architecture-context.md`に従って必要なsnapshot更新と差分照合を行う。説明不能な差分は原因を解消し、品質ゲートをpassにしない。`test-fixer`へ変更範囲と証跡を渡し、有効な結果の再利用と未検証ゲートの実行により必要な品質ゲートを揃える。教材変更は`content-new`のレビュー・パース検証も含める。ゲート通過後、今回の変更と実差分のあるsnapshotだけをコミットする。
+オーケストレーターは`references/architecture-context.md`に従って必要なsnapshot更新と差分照合を行う。説明不能な差分は原因を解消し、品質ゲートをpassにしない。`test-fixer`へ変更範囲と証跡を渡し、有効な結果の再利用と未検証ゲートの実行により必要な品質ゲートを揃える。教材変更は`content-new`のレビュー・パース検証も含める。エージェント契約文書（`.ai/skills/`、`.ai/agents/`、`.ai/*.md`、`.ai/automations/`、`.ai/scripts/`、`.codex/agents/`、`.github/ISSUE_TEMPLATE/`、`docs/ai-coding-agents.md`）が変更ファイルに含まれる場合は、`pnpm test:hooks` を正式ゲートへ含める。ゲート通過後、今回の変更と実差分のあるsnapshotだけをコミットする。
 
 ### フェーズ5: discovery
 
