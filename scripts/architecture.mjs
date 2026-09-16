@@ -4,18 +4,22 @@ import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import ts from 'typescript'
 
-const relations = new Set([
-  'calls-symbol',
-  'accepts-deps',
-  'returns-deps',
-  'imports',
-  'mounts',
-  'implements',
-  'calls-endpoint',
-  'derives-schema',
-  'uses-symbol',
-  'binds',
-])
+/** Ontology: node kinds, symbol kinds and per-relation domain/range (architecture/README.md). */
+const symbolKinds = ['db-table', 'contract-schema', 'deps-type', 'type', 'function', 'constant']
+const nodeKinds = new Set(['module', 'http-endpoint', 'worker-binding', ...symbolKinds])
+const relationSpec = {
+  imports: { domain: ['module'], range: ['module'] },
+  'imports-symbol': { domain: ['module'], range: symbolKinds },
+  'calls-symbol': { domain: ['module'], range: ['function'] },
+  'accepts-deps': { domain: ['function'], range: ['deps-type'] },
+  'returns-deps': { domain: ['function'], range: ['deps-type'] },
+  mounts: { domain: ['module'], range: ['module'] },
+  implements: { domain: ['http-endpoint'], range: ['module'] },
+  'calls-endpoint': { domain: ['module'], range: ['http-endpoint'] },
+  'derives-schema': { domain: ['type'], range: ['db-table', 'contract-schema'] },
+  'binds-service': { domain: ['module'], range: ['module'] },
+  'binds-database': { domain: ['module'], range: ['worker-binding'] },
+}
 const fixedFiles = ['apps/api/wrangler.toml', 'apps/web/wrangler.jsonc', '.dependency-cruiser.cjs']
 const roots = ['apps/api/src', 'apps/web/src', 'packages/shared/src']
 const included = (file) =>
@@ -23,6 +27,39 @@ const included = (file) =>
   !/\.test\.|\.d\.ts$|\/test\/|generated-content/.test(file) &&
   (!file.startsWith('apps/web/') ||
     /\/features\/[^/]+\/(api\/|server\/load-)|\/lib\/api\.ts$/.test(file))
+
+/** Deterministic layer from path convention; every extracted file resolves to exactly one. */
+export function layerOf(file) {
+  if (file.startsWith('apps/api/src/routes/')) return 'api-route'
+  if (file.startsWith('apps/api/src/services/')) return 'api-service'
+  if (file.startsWith('apps/api/src/dal/')) return 'api-dal'
+  if (file.startsWith('apps/api/src/middleware/')) return 'api-middleware'
+  if (file.startsWith('apps/api/src/')) return 'api-app'
+  if (file.startsWith('packages/shared/src/schema/')) return 'shared-schema'
+  if (file.startsWith('packages/shared/src/db/')) return 'shared-db'
+  if (file.startsWith('packages/shared/src/')) return 'shared-domain'
+  if (/^apps\/web\/src\/features\/[^/]+\/server\/load-/.test(file)) return 'web-loader'
+  if (/^apps\/web\/src\/features\/[^/]+\/api\//.test(file) || file === 'apps/web/src/lib/api.ts')
+    return 'web-api'
+  if (fixedFiles.includes(file)) return 'config'
+  throw new Error(`Unclassified layer: ${file}`)
+}
+
+/** Deterministic symbol kind from syntax; db-table beats contract-schema, deps-type beats type. */
+function symbolKind(node, sf) {
+  if (ts.isFunctionDeclaration(node)) return 'function'
+  if (ts.isTypeAliasDeclaration(node) || ts.isInterfaceDeclaration(node))
+    return node.name.text.endsWith('Deps') ? 'deps-type' : 'type'
+  const initializer = node.initializer
+  if (
+    initializer &&
+    ts.isCallExpression(initializer) &&
+    initializer.expression.getText(sf) === 'sqliteTable'
+  )
+    return 'db-table'
+  if (initializer && /^z\b/.test(initializer.getText(sf))) return 'contract-schema'
+  return node.name.text.endsWith('Schema') ? 'contract-schema' : 'constant'
+}
 
 /** Only explicit configuration and non-test source roots; symlinks are never followed. */
 export function readSources(root) {
@@ -107,8 +144,11 @@ export function extract(sources) {
   }
   const edge = (from, relation, to, source, extra = {}) =>
     edges.push({ from, relation, to, source, ...extra })
+  /** Containment is a node attribute, never an edge: it costs no query depth. */
+  const declare = (file, name) => nodes.get(file).symbols.push(name)
   const files = Object.keys(sources).sort()
-  for (const file of files) add(file, 'file', { file, line: 1 })
+  for (const file of files)
+    add(file, 'module', { file, line: 1 }, { layer: layerOf(file), symbols: [] })
   const parsed = new Map(
     files
       .filter((file) => file.endsWith('.ts') || file.endsWith('.tsx') || file.endsWith('.cjs'))
@@ -151,9 +191,10 @@ export function extract(sources) {
             continue
           const key = `${file}#${node.name.text}`
           if (symbols.has(key)) throw new Error(`Duplicate shared declaration: ${key}`)
-          const id = add(`symbol:${key}`, 'symbol', sourceAt(sf, node), {
-            declaration: node.getText(sf),
+          const id = add(`symbol:${key}`, symbolKind(node, sf), sourceAt(sf, node), {
+            layer: layerOf(file),
           })
+          declare(file, node.name.text)
           symbols.set(key, id)
           if (
             statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)
@@ -161,7 +202,6 @@ export function extract(sources) {
             const candidates = exportedSymbols.get(node.name.text) ?? []
             exportedSymbols.set(node.name.text, [...candidates, id])
           }
-          edge(file, 'implements', id, sourceAt(sf, node))
         }
       }
     }
@@ -173,9 +213,16 @@ export function extract(sources) {
             ts.isInterfaceDeclaration(node)) &&
           node.name
         ) {
-          const id = add(`symbol:${file}#${node.name.text}`, 'symbol', sourceAt(sf, node))
+          const id = add(
+            `symbol:${file}#${node.name.text}`,
+            symbolKind(node, sf),
+            sourceAt(sf, node),
+            {
+              layer: layerOf(file),
+            },
+          )
           apiSymbols.set(`${file}#${node.name.text}`, id)
-          edge(file, 'implements', id, sourceAt(sf, node))
+          declare(file, node.name.text)
         }
       }
     }
@@ -227,7 +274,7 @@ export function extract(sources) {
     for (const binding of imports.get(file).values()) {
       if (!binding.target.startsWith('packages/shared/')) continue
       const target = sharedSymbol(binding.target, binding.name)
-      if (target) edge(file, 'uses-symbol', target, sourceAt(sf, binding.node))
+      if (target) edge(file, 'imports-symbol', target, sourceAt(sf, binding.node))
     }
     if (file.startsWith('packages/shared/'))
       for (const node of sf.statements) {
@@ -289,7 +336,8 @@ export function extract(sources) {
       const endpointPath =
         `${prefix}/${localPath}`.replace(/\/{2,}/g, '/').replace(/\/$/, '') || '/'
       const source = sourceAt(parsed.get(target), node.expression.name)
-      const id = add(`endpoint:${method} ${endpointPath}`, 'endpoint', source, {
+      const id = add(`endpoint:${method} ${endpointPath}`, 'http-endpoint', source, {
+        layer: layerOf(target),
         method,
         path: endpointPath,
       })
@@ -361,7 +409,7 @@ export function extract(sources) {
       sources['apps/web/wrangler.jsonc'].split('\n').findIndex((line) => line.includes('"API"')) +
       1,
   }
-  edge('apps/web/wrangler.jsonc', 'binds', 'apps/api/src/internal-api.ts', workerSource, {
+  edge('apps/web/wrangler.jsonc', 'binds-service', 'apps/api/src/internal-api.ts', workerSource, {
     binding: 'API',
     service: api.name,
     entrypoint: 'InternalApi',
@@ -373,10 +421,11 @@ export function extract(sources) {
         .split('\n')
         .findIndex((line) => /binding\s*=\s*["']DB["']/.test(line)) + 1,
   }
-  const db = add('binding:D1:DB', 'binding', dbSource, {
+  const db = add('binding:D1:DB', 'worker-binding', dbSource, {
+    layer: 'config',
     name: api.databases.find((database) => database.binding === 'DB').database_name,
   })
-  edge('apps/api/wrangler.toml', 'binds', db, dbSource)
+  edge('apps/api/wrangler.toml', 'binds-database', db, dbSource)
   const rules = []
   visit(parsed.get('.dependency-cruiser.cjs'), (node) => {
     if (
@@ -390,14 +439,16 @@ export function extract(sources) {
       })
   })
   const graph = {
-    version: 1,
+    version: 2,
     sources: Object.fromEntries(
       files.map((file) => [
         file,
         { sha256: digest(sources[file]), lines: sources[file].split('\n').length },
       ]),
     ),
-    nodes: [...nodes.values()].sort((a, b) => a.id.localeCompare(b.id)),
+    nodes: [...nodes.values()]
+      .map((node) => (node.symbols ? { ...node, symbols: [...node.symbols].sort() } : node))
+      .sort((a, b) => a.id.localeCompare(b.id)),
     edges: edges.sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))),
     dependencyRules: rules,
   }
@@ -407,7 +458,7 @@ export function extract(sources) {
 
 export function validateGraph(graph) {
   if (
-    graph.version !== 1 ||
+    graph.version !== 2 ||
     !Array.isArray(graph.nodes) ||
     !Array.isArray(graph.edges) ||
     !graph.sources
@@ -440,17 +491,43 @@ export function validateGraph(graph) {
     )
       throw new Error('Invalid source provenance')
   }
+  const kindOf = new Map()
   for (const node of graph.nodes) {
+    if (typeof node.id !== 'string' || !nodeKinds.has(node.kind)) throw new Error('Invalid node')
+    // The id names the owning module, so provenance must agree with it: layer, query
+    // suppression and the projection all read source.file, and a mismatch would let a node
+    // claim one module by id and another by provenance.
     if (
-      typeof node.id !== 'string' ||
-      !['file', 'symbol', 'endpoint', 'binding'].includes(node.kind)
+      (node.kind === 'module' || symbolKinds.includes(node.kind)) &&
+      moduleOf(node.id) !== node.source?.file
     )
-      throw new Error('Invalid node')
+      throw new Error(`Invalid ownership: ${node.id}`)
+    if (node.layer !== layerOf(node.source?.file ?? ''))
+      throw new Error(`Invalid layer: ${node.id}`)
     provenance(node.source)
+    kindOf.set(node.id, node.kind)
   }
+  // Containment: every symbol is declared by exactly its own module, and vice versa.
+  const declared = new Set()
+  for (const node of graph.nodes) {
+    if (node.kind !== 'module') {
+      if (node.symbols !== undefined) throw new Error(`Containment on non-module: ${node.id}`)
+      continue
+    }
+    if (!Array.isArray(node.symbols)) throw new Error(`Missing containment: ${node.id}`)
+    for (const name of node.symbols) declared.add(`symbol:${node.id}#${name}`)
+  }
+  for (const node of graph.nodes) {
+    if (!symbolKinds.includes(node.kind)) continue
+    if (!declared.delete(node.id)) throw new Error(`Undeclared symbol: ${node.id}`)
+  }
+  if (declared.size) throw new Error(`Declared symbol has no node: ${[...declared][0]}`)
   for (const edge of graph.edges) {
-    if (!relations.has(edge.relation) || !ids.has(edge.from) || !ids.has(edge.to))
+    const spec = relationSpec[edge.relation]
+    if (!spec || !ids.has(edge.from) || !ids.has(edge.to))
       throw new Error('Unknown relation or dangling edge')
+    if (!spec.domain.includes(kindOf.get(edge.from)) || !spec.range.includes(kindOf.get(edge.to)))
+      throw new Error(`Relation ${edge.relation} violates domain/range: ${edge.from} -> ${edge.to}`)
     provenance(edge.source)
   }
 }
@@ -461,27 +538,60 @@ export function assertFresh(saved, current) {
     throw new Error('Architecture snapshot is stale: run node scripts/architecture.mjs extract')
 }
 
-export function query(graph, needle, depth = 2) {
+const terminalLayers = new Set(['shared-schema', 'shared-db'])
+/** Owning module of a node id, or undefined when the id carries no module. */
+const moduleOf = (id) =>
+  id.startsWith('symbol:')
+    ? id.slice('symbol:'.length).split('#')[0]
+    : id.includes(':')
+      ? undefined
+      : id
+
+export function query(graph, needle, depth = 1) {
   if (!needle || !Number.isInteger(depth) || depth < 0 || depth > 4)
     throw new Error('query requires text and depth 0..4')
-  const selected = new Set(
+  const seeds = new Set(
     graph.nodes.filter((node) => node.id.includes(needle)).map((node) => node.id),
   )
-  if (selected.size === 0) throw new Error(`No architecture match: ${needle}`)
+  if (seeds.size === 0) throw new Error(`No architecture match: ${needle}`)
+  const layers = new Map(graph.nodes.map((node) => [node.id, node.layer]))
+  // Shared contract surfaces connect everything, so reaching one does not expand through it.
+  // Seeding one still does: the caller asked about that contract.
+  const expands = (id) => seeds.has(id) || !terminalLayers.has(layers.get(id))
+  const selected = new Set(seeds)
   for (let i = 0; i < depth; i++) {
     const next = new Set(selected)
-    for (const edge of graph.edges)
-      if (selected.has(edge.from) || selected.has(edge.to)) {
-        next.add(edge.from)
-        next.add(edge.to)
-      }
+    for (const edge of graph.edges) {
+      if (selected.has(edge.from) && expands(edge.from)) next.add(edge.to)
+      if (selected.has(edge.to) && expands(edge.to)) next.add(edge.from)
+    }
     for (const id of next) selected.add(id)
   }
+  // Projection drops anything the id already carries.
+  const projectNode = ({ id, kind, layer, symbols, source, ...rest }) => ({
+    id,
+    kind,
+    layer,
+    ...(symbols ? { symbols } : {}),
+    ...rest,
+    ...(moduleOf(id) === source.file
+      ? source.line === 1
+        ? {}
+        : { line: source.line }
+      : { source }),
+  })
+  const projectEdge = ({ from, relation, to, source, ...rest }) => ({
+    from,
+    relation,
+    to,
+    ...rest,
+    ...(moduleOf(from) === source.file ? { line: source.line } : { source }),
+  })
   return {
-    nodes: graph.nodes
-      .filter((node) => selected.has(node.id))
-      .map(({ declaration, ...node }) => node),
-    edges: graph.edges.filter((edge) => selected.has(edge.from) && selected.has(edge.to)),
+    nodes: graph.nodes.filter((node) => selected.has(node.id)).map(projectNode),
+    edges: graph.edges
+      .filter((edge) => selected.has(edge.from) && selected.has(edge.to))
+      .map(projectEdge),
   }
 }
 
@@ -499,7 +609,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
       console.log('Architecture snapshot and Worker bindings are consistent')
     } else if (command === 'query') {
       console.log(
-        JSON.stringify(query(graph, needle, depth === undefined ? 2 : Number(depth)), null, 2),
+        JSON.stringify(query(graph, needle, depth === undefined ? 1 : Number(depth)), null, 2),
       )
     } else
       throw new Error(

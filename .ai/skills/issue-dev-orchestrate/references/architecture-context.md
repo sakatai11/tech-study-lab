@@ -29,11 +29,11 @@ pnpm architecture:test
 Issue と受け入れ条件に現れる endpoint、file、関数、schema などの具体語を seed に、広域のコード検索やファイル読み取りより先に query する。ここでいうGraph-firstは、Issueの仕様分解と必要な`docs/design.md`契約の確認後に行う**リポジトリ構造調査の順序**である。Issue に具体語がない場合は、機能名や変更領域から最小の seed を選ぶための限定的な検索だけを許容し、候補が得られたら直ちに query へ戻る。候補が複数なら関連する候補をqueryし、不足はLSP・`rg`で補う。調査を続けても仕様・対象範囲・必要な権限を確定できない場合に、要確認事項を報告する。
 
 ```sh
-pnpm architecture:query '/dashboard/due-count' 1
-pnpm architecture:query 'load-dashboard.ts' 1
+pnpm architecture:query '/dashboard/due-count'
+pnpm architecture:query 'load-dashboard.ts'
 ```
 
-- 最初は depth 0〜2 に絞り、必要な関係が不足した場合だけ最大4まで広げる。大きなquery結果をそのまま全てブリーフへ貼らない。
+- 既定の depth 1 で始め、必要な関係が不足した場合だけ広げる。depth 2 は既にリポジトリの3割前後へ到達し、depth 3 以上はほぼ全体になるため、seedを具体的なsymbol / fileへ絞る方を先に試す。大きなquery結果をそのまま全てブリーフへ貼らない。
 - 未調査は`pending`としてよい。担当が必要な調査を補い、判断に必要な根拠を揃える。状態ラベルや未使用項目の欠落だけを停止理由にしない。
 - coverageは`covered`（必要な構造を確認済み）、`partial`（一部不足または対象内外の混在）、`outside`（抽出対象外）、`unmatched`（対象内だが一致なし）で要約する。対象外は抽出器の定義で確認し、空結果を無関係の証明にしない。判断に影響する不足と追加確認を記録する。
 - `graphEvidence` には query語・depth・結果、判断に使った node / edge、Graphが返した関連ファイルだけを要約する。fallbackで発見した対象は`graphEvidence.files`へ混ぜず、実装コードは`sourceVerification.code`、教材Markdownは`sourceVerification.content`、型は`sourceVerification.types`、テストは`sourceVerification.tests`、抽出対象の定義は`sourceVerification.extractor`へ記録する。結果が空なら node / edge / files を空のまま保持し、架空の証跡で補わない。
