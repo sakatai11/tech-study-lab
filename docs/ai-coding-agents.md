@@ -2,7 +2,7 @@
 
 ## 1. 目的と適用範囲
 
-この仕様書は、**tech-study-lab** で利用するAIコーディングエージェントの設定、共通資産、実行時の差分、検証方法を定義する。対象は Claude Code、Codex App / CLI、Gemini Code Review である。
+この仕様書は、**tech-study-lab** で利用するAIコーディングエージェントの設定、共通資産、実行時の差分、検証方法を定義する。対象は Claude Code と Codex App / CLI である。
 
 アプリケーションの設計・機能仕様の一次ソースは [`design.md`](./design.md)。本書はAI開発ハーネスの仕様であり、アプリケーション要件を定義しない。
 
@@ -12,9 +12,6 @@
 | --- | --- | --- | --- | --- | --- |
 | Claude Code | 対話型の実装・調査・レビュー | 対応 | 対応 | 対応 | `.claude/settings.json`、`.claude/rules/` |
 | Codex App / CLI | 対話型の実装・調査・レビュー | 対応 | 対応 | 対応 | `~/.codex/config.toml`、`.codex/agents/*.toml`、`.codex/hooks.json` |
-| Gemini Code Review | PR・コードレビュー | 未対応 | 未対応 | 未対応 | `.gemini/config.yaml`、`.gemini/styleguide.md` |
-
-Geminiは現時点ではレビュー専用であり、Claude/Codex向けの共通スキル・サブエージェント・フックを読み込まない。Geminiへ開発フローを広げる場合は、互換性を確認したうえで別途この仕様を拡張する。
 
 ## 3. 共通資産の配置
 
@@ -39,10 +36,6 @@ Geminiは現時点ではレビュー専用であり、Claude/Codex向けの共�
 ├── agents/<name>.toml              # カスタムエージェント登録
 ├── hooks/                          # Codexペイロードのアダプター
 └── hooks.json                      # 生成済みhook配線
-
-.gemini/                            # Gemini Code Review固有の設定
-├── config.yaml                     # レビュー動作設定
-└── styleguide.md                   # レビュー方針とコメント形式
 ```
 
 ### 3.1 編集責務
@@ -54,7 +47,6 @@ Geminiは現時点ではレビュー専用であり、Claude/Codex向けの共�
 | Claude/Codex共通hook処理 | `.ai/hooks/` | 設定JSONへ処理をインライン記述すること |
 | Claude/Codex入力の正規化 | `.claude/hooks/`、`.codex/hooks/` | 共通処理へ製品固有ペイロードを持ち込むこと |
 | Claude固有ルール | `.claude/rules/` | `AGENTS.md`へClaude専用挙動を混在させること |
-| Geminiレビュー方針 | `.gemini/` | `.ai/`へ未対応のGemini固有形式を置くこと |
 
 `.claude/skills/`、`.agents/skills/`、`.claude/agents/` は発見用のシンボリックリンクである。リンクを通常ファイルに置換したり、リンク経由で本文を複製・直接編集したりしない。
 
@@ -137,10 +129,9 @@ pnpm test:hooks           # hook fixture、共通ログ、同期、エージェ�
 ## 8. 恒久ルールと権限
 
 - 共通の開発規約、コマンド、検証手順は `AGENTS.md` に置く。
-- Claude固有のパスベースルールは `.claude/rules/` に置く。CodexやGeminiへ自動適用されない。
-- Claudeの `settings.json` にあるallow / denyはCodex・Geminiの権限を変更しない。
+- Claude固有のパスベースルールは `.claude/rules/` に置く。Codexへ自動適用されない。
+- Claudeの `settings.json` にあるallow / denyはCodexの権限を変更しない。
 - Codex App / CLIはセッションのsandbox・approval設定と `AGENTS.md` に従う。`gh auth status` が成功した場合は認証済みの `gh` CLI を使える。失敗時はCodex Appの接続済みGitHubコネクタを使い、利用できなければ `auth-required` または `error` として明示的に扱う。
-- Geminiのレビュー動作は `.gemini/config.yaml` と `.gemini/styleguide.md` に従う。
 
 ## 9. 変更時の完了条件
 
@@ -151,6 +142,5 @@ pnpm test:hooks           # hook fixture、共通ログ、同期、エージェ�
 | エージェント契約文書（`.ai/skills/`、`.ai/agents/`、`.ai/*.md`、`.ai/automations/`、`.ai/scripts/`、`.codex/agents/`、`.github/ISSUE_TEMPLATE/`、本書 `docs/ai-coding-agents.md`） | `pnpm test:hooks`（文言を変えた場合は `scripts/test-hooks.sh` の期待値も同じ変更で更新する） |
 | `.claude/settings.json` のhook配線 | 手編集ではなく `pnpm sync:agents` 後の差分 |
 | `.codex/hooks.json` | 手編集ではなく `pnpm sync:agents` 後の差分、信頼済みCodex環境での必要時スモークテスト |
-| `.gemini/` | Gemini Code Review上で設定・コメント形式を確認 |
 
 `skill-audit` は共通スキル、リンク、エージェント、hooks、ローカルスキルログをまとめて監査する。AIハーネスの変更後は、必要に応じてこの監査も実行する。
