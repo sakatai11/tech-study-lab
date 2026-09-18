@@ -50,7 +50,7 @@ export function findUnresolvedRefs(file, text, headings) {
       if (!headings.numbers.has(match[1])) report(match[0])
     for (const match of line.matchAll(/design\.md ([0-9]+(?:\.[0-9]+)*)/g))
       if (!headings.numbers.has(match[1])) report(match[0])
-    for (const match of line.matchAll(/design\.md#([^\s)"'\]）」』】、。,`<>]+)/g))
+    for (const match of line.matchAll(/design\.md#([^\s)"'\]）」』】、。,`<>${}]+)/g))
       if (!headings.slugs.has(match[1])) report(match[0])
   })
 
@@ -59,6 +59,12 @@ export function findUnresolvedRefs(file, text, headings) {
 
 /** 参照切れを実際に検出できることの回帰テスト。 */
 function selfTest() {
+  // この検査自身も走査対象に含まれるため、fixture の参照をソース上へ literal で残さない。
+  // 実在しない章を literal で書くと、この検査が自分の fixture を未解決参照として落とす。
+  const chapter = (number) => `§${number}`
+  const bare = (number) => `design.md ${number}`
+  const anchor = (slug) => `design.md#${slug}`
+
   const headings = collectHeadings(
     [
       '## 8. フロントエンドアーキテクチャ（How）',
@@ -68,37 +74,37 @@ function selfTest() {
 
   assert.deepEqual(headings.numbers, new Set(['8', '8.3']))
   assert.deepEqual(
-    findUnresolvedRefs('fixture', '§8 と design.md 8.3 を参照する', headings),
+    findUnresolvedRefs('fixture', `${chapter('8')} と ${bare('8.3')} を参照する`, headings),
     [],
     'resolvable chapter references must not be reported',
   )
   assert.deepEqual(
     findUnresolvedRefs(
       'fixture',
-      '[境界](design.md#83-server--client-コンポーネント境界)',
+      `[境界](${anchor('83-server--client-コンポーネント境界')})`,
       headings,
     ),
     [],
     'resolvable anchors must not be reported',
   )
   assert.deepEqual(
-    findUnresolvedRefs('fixture', '§8.9 と design.md 9.1 は存在しない', headings).map(
+    findUnresolvedRefs('fixture', `${chapter('8.9')} と ${bare('9.1')} は存在しない`, headings).map(
       (item) => item.ref,
     ),
-    ['§8.9', 'design.md 9.1'],
+    [chapter('8.9'), bare('9.1')],
     'deleted or renumbered chapters must be reported',
   )
   assert.deepEqual(
-    findUnresolvedRefs('fixture', '[境界](design.md#83-server-client)', headings).map(
+    findUnresolvedRefs('fixture', `[境界](${anchor('83-server-client')})`, headings).map(
       (item) => item.ref,
     ),
-    ['design.md#83-server-client'],
+    [anchor('83-server-client')],
     'anchors that no longer match a heading must be reported',
   )
   assert.deepEqual(
     findUnresolvedRefs(
       'fixture',
-      '境界は（design.md#83-server--client-コンポーネント境界）を参照する',
+      `境界は（${anchor('83-server--client-コンポーネント境界')}）を参照する`,
       headings,
     ),
     [],
