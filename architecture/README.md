@@ -84,6 +84,16 @@ Graphの語彙定義。node kind・relation・`layer` は**構文とパス規約
 | `web-loader` | `apps/web/src/features/*/server/load-*` |
 | `config` | dependency-cruiser設定、Worker設定 |
 
+### 設計契約への参照を持たない
+
+Graphは設計契約の本文を持たないのと同様に、契約への**参照**（`docs/design.md` の章アンカー）も持たない。#182 で `governed-by` 相当の関係を検討し、次の理由で採らない判断とした。
+
+- 領域から読む章を引く対応表には「テストファイル → §9.8 / §10.9」のようにパスから決定的に導出できない行があり、本節の「人手の判断を挟まない」という導出規則に反する。
+- 章番号への参照は`docs/design.md`の章構成が動くたびに追従対象となり、「再生成すれば必ず現在の構造と一致する」というsnapshotの性質を弱める。
+- レビュー時にどの章を読むかの単一ソースは [`.ai/review-guidelines.md`](../.ai/review-guidelines.md) の章マッピングであり、本書へ再掲も複製もしない。`.claude/rules/*.md` が持つ個別ルールの根拠章も同じ扱いとする。
+
+章参照そのものの腐りはGraphではなく `scripts/test-design-chapter-refs.mjs` が検査する。`pnpm test:hooks` から実行し、リポジトリ中の `§N`・`design.md N.N`・`design.md#<見出しスラッグ>` が `docs/design.md` の実在する見出しへ解決されることを確認して、解決できない参照を非0で落とす。
+
 ## 抽出対象
 
 - `apps/api/src`、`packages/shared/src` の非テスト `.ts/.tsx`。

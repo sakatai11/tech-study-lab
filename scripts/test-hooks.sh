@@ -5,6 +5,8 @@
 # 2. `.ai/` 配下のスキル・エージェント定義・共通契約と `docs/ai-coding-agents.md` に対する
 #    完全一致 grep（check_agent_contract / check_absent_contract /
 #    check_section_contract / check_order_contract）による契約検査。件数は後者が大半を占める。
+# 3. `docs/design.md` の章参照（`§N` / `design.md N.N` / `design.md#<見出しスラッグ>`）が実在する見出しへ
+#    解決されることの検査（scripts/test-design-chapter-refs.mjs）。
 #
 # 2 はレビューの成立条件、外部送信の同意、ブランチ規約、役割別モデル方針、手順の順序が
 # 黙って削除・改変されないよう固定する。契約文書の文言を変えた場合はここの期待値も同じ変更で
@@ -373,7 +375,7 @@ check_section_contract "external review uses spec-compliance-first" "$review_pro
 check_section_contract "external review prioritizes specification" "$review_profiles_section" '優先順: **仕様準拠 → ガードレール違反 → 正確性 → セキュリティ → テスト**'
 check_agent_contract "agents md points at guidelines" '.ai/review-guidelines.md' AGENTS.md
 # 章マッピング表が単一ソース以外へ再掲されていないこと
-for f in AGENTS.md .ai/agents/reviewer.md "$COMMON" "$SKILL"; do
+for f in AGENTS.md .ai/agents/reviewer.md architecture/README.md "$COMMON" "$SKILL"; do
   check_absent_contract "design mapping not restated ($f)" '| `apps/web/**` |' "$f"
 done
 
@@ -757,5 +759,10 @@ check_agent_contract "weekly retro renders transfer number without title or URL"
 check_agent_contract "weekly retro renders parent tracker number without title or URL" '<li>#115 親tracker (GitHub sub-issue) — 子Issue: close候補</li>' "$WEEKLY_RETRO_NUMBER_FALLBACK_OUTPUT"
 
 node scripts/test-review-state-machine.mjs
+
+# ---- Issue #182: design.md 章参照の解決検査 ----
+# 章番号の変更・削除で、リポジトリ中の `§N` / `design.md N.N` / `design.md#<見出しスラッグ>` が
+# 黙って腐ることを防ぐ。参照切れ検出の回帰テストはスクリプト側が持つ。
+node scripts/test-design-chapter-refs.mjs
 
 printf '%s\n' "Agent contract checks passed!"
