@@ -21,7 +21,11 @@ description: Knowledge Graphの影響範囲を原因特定に使い、正式な�
    pnpm architecture:check
    pnpm architecture:test
    ```
-   `content/` が変更ファイルに含まれる場合は、Graph対象外でも教材固有ゲートを省略しない。`content-new` の契約に従う教材レビュー結果を確認し、`pnpm content:sync` または同等のビルド時パースを実行してfrontmatter、ID、選択肢、`answerIndex`を検証し、`sourceVerification.content`へ記録する。
+   エージェント契約文書（`.ai/skills/`、`.ai/agents/`、`.ai/*.md`、`.ai/automations/`、`.ai/scripts/`、`.codex/agents/`、`.github/ISSUE_TEMPLATE/`、`docs/ai-coding-agents.md`）が変更ファイルに含まれる場合は、Graph対象外でも次の契約ゲートを正式判定へ含める。このゲートは `.ai/` 配下の契約文言を完全一致で検査するため、文言を変更した場合は `scripts/test-hooks.sh` の期待値を同じ変更で更新する（期待値の更新はスコープ内の修正であり、検査の削除で通すことはしない）。同じ入力に対する成功結果を再利用できない場合は実行する。PR CIでも同じゲートが実行される。
+   ```bash
+   pnpm test:hooks
+   ```
+   `content/` が変更ファイルに含まれる場合は、Graph対象外でも教材固有ゲートを省略しない。`content-new` / `content-quality-gate` の契約に従う教材レビュー結果を確認し、同じ入力に対する成功結果を再利用できなければ `pnpm content:validate` を実行してfrontmatter、ID、選択肢、`answerIndex`を検証し、`sourceVerification.content`へ記録する。この検証ではD1を変更する `content:sync` / `content:sync:remote` を実行しない。
    - `pnpm typecheck` / `pnpm lint` / `pnpm test` が非0終了した場合、既存失敗だけが原因でも正式ゲートの `pass` ではない。変更起因かベースラインかを切り分け、ベースラインとして据え置いた場合も `fail（ベースライン）` として報告する。
    - `pnpm lint` は `package.json` の正式スクリプト（Biome と dependency-cruiser）を実行する。`pnpm biome check .` 単体を正式な lint ゲートとして扱わない。
    - 正式ゲートがスコープ外の既存エラー（例: `docs/mockups/*.js`、テスト未整備パッケージの「No test files found」）で失敗しても、**それは直さない**。ベースラインとして据え置き、報告で明示する。
@@ -52,6 +56,7 @@ description: Knowledge Graphの影響範囲を原因特定に使い、正式な�
 | test | pass / fail（ベースライン、N passed / M failed） |
 | architecture check | pass / fail |
 | architecture test | pass / fail |
+| agent contract（test:hooks） | pass / fail / 対象外 |
 
 ### Architecture context
 - 共通実行記録の参照先・対象revision

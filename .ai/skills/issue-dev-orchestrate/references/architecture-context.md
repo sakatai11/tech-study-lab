@@ -1,21 +1,21 @@
 # Knowledge Graph 開発コンテキスト
 
-`develop-v2` 系統の Issue 開発で常時使用する、構造化アーキテクチャ参照の契約。構造調査は Knowledge Graph から開始し、結果を使って読むコード・型・テスト・設計文書を絞る。設計意図・振る舞い・依存方向の一次ソースは `docs/design.md`、現在構造の一次ソースはコードと設定であり、Graph は探索・照合の入口であって代替仕様ではない。Graph の存在だけで仕様や実行経路を推測してはならない。
+`develop` 系統の Issue 開発で常時使用する、構造化アーキテクチャ参照の契約。構造調査は Knowledge Graph から開始し、結果を使って読むコード・型・テスト・設計文書を絞る。設計意図・振る舞い・依存方向の一次ソースは `docs/design.md`、現在構造の一次ソースはコードと設定であり、Graph は探索・照合の入口であって代替仕様ではない。Graph の存在だけで仕様や実行経路を推測してはならない。
 
 ## 基底と完了条件
 
-- Issue作業ブランチの統合ブランチは `develop-v2` とし、開始時に `baseBranch: develop-v2` を記録する。既存の `develop` 系統は変更せず、release-main-pr の `develop` → `main` 運用にも触れない。
+- Issue作業ブランチの統合ブランチは `develop` とし、開始時に `baseBranch: develop` を記録する。release-main-pr の `develop` → `main` 運用と整合させる。
 - 作業開始時は`git status --short`と差分で、今回の継続変更とユーザー所有・不明な変更を識別する。今回の継続変更は保持して進める。無関係な変更は触れず、必要ならcleanな別worktreeへ作業を隔離する。重なりや所有を解消できない場合だけ該当作業を止めて確認する。ユーザー変更を自動stash・破棄・コミットしない。
-- `git fetch origin develop-v2`後、`git rev-parse --verify origin/develop-v2^{commit}`でremote baseを検証する。checkoutやmergeは対象worktreeで変更を保護できる状態で行う。同一作業の再開で固定済みbaseが有効なら準備を繰り返さず、base更新が必要なら継続変更を保護できる段階で行う。
-- `origin/develop-v2` を起点に統合ブランチ `develop-v2` をfast-forwardで更新して新規Issue作業ブランチを切る。既存Issue作業ブランチを継続する場合は、最新 `develop-v2` を通常のmergeで取り込んでから準備完了とする。履歴の破壊的な書き換えやforce操作は行わない。
-- 作業ブランチ準備後、必ず `git merge-base --is-ancestor origin/develop-v2 HEAD` を実行する。非祖先の場合は古いまたは別系統の起点として実装へ進まず停止する。
-- 祖先性検証後に `git merge-base origin/develop-v2 HEAD` を実行し、その単一結果を `effectiveBase` として固定する。レビューの `committedRange` は常に `<effectiveBase>...HEAD` とする。
+- `git fetch origin develop`後、`git rev-parse --verify origin/develop^{commit}`でremote baseを検証する。checkoutやmergeは対象worktreeで変更を保護できる状態で行う。同一作業の再開で固定済みbaseが有効なら準備を繰り返さず、base更新が必要なら継続変更を保護できる段階で行う。
+- `origin/develop` を起点に統合ブランチ `develop` をfast-forwardで更新して新規Issue作業ブランチを切る。既存Issue作業ブランチを継続する場合は、最新 `develop` を通常のmergeで取り込んでから準備完了とする。履歴の破壊的な書き換えやforce操作は行わない。
+- 作業ブランチ準備後、必ず `git merge-base --is-ancestor origin/develop HEAD` を実行する。非祖先の場合は古いまたは別系統の起点として実装へ進まず停止する。
+- 祖先性検証後に `git merge-base origin/develop HEAD` を実行し、その単一結果を `effectiveBase` として固定する。レビューの `committedRange` は常に `<effectiveBase>...HEAD` とする。
 - 共通の実行記録にモード、base、調査証跡を保持し、エージェントには参照先と担当範囲を渡す。
-- 完了条件は、snapshotを再生成・差分照合し、通常の typecheck / lint / test / build に加えて `architecture:check` と `architecture:test` を通過した検証済みコミット列を `develop-v2` 向けPRへ渡すこと。PRのマージは人間が判断する。
+- 完了条件は、snapshotを再生成・差分照合し、通常の typecheck / lint / test / build に加えて `architecture:check` と `architecture:test` を通過した検証済みコミット列を `develop` 向けPRへ渡すこと。PRのマージは人間が判断する。
 
 ## 開始時の基盤確認
 
-`architecture/graph.json`、`scripts/architecture.mjs`、次のpackage scriptが存在することを、Issue変更前に確認する。検査対象は、最新の`origin/develop-v2`を取り込んで祖先性検証を終えたIssue作業ブランチのcheckoutとする。開始時の別ブランチや、更新前のIssue作業ブランチでは実行しない。
+`architecture/graph.json`、`scripts/architecture.mjs`、次のpackage scriptが存在することを、Issue変更前に確認する。検査対象は、最新の`origin/develop`を取り込んで祖先性検証を終えたIssue作業ブランチのcheckoutとする。開始時の別ブランチや、更新前のIssue作業ブランチでは実行しない。
 
 ```sh
 pnpm architecture:check
@@ -29,11 +29,11 @@ pnpm architecture:test
 Issue と受け入れ条件に現れる endpoint、file、関数、schema などの具体語を seed に、広域のコード検索やファイル読み取りより先に query する。ここでいうGraph-firstは、Issueの仕様分解と必要な`docs/design.md`契約の確認後に行う**リポジトリ構造調査の順序**である。Issue に具体語がない場合は、機能名や変更領域から最小の seed を選ぶための限定的な検索だけを許容し、候補が得られたら直ちに query へ戻る。候補が複数なら関連する候補をqueryし、不足はLSP・`rg`で補う。調査を続けても仕様・対象範囲・必要な権限を確定できない場合に、要確認事項を報告する。
 
 ```sh
-pnpm architecture:query '/dashboard/due-count' 1
-pnpm architecture:query 'load-dashboard.ts' 1
+pnpm architecture:query '/dashboard/due-count'
+pnpm architecture:query 'load-dashboard.ts'
 ```
 
-- 最初は depth 0〜2 に絞り、必要な関係が不足した場合だけ最大4まで広げる。大きなquery結果をそのまま全てブリーフへ貼らない。
+- 既定の depth 1 で始め、必要な関係が不足した場合だけ広げる。depth 2 は既にリポジトリの3割前後へ到達し、depth 3 以上はほぼ全体になるため、seedを具体的なsymbol / fileへ絞る方を先に試す。大きなquery結果をそのまま全てブリーフへ貼らない。
 - 未調査は`pending`としてよい。担当が必要な調査を補い、判断に必要な根拠を揃える。状態ラベルや未使用項目の欠落だけを停止理由にしない。
 - coverageは`covered`（必要な構造を確認済み）、`partial`（一部不足または対象内外の混在）、`outside`（抽出対象外）、`unmatched`（対象内だが一致なし）で要約する。対象外は抽出器の定義で確認し、空結果を無関係の証明にしない。判断に影響する不足と追加確認を記録する。
 - `graphEvidence` には query語・depth・結果、判断に使った node / edge、Graphが返した関連ファイルだけを要約する。fallbackで発見した対象は`graphEvidence.files`へ混ぜず、実装コードは`sourceVerification.code`、教材Markdownは`sourceVerification.content`、型は`sourceVerification.types`、テストは`sourceVerification.tests`、抽出対象の定義は`sourceVerification.extractor`へ記録する。結果が空なら node / edge / files を空のまま保持し、架空の証跡で補わない。
@@ -47,7 +47,7 @@ pnpm architecture:query 'load-dashboard.ts' 1
 
 オーケストレーターは共通の実行記録を一か所に保持する。以下は記録項目の目安であり、空欄の展開や配列の並び順は要求しない。
 
-- `architectureMode: knowledge-graph`、`baseBranch: develop-v2`、`effectiveBase`
+- `architectureMode: knowledge-graph`、`baseBranch: develop`、`effectiveBase`
 - `graphCoverage`、`graphEvidence`（query・判断に使ったnode / edge / file）
 - `graphLimitations`（判断に影響する制限）
 - `sourceVerification`（一次ソースの参照先と確認した事実。code / content / types / tests等で必要に応じ分類）
@@ -70,7 +70,7 @@ git diff -- architecture/graph.json
 - 削除後の空結果は上記の削除方針で照合する。
 - 期待しないnode/edgeの消失、出典の混線、抽出不能な新構文があれば品質ゲートをpassにしない。
 - snapshot差分を照合した後、`test-fixer`が通常ゲートと`architecture:check` / `architecture:test`の結果を確認する。
-- `content/` を変更した場合はオーケストレーターが`content-new`を全文読んで起動し、同スキルに従って`content-author`へ執筆・改訂、`reviewer`へ教材観点レビューを委譲する。`test-fixer`はレビュー結果を受け取り、`pnpm content:sync`または同等のビルド時パースを正式判定する。Graphゲートで教材検証を代替せず、frontmatter、ID、選択肢、`answerIndex`、本文と解説の整合を確認し、結果は`sourceVerification.content`へ記録する。
+- `content/` を変更した場合はオーケストレーターが`content-new`を全文読んで起動し、`content-quality-gate`も全文読んだうえで、同スキルに従って`content-author`へ執筆・改訂、`reviewer`へ教材観点レビューを委譲する。`test-fixer`はレビュー結果と、同じ入力に対する `pnpm content:validate` の成功結果を受け取り、再利用できなければ同コマンドを正式判定として実行する。D1を変更する `content:sync` / `content:sync:remote` を検証用途に使わない。Graphゲートで教材検証を代替せず、frontmatter、ID、選択肢、`answerIndex`、本文と解説の整合を確認し、結果は`sourceVerification.content`へ記録する。
 - 検証結果には対象revisionまたは入力内容、コマンド、実行条件、終了結果を残す。同じ入力・条件に対する成功結果は担当交代やコミットだけで再実行せず引き継げる。コード・依存・設定・環境の変更、証跡不足、失敗があれば影響する検証を再実行する。最終HEADに必要な全ゲートの有効な証跡があることを確認する。
 
 ## エージェントへ渡す情報
