@@ -23,16 +23,29 @@ export function slugify(heading) {
     .replace(/\s/g, '-')
 }
 
-/** `##`〜`####` の見出しから、解決可能な章番号と anchor スラッグを集める。 */
+/**
+ * 見出しから、解決可能な章番号と anchor スラッグを集める。
+ *
+ * anchor は GitHub に合わせて全レベル（`#`〜`######`）の見出しから生成し、同じスラッグが
+ * 再出現した場合は GitHub と同じく `-1`・`-2` と連番を付けて一意化する。章番号は
+ * `##`〜`####` を使うリポジトリの章立て規約に従う。
+ */
 export function collectHeadings(markdown) {
   const numbers = new Set()
   const slugs = new Set()
+  const slugOccurrences = new Map()
 
   for (const line of markdown.split('\n')) {
-    const heading = line.match(/^#{2,4} (.+?)\s*$/)
+    const heading = line.match(/^(#{1,6}) (.+?)\s*$/)
     if (!heading) continue
-    slugs.add(slugify(heading[1]))
-    const numbered = heading[1].match(/^([0-9]+(?:\.[0-9]+)*)[.．\s]/)
+
+    const base = slugify(heading[2])
+    const seen = slugOccurrences.get(base) ?? 0
+    slugOccurrences.set(base, seen + 1)
+    slugs.add(seen === 0 ? base : `${base}-${seen}`)
+
+    if (heading[1].length < 2 || heading[1].length > 4) continue
+    const numbered = heading[2].match(/^([0-9]+(?:\.[0-9]+)*)[.．\s]/)
     if (numbered) numbers.add(numbered[1])
   }
 
@@ -93,6 +106,31 @@ function selfTest() {
     ),
     [chapter('8.9'), bare('9.1')],
     'deleted or renumbered chapters must be reported',
+  )
+
+  // GitHub は重複した見出しの anchor へ `-1`・`-2` と連番を付ける。連番付き anchor を
+  // 未解決として報告しないこと、および連番が尽きた先を解決しないことを確認する。
+  const duplicated = collectHeadings(
+    ['# 同じ見出し', '## 同じ見出し', '### 同じ見出し', '##### 同じ見出し'].join('\n'),
+  )
+
+  assert.deepEqual(
+    duplicated.slugs,
+    new Set(['同じ見出し', '同じ見出し-1', '同じ見出し-2', '同じ見出し-3']),
+  )
+  assert.deepEqual(
+    findUnresolvedRefs(
+      'fixture',
+      `${anchor('同じ見出し')} ${anchor('同じ見出し-1')} ${anchor('同じ見出し-3')}`,
+      duplicated,
+    ),
+    [],
+    'anchors that GitHub disambiguates with a counter must resolve',
+  )
+  assert.deepEqual(
+    findUnresolvedRefs('fixture', anchor('同じ見出し-4'), duplicated).map((item) => item.ref),
+    [anchor('同じ見出し-4')],
+    'a counter beyond the last duplicate heading must be reported',
   )
   assert.deepEqual(
     findUnresolvedRefs('fixture', `[境界](${anchor('83-server-client')})`, headings).map(
