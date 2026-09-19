@@ -1,7 +1,6 @@
 import 'server-only'
 
 import { domainKeySchema } from '@tsl/shared'
-import { connection } from 'next/server'
 
 import { createServerApiClient } from '@/lib/api'
 import { getLessonContent, getLessonRouteParams, getOrderedTopicRoutes } from '@/lib/content'
@@ -45,16 +44,13 @@ export function loadDashboardStatic(): DashboardStaticViewModel {
 
 /**
  * ユーザー固有の due 件数を取得する非キャッシュ loader。
- * Cache Components 有効時は、Cloudflare context に触れる前にリクエスト時実行を宣言する。
+ * 通常SSRでリクエストごとに取得するユーザー固有データ。
  */
 export async function loadDashboardDueCount(): Promise<DashboardDueViewModel> {
-  await connection()
-
   return dueCountToViewModel(await fetchDueCount(await createServerApiClient()))
 }
 
 export async function loadDashboard(): Promise<DashboardViewModel> {
-  await connection()
   const client = await createServerApiClient()
   const [summary, heatmap, domains, activity] = await Promise.all([
     fetchDashboardSummary(client),

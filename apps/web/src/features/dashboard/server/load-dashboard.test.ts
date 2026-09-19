@@ -7,7 +7,6 @@ import type {
   RecentActivityResponse,
 } from '@tsl/shared'
 
-const connection = vi.hoisted(() => vi.fn(() => Promise.resolve()))
 const createServerApiClient = vi.hoisted(() => vi.fn())
 const getLessonRouteParams = vi.hoisted(() =>
   vi.fn((): { domain: string; topic: string; lesson: string }[] => []),
@@ -19,7 +18,6 @@ const fetchDashboardHeatmap = vi.hoisted(() => vi.fn())
 const fetchDashboardDomains = vi.hoisted(() => vi.fn())
 const fetchRecentActivity = vi.hoisted(() => vi.fn())
 
-vi.mock('next/server', () => ({ connection }))
 vi.mock('@/lib/api', () => ({ createServerApiClient }))
 vi.mock('@/lib/content', () => ({
   getLessonContent,
@@ -103,7 +101,6 @@ const activity = {
 } satisfies RecentActivityResponse
 
 function mockDashboardRequests(client: object) {
-  connection.mockResolvedValue(undefined)
   createServerApiClient.mockResolvedValue(client)
   fetchDashboardSummary.mockResolvedValue(summary)
   fetchDashboardHeatmap.mockResolvedValue(heatmap)
@@ -121,8 +118,6 @@ function deferred<T>() {
 
 describe('loadDashboardStatic', () => {
   afterEach(() => {
-    connection.mockReset()
-    connection.mockImplementation(() => Promise.resolve())
     createServerApiClient.mockReset()
     fetchDashboardSummary.mockReset()
     fetchDashboardHeatmap.mockReset()
@@ -165,8 +160,6 @@ describe('loadDashboardStatic', () => {
 
 describe('loadDashboard', () => {
   afterEach(() => {
-    connection.mockReset()
-    connection.mockImplementation(() => Promise.resolve())
     createServerApiClient.mockReset()
     fetchDashboardSummary.mockReset()
     fetchDashboardHeatmap.mockReset()
@@ -185,7 +178,6 @@ describe('loadDashboard', () => {
     const domainsRequest = deferred<DomainsResponse>()
     const activityRequest = deferred<RecentActivityResponse>()
     const started: string[] = []
-    connection.mockResolvedValue(undefined)
     createServerApiClient.mockReturnValue(client)
     fetchDashboardSummary.mockImplementation(() => {
       started.push('summary')
@@ -218,7 +210,6 @@ describe('loadDashboard', () => {
     await Promise.resolve()
 
     expect(started).toEqual(['summary', 'heatmap', 'domains', 'activity'])
-    expect(connection).toHaveBeenCalledOnce()
     expect(createServerApiClient).toHaveBeenCalledOnce()
     expect(fetchDashboardSummary).toHaveBeenCalledWith(client)
     expect(fetchDashboardHeatmap).toHaveBeenCalledWith(client)
@@ -248,7 +239,6 @@ describe('loadDashboard', () => {
     fetchDashboardHeatmap.mockRejectedValue(failure)
 
     await expect(loadDashboard()).rejects.toBe(failure)
-    expect(connection).toHaveBeenCalledOnce()
     expect(createServerApiClient).toHaveBeenCalledOnce()
   })
 })
