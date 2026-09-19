@@ -1,17 +1,11 @@
 import 'server-only'
 
-import { Suspense } from 'react'
-
 import { AnalyticsDashboard } from '@/features/analytics/server/components/analytics-dashboard'
-import { AnalyticsFallback } from '@/features/analytics/server/components/analytics-fallback'
 import { loadAnalytics } from '@/features/analytics/server/load-analytics'
 
-async function AnalyticsUserContent() {
+export async function AnalyticsPageContent() {
   const viewModel = await loadAnalytics()
-  return <AnalyticsDashboard viewModel={viewModel} />
-}
 
-export function AnalyticsPageContent() {
   return (
     <div className="flex flex-col gap-5">
       <header className="px-1 pt-1">
@@ -25,9 +19,7 @@ export function AnalyticsPageContent() {
           解答ログとSRSの状態から、学習の進み方と弱点を確認しましょう。
         </p>
       </header>
-      <Suspense fallback={<AnalyticsFallback />}>
-        <AnalyticsUserContent />
-      </Suspense>
+      <AnalyticsDashboard viewModel={viewModel} />
     </div>
   )
 }

@@ -120,8 +120,8 @@ for (const [label, file, before, after] of [
   [
     'loader',
     'apps/web/src/features/dashboard/server/load-dashboard.ts',
-    'await connection()',
-    'await connection(); await connection()',
+    'const client = await createServerApiClient()',
+    'const client = await createServerApiClient(); await createServerApiClient()',
   ],
 ]) {
   test(`detects stale snapshot after ${label} changes`, () => {

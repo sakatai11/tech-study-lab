@@ -2,22 +2,19 @@ import 'server-only'
 
 import Link from 'next/link'
 import type { CSSProperties } from 'react'
-import { Suspense } from 'react'
 
 import { Card } from '@/components/ui/card'
 import { TermCrumb } from '@/components/ui/term-crumb'
 
 import { loadDashboardStatic } from '../load-dashboard'
 import { DashboardDueCard } from './dashboard-due-card'
-import { DashboardDueCardFallback } from './dashboard-due-card-fallback'
-import { DashboardFallback } from './dashboard-fallback'
 import { DashboardUserContent } from './dashboard-user-content'
 
 function revealStyle(index: number): CSSProperties {
   return { '--reveal-index': index } as CSSProperties
 }
 
-export function DashboardPageContent() {
+export async function DashboardPageContent() {
   const {
     continueHref,
     continueTitle,
@@ -25,6 +22,7 @@ export function DashboardPageContent() {
     continueQuestionCount,
     learnHref,
   } = loadDashboardStatic()
+  const [dueCard, userContent] = await Promise.all([DashboardDueCard(), DashboardUserContent()])
 
   return (
     <div className="flex flex-col gap-5">
@@ -50,14 +48,10 @@ export function DashboardPageContent() {
       </section>
 
       <section aria-label="今日の復習" className="grid grid-cols-1 gap-3">
-        <Suspense fallback={<DashboardDueCardFallback />}>
-          <DashboardDueCard />
-        </Suspense>
+        {dueCard}
       </section>
 
-      <Suspense fallback={<DashboardFallback />}>
-        <DashboardUserContent />
-      </Suspense>
+      {userContent}
 
       {learnHref ? (
         <Card className="reveal border-green p-5 sm:p-6" style={revealStyle(2)}>
