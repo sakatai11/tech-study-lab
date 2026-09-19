@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 
 import { describe, expect, it } from 'vitest'
 
+import nextConfig from '../next.config'
 import { cloudflareConfig } from '../open-next.config'
 
 const wranglerConfig = JSON.parse(
@@ -14,6 +15,10 @@ const wranglerConfig = JSON.parse(
 }
 
 describe('Cloudflare SSR configuration', () => {
+  it('does not enable Next Cache Components', () => {
+    expect(nextConfig).not.toHaveProperty('cacheComponents')
+  })
+
   it('keeps the API Service Binding for server loaders', () => {
     expect(wranglerConfig.services).toContainEqual({
       binding: 'API',
