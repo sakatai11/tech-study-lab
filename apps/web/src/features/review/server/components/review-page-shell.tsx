@@ -6,7 +6,6 @@ import { TermCrumb } from '@/components/ui/term-crumb'
 
 /**
  * API に依存しない静的シェル（design.md 7.1・9.2）。
- * Cache Components 有効時はここまでが queue 取得を待たずに返る。
  * ユーザー固有データを受け取らないこと（共有される静的シェルへの混入を防ぐ）。
  */
 export function ReviewPageShell({

@@ -9,15 +9,13 @@ type QuizPageProps = {
   params: Promise<{ lesson: string }>
 }
 
-// content 由来で API に依存しないため、Cache Components 有効時も全件を
-// ビルド時に prerender する（design.md 7.1・8.2）
+// content 由来で API に依存しないため、generateStaticParams で全件を
+// ビルド時に静的生成する（design.md 7.1・8.2）。
 export function generateStaticParams() {
   return listQuizRouteParams()
 }
 
 export default async function QuizPage({ params }: QuizPageProps) {
-  'use cache'
-
   const { lesson } = await params
   const viewModel = loadQuiz(lesson)
 

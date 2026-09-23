@@ -9,7 +9,7 @@ import { loadDashboardDueCount } from '../load-dashboard'
 const reviewLinkClassName =
   'mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-green px-4 py-2.5 font-bold text-white shadow-[0_4px_0_var(--green-shade)] transition-transform hover:brightness-110 active:translate-y-1 active:shadow-none'
 
-/** Suspense 内で due 件数だけを取得する、ダッシュボードのユーザー固有カード。 */
+/** 通常 SSR で due 件数を取得する、ダッシュボードのユーザー固有カード。 */
 export async function DashboardDueCard() {
   try {
     const viewModel = await loadDashboardDueCount()
