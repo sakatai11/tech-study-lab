@@ -64,7 +64,7 @@ flowchart LR
   Content["content/<br/>Markdown 教材・問題"]
 
   Browser -- "SSR / SSG ページ" --> Web
-  Browser -- "解答の送信（hc）<br/>Cloudflare Access" --> Api
+  Browser -- "解答・閲覧記録の送信<br/>復習件数の取得（hc）<br/>Cloudflare Access" --> Api
   Web -- "Service Binding（hc）" --> Api
   Api -- Drizzle --> D1
   Content -. "ビルド時にバンドル" .-> Web
@@ -72,7 +72,7 @@ flowchart LR
 ```
 
 - web と api は**別の Worker** です。API は自分の wrangler 設定と D1 マイグレーションを単独で管理し、Next.js のビルドとは独立してデプロイできます。
-- サーバー側の読み込みは Service Binding を通るため、公衆インターネットを経由しません。ブラウザからの呼び出しは Cloudflare Access で保護し、Worker 内でも JWT を検証します。
+- サーバー側の読み込みは Service Binding を通るため、公衆インターネットを経由しません。解答・閲覧記録の送信と復習件数の取得は、ブラウザから api Worker を直接呼び出します。この呼び出しは Cloudflare Access で保護し、Worker 内でも JWT を検証します。
 - 教材・問題は Git 管理の Markdown です。画面表示用にビルドへ取り込み、採点用に D1 へ同期します。
 - 型とスキーマは `packages/shared` に集約し、フロントエンド・API・DB で共有しています。
 
