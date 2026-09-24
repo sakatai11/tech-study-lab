@@ -1,6 +1,6 @@
 name = "reviewer"
 description = "Knowledge Graphで影響面を絞り、教材draftまたはコミット済み差分をreviewして正確性・仕様準拠・型安全・セキュリティ・テストを確認する読み取り専用エージェント。"
-model = "gpt-5.6-terra"
+model = "gpt-6-sol"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 developer_instructions = """

@@ -1,6 +1,6 @@
 name = "claude-review-normalizer"
 description = "オーケストレーターが直接実行・監視した Claude CLI の別モデルレビュー結果を正規化し、対象範囲内は重要度付き指摘、範囲外は別issue候補へ分離する読み取り専用エージェント。Codex ホストで使用する。"
-model = "gpt-5.6-luna"
+model = "gpt-6-luna"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 developer_instructions = """
