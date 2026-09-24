@@ -11,7 +11,11 @@ const wranglerConfig = JSON.parse(
   services?: Array<{ binding: string; service: string }>
   r2_buckets?: unknown
   durable_objects?: unknown
-  migrations?: unknown
+  migrations?: Array<{
+    tag: string
+    new_sqlite_classes?: string[]
+    deleted_classes?: string[]
+  }>
 }
 
 describe('Cloudflare SSR configuration', () => {
@@ -35,7 +39,10 @@ describe('Cloudflare SSR configuration', () => {
   it('does not bind PPR-only cache infrastructure', () => {
     expect(wranglerConfig.r2_buckets).toBeUndefined()
     expect(wranglerConfig.durable_objects).toBeUndefined()
-    expect(wranglerConfig.migrations).toBeUndefined()
+    expect(wranglerConfig.migrations).toEqual([
+      { tag: 'v1', new_sqlite_classes: ['DOQueueHandler'] },
+      { tag: 'v2', deleted_classes: ['DOQueueHandler'] },
+    ])
     expect(wranglerConfig.services).not.toContainEqual(
       expect.objectContaining({ binding: 'WORKER_SELF_REFERENCE' }),
     )

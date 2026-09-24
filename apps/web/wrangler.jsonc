@@ -5,6 +5,10 @@
   "compatibility_date": "2025-01-09",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "services": [{ "binding": "API", "service": "tech-study-lab-api", "entrypoint": "InternalApi" }],
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["DOQueueHandler"] },
+    { "tag": "v2", "deleted_classes": ["DOQueueHandler"] }
+  ],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"

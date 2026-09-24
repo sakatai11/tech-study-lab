@@ -329,7 +329,7 @@ HTTP 入出力、リクエスト・レスポンスの実例（JSON）、Zod ス�
 - due件数・統計・review queue・domains／analytics集計には共有キャッシュを使わない。APIが注入するuser_idをwebの共有キャッシュキーに含められず、ユーザー間の混入が起こり得るためである。
 - Reactの `cache()` によるリクエスト内の取得共有は許可する。ユーザー横断の共有キャッシュとは区別する。復習のdueバッジと本文の取得共有・表示分岐・次バッチへの遷移は §9.2で定義する。
 - 解答後や画面復帰時は `router.refresh()` で Server loader を再実行して鮮度を回復する。復習のバッチ完了時の条件は §9.2。
-- OpenNext は API Service Binding と静的 asset 配信に必要な最小構成だけを使う。PPR 専用の Incremental Cache、R2、Durable Object Queue、Worker 自己参照 binding は持たない。
+- OpenNext は API Service Binding と静的 asset 配信に必要な最小構成だけを使う。PPR 専用の Incremental Cache、R2、Durable Object Queue の有効 binding、Worker 自己参照 binding は持たない。過去に登録した `DOQueueHandler` を廃止するため、`wrangler.jsonc` には `v1` の作成履歴と後続の `v2` `deleted_classes` migration を保持する。
 
 ### 8.4 `hc` クライアントの取り回し
 
@@ -868,4 +868,4 @@ content は「web のビルド時バンドル（§8.2）」と「D1 の `questio
 
 通常 SSR の認証後 route は、ユーザー固有の API データをリクエストごとに取得し、route error boundary が取得失敗を扱うことを確認する。教材・演習 route は `generateStaticParams` が全 content params を返し、`next build` と OpenNext build が標準 SSG を生成することを確認する。Client hook の API client は最初の送信まで遅延生成し、render / SSG 時のブラウザ専用設定への依存を避ける。
 
-OpenNext の構成確認では、`API` Service Binding が残り、PPR 専用の `cacheComponents`、Incremental Cache、R2、Durable Object Queue、Worker 自己参照 binding が存在しないことをテストで固定する。OpenNext preview を使う場合は、認証環境で `/home`・`/review`・`/domains`・`/analytics` の full GET と `?_rsc=...` navigation が通常 SSR として完了することを確認する。
+OpenNext の構成確認では、`API` Service Binding が残り、PPR 専用の `cacheComponents`、Incremental Cache、R2、Durable Object Queue の有効 binding、Worker 自己参照 binding が存在しないことをテストで固定する。登録済み `DOQueueHandler` の `v1` 作成履歴と後続の `v2` 削除 migration も維持する。OpenNext preview を使う場合は、認証環境で `/home`・`/review`・`/domains`・`/analytics` の full GET と `?_rsc=...` navigation が通常 SSR として完了することを確認する。
