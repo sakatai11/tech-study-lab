@@ -23,14 +23,14 @@ describe('DashboardPageContent', () => {
     loadDashboardStatic.mockReset()
   })
 
-  it('keeps the dashboard content, due card, and learning links', () => {
+  it('keeps the dashboard content, due card, and learning links', async () => {
     loadDashboardStatic.mockReturnValue({
       continueHref: '/learn/security/xss/preventing-xss',
       learnHref: '/learn/security/xss/preventing-xss',
       quizHref: '/quiz/preventing-xss',
     })
 
-    render(<DashboardPageContent />)
+    render(await DashboardPageContent())
 
     expect(screen.getByRole('heading', { name: '開発者のための学習ワークベンチ' })).toBeTruthy()
     expect(screen.getByText('due-card')).toBeTruthy()
@@ -46,14 +46,14 @@ describe('DashboardPageContent', () => {
     )
   })
 
-  it('does not show a next-lesson card when no bundled lesson is available', () => {
+  it('does not show a next-lesson card when no bundled lesson is available', async () => {
     loadDashboardStatic.mockReturnValue({
       continueHref: '/home',
       learnHref: undefined,
       quizHref: undefined,
     })
 
-    render(<DashboardPageContent />)
+    render(await DashboardPageContent())
 
     expect(screen.queryByText('NEXT LESSON')).toBeNull()
     expect(screen.queryByRole('link', { name: '続きから' })).toBeNull()

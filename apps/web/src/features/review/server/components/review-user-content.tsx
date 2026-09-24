@@ -12,7 +12,7 @@ const REVIEW_CONTENT_INTEGRITY_ERROR =
 
 /**
  * ユーザー固有の due queue を読む非キャッシュの async Server Component。
- * <Suspense> の内側に置き、queue 完了後に ReviewRunner をストリーミングする
+ * ReviewDueBadge と同じ React cache() 付き loader を共有する
  * （design.md 9.2）。
  */
 export async function ReviewUserContent() {

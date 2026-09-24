@@ -85,9 +85,7 @@ pnpm workspaces による monorepo。
 
 - web 側の wrangler 設定に `services: [{ "binding": "API", "service": "<API Worker 名>", "entrypoint": "InternalApi" }]` を宣言し、Server 側の `hc` には `getCloudflareContext().env.API.fetch` をカスタム `fetch` として渡す。
 - Service Binding 経由でも `hc<AppType>` の型安全 RPC はそのまま維持される（差し替わるのは fetch 実装のみで、パス・メソッド・型は不変。baseURL のホスト名はダミーでよい）。
-- web Worker の Next.js Cache Components / PPR が使う Incremental Cache は、API や D1 とは分離した専用 R2 bucket を `NEXT_INC_CACHE_R2_BUCKET` として bind する。時間ベース再検証は SQLite Durable Object の `NEXT_CACHE_DO_QUEUE` で処理し、`WORKER_SELF_REFERENCE` から同じ web Worker の再検証 entrypoint を呼ぶ。OpenNext の dummy cache / queue は本番で使用しない。
-
-`'use cache'` の既定profileによる15分の時間ベース再検証があるためQueueは省略しない。on-demand revalidationは採用しないためTag Cacheは追加しない。将来 `revalidateTag` / `revalidatePath` を導入する場合は、対応するTag Cacheとcache purgeを同時に設計する。
+- web Worker の認証後画面は、ユーザー固有データを共有キャッシュへ載せない通常のリクエスト時 SSR とする。教材・問題の content route だけは `generateStaticParams` による標準 SSG とし、OpenNext の専用 Incremental Cache、再検証 Queue、Worker 自己参照 binding は使用しない。
 
 #### 本番アクセス境界（Issue #112）
 
@@ -213,13 +211,13 @@ SM-2 の計算式は [sm2.ts](../packages/shared/src/srs/sm2.ts)、その周辺�
 | ルート | 役割 | データ経路 | レンダリング／キャッシュ方針 | 主導線 |
 | --- | --- | --- | --- | --- |
 | `/` 公開トップ | 個人開発者向けの AI 駆動ソフトウェア学習ラボを説明し、「教材を読む → 4択で確かめる → SRSで復習する」学習ループを示す。明確なログイン CTA から `/home` へ進む | なし。プロダクト説明だけを静的に表示する | 静的 RSC。`AppShell`・dashboard loader・API client・Service Binding・due-count Client hook/provider を import せず、ユーザー固有データを読まない | 「ログインして学習を始める」→ `/home` |
-| `/home` ダッシュボード | **今日の復習（due）が主役**。学習統計（正答率・学習時間・連続学習日数）・学習コントリビューション（草＝日次解答数ヒートマップ）・領域別習得状況・最近のアクティビティ・次のレッスン導線を併せ持つ | due 件数は独立した API（Server loader → `hc`）。summary・heatmap・domains・recent activity は同一の非キャッシュ loader が同じ API client から並列取得し、`/home` で実データを表示する | RSC。PPR・キャッシュは §8.3に従う | 「復習を始める」→ `/review`、「続きから」→ `/learn/...` |
-| `/domains` スキルツリー | 現行は `GET /domains` の実データを使い、4つの学習領域をカードで俯瞰する。各カードに習得率・習得済み/全問題数・トピック数・レッスン数と、コンテンツ上の先頭トピックへの導線（該当しない場合は「準備中」）を表示する。詳細な done ✓ / current ▶ / locked 🔒 のディレクトリツリーは後続スコープとする（§8.7）。 | 領域別集計は API（`GET /domains`）。領域カードは `/domains` と `/home` が共通の props 境界を介して表示する | RSC。PPR・キャッシュは §8.3に従う | 先頭トピックあり → `/learn/[domain]/[topic]`、なし → 「準備中」 |
-| `/learn/[domain]/[topic]` レッスン一覧 | トピック内のレッスン一覧（初期は XSS 1本） | ビルド時バンドル済み content（RSC） | `generateStaticParams` と `'use cache'` で全件を build 時に prerender。PPR streaming 対象外 | 各レッスンへ |
-| `/learn/[domain]/[topic]/[lesson]` 教材本文 | Markdown 本文表示 | ビルド時バンドル済み content（RSC。本文の初期取得・描画にはAPI不要）・閲覧記録のみAPI（最小Client recorder） | `generateStaticParams` と `'use cache'` で全件を build 時に prerender。PPR streaming 対象外 | 「問題を解く →」`/quiz/[lesson]` |
-| `/quiz/[lesson]` 演習 | イントロ（レッスン概要の確認）→ 全問を 1 問ずつ即時採点 → 結果サマリ、を 1 画面内のクライアント状態遷移（`intro → exercise → result`）で完結。演習ナビ・教材本文の両方から入れる | 問題＝content（RSC で初期化）/ 解答記録＝API | `generateStaticParams` と `'use cache'` で全件を build 時に prerender。PPR streaming 対象外 | 完了 → 「次のレッスンへ」／「再挑戦」 |
-| `/review` 復習 | イントロ（本日の due キューを dueAt 昇順・滞留日数付きでプレビュー）→ due 問題をレッスン横断で 1 問ずつ即時採点 → 結果サマリ、を 1 画面内のクライアント状態遷移で完結 | queue＝API（`GET /review/queue`）/ 問題本文＝content / 記録＝API | 初回取得とバッチ表示は §9.2、PPRは §8.3に従う | 完了 → 「ホームへ」／「間違えた問題だけ再挑戦」 |
-| `/analytics` アナリティクス | 解答ログ・SRS状態を集計した学習分析ビュー（総解答数・正答率・平均反応時間・習得済み問題数・週次アクティビティ・SRS定着度分布・間違えやすい問題ランキング） | 集計値は API（§7.3） | RSC。PPR・キャッシュは §8.3に従う。忘却曲線・復習タイミングは対象外 | サイドバーの「アナリティクス」→ `/analytics` |
+| `/home` ダッシュボード | **今日の復習（due）が主役**。学習統計（正答率・学習時間・連続学習日数）・学習コントリビューション（草＝日次解答数ヒートマップ）・領域別習得状況・最近のアクティビティ・次のレッスン導線を併せ持つ | due 件数は独立した API（Server loader → `hc`）。summary・heatmap・domains・recent activity は同一の非キャッシュ loader が同じ API client から並列取得し、`/home` で実データを表示する | 通常 SSR。各リクエストで Server loader を実行し、ユーザー固有データを共有キャッシュしない | 「復習を始める」→ `/review`、「続きから」→ `/learn/...` |
+| `/domains` スキルツリー | 現行は `GET /domains` の実データを使い、4つの学習領域をカードで俯瞰する。各カードに習得率・習得済み/全問題数・トピック数・レッスン数と、コンテンツ上の先頭トピックへの導線（該当しない場合は「準備中」）を表示する。詳細な done ✓ / current ▶ / locked 🔒 のディレクトリツリーは後続スコープとする（§8.7）。 | 領域別集計は API（`GET /domains`）。領域カードは `/domains` と `/home` が共通の props 境界を介して表示する | 通常 SSR。Server loader が各リクエストのユーザー固有集計を取得する | 先頭トピックあり → `/learn/[domain]/[topic]`、なし → 「準備中」 |
+| `/learn/[domain]/[topic]` レッスン一覧 | トピック内のレッスン一覧（初期は XSS 1本） | ビルド時バンドル済み content（RSC） | `generateStaticParams` による標準 SSG。PPR streaming 対象外 | 各レッスンへ |
+| `/learn/[domain]/[topic]/[lesson]` 教材本文 | Markdown 本文表示 | ビルド時バンドル済み content（RSC。本文の初期取得・描画にはAPI不要）・閲覧記録のみAPI（最小Client recorder） | `generateStaticParams` による標準 SSG。PPR streaming 対象外 | 「問題を解く →」`/quiz/[lesson]` |
+| `/quiz/[lesson]` 演習 | イントロ（レッスン概要の確認）→ 全問を 1 問ずつ即時採点 → 結果サマリ、を 1 画面内のクライアント状態遷移（`intro → exercise → result`）で完結。演習ナビ・教材本文の両方から入れる | 問題＝content（RSC で初期化）/ 解答記録＝API | `generateStaticParams` による標準 SSG。PPR streaming 対象外 | 完了 → 「次のレッスンへ」／「再挑戦」 |
+| `/review` 復習 | イントロ（本日の due キューを dueAt 昇順・滞留日数付きでプレビュー）→ due 問題をレッスン横断で 1 問ずつ即時採点 → 結果サマリ、を 1 画面内のクライアント状態遷移で完結 | queue＝API（`GET /review/queue`）/ 問題本文＝content / 記録＝API | 通常 SSR。初回 queue は Server loader が取得し、due バッジと本文は React `cache()` の request-local dedupe を共有する | 完了 → 「ホームへ」／「間違えた問題だけ再挑戦」 |
+| `/analytics` アナリティクス | 解答ログ・SRS状態を集計した学習分析ビュー（総解答数・正答率・平均反応時間・習得済み問題数・週次アクティビティ・SRS定着度分布・間違えやすい問題ランキング） | 集計値は API（§7.3） | 通常 SSR。Server loader が各リクエストのユーザー固有集計を取得する。忘却曲線・復習タイミングは対象外 | サイドバーの「アナリティクス」→ `/analytics` |
 
 ### 7.2 横断する設計判断
 
@@ -235,7 +233,7 @@ SM-2 の計算式は [sm2.ts](../packages/shared/src/srs/sm2.ts)、その周辺�
 - **レイアウト（サイドバー / ボトムタブ）**：`/home` 以下の学習画面では、PC は左サイドバー（ロゴ＋テーマトグル＋ダッシュボード／教材／演習／復習（due件数バッジ）／アナリティクス／スキルツリー）、本文は右側 1 カラム。SP は上部アプリバー（ロゴ＋ストリーク表示＋テーマトグル）＋下部固定タブバー（**ホーム／教材／演習／復習（dueバッジ）／ツリーの5項目**）。ダッシュボード／ホームのナビゲーション先は `/home` とする。「演習」「復習」ナビ項目は直前に扱っていたレッスン（未着手なら先頭レッスン）を対象とする簡易ヒューリスティックで遷移先を決定する（MVP は XSS 1本のため実質固定）。SP のタブバーはスペース都合で 5 項目に絞り、「アナリティクス（`/analytics`）」へはダッシュボードの「すべて表示」リンクから遷移する。「設定」は将来の公開機能（認証等、§1 スコープ外）向けで、MVP ではナビに置かない。
 - **公開・認証境界**：`/` は公開の静的プロダクト入口である。`/home` とユーザー向け学習ルート（`/learn/...`・`/quiz/...`・`/review`・`/domains`・`/analytics`）は本番で Cloudflare Access により保護する。アプリ内のログイン・セッションは持たず、公開トップの「ログインして学習を始める」は `/home` へリンクするだけとする。Cloudflare Access Application/Policy と route pattern（`/` は公開、`/home` とユーザー向け route は保護）の設定・デプロイ後検証は Issue #35 の責務である。
 - **ユーザー**：アプリ管理のログイン UI・セッションは持たない。API（Hono）側が固定 `user_id` を権威的に注入する。将来公開時は「固定値を返す関数」を「認証から `user_id` を引く関数」に差し替えるだけで、画面・API 契約は不変。
-- **`cacheComponents` / PPR**：対象画面・キャッシュ境界・再取得方式は §8.3、復習バッチの表示契約は §9.2に従う。
+- **SSR / SSG**：認証後画面は通常 SSR、教材・演習の content route は `generateStaticParams` による標準 SSG とする。復習の request-local dedupe とバッチ表示契約は §8.3・§9.2に従う。
 - **スタイリング**：Tailwind CSS ＋ Dev-Native Neo Flat × Terminal デザインシステム（ダークファースト）。詳細トークン・コンポーネント文法・ゲーミフィケーション表現の実装区分は §8.7。
 
 ### 7.3 画面構成から要請される API（参考）
@@ -312,7 +310,7 @@ HTTP 入出力、リクエスト・レスポンスの実例（JSON）、Zod ス�
 - content 参照は `apps/web/src/lib/content.ts` に集約する。`getLessonContent(lessonId)`・`getLessonsByTopic(domain, topic)`・`getBundledQuestions()`・`getQuestionById(questionId)` を共通関数として用意し、初回表示の実行経路では `features/*/server` の Server loader だけが呼び出す。page は loader、mapper は引数で渡された Content data だけを参照し、`lib/content` を直接 import しない。ビルド・同期スクリプトと `lib/content` 自身のテストはこの制約の対象外とする。
 - `getBundledQuestions()` は `/review` の `question_id` 解決用に `questionId` index を返せる形にする。各 feature で frontmatter 配列を直接走査しない。
 - **同じパース経路を `content/` → D1 seed/upsert スクリプトでも再利用**し、フロント表示と D1 配信を単一ソースから導く（4.2 の責務分離を維持）。
-- `/learn/...` と `/quiz/...` は content 由来の prerender を維持し、PPR streaming の対象にしない。Cache Components 下では動的セグメントを build 時に列挙する必要があるため、`generateStaticParams` で全 params を返し、page 本体に `'use cache'` を置く。route params は `lib/content` の `getLessonRouteParams()` / `getTopicRouteParams()` / `getQuizRouteParams()` を feature loader 経由で読み、page から `lib/content` を直接 import しない。
+- `/learn/...` と `/quiz/...` は content 由来の標準 SSG を維持し、PPR streaming の対象にしない。`generateStaticParams` で全 params を返し、route params は `lib/content` の `getLessonRouteParams()` / `getTopicRouteParams()` / `getQuizRouteParams()` を feature loader 経由で読み、page から `lib/content` を直接 import しない。
 
 ### 8.3 Server / Client コンポーネント境界
 
@@ -323,17 +321,15 @@ HTTP 入出力、リクエスト・レスポンスの実例（JSON）、Zod ス�
 - Server Actionsは採用しない。初回取得はServer loader、mutationはClient hookからHono APIを呼ぶ。API契約とuser_id注入点を単一に保ち、HonoとCloudflareを学ぶ目的に沿わせる。重いフォームなど別の要求が生じた場合に再検討する。
 - Server dataの再取得はClient Componentの `router.refresh()` によるRSC再実行に統一する。API adapterへキャッシュ方針を持ち込まない。
 
-#### キャッシュ・PPRの規範
+#### 通常SSR・標準SSGの規範
 
-- `cacheComponents` を有効にする。全App Router routeがそのbuild条件を満たすこと。`dynamic` / `dynamicParams` を含むpage-level route segment configは置かない。
-- `/` はユーザー固有データを読まない静的RSC、教材・演習のcontent routeはビルド時params列挙とpageの `'use cache'` によるprerenderとする（content取得の契約は §8.2）。
-- PPR streamingの対象は `/home`・`/review`・`/domains`・`/analytics`。静的shellの内側でユーザー固有データをSuspenseにより分離し、fallbackを表示する。取得失敗は各routeのerror boundaryへ渡す。
-- `/home` はdue件数カードと本体（summary・heatmap・domains・recent activity）に別々のSuspense境界を持つ。本体は一つの非キャッシュloaderが同じAPI clientで並列取得する。`/domains` は4領域の集計、`/analytics` はsummary・weekly・mistakesを読む。忘却曲線・復習タイミングは対象外。
-- ユーザー固有loaderは先頭で `connection()` を呼ぶ。Cloudflare contextや現在時刻をprerender中に解決しない。現在時刻はuncached dataの取得後に読み、既定引数で先行評価しない。
-- due件数・統計・review queue・domains／analytics集計には `'use cache'`・`cacheLife`・`cacheTag`・`revalidateTag` を使わない。APIが注入するuser_idをwebの共有キャッシュキーに含められず、ユーザー間の混入が起こり得るためである。
+- `/` はユーザー固有データを読まない静的 RSC、`/home`・`/review`・`/domains`・`/analytics` は `dynamic = 'force-dynamic'` を指定した通常のリクエスト時 SSR とする。各 Server loader はリクエストごとに実行し、ユーザー固有データを共有キャッシュしない。
+- 教材・演習の content route は `generateStaticParams` で全 params を列挙する標準 SSG とする（content 取得の契約は §8.2）。`cacheComponents`、`'use cache'`、PPR streaming、専用 fallback composition は採用しない。
+- `/home` は due 件数カードと本体を同一 SSR の中で取得し、due 件数と summary・heatmap・domains・recent activity はそれぞれの loader 契約を保つ。loader 内の API 呼び出しは可能な範囲で並列化する。`/domains` は4領域の集計、`/analytics` は summary・weekly・mistakesを読む。忘却曲線・復習タイミングは対象外。
+- due件数・統計・review queue・domains／analytics集計には共有キャッシュを使わない。APIが注入するuser_idをwebの共有キャッシュキーに含められず、ユーザー間の混入が起こり得るためである。
 - Reactの `cache()` によるリクエスト内の取得共有は許可する。ユーザー横断の共有キャッシュとは区別する。復習のdueバッジと本文の取得共有・表示分岐・次バッチへの遷移は §9.2で定義する。
-- 解答後や画面復帰時は `router.refresh()` で鮮度を回復する。復習のバッチ完了時の条件は §9.2。
-- OpenNextの本番cache基盤は §3.1、デプロイは §12.4、実行確認は §12.8に従う。
+- 解答後や画面復帰時は `router.refresh()` で Server loader を再実行して鮮度を回復する。復習のバッチ完了時の条件は §9.2。
+- OpenNext は API Service Binding と静的 asset 配信に必要な最小構成だけを使う。PPR 専用の Incremental Cache、R2、Durable Object Queue の有効 binding、Worker 自己参照 binding は持たない。過去に登録した `DOQueueHandler` を廃止するため、`wrangler.jsonc` には `v1` の作成履歴と後続の `v2` `deleted_classes` migration を保持する。
 
 ### 8.4 `hc` クライアントの取り回し
 
@@ -346,6 +342,7 @@ HTTP 入出力、リクエスト・レスポンスの実例（JSON）、Zod ス�
 - `hc` の path 呼び出し自体は文字列パスの汎用 fetch に置き換えない。`client.review.queue.$get()` のような endpoint ごとの wrapper を残すことで、Hono RPC の型推論を維持する。
 - 初回表示に必要な `GET /dashboard/due-count`・`GET /review/queue` は Server loader から呼び、ViewModel に整形して page 経由で feature component へ props として渡す。
 - ユーザー操作後の `POST /answers` は Client hook から呼ぶ。`GET /review/queue` の再取得は Client Component の `router.refresh()` で Server loader に委譲する。初回表示で不要なスピナーを出さない。
+- 通常 SSR の Server loader はリクエストごとに `createServerApiClient` を解決し、`API` Service Binding の fetch を `hc` に渡す。OpenNext の共有 Incremental Cache や再検証 Queue を API client 層へ持ち込まない。
 
 ### 8.5 演習（Quiz）の状態管理
 
@@ -455,7 +452,7 @@ Server loader は初回データの fetch と Mapper 呼び出しを統括する
 
 ### 9.2 二系統：Server loader と Client hook
 
-初回データは Server loader が形成し、page から表示 component へ ViewModel を渡す。責務・依存境界は §8.1、表示状態と通信状態の所有者は §8.5、キャッシュとPPRは §8.3に従う。
+初回データは Server loader が形成し、page から表示 component へ ViewModel を渡す。責務・依存境界は §8.1、表示状態と通信状態の所有者は §8.5、SSR / SSG の実行方式は §8.3に従う。
 
 | 画面 | 初回データ | ユーザー操作後 |
 | --- | --- | --- |
@@ -466,7 +463,7 @@ Server loader は初回データの fetch と Mapper 呼び出しを統括する
 #### 復習の表示契約
 
 - 正解情報の境界は §7.2に従う。content loaderや全教材データをClient bundleへimportしない。
-- 静的シェルはユーザー固有データを保持せず、dueバッジと本文をそれぞれSuspense境界内で取得する。両者は唯一のloader入口 `loadReviewOnce` を通し、Reactの `cache()` によって同一リクエスト内のqueue取得を1回に畳む。未ラップのloaderはexportしない。共有キャッシュとの違いは §8.3。
+- 静的な表示構造はユーザー固有データを共有キャッシュへ載せず、dueバッジと本文を同じ SSR リクエストで取得する。両者は唯一のloader入口 `loadReviewOnce` を通し、Reactの `cache()` によって同一リクエスト内のqueue取得を1回に畳む。未ラップのloaderはexportしない。共有キャッシュとの違いは §8.3。
 - APIの生のdue件数とjoin後の表示件数の意味は §4.5。join後の表示可能な問題が0件で `hasMore=true` ならcontent整合性エラー、0件でfalseなら通常の空キュー、1件以上なら現在バッチを表示する。空キューをQuizの空問題表示へ委ねない。
 - 表示再利用の境界は §9.7。次バッチがある場合の完了操作で再取得し、mapperが導出した `batchKey` をinteractive subtreeのkeyにして、新しいバッチでは解答結果・画面フェーズをintroへリセットする。
 - 取得・整合性エラーと再試行導線は §9.6。
@@ -523,7 +520,7 @@ API DTO が変わった場合（例：review queue に `dueAt` が追加）：
 
 ### 9.6 エラー・ローディング処理
 
-- 初回データの取得・検証失敗はServer側でthrowし、routeの `error.tsx` で扱う。PPRの待機表示は §8.3、復習のcontent整合性分岐は §9.2に従う。
+- 初回データの取得・検証失敗はServer側でthrowし、routeの `error.tsx` で扱う。復習のcontent整合性分岐は §9.2に従う。
 - mutationの待機・失敗はhookの `submitting`・`error` を表示componentへ渡して扱う。再取得中の表示が必要なら `isRefreshing` またはrouteの `loading.tsx` を用いる。
 - `/review/error.tsx` は本番で秘匿され得るServer Componentの `error.message` から失敗種別を判定しない。API/通信の一時的失敗とcontent不整合の両方を含む案内を表示する。`reset` による再試行と、恒久的な不整合で再試行ループに閉じ込めないためのホームへのLinkを提供する。
 - 教材閲覧のfire-and-forget記録は、失敗しても本文表示やroute error boundaryへ波及させない（§9.7）。
@@ -821,9 +818,6 @@ topic frontmatter の `order` も同様に表示順（0 以上の整数、小さ
 | `ACCESS_ISSUER` | var（api） | Cloudflare Access JWT の issuer 検証（§3.1） | 未設定（両 Access 設定なし＋loopback URL のみ bypass） | API deploy 時に `--var ACCESS_ISSUER:<access-issuer>` として明示指定 |
 | `ACCESS_AUDIENCE` | var（api） | Cloudflare Access JWT の audience 検証（§3.1） | 未設定（両 Access 設定なし＋loopback URL のみ bypass） | API deploy 時に `--var ACCESS_AUDIENCE:<access-audience>` として明示指定 |
 | `API` | Service Binding（web） | Server loader（§3.1・§8.4） | なし（URL フォールバック） | `services: [{ binding: "API", service: "tech-study-lab-api", entrypoint: "InternalApi" }]` |
-| `NEXT_INC_CACHE_R2_BUCKET` | R2 バインディング（web） | OpenNext Incremental Cache（§12.8） | `opennextjs-cloudflare preview` のローカル R2 | `tech-study-lab-web-cache`。`opennextjs-cloudflare deploy` が build 済み cache を投入 |
-| `NEXT_CACHE_DO_QUEUE` | SQLite Durable Object バインディング（web） | OpenNext の時間ベース再検証 Queue（§12.8） | `opennextjs-cloudflare preview` のローカル DO | `DOQueueHandler`。初回 web deploy の migration で作成 |
-| `WORKER_SELF_REFERENCE` | Service Binding（web） | `DOQueueHandler` から web Worker への再検証要求（§12.8） | `tech-study-lab-web` のローカル自己参照 | `tech-study-lab-web` の自己参照 |
 | `API_BASE_URL` | env（web / Server 専用） | Server loader のローカルフォールバック（§8.4） | `http://localhost:8787` | 設定しない（Service Binding必須。欠落時はfail-fast） |
 | `NEXT_PUBLIC_API_BASE_URL` | ビルド時 env（web / Client） | Client hook（§8.4） | `http://localhost:8787` | web の build/deploy 時に api Worker の公開 URL を環境変数として明示指定 |
 
@@ -844,7 +838,7 @@ topic frontmatter の `order` も同様に表示順（0 以上の整数、小さ
 1. **マイグレーション適用**：`pnpm --filter @tsl/api exec wrangler d1 migrations apply tech-study-lab --remote`
 2. **content sync**：`pnpm --filter @tsl/api content:sync:remote`（`content/` → D1 upsert。§10.8）
 3. **api デプロイ**：`pnpm --filter @tsl/api run deploy --var WEB_ORIGIN:<web-public-url> --var ACCESS_ISSUER:<access-issuer> --var ACCESS_AUDIENCE:<access-audience>`。3 値は**毎回すべて**この deploy 実行時だけ明示指定し、Git や `.env` には保存しない。値を省いた bare deploy は禁止する。Wrangler がローカルまたは不完全な vars へ置き換えると、Access は fail closed となり、CORS も失敗し得る。`pnpm deploy` は pnpm 自身のコマンドと衝突するため、package script は必ず `run deploy` で起動し、引数前に追加の `--` を置かない。
-4. **web デプロイ**：初回のみ専用 R2 bucket `tech-study-lab-web-cache` を作成し、`NEXT_INC_CACHE_R2_BUCKET`・`NEXT_CACHE_DO_QUEUE`・`WORKER_SELF_REFERENCE` の各 binding を確認する。その後 `NEXT_PUBLIC_API_BASE_URL=<api-public-url> pnpm --filter @tsl/web run deploy` を実行する。`NEXT_PUBLIC_API_BASE_URL` は OpenNext build 時に必要であり、API の公開 URL を使う。初回 deploy は `DOQueueHandler` の SQLite migration を適用する。`opennextjs-cloudflare deploy` は Worker の更新と build 済み Incremental Cache の R2 への投入を一体で行うため、`wrangler deploy` 単体へ置き換えない。
+4. **web デプロイ**：`NEXT_PUBLIC_API_BASE_URL=<api-public-url> pnpm --filter @tsl/web run deploy` を実行する。`NEXT_PUBLIC_API_BASE_URL` は OpenNext build 時に必要であり、API の公開 URL を使う。OpenNext は API Service Binding と静的 asset を含む通常 SSR / 標準 SSG の Worker を更新する。
 
 順序の根拠：**スキーマ → データ → API → 画面** の順なら、各ステップの完了時点で稼働中の旧バージョンが壊れない（マイグレーションが追加中心の後方互換であることが前提。§12.6）。
 
@@ -870,12 +864,8 @@ content は「web のビルド時バンドル（§8.2）」と「D1 の `questio
 - **バックアップ**：教材・問題は Git にあるため、守る対象は D1 の動的データ（`answer_logs` / `srs_states` / `lesson_views`）のみ。当面は必要時に `wrangler d1 export` を手動実行し、マルチユーザー公開時に定期化（Cron 等）を検討する。
 - **観測**：§10.3.1 の rate limit / 永続書き込みでは、429・limiter failure・成功した永続書き込みごとに `event`・`endpoint`・`writeUnit` だけを含む PII-free の構造化 Worker log を出す。運用時は Workers Logs の event 別件数と D1 dashboard の `answer_logs` / `lesson_views` / `srs_states` の書き込み・容量メトリクスを同じ時間帯で突合する。`console.error` は §10.6 の未処理エラー出力に限る。Analytics Engine を含む外部監視は、既存のログと D1 メトリクスでは不足すると判断された場合に別 issue で検討する。
 
-### 12.8 `cacheComponents` の実行確認
+### 12.8 通常SSR・標準SSGの実行確認
 
-キャッシュ・PPRの規範は §8.3、本番のR2・DO Queue構成は §3.1、設定とデプロイは §12.2・§12.4に従う。Client hookのAPI clientは最初の送信まで遅延生成し、render／prerender時のブラウザ専用設定への依存を避ける。
+通常 SSR の認証後 route は、ユーザー固有の API データをリクエストごとに取得し、route error boundary が取得失敗を扱うことを確認する。教材・演習 route は `generateStaticParams` が全 content params を返し、`next build` と OpenNext build が標準 SSG を生成することを確認する。Client hook の API client は最初の送信まで遅延生成し、render / SSG 時のブラウザ専用設定への依存を避ける。
 
-過去の比較バージョン・再現結果は [2026-07-28の検証記録](./investigations/2026-07-28-cache-components.md) を参照する。
-
-#### 残る制約
-
-現行 CI は `next build` のみであり、OpenNext preview のストリーミングや本番 R2 cache binding の欠落を検知できない。**ビルド成功だけを回帰の根拠にしてはならない。** PPR の描画・streaming または cache binding に関わる変更では、R2 binding を含む `opennextjs-cloudflare preview` で full GET と `?_rsc=...` navigation の両方を確認する。OpenNext / Next を更新した際は、過去の検証記録に挙げた問題も再確認する。
+OpenNext の構成確認では、`API` Service Binding が残り、PPR 専用の `cacheComponents`、Incremental Cache、R2、Durable Object Queue の有効 binding、Worker 自己参照 binding が存在しないことをテストで固定する。登録済み `DOQueueHandler` の `v1` 作成履歴と後続の `v2` 削除 migration も維持する。OpenNext preview を使う場合は、認証環境で `/home`・`/review`・`/domains`・`/analytics` の full GET と `?_rsc=...` navigation が通常 SSR として完了することを確認する。

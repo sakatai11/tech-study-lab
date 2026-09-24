@@ -58,14 +58,14 @@
 
 | 役割 | 標準モデル | reasoning effort | 適用範囲 |
 | --- | --- | --- | --- |
-| `developer` | `gpt-5.6-luna` | `xhigh` | 決定済みの実装方針・対象範囲・受け入れ条件に沿う実装 |
-| `test-fixer` | `gpt-5.6-luna` | `high` | 変更起因の型チェック・Biome・テスト失敗の最小修正 |
-| `issue-investigator` | `gpt-5.6-terra` | `medium` | 調査と実装方針の作成 |
-| `reviewer` | `gpt-5.6-terra` | `high` | 正確性を優先する差分レビュー |
-| `content-author` | `gpt-5.6-terra` | `medium` | 教材・問題の執筆と改訂 |
-| `codex-review-normalizer` / `claude-review-normalizer` | `gpt-5.6-luna` | `high` | 別モデルCLIレビュー結果の正規化と仕様照合 |
+| `developer` | `gpt-6-luna` | `xhigh` | 決定済みの実装方針・対象範囲・受け入れ条件に沿う実装 |
+| `test-fixer` | `gpt-6-luna` | `high` | 変更起因の型チェック・Biome・テスト失敗の最小修正 |
+| `issue-investigator` | `gpt-6-sol` | `medium` | 調査と実装方針の作成 |
+| `reviewer` | `gpt-6-sol` | `high` | 正確性を優先する差分レビュー |
+| `content-author` | `gpt-6-sol` | `medium` | 教材・問題の執筆と改訂 |
+| `codex-review-normalizer` / `claude-review-normalizer` | `gpt-6-luna` | `high` | 別モデルCLIレビュー結果の正規化と仕様照合 |
 
-`developer` と `test-fixer` でLunaを使うのは、方針・対象範囲・受け入れ条件が明確な実装と品質ゲート修正に限定する。review normalizerは、上表のとおり別モデルCLIレビュー結果の正規化と仕様照合にLunaを使う。仕様が曖昧または矛盾している場合、複数領域をまたぐ設計判断が必要な場合、高難度の実装、またはセキュリティレビューでは、該当TOMLを未コミットのローカル上書きとして一時的に `gpt-5.6-sol` / `high` へ昇格する。品質ゲートの実行およびコミットの前に、役割ごとの標準設定へ復元する。素の `gpt-5.6` は ChatGPT アカウント認証では使えないため指定しない。
+`developer` と `test-fixer` でLunaを使うのは、方針・対象範囲・受け入れ条件が明確な実装と品質ゲート修正に限定する。review normalizerは、上表のとおり別モデルCLIレビュー結果の正規化と仕様照合にLunaを使う。仕様が曖昧または矛盾している場合、複数領域をまたぐ設計判断が必要な場合、高難度の実装、またはセキュリティレビューでは、Luna担当は `gpt-6-sol` / `high`、Sol担当は `gpt-6-astra` / `high` へ該当TOMLを未コミットのローカル上書きとして一時的に昇格する。品質ゲートの実行およびコミットの前に、役割ごとの標準設定へ復元する。
 
 ## 別モデルCLIレビューのモデル方針
 
@@ -73,10 +73,10 @@
 
 | ホストランタイム | 正規化エージェント | オーケストレーターが直接実行するコマンド | モデル指定 | 送信先 |
 |---|---|---|---|---|
-| Claude Code | `codex-review-normalizer` | `codex exec review --base <effective-base> -c sandbox_mode="read-only"` | `-m gpt-5.6-sol` | OpenAI |
+| Claude Code | `codex-review-normalizer` | `codex exec review --base <effective-base> -c sandbox_mode="read-only"` | `-m gpt-6-sol` | OpenAI |
 | Codex（App / CLI） | `claude-review-normalizer` | `git diff <effective-base>...HEAD \| .ai/scripts/run-claude-review.sh -p ...` | `--model opus` | Anthropic |
 
-- モデルは必ず `-m` / `--model` で明示指定する。既定モデルに委ねてはならない。ChatGPTアカウントのCodex CLIでは素の `gpt-5.6` は使えないため、利用可能なバリアントを指定する。
+- モデルは必ず `-m` / `--model` で明示指定する。既定モデルに委ねてはならない。指定モデルが利用可能か、起動前に契約・クライアントの環境で確認する。
 - どちらの経路でも、ホストの `reviewer` とは提供元が異なるモデルを使う。レビュー観点の分担は `reviewer` が正確性優先、別モデルCLIと正規化エージェントが仕様準拠優先であり、詳細は `.ai/review-guidelines.md` に従う。
 
 ## 別モデルCLIの実行契約

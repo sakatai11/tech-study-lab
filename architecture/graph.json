@@ -150,24 +150,24 @@
       "lines": 36
     },
     "apps/web/src/features/analytics/server/load-analytics.ts": {
-      "sha256": "ea6ed005c343b33f58c834f05c4a9a1140fa9d011f48b0273bcb89564a4ed029",
-      "lines": 26
+      "sha256": "9abada70ff12d5316ba6cdc4262590881b70656b4c996abb080db15697d93078",
+      "lines": 23
     },
     "apps/web/src/features/dashboard/api/dashboard-api.ts": {
       "sha256": "0ae7c65068548e7870da1fc33856de275ae8f29fe443cbb4b150a2911e036eda",
       "lines": 62
     },
     "apps/web/src/features/dashboard/server/load-dashboard.ts": {
-      "sha256": "096afbc89b263bf82539231d818460b05b818e9920111dd71ebb438389dfe274",
-      "lines": 79
+      "sha256": "9a04af35f3280e06ddffcbfdabb9abc031cfc4374fb21e1110b62e1224d7e240",
+      "lines": 75
     },
     "apps/web/src/features/domains/api/domains-api.ts": {
       "sha256": "3ce4c3b7c3faf0bf02bbf5bff0fe41b610477cf6a05b4b58fe69c0830226d33e",
       "lines": 13
     },
     "apps/web/src/features/domains/server/load-domains.ts": {
-      "sha256": "02e5c08a6562eef3a9f4933bced53ee037dc7e86c8382f7dfd8095f0a0ebc138",
-      "lines": 23
+      "sha256": "c16304312186e267d9f8ce137752b2c2c4efbe800f5159be20ba31f796b2d175",
+      "lines": 20
     },
     "apps/web/src/features/lesson/api/lesson-api.ts": {
       "sha256": "559ff7f01dd1a48916142b10579aa78b5df4d322bfb647e11ab447093f9a7d15",
@@ -194,16 +194,16 @@
       "lines": 13
     },
     "apps/web/src/features/review/server/load-review.ts": {
-      "sha256": "5fd7ac84b3b66eb7b976a2e6e9992c3e67f6bd97d07425dade0bef58889b39c9",
-      "lines": 32
+      "sha256": "90bac7a5413a55b7800a9c4a9496450be56e9c5befbed8f61b5e59061dabd5b7",
+      "lines": 26
     },
     "apps/web/src/lib/api.ts": {
       "sha256": "8f1aebf207376f01d9fbfb91f99229e3c2ee6c7011c10c7665c8d8a30d851d4a",
       "lines": 68
     },
     "apps/web/wrangler.jsonc": {
-      "sha256": "0e75cd5b0c8267c2c44772871602ce9ad8932ab37dcf52a2ecbd9a2be35d55a9",
-      "lines": 23
+      "sha256": "c14480e747d5315243435967c181d6af6372bf0964ec2bfc377ff60b16bc1949",
+      "lines": 17
     },
     "packages/shared/src/content-parser.ts": {
       "sha256": "d64e767b7f296f0768b5e1a0474d46c720889db2b68576615a0097b8a189be44",
@@ -4012,7 +4012,7 @@
       "to": "apps/web/src/features/analytics/api/analytics-api.ts",
       "source": {
         "file": "apps/web/src/features/analytics/server/load-analytics.ts",
-        "line": 7
+        "line": 5
       },
       "specifier": "../api/analytics-api",
       "typeOnly": false
@@ -4023,7 +4023,7 @@
       "to": "apps/web/src/lib/api.ts",
       "source": {
         "file": "apps/web/src/features/analytics/server/load-analytics.ts",
-        "line": 5
+        "line": 3
       },
       "specifier": "@/lib/api",
       "typeOnly": false
@@ -4209,7 +4209,7 @@
       "to": "apps/web/src/features/dashboard/api/dashboard-api.ts",
       "source": {
         "file": "apps/web/src/features/dashboard/server/load-dashboard.ts",
-        "line": 9
+        "line": 8
       },
       "specifier": "../api/dashboard-api",
       "typeOnly": false
@@ -4220,7 +4220,7 @@
       "to": "apps/web/src/lib/api.ts",
       "source": {
         "file": "apps/web/src/features/dashboard/server/load-dashboard.ts",
-        "line": 6
+        "line": 5
       },
       "specifier": "@/lib/api",
       "typeOnly": false
@@ -4300,7 +4300,7 @@
       "to": "apps/web/src/features/domains/api/domains-api.ts",
       "source": {
         "file": "apps/web/src/features/domains/server/load-domains.ts",
-        "line": 9
+        "line": 8
       },
       "specifier": "../api/domains-api",
       "typeOnly": false
@@ -4311,7 +4311,7 @@
       "to": "apps/web/src/lib/api.ts",
       "source": {
         "file": "apps/web/src/features/domains/server/load-domains.ts",
-        "line": 6
+        "line": 5
       },
       "specifier": "@/lib/api",
       "typeOnly": false
@@ -4536,7 +4536,7 @@
       "to": "apps/web/src/features/review/api/review-api.ts",
       "source": {
         "file": "apps/web/src/features/review/server/load-review.ts",
-        "line": 9
+        "line": 8
       },
       "specifier": "../api/review-api",
       "typeOnly": false
@@ -4547,7 +4547,7 @@
       "to": "apps/web/src/lib/api.ts",
       "source": {
         "file": "apps/web/src/features/review/server/load-review.ts",
-        "line": 6
+        "line": 5
       },
       "specifier": "@/lib/api",
       "typeOnly": false
@@ -4569,7 +4569,7 @@
       "to": "apps/api/src/internal-api.ts",
       "source": {
         "file": "apps/web/wrangler.jsonc",
-        "line": 8
+        "line": 7
       },
       "binding": "API",
       "service": "tech-study-lab-api",
