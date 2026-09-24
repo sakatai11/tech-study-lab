@@ -146,7 +146,7 @@ tech-study-lab/
 
 ## ローカルで動かす
 
-必要なもの：Node.js 20 以上、pnpm 9
+必要なもの：Node.js 20.9 以上、pnpm 9
 
 ```bash
 pnpm install
