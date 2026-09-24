@@ -84,8 +84,6 @@ Codexは `.codex/agents/<name>.toml` でカスタムエージェントを登録�
 
 `developer` と `test-fixer` でLunaを使うのは、決定済みの方針・対象範囲・受け入れ条件に従う実装と、変更起因の品質ゲート失敗の最小修正に限る。review normalizerは、別モデルCLIレビュー結果の正規化と仕様照合にLunaを使う。仕様の曖昧さ・矛盾、複数領域にまたがる設計判断、高難度実装、またはセキュリティレビューが必要な場合は、Luna担当を一時的に `gpt-6-sol` / `high`、Sol担当を `gpt-6-astra` / `high` へ未コミットのローカル上書きとして昇格する。品質ゲートの実行およびコミットの前に、役割ごとの標準設定へ復元する。
 
-GPT-6を利用できない環境では `node scripts/select-codex-agent-models.mjs --family gpt-5.6` で7つのエージェントを従来のモデルに切り替える。`node scripts/select-codex-agent-models.mjs --family gpt-6` で標準設定へ戻し、コミット前にも復元する。切り替え後は新しいCodexセッションを開始する。別モデルCLIレビューの指定も `.ai/runtime-compatibility.md` に従い、選択中のモデル系列と一致させる。
-
 Codex環境でカスタム種別を指定できない場合は、通常のサブエージェントに `.ai/agents/<name>.md` を全文読むよう指示して代替する。
 
 ## 6. Hooks

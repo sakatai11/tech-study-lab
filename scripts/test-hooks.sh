@@ -443,9 +443,8 @@ check_absent_contract "common does not duplicate Codex CLI mapping" '| Codex（A
 check_agent_contract "model policy section exists" '## 別モデルCLIレビューのモデル方針' "$RUNTIME"
 check_agent_contract "agent-self policy is separate" '## Codexサブエージェント本体のモデル方針' "$RUNTIME"
 check_agent_contract "model must be explicit" 'モデルは必ず `-m` / `--model` で明示指定する' "$RUNTIME"
-check_agent_contract "model availability documented" 'GPT-6の利用可否は契約・クライアント・ロールアウトに依存する' "$RUNTIME"
 check_agent_contract "codex sandbox default documented" '既定 Sandbox は `workspace-write`' "$RUNTIME"
-check_agent_contract "codex nested model follows selected family" '`-m "$(node scripts/select-codex-agent-models.mjs --review-model)"`' "$RUNTIME"
+check_agent_contract "codex nested model" '`-m gpt-6-sol`' "$RUNTIME"
 check_agent_contract "claude nested model" '`--model opus`' "$RUNTIME"
 check_agent_contract "host to reviewer mapping" '| Claude Code | `codex-review-normalizer` |' "$RUNTIME"
 check_agent_contract "codex host uses claude reviewer" '| Codex（App / CLI） | `claude-review-normalizer` |' "$RUNTIME"
@@ -457,10 +456,20 @@ check_agent_contract "claude toml effort" 'model_reasoning_effort = "high"' .cod
 check_agent_contract "communication is not authentication" '通信失敗を未認証と報告しない' "$RUNTIME"
 
 # ---- Codexサブエージェントの役割別モデル方針 ----
-node scripts/select-codex-agent-models.mjs --check
-node scripts/test-codex-agent-models.mjs
-check_agent_contract "legacy model selection documented" '`node scripts/select-codex-agent-models.mjs --family gpt-5.6`' "$RUNTIME"
-check_agent_contract "GPT-6 model selection documented" '`node scripts/select-codex-agent-models.mjs --family gpt-6`' "$RUNTIME"
+check_agent_contract "developer uses Luna" 'model = "gpt-6-luna"' .codex/agents/developer.toml
+check_agent_contract "developer uses xhigh" 'model_reasoning_effort = "xhigh"' .codex/agents/developer.toml
+check_agent_contract "test fixer uses Luna" 'model = "gpt-6-luna"' .codex/agents/test-fixer.toml
+check_agent_contract "test fixer uses high" 'model_reasoning_effort = "high"' .codex/agents/test-fixer.toml
+check_agent_contract "investigator uses Sol medium" 'model = "gpt-6-sol"' .codex/agents/issue-investigator.toml
+check_agent_contract "investigator uses Sol medium" 'model_reasoning_effort = "medium"' .codex/agents/issue-investigator.toml
+check_agent_contract "reviewer uses Sol high" 'model = "gpt-6-sol"' .codex/agents/reviewer.toml
+check_agent_contract "reviewer uses Sol high" 'model_reasoning_effort = "high"' .codex/agents/reviewer.toml
+check_agent_contract "content author uses Sol medium" 'model = "gpt-6-sol"' .codex/agents/content-author.toml
+check_agent_contract "content author uses Sol medium" 'model_reasoning_effort = "medium"' .codex/agents/content-author.toml
+check_agent_contract "normalizers stay Luna high" 'model = "gpt-6-luna"' .codex/agents/codex-review-normalizer.toml
+check_agent_contract "normalizers stay Luna high" 'model_reasoning_effort = "high"' .codex/agents/codex-review-normalizer.toml
+check_agent_contract "normalizers stay Luna high" 'model = "gpt-6-luna"' .codex/agents/claude-review-normalizer.toml
+check_agent_contract "normalizers stay Luna high" 'model_reasoning_effort = "high"' .codex/agents/claude-review-normalizer.toml
 check_agent_contract "runtime documents developer policy" '| `developer` | `gpt-6-luna` | `xhigh` |' "$RUNTIME"
 check_agent_contract "runtime documents test fixer policy" '| `test-fixer` | `gpt-6-luna` | `high` |' "$RUNTIME"
 check_agent_contract "runtime documents investigator policy" '| `issue-investigator` | `gpt-6-sol` | `medium` |' "$RUNTIME"

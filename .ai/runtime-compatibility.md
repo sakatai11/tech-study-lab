@@ -67,18 +67,16 @@
 
 `developer` と `test-fixer` でLunaを使うのは、方針・対象範囲・受け入れ条件が明確な実装と品質ゲート修正に限定する。review normalizerは、上表のとおり別モデルCLIレビュー結果の正規化と仕様照合にLunaを使う。仕様が曖昧または矛盾している場合、複数領域をまたぐ設計判断が必要な場合、高難度の実装、またはセキュリティレビューでは、Luna担当は `gpt-6-sol` / `high`、Sol担当は `gpt-6-astra` / `high` へ該当TOMLを未コミットのローカル上書きとして一時的に昇格する。品質ゲートの実行およびコミットの前に、役割ごとの標準設定へ復元する。
 
-GPT-6の利用可否は契約・クライアント・ロールアウトに依存する。利用できない環境では、Codexを起動する前に `node scripts/select-codex-agent-models.mjs --family gpt-5.6` を実行して7つのエージェント設定を従来のLuna / Terraへ切り替える。利用できるようになったら `node scripts/select-codex-agent-models.mjs --family gpt-6` で復元する。`--check` で全役割のモデルと推論強度の整合を検証する。切り替えは追跡対象TOMLへのローカル変更となるため、コミット前に標準設定へ戻す。カスタムエージェントの `model` は起動時のモデル指定や親の設定より優先されるため、切り替え後に新しいCodexセッションを開始する。
-
 ## 別モデルCLIレビューのモデル方針
 
 レビュー方針で外部レビューが必須となったコミット済み差分は、**ホストランタイムとは別のモデルのCLI**で独立レビューする。使用するCLIと正規化エージェントはホストで決まる。ホストと同じ提供元のCLIを別モデルレビューに使ってはならない（「独立した第二の目」が成立しなくなる）。
 
 | ホストランタイム | 正規化エージェント | オーケストレーターが直接実行するコマンド | モデル指定 | 送信先 |
 |---|---|---|---|---|
-| Claude Code | `codex-review-normalizer` | `codex exec review --base <effective-base> -c sandbox_mode="read-only"` | `-m "$(node scripts/select-codex-agent-models.mjs --review-model)"` | OpenAI |
+| Claude Code | `codex-review-normalizer` | `codex exec review --base <effective-base> -c sandbox_mode="read-only"` | `-m gpt-6-sol` | OpenAI |
 | Codex（App / CLI） | `claude-review-normalizer` | `git diff <effective-base>...HEAD \| .ai/scripts/run-claude-review.sh -p ...` | `--model opus` | Anthropic |
 
-- モデルは必ず `-m` / `--model` で明示指定する。既定モデルに委ねてはならない。上表のCodex CLIレビューでは選択中のエージェント設定に応じて `gpt-6-sol` または `gpt-5.6-sol` を指定する。指定モデルが利用可能か、起動前に契約・クライアントの環境で確認する。
+- モデルは必ず `-m` / `--model` で明示指定する。既定モデルに委ねてはならない。指定モデルが利用可能か、起動前に契約・クライアントの環境で確認する。
 - どちらの経路でも、ホストの `reviewer` とは提供元が異なるモデルを使う。レビュー観点の分担は `reviewer` が正確性優先、別モデルCLIと正規化エージェントが仕様準拠優先であり、詳細は `.ai/review-guidelines.md` に従う。
 
 ## 別モデルCLIの実行契約
