@@ -53,23 +53,7 @@ SRS は問題単位で管理しており、弱点を1問ごとに追跡できま
 
 ## アーキテクチャ
 
-```mermaid
-flowchart LR
-  Browser["ブラウザ"]
-  subgraph CF["Cloudflare"]
-    Web["web Worker<br/>Next.js / OpenNext"]
-    Api["api Worker<br/>Hono"]
-    D1[("D1<br/>SQLite")]
-  end
-  Content["content/<br/>Markdown 教材・問題"]
-
-  Browser -- "SSR / SSG ページ" --> Web
-  Browser -- "解答・閲覧記録の送信<br/>復習件数の取得（hc）<br/>Cloudflare Access" --> Api
-  Web -- "Service Binding（hc）" --> Api
-  Api -- Drizzle --> D1
-  Content -. "ビルド時にバンドル" .-> Web
-  Content -. "content:sync" .-> D1
-```
+![アーキテクチャ図](./docs/images/readme/architecture.png)
 
 - web と api は**別の Worker** です。API は自分の wrangler 設定と D1 マイグレーションを単独で管理し、Next.js のビルドとは独立してデプロイできます。
 - サーバー側の読み込みは Service Binding を通るため、公衆インターネットを経由しません。解答・閲覧記録の送信と復習件数の取得は、ブラウザから api Worker を直接呼び出します。この呼び出しは Cloudflare Access で保護し、Worker 内でも JWT を検証します。
