@@ -17,6 +17,8 @@
     "architecture:check": "node scripts/architecture.mjs check",
     "architecture:query": "node scripts/architecture.mjs query",
     "architecture:test": "node --test scripts/architecture.test.mjs",
+    "migration:check-immutable": "node scripts/check-migration-immutability.mjs",
+    "migration:test": "node --test scripts/check-migration-immutability.test.mjs",
     "dev": "pnpm --parallel --filter @tsl/api --filter @tsl/web dev",
     "dev:web": "pnpm --filter @tsl/web dev",
     "dev:api": "pnpm --filter @tsl/api dev",
