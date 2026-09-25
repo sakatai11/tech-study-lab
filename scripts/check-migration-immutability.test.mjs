@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict'
-import { execFileSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { execFileSync, spawnSync } from 'node:child_process'
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
+import { fileURLToPath } from 'node:url'
 import {
   checkMigrationImmutability,
   findImmutableFileChanges,
@@ -74,6 +75,7 @@ test('ignores files outside the Drizzle migration and snapshot paths', () => {
 
 test('compares the supplied base and checkout HEAD trees', () => {
   const repository = mkdtempSync(path.join(os.tmpdir(), 'migration-immutability-'))
+  const symlinkDirectory = mkdtempSync(path.join(os.tmpdir(), 'migration-check-link-'))
   const write = (filePath, contents) => {
     const absolutePath = path.join(repository, filePath)
     mkdirSync(path.dirname(absolutePath), { recursive: true })
@@ -84,6 +86,16 @@ test('compares the supplied base and checkout HEAD trees', () => {
       cwd: repository,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
+    })
+  const checker = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    'check-migration-immutability.mjs',
+  )
+  const linkedChecker = path.join(symlinkDirectory, 'check-migration-immutability.mjs')
+  const runCli = (...args) =>
+    spawnSync(process.execPath, [linkedChecker, ...args], {
+      cwd: repository,
+      encoding: 'utf8',
     })
 
   try {
@@ -106,6 +118,15 @@ test('compares the supplied base and checkout HEAD trees', () => {
 
     assert.deepEqual(checkMigrationImmutability(base, checkoutHead, repository), [])
 
+    symlinkSync(checker, linkedChecker)
+    const symlinkResult = runCli(base, checkoutHead)
+    assert.equal(symlinkResult.status, 0, symlinkResult.stderr)
+    assert.match(symlinkResult.stdout, /Migration immutability check passed/)
+
+    const missingRevisionResult = runCli('missing-test-revision', checkoutHead)
+    assert.equal(missingRevisionResult.status, 1)
+    assert.match(missingRevisionResult.stderr, /resolving revision "missing-test-revision"/)
+
     write(sqlPath, 'DROP TABLE initial;')
     write(snapshotPath, '{"id":"snapshot-changed"}')
     git('add', '.')
@@ -116,7 +137,12 @@ test('compares the supplied base and checkout HEAD trees', () => {
       { path: sqlPath, reason: 'modified' },
       { path: snapshotPath, reason: 'modified' },
     ])
+
+    const changedArtifactResult = runCli(base, changedHead)
+    assert.equal(changedArtifactResult.status, 1)
+    assert.match(changedArtifactResult.stderr, /::error::Merged migration artifact content changed/)
   } finally {
     rmSync(repository, { recursive: true, force: true })
+    rmSync(symlinkDirectory, { recursive: true, force: true })
   }
 })
