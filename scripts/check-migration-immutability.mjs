@@ -1,8 +1,10 @@
 import { execFileSync } from 'node:child_process'
 import { realpathSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
+import { isDeepStrictEqual } from 'node:util'
 
 const migrationDirectory = 'apps/api/drizzle/migrations'
+const journalPath = `${migrationDirectory}/meta/_journal.json`
 
 function isImmutableMigrationPath(filePath) {
   if (!filePath.startsWith(`${migrationDirectory}/`)) return false
@@ -81,6 +83,37 @@ function readImmutableBlobs(revision, cwd) {
   return blobs
 }
 
+function readMigrationJournal(revision, cwd) {
+  const commit = resolveCommit(revision, cwd)
+  const contents = git(
+    ['show', `${commit}:${journalPath}`],
+    cwd,
+    `reading migration journal at revision ${JSON.stringify(revision)}`,
+  )
+
+  let journal
+  try {
+    journal = JSON.parse(contents)
+  } catch {
+    throw new Error(`Invalid migration journal at revision ${JSON.stringify(revision)}`)
+  }
+  if (!journal || !Array.isArray(journal.entries))
+    throw new Error(`Invalid migration journal entries at revision ${JSON.stringify(revision)}`)
+
+  return journal
+}
+
+function findJournalChanges(baseJournal, headJournal) {
+  const baseEntries = baseJournal.entries
+  const headEntries = headJournal.entries
+  const retainedHeadJournal = { ...headJournal, entries: headEntries.slice(0, baseEntries.length) }
+
+  return headEntries.length >= baseEntries.length &&
+    isDeepStrictEqual(baseJournal, retainedHeadJournal)
+    ? []
+    : [{ path: journalPath, reason: 'modified' }]
+}
+
 export function checkMigrationImmutability(baseRevision, headRevision, cwd = process.cwd()) {
   if (!baseRevision || !headRevision)
     throw new Error('Usage: node scripts/check-migration-immutability.mjs <base-sha> <head-ref>')
@@ -92,7 +125,12 @@ export function checkMigrationImmutability(baseRevision, headRevision, cwd = pro
     )
 
   const headBlobs = readImmutableBlobs(headRevision, cwd)
-  return findImmutableFileChanges(baseBlobs, headBlobs)
+  const changes = findImmutableFileChanges(baseBlobs, headBlobs)
+  const journalChanges = findJournalChanges(
+    readMigrationJournal(baseRevision, cwd),
+    readMigrationJournal(headRevision, cwd),
+  )
+  return [...changes, ...journalChanges].sort((left, right) => left.path.localeCompare(right.path))
 }
 
 function main(args) {
@@ -109,7 +147,7 @@ function main(args) {
         console.error(`::error::Merged migration artifact ${detail}: ${change.path}`)
       }
       console.error(
-        'Add a new migration to correct an applied migration; do not rewrite existing SQL or snapshots.',
+        'Add a new migration to correct an applied migration; keep existing SQL, snapshots, and journal entries unchanged.',
       )
       process.exitCode = 1
       return
