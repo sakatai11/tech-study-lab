@@ -858,6 +858,14 @@ content は「web のビルド時バンドル（§8.2）」と「D1 の `questio
 - 生成：`pnpm --filter @tsl/api db:generate`（drizzle-kit）→ ローカル適用（`db:migrate:local`）→ テスト → PR。
 - 本番適用はデプロイ手順の先頭（§12.4 の①）。
 - **破壊的変更（列削除・型変更・NOT NULL 追加）は原則避け、追加中心**とする。やむを得ない場合は「新列追加 → データ移行 → 旧列削除」の多段リリースで行う。
+- Git に取り込まれた Drizzle migration のファイル名・SQL 本文、および既存の `meta/*_snapshot.json` は変更・削除・改名しない。migration の履歴は適用済みファイル名と SQL に依存するため、修正が必要なら新しい migration を追加する。CI は PR base に存在する `.sql` と snapshot の blob を checkout 済み PR HEAD と比較し、削除・改名・内容変更を拒否する。新規 migration と snapshot の追加は許可する。`meta/_journal.json` は Drizzle の生成結果として既存 entry を保ったまま新しい entry を末尾へ追加する。CI は既存 entry が同じ順序のまま保持されていることも確認し、journal の削除や既存 entry の変更・削除・並べ替えを拒否する。
+- 過去に `0002_add_question_metadata.sql` として適用済みの**ローカル D1**を、同じ SQL の現行名 `0002_nasty_guardsmen.sql` に合わせる必要がある場合に限り、先に D1 のバックアップ、`d1_migrations` の旧名行の有無、実スキーマが migration 後の状態であることを確認する。旧名行がちょうど 1 件あり、新名行が存在しないときだけ、次の条件付き更新を `wrangler d1 execute tech-study-lab --local` で実行し、更新後の履歴を確認してから `db:migrate:local` を実行する。条件に合わない場合は更新せず、履歴とスキーマを調査する。
+
+  ```sh
+  pnpm --filter @tsl/api exec wrangler d1 execute tech-study-lab --local --command "UPDATE d1_migrations SET name = '0002_nasty_guardsmen.sql' WHERE name = '0002_add_question_metadata.sql' AND (SELECT COUNT(*) FROM d1_migrations WHERE name = '0002_add_question_metadata.sql') = 1 AND NOT EXISTS (SELECT 1 FROM d1_migrations WHERE name = '0002_nasty_guardsmen.sql');"
+  ```
+
+  この履歴修復はローカル D1 に限る。適用済み migration の変更や production 履歴の書き換えには使わない。
 
 ### 12.7 バックアップ・観測（当面の運用）
 
