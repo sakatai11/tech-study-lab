@@ -16,6 +16,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Set up Node.js
@@ -39,6 +40,15 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Migration immutability tests
+        run: pnpm migration:test
+
+      - name: Migration immutability check (pull requests)
+        if: github.event_name == 'pull_request'
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: pnpm run migration:check-immutable "$PR_BASE_SHA" HEAD
 
       - name: Typecheck
         run: pnpm typecheck
