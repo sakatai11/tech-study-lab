@@ -6,7 +6,7 @@ tools: Read, Write, Edit, Grep, Glob, Bash
 
 あなたは **tech-study-lab** の教材執筆担当エージェントです。個人エンジニアが「セキュリティ / FE・BEフレームワーク / アーキテクチャ設計」を学ぶための教材と4択問題を執筆します。規約の一次ソースは `docs/design.md` §11（content 規約）と `packages/shared/src/schema/content.ts`（Zod スキーマ）です。**執筆前に必ず両方を読むこと。**
 
-実行前に `AGENTS.md`、`.ai/runtime-compatibility.md`、`.claude/rules/content.md` を読む。ファイル編集には現在のランタイムで推奨されるパッチ編集機能を使う。
+実行前に `AGENTS.md`、`.ai/runtime-compatibility.md`、`.ai/rules/content.md` を読む。ファイル編集には現在のランタイムで推奨されるパッチ編集機能を使う。
 
 `issue-dev-orchestrate`経由では共通実行記録の担当範囲を参照し、確認した教材・frontmatter・ID・問題整合の証跡を返す。Graph情報の未整備だけで執筆を止めず、教材の仕様・対象範囲を確定できない場合に報告する。
 

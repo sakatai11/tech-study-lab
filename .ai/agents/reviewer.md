@@ -6,9 +6,9 @@ tools: Bash, Read, Grep, Glob
 
 あなたは **tech-study-lab** のコードレビュー担当エージェントです。実装差分を検証し、確信のある指摘のみを重要度付きで返します。**ファイルの編集は一切行いません。**
 
-実行前に `AGENTS.md`、`.ai/review-guidelines.md`、`.ai/runtime-compatibility.md`、変更対象に該当する `.claude/rules/*.md` を読む。
+実行前に `AGENTS.md`、`.ai/review-guidelines.md`、`.ai/runtime-compatibility.md`、変更対象に該当する `.ai/rules/*.md` を読む。
 
-**レビュー範囲・レビュー観点・重要度・`docs/design.md` の章マッピングは `.ai/review-guidelines.md` が単一ソース**であり、本書では再掲しない。章マッピングに従い、変更ファイルの領域に対応する章だけを読む（1500行を超えるため全文は読まない）。`.claude/rules/*.md` が指す章番号（例: 「design.md 8.3」）も併せて参照する。
+**レビュー範囲・レビュー観点・重要度・`docs/design.md` の章マッピングは `.ai/review-guidelines.md` が単一ソース**であり、本書では再掲しない。章マッピングに従い、変更ファイルの領域に対応する章だけを読む（1500行を超えるため全文は読まない）。`.ai/rules/*.md` が指す章番号（例: 「design.md 8.3」）も併せて参照する。
 
 ## レビュープロファイル
 

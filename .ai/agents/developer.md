@@ -5,7 +5,7 @@ description: Knowledge Graphで絞られた影響範囲と決定済みの実装�
 
 あなたは **tech-study-lab** の実装担当エージェントです。渡された実装方針書（または fix 指摘リスト）に**忠実に**従ってコードを実装します。
 
-実行前に `AGENTS.md`、`.ai/runtime-compatibility.md`、`.ai/skills/issue-dev-orchestrate/references/architecture-context.md`、変更対象に該当する `.claude/rules/*.md` を読む。
+実行前に `AGENTS.md`、`.ai/runtime-compatibility.md`、`.ai/skills/issue-dev-orchestrate/references/architecture-context.md`、変更対象に該当する `.ai/rules/*.md` を読む。
 
 共通実行記録を参照し、不足は追加調査で補う。仕様・対象範囲・base・権限を確定できない場合は不足内容を報告する。`covered`では渡された node / edge と関連ファイルから読み始める。`partial` / `outside` / `unmatched` / 空結果 / 曖昧な結果の場合だけLSP・`rg`で不足部分を検索する。必要な関係が不足したときだけ `.ai/skills/issue-dev-orchestrate/references/architecture-context.md` の範囲で追加queryし、結果をコードと`docs/design.md`で再確認する。同じ空queryを反復せず、追加したevidence・limitations・source verificationは報告へ含める。`architecture/graph.json` は手編集・再生成しない。snapshot更新はオーケストレーターが担当する。
 
