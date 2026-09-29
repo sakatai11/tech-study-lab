@@ -1,16 +1,15 @@
 #!/bin/sh
-# hookの動作検証と、エージェント契約文書の不変条件チェックを行うゲート。
+# AIハーネスの動作と構成の整合を検査するゲート。
 #
-# 1. hook fixture / 共通ログ / `sync:agents --check` による生成物の同期検証。
-# 2. `.ai/` 配下のスキル・エージェント定義・共通契約と `docs/ai-coding-agents.md` に対する
-#    完全一致 grep（check_agent_contract / check_absent_contract /
-#    check_section_contract / check_order_contract）による契約検査。件数は後者が大半を占める。
-# 3. `docs/design.md` の章参照（`§N` / `design.md N.N` / `design.md#<見出しスラッグ>`）が実在する見出しへ
+# 1. hook fixture / 共通スキルログ / `sync:agents --check` による hook と生成物の動作検証。
+# 2. Claude Code と Codex の両ランタイムから同じ `.ai/` の一次ソースへ届くことの構成検査
+#    （発見用リンク、Codex agent TOML、パス別ルールの参照、権限迂回フラグの不在）。
+# 3. weekly-retro レンダラーの出力検証。
+# 4. `docs/design.md` の章参照（`§N` / `design.md N.N` / `design.md#<見出しスラッグ>`）が実在する見出しへ
 #    解決されることの検査（scripts/test-design-chapter-refs.mjs）。
 #
-# 2 はレビューの成立条件、外部送信の同意、ブランチ規約、役割別モデル方針、手順の順序が
-# 黙って削除・改変されないよう固定する。契約文書の文言を変えた場合はここの期待値も同じ変更で
-# 更新する。検査を削って通すことはしない。
+# 契約文書の文言は検査しない。文言の存在はモデルが従うことを保証せず、改善のたびに期待値の更新を
+# 強いるため。ここでは機械的に判定できる構成と、コードの振る舞いだけを固定する。
 #
 # PR CI（.github/workflows/ci.yml）から実行される。`jq` を必要とする。
 set -eu
@@ -18,13 +17,34 @@ set -eu
 repo_root=$(git rev-parse --show-toplevel)
 cd "$repo_root"
 
+fail() {
+  printf '%s\n' "$*" >&2
+  exit 1
+}
+
 expect_blocked() {
   if "$@"; then
-    printf '%s\n' "expected hook to block: $*" >&2
-    exit 1
+    fail "expected hook to block: $*"
   fi
 }
 
+expect_contains() {
+  label=$1
+  expected=$2
+  file=$3
+  grep -F -- "$expected" "$file" >/dev/null || fail "expected content missing: $label ($file)"
+}
+
+expect_absent() {
+  label=$1
+  unexpected=$2
+  file=$3
+  if grep -F -- "$unexpected" "$file" >/dev/null; then
+    fail "unexpected content: $label ($file)"
+  fi
+}
+
+# ---- 1. hook と生成物 ----
 expect_blocked sh -c './.claude/hooks/pre-edit.sh < .ai/hooks/fixtures/claude-edit-todo.json'
 ./.claude/hooks/pre-edit.sh < .ai/hooks/fixtures/claude-edit-clean.json
 expect_blocked sh -c './.codex/hooks/pre-tool-use.sh < .ai/hooks/fixtures/codex-apply-patch-todo.json'
@@ -51,665 +71,60 @@ jq -e -s '
 
 node scripts/sync-agent-config.mjs --check
 
-# 外部CLIの認証と通信をSandbox内の結果だけで誤判定しない契約を固定する。
-check_agent_contract() {
-  label=$1
-  expected=$2
-  file=$3
+# ---- 2. 両ランタイムの構成整合 ----
+printf '%s\n' "Checking Claude/Codex harness consistency..."
 
-  if ! grep -F -- "$expected" "$file" >/dev/null; then
-    printf '%s\n' "agent contract check failed: $label ($file)" >&2
-    exit 1
-  fi
+# 発見用リンクが存在し、`.ai/` の一次ソースを相対パスで指していること。
+expect_link() {
+  link=$1
+  target=$2
+  [ -L "$link" ] || fail "discovery link missing or not a symlink: $link"
+  [ "$(readlink "$link")" = "$target" ] || fail "discovery link points elsewhere: $link -> $(readlink "$link") (expected $target)"
+  [ -e "$link" ] || fail "discovery link is broken: $link"
 }
 
-extract_section() {
-  _file=$1
-  _start=$2
-  _end=$3
-
-  awk '
-    BEGIN {
-      start = ARGV[1]
-      end = ARGV[2]
-      ARGV[1] = ""
-      ARGV[2] = ""
-    }
-    !active && index($0, start) { active = 1; found_start = 1 }
-    active && index($0, end) { found_end = 1; exit }
-    active { print }
-    END {
-      if (!found_start || !found_end) {
-        exit 1
-      }
-    }
-  ' "$_start" "$_end" "$_file"
-}
-
-check_section_contract() {
-  label=$1
-  section=$2
-  expected=$3
-
-  if ! printf '%s\n' "$section" | grep -F -- "$expected" >/dev/null; then
-    printf '%s\n' "section contract check failed: $label" >&2
-    exit 1
-  fi
-}
-
-check_section_absent_contract() {
-  label=$1
-  section=$2
-  unexpected=$3
-
-  if printf '%s\n' "$section" | grep -F -- "$unexpected" >/dev/null; then
-    printf '%s\n' "unexpected section contract: $label" >&2
-    exit 1
-  fi
-}
-
-check_absent_contract() {
-  label=$1
-  unexpected=$2
-  file=$3
-
-  if grep -F -- "$unexpected" "$file" >/dev/null; then
-    printf '%s\n' "unexpected agent contract: $label ($file)" >&2
-    exit 1
-  fi
-}
-
-check_order_contract() {
-  label=$1
-  file=$2
-  first=$3
-  second=$4
-  first_line=$(awk -v marker="$first" 'index($0, marker) { print NR; exit }' "$file")
-  second_line=$(awk -v marker="$second" 'index($0, marker) { print NR; exit }' "$file")
-
-  if [ -z "$first_line" ] || [ -z "$second_line" ] || [ "$first_line" -ge "$second_line" ]; then
-    printf '%s\n' "agent contract order check failed: $label ($file)" >&2
-    exit 1
-  fi
-}
-
-printf '%s\n' "Checking agent contract consistency..."
-
-# 方針: 手順の逐語表現は固定しない。より良い言い回しへの改善を阻害するため。
-# ここで守るのは「破られると危険な不変条件」と「単一ソースが二重定義に戻っていないこと」だけ。
-
-SKILL=.ai/skills/issue-dev-orchestrate/SKILL.md
-COMMON=.ai/cross-model-reviewer-common.md
-GUIDE=.ai/review-guidelines.md
-RUNTIME=.ai/runtime-compatibility.md
-AGENT_GUIDE=docs/ai-coding-agents.md
-ARCHITECTURE_CONTEXT=.ai/skills/issue-dev-orchestrate/references/architecture-context.md
-PHASE_REF=.ai/skills/issue-dev-orchestrate/references/phase-reconciliation.md
-TEST_FIXER=.ai/agents/test-fixer.md
-
-reference_map_section=$(extract_section "$SKILL" '## 参照マップ' '## 実行準備') || {
-  printf '%s\n' 'failed to extract skill reference map contract' >&2
-  exit 1
-}
-consent_section=$(extract_section "$COMMON" '## オーケストレーターの直接実行・監視契約' '## 範囲と分割coverage') || {
-  printf '%s\n' 'failed to extract external egress consent contract' >&2
-  exit 1
-}
-coderabbit_consent_section=$(extract_section "$COMMON" '## CodeRabbit App（補助・任意）' '## 範囲と分割coverage') || {
-  printf '%s\n' 'failed to extract CodeRabbit consent contract' >&2
-  exit 1
-}
-phase7_skill_section=$(extract_section "$SKILL" '### フェーズ7: 完了' '## 中断・失敗時') || {
-  printf '%s\n' 'failed to extract skill Phase 7 contract' >&2
-  exit 1
-}
-
-# 正規化エージェント名から、外部CLIを実行・監視する主体だと誤認できないことを固定する。
-for old_path in \
-  .ai/agents/claude-reviewer.md \
-  .ai/agents/codex-reviewer.md \
-  .claude/agents/claude-reviewer.md \
-  .claude/agents/codex-reviewer.md \
-  .codex/agents/claude-reviewer.toml \
-  .codex/agents/codex-reviewer.toml; do
-  if [ -e "$old_path" ] || [ -L "$old_path" ]; then
-    printf '%s\n' "legacy reviewer agent name remains: $old_path" >&2
-    exit 1
-  fi
+for skill_dir in .ai/skills/*/; do
+  name=$(basename "$skill_dir")
+  [ -f "$skill_dir/SKILL.md" ] || fail "skill without SKILL.md: $skill_dir"
+  expect_link ".claude/skills/$name" "../../.ai/skills/$name"
+  expect_link ".agents/skills/$name" "../../.ai/skills/$name"
 done
 
-if [ "$(readlink .claude/agents/claude-review-normalizer.md)" != '../../.ai/agents/claude-review-normalizer.md' ] ||
-  [ "$(readlink .claude/agents/codex-review-normalizer.md)" != '../../.ai/agents/codex-review-normalizer.md' ]; then
-  printf '%s\n' 'review normalizer discovery links are invalid' >&2
-  exit 1
+for agent in .ai/agents/*.md; do
+  name=$(basename "$agent" .md)
+  expect_link ".claude/agents/$name.md" "../../.ai/agents/$name.md"
+  toml=".codex/agents/$name.toml"
+  [ -f "$toml" ] || fail "Codex agent TOML missing for $agent: $toml"
+  grep -qx "name = \"$name\"" "$toml" || fail "Codex agent TOML name does not match $name: $toml"
+done
+
+for toml in .codex/agents/*.toml; do
+  name=$(basename "$toml" .toml)
+  [ -f ".ai/agents/$name.md" ] || fail "Codex agent TOML without .ai/agents/$name.md: $toml"
+done
+
+if [ -d .ai/rules ]; then
+  for rule in .ai/rules/*.md; do
+    [ -e "$rule" ] || continue
+    name=$(basename "$rule")
+    expect_link ".claude/rules/$name" "../../.ai/rules/$name"
+    expect_contains "path rule is reachable from AGENTS.md" ".ai/rules/$name" AGENTS.md
+  done
 fi
 
-check_agent_contract "claude normalizer TOML name" 'name = "claude-review-normalizer"' .codex/agents/claude-review-normalizer.toml
-check_agent_contract "codex normalizer TOML name" 'name = "codex-review-normalizer"' .codex/agents/codex-review-normalizer.toml
-check_absent_contract "legacy consent field name stays removed" '`reviewerAgent`' "$SKILL"
-check_agent_contract "consent identifies the normalizer" '`normalizerAgent`' "$COMMON"
-
-for file in \
-  "$SKILL" \
-  .ai/skills/issue-new/SKILL.md \
-  .github/ISSUE_TEMPLATE/feature-spec.yml \
-  .github/ISSUE_TEMPLATE/task.yml; do
-  check_absent_contract "unused background agent CLI option stays removed" 'バックグラウンドAIエージェントCLI' "$file"
-  check_absent_contract "unused background agent CLI field stays removed" 'background-agent-cli' "$file"
+# 発見用ディレクトリに、一次ソースを持たない取り残しのリンクがないこと。
+for link in .claude/skills/* .agents/skills/* .claude/agents/* .claude/rules/*; do
+  [ -e "$link" ] || [ -L "$link" ] || continue
+  [ -e "$link" ] || fail "stale discovery link: $link"
 done
 
-# ---- スキルが手順書化していないこと ----
-check_agent_contract "skill declares it is not a procedure" '**本書は手順書ではない。**' "$SKILL"
-check_agent_contract "skill invites better approaches" 'より良い進め方を思いついたら' "$SKILL"
-check_agent_contract "skill has invariants section" '## 不変条件' "$SKILL"
-check_agent_contract "invariants are non-negotiable" 'という理由での逸脱も認めない' "$SKILL"
-
-# ---- 不変条件: レビューの成立（最重要） ----
-check_agent_contract "failure is never approval" 'レビューが正常完了しなかった状態（失敗・未取得）を approve として扱わない' "$SKILL"
-# 「指摘ゼロ」を一律に禁じると、正常完了した zero-finding レビューまでブロックし、
-# 共通定義の approve 規則と矛盾する。禁止と正当な approve の区別が明記されていること。
-check_agent_contract "zero findings can be a valid approve" 'must-fix / should-fix が0件なら、それは正当な `approve` である' "$SKILL"
-check_agent_contract "common defines scoped approve rule" '対象範囲内の must-fix / should-fix が0件' "$COMMON"
-check_agent_contract "out-of-scope candidates do not block approve" '判定件数・修正対象に含めない' "$COMMON"
-check_agent_contract "out-of-scope and confirmation items are classified" '別issue候補（範囲外）、確認事項へ分類する' "$COMMON"
-legacy_zero_finding_ban=$(printf '%s%s' 'レビューの失敗・未取得・指摘ゼロ' 'を approve として扱わない')
-check_absent_contract "no blanket ban on zero findings" "$legacy_zero_finding_ban" "$SKILL"
-# internal reviewer と外部レビューは、規約のプロファイル割当と優先順を分ける。
-check_agent_contract "consent-blocked result does not enter fallback" '第二のinternal reviewerを代替レビューとして起動せず' "$COMMON"
-check_agent_contract "consent-blocked result reports missing scope" '不足した対象と理由を具体的に報告する' "$COMMON"
-check_agent_contract "consent-blocked result requires fresh confirmation" '同意を取得・記録するまでCLIを再実行しない' "$COMMON"
-check_agent_contract "green check is not review" 'ステータスチェックが緑でも、レビュー済みの根拠にしない' "$COMMON"
-check_agent_contract "no guessing review range" 'レビュー範囲を推測で決めない' "$SKILL"
-check_agent_contract "no cherry-picking findings" '各レビュー結果をオーケストレーターの都合で取捨選択せず' "$SKILL"
-check_agent_contract "reviewed head only after real review" 'これらの状態ではFinding台帳と全レビュー境界を更新せず' "$COMMON"
-check_agent_contract "orchestrator brief references the basic scope contract" '基本5項目（`targetFeature`、`inScopeFiles`、`acceptanceCriteria`、`outOfScopePolicy`、`committedRange`）は、`.ai/review-guidelines.md` の「レビュー範囲」に従う' "$COMMON"
-check_agent_contract "common inherits the read-only file scope rule" '同節の `inScopeFiles` に関する規則も継承し' "$COMMON"
-check_agent_contract "all review actors receive the same scope" 'internal reviewer、別モデルCLI、正規化エージェントがそれぞれの範囲' "$COMMON"
-check_agent_contract "both reviewer types receive one full brief path" '同じブリーフファイルの読み取り可能なパスを渡す' "$COMMON"
-check_agent_contract "integrated review brief includes policy decision and head" '`reviewPolicy` / `externalReviewDecision` / 規則ID / 具体的根拠 / `decisionHead`' "$COMMON"
-check_agent_contract "review mode record alone is insufficient" '`review-mode-<N>.md` だけを渡して済ませず' "$COMMON"
-check_agent_contract "full brief includes consent record" '`reviewMode: cross-model-cli`、`normalizerAgent`、`egressDestination`' "$COMMON"
-check_agent_contract "scope expansion requires user decision" 'ユーザーが明示的に範囲を変更するまでは修正ループと判定件数に含めない' "$GUIDE"
-check_agent_contract "urgent independent severe findings pause for user decision" '緊急性がある場合だけユーザー判断へエスカレーションする' "$GUIDE"
-
-# ---- 不変条件: ブランチとコミット ----
-check_agent_contract "no work on main" '`main` では作業せず' "$SKILL"
-check_agent_contract "work branch does not merge into develop" '作業ブランチから `develop` へのマージは行わず' "$SKILL"
-check_agent_contract "develop updates into work branch remain allowed" '作業ブランチへ `develop` を取り込む通常の操作は妨げない' "$SKILL"
-check_agent_contract "gh pr merge remains human-only" '`gh pr merge` は使わない' "$SKILL"
-check_agent_contract "no closes keyword" '`closes #<N>` は使わない' "$SKILL"
-check_agent_contract "refs required" 'refs #<N>' "$SKILL"
-check_agent_contract "no hiding failures" '`|| true` などで隠さない' "$SKILL"
-check_agent_contract "orchestrator owns commits" '`developer` と `test-fixer` はコミットしない' "$SKILL"
-check_agent_contract "no extra commit at completion" '追加コミットを作らず' "$SKILL"
-check_agent_contract "implementation owner is recorded" '`executionOwner: developer | orchestrator`' "$SKILL"
-check_agent_contract "orchestrator implementation inherits developer guardrails" '`orchestrator`が実装する場合も`.ai/agents/developer.md`を全文読み' "$SKILL"
-check_agent_contract "implementation never self-reviews" 'internal reviewは別の`reviewer`エージェントへ委譲して自己レビューで代替しない' "$SKILL"
-check_agent_contract "developer self-check is scoped" '変更ファイルと影響packageに絞った自己検証' .ai/agents/developer.md
-check_agent_contract "test fixer owns full gates" '正式な`pnpm typecheck` / `pnpm lint` / `pnpm test`はフェーズ4の`test-fixer`が担う' .ai/agents/developer.md
-check_agent_contract "test fixer formal typecheck gate" '`pnpm typecheck`' "$TEST_FIXER"
-check_agent_contract "test fixer formal lint gate" '`pnpm lint`' "$TEST_FIXER"
-check_agent_contract "test fixer formal test gate" '`pnpm test`' "$TEST_FIXER"
-check_agent_contract "test fixer lint includes dependency cruiser" 'dependency-cruiser' "$TEST_FIXER"
-check_agent_contract "test fixer baseline failure is not pass" '正式ゲートの `pass` ではない' "$TEST_FIXER"
-check_agent_contract "test fixer reports lint instead of biome-only gate" '| lint（Biome + dependency-cruiser） | pass / fail（ベースライン） |' "$TEST_FIXER"
-check_absent_contract "test fixer has no biome-only formal report" '| biome | pass / fail |' "$TEST_FIXER"
-check_absent_contract "skill does not duplicate lifecycle log command" './.ai/hooks/log-skill-usage.sh --runtime codex --skill issue-dev-orchestrate' "$SKILL"
-check_agent_contract "skill delegates lifecycle logging to runtime" 'スキルライフサイクルログは `.ai/runtime-compatibility.md` の「設定とログ」に従う' "$SKILL"
-check_agent_contract "runtime owns lifecycle log command" './.ai/hooks/log-skill-usage.sh --runtime codex --skill <name> --status started|completed' "$RUNTIME"
-check_agent_contract "runtime defines concrete scratchpad location" 'このリポジトリでは `<scratchpad>` を `.claude/logs/briefs/` と定義する' "$RUNTIME"
-check_agent_contract "runtime defines scratchpad brief location" '長いブリーフは `<scratchpad>` 配下' "$RUNTIME"
-check_agent_contract "runtime keeps scratchpad gitignored" 'gitignore対象一時領域' "$RUNTIME"
-check_absent_contract "runtime does not duplicate briefs directory" '.claude/logs/briefs/briefs/' "$RUNTIME"
-
-# ---- 参照マップの通常経路 ----
-check_section_contract "reference map reaches runtime compatibility" "$reference_map_section" '実行開始 | `.ai/runtime-compatibility.md` | ランタイム、GitHub、エージェント、CLI、scratchpad の互換条件'
-check_section_contract "reference map reaches review guidelines and common" "$reference_map_section" 'discovery / verification 前 | `.ai/review-guidelines.md`、`.ai/cross-model-reviewer-common.md` | 範囲、分類、Finding、判定、同意、境界'
-check_section_contract "reference map reaches phase reconciliation" "$reference_map_section" 'phase / spike | `references/phase-reconciliation.md` | 関連Issue・撤回／置換PRの状態照合'
-
-# ---- 最終報告契約 ----
-check_section_contract "final report points to common output contract" "$phase7_skill_section" '最終報告は `.ai/cross-model-reviewer-common.md` の出力契約を参照し'
-check_section_contract "final report keeps out-of-scope split proposal" "$phase7_skill_section" '別issue候補（範囲外）と切り出し案'
-check_section_contract "final report includes policy decision evidence" "$phase7_skill_section" '`reviewPolicy` / current HEADの`externalReviewDecision` / 規則IDと根拠'
-check_section_contract "final report includes external review actors" "$phase7_skill_section" '使用した別モデルCLI・正規化エージェント名・送信先（未実行・未取得なら理由）'
-check_section_contract "final report states guarantee degradation" "$phase7_skill_section" '保証低下の有無'
-
-# ---- 不変条件: スパイク／フェーズ分割時の関連状態照合 ----
-# 実施手順ではなく、対象の限定・記録すべき状態・追跡可能性だけを固定する。
-goal_section=$(extract_section "$SKILL" '## ゴール' '## オーケストレーターの責務') || {
-  printf '%s\n' 'failed to extract goal completion contract' >&2
-  exit 1
-}
-phase7_section=$(sed -n '/^# フェーズ／スパイクの関連状態照合/,$p' "$PHASE_REF")
-if [ -z "$phase7_section" ]; then
-  printf '%s\n' 'failed to extract Phase 7 reconciliation contract' >&2
-  exit 1
+# 権限・Sandbox の迂回フラグをハーネスへ持ち込まないこと（文字列はここで分割して自己一致を避ける）。
+bypass_flag=$(printf '%s%s' '--dangerously' '-')
+if grep -rF -- "$bypass_flag" .ai .codex .claude/settings.json AGENTS.md 2>/dev/null | grep -v '^\.ai/logs/' >/dev/null; then
+  fail "permission or sandbox bypass flag found in harness files"
 fi
 
-check_section_contract "completion requires conditional reconciliation" "$goal_section" 'スパイクまたはフェーズ分割を伴う作業では、明示された関連Issue・撤回／置換PRの状態照合が完了'
-check_section_contract "reconciliation records ordinary results to current and phase issues" "$phase7_section" '現在Issueと明示的に関連する各phase Issueにも、同じ照合結果を追跡可能な形で記録する'
-check_section_contract "reconciliation does not authorize early closure or automation" "$phase7_section" 'Issueの早期close、作業ブランチの自動merge、release自動化を許可しない'
-check_section_contract "reconciliation scope is explicit sources only" "$phase7_section" '現在Issue本文・GitHub sub-issue関係・フェーズ2の実装方針コメント'
-check_section_contract "reconciliation includes required artifact kinds" "$phase7_section" '親／子／phase／spike／implementation Issue、または撤回／置換PR'
-check_section_contract "reconciliation does not infer arbitrary references" "$phase7_section" '任意の `#<N>` 言及、参考リンク、ボットが生成した「関連する可能性」の提案から対象や関係を推測してはならない'
-
-for classification in \
-  'develop反映済み・main release待ち' \
-  '未達・現在Issueに残す' \
-  '別Issueへ移管済み' \
-  '外部条件待ち・再開条件あり' \
-  '不要または置換済み'; do
-  check_section_contract "reconciliation classification: $classification" "$phase7_section" "$classification"
-done
-
-check_section_contract "reconciliation records acceptance criteria" "$phase7_section" '受け入れ条件、次の5分類からちょうど1つの主分類、残条件、移管先、main反映後のclose候補'
-check_section_contract "transfer maps unmet criteria to destination" "$phase7_section" '移管先Issueと対応する未達の受け入れ条件を必ず対応付ける'
-check_section_contract "transfer without destination becomes human decision" "$phase7_section" '新規Issue候補として人間判断へ渡す'
-check_section_contract "withdrawn judgments trace from current and phase issues" "$phase7_section" '現在Issueと明示的に関連する各phase Issueから追跡可能にする'
-check_section_contract "replacement PR records final result" "$phase7_section" '撤回理由・置換先PR・採用する最終結果を記録する'
-check_section_contract "phase 7 report includes reconciliation status" "$phase7_section" '対象ごとの主分類、残条件、移管先、main反映後のclose候補'
-check_section_contract "reconciliation preserves refs policy" "$phase7_section" '`refs #<N>` とし、`closes #<N>` は使わない'
-
-# ---- 不変条件: 外部送信 ----
-check_agent_contract "consent lists what is sent" '今回の `committed-diff`、`brief-context`、`repository-reads` を具体的に列挙' "$COMMON"
-check_agent_contract "out-of-scope consent not substitutable" '差分だけの同意、別実行・範囲外の過去同意、スキル文書で代用してはならない' "$COMMON"
-check_agent_contract "consent covers more than diff" '今回の `committed-diff`、`brief-context`、`repository-reads`' "$COMMON"
-check_agent_contract "consent scope diff" 'committed-diff' "$COMMON"
-check_agent_contract "consent scope brief" 'brief-context' "$COMMON"
-check_agent_contract "consent scope repo reads" 'repository-reads' "$COMMON"
-check_section_contract "consent is confirmed before external send" "$consent_section" '最初の外部送信直前に、今回の `committed-diff`、`brief-context`、`repository-reads` を具体的に列挙した明示同意を確認する。'
-check_section_contract "cross-model consent records destination" "$consent_section" '`reviewMode: cross-model-cli`、`normalizerAgent`、`egressDestination`、`externalEgressApproved: true`、`approvedScope`'
-check_section_contract "verification consent is limited to approved scope" "$consent_section" '送信先、issue、branch、effective base、変更ファイルとrepository readsが承認済みパスの部分集合、データ種別、read-only能力がすべて同じ承認範囲内なら同意を再利用できる。'
-check_section_contract "destination or scope changes require renewed consent" "$consent_section" '送信先変更、範囲拡大、新しい機密カテゴリ、実行能力の拡大、または別実行では同意を取り直す。'
-check_section_contract "private automatic App review requires pre-PR consent" "$coderabbit_consent_section" 'private リポジトリで CodeRabbit App の自動レビューが有効、または無効と確認できない場合は、PR作成前に'
-check_section_contract "automatic App consent records destination" "$coderabbit_consent_section" '`reviewMode: coderabbit-app` / `egressDestination: coderabbit` / `externalEgressApproved: true` / `approvedScope`'
-check_agent_contract "unapproved automatic App review is not integrated" '明示同意なしに取得された自動Appレビューは統合しない' "$COMMON"
-check_agent_contract "manual App review keeps separate approval" '単発起動の `@coderabbitai review` をPRへコメントする場合は、その投稿について別途ユーザー承認を得る' "$COMMON"
-check_agent_contract "no same-vendor reviewer" '別モデルレビューに使ってはならない' "$COMMON"
-check_agent_contract "no bypass flags" '迂回フラグ' "$SKILL"
-
-# 危険フラグそのものが復活していないこと
-check_absent_contract "sandbox bypass flag absent" '--dangerously-bypass-approvals-and-sandbox' "$SKILL"
-claude_permission_bypass=$(printf '%s%s' '--dangerously-skip-' 'permissions')
-check_absent_contract "claude permission bypass absent" "$claude_permission_bypass" "$SKILL"
-
-# ---- 単一ソース: レビュー規約 ----
-check_agent_contract "guidelines own the design mapping" '## 読む章（design.md 章マッピング）' "$GUIDE"
-check_agent_contract "guidelines define accuracy profile" '`accuracy-first`（正確性優先）' "$GUIDE"
-check_agent_contract "guidelines define spec profile" '`spec-compliance-first`（仕様準拠優先）' "$GUIDE"
-check_agent_contract "guidelines define severities" '## 重要度' "$GUIDE"
-check_agent_contract "guidelines own review scope" '## レビュー範囲' "$GUIDE"
-check_agent_contract "guidelines define out-of-scope candidates" '**別issue候補（範囲外）**' "$GUIDE"
-scope_contract_section=$(extract_section "$GUIDE" '## レビュー範囲' '### 範囲判定') || {
-  printf '%s\n' 'failed to extract review scope contract' >&2
-  exit 1
-}
-scope_judgment_section=$(extract_section "$GUIDE" '### 範囲判定' '### 重大問題の例外') || {
-  printf '%s\n' 'failed to extract review scope judgment contract' >&2
-  exit 1
-}
-scope_exception_section=$(extract_section "$GUIDE" '### 重大問題の例外' '## 読む章（design.md 章マッピング）') || {
-  printf '%s\n' 'failed to extract review scope exception contract' >&2
-  exit 1
-}
-review_profiles_section=$(extract_section "$GUIDE" '## レビュープロファイル' '## 重要度') || {
-  printf '%s\n' 'failed to extract review profile contract' >&2
-  exit 1
-}
-for field in targetFeature inScopeFiles acceptanceCriteria outOfScopePolicy committedRange; do
-  check_section_contract "guidelines define $field" "$scope_contract_section" "\`$field\`:"
-  check_absent_contract "common does not redefine $field" "- \`$field\`:" "$COMMON"
-done
-check_agent_contract "feature or acceptance relevance is required" '`targetFeature` または `acceptanceCriteria` に直接関係し' "$GUIDE"
-check_agent_contract "in-scope files are an additional constraint" 'かつ指摘箇所が `inScopeFiles` に含まれる' "$GUIDE"
-check_agent_contract "file location alone never makes a finding in scope" '`inScopeFiles` に含まれることだけでは対象範囲内にしない' "$GUIDE"
-check_absent_contract "legacy any-one scope rule stays removed" 'の少なくとも1つに直接関係し' "$GUIDE"
-check_agent_contract "guidelines keep repository reads from expanding scope" 'レビュー対象の外側を読んで問題を発見したこと自体は、当該 issue の修正対象にする根拠にならない' "$GUIDE"
-check_agent_contract "guidelines include diff-caused regressions" '**今回差分が起こした範囲外機能の回帰**' "$GUIDE"
-check_agent_contract "guidelines escalate urgent independent severe findings" '緊急性がある場合だけユーザー判断へエスカレーションする' "$GUIDE"
-check_section_contract "out-of-scope candidates are reported, not fixed" "$scope_judgment_section" 'must-fix / should-fix / nit に変換せず、理由・影響・切り出し案を報告する。'
-check_section_contract "out-of-scope candidates stay out of fix loop" "$scope_exception_section" 'ユーザーが明示的に範囲を変更するまでは修正ループと判定件数に含めない。'
-check_section_contract "internal reviewer uses accuracy-first" "$review_profiles_section" '担当: `reviewer`、および GitHub App 方式で並列実行する1件目の `reviewer`。'
-check_section_contract "internal reviewer prioritizes accuracy" "$review_profiles_section" '優先順: **正確性 → セキュリティ → 仕様準拠 → ガードレール違反 → テスト**'
-check_section_contract "external review uses spec-compliance-first" "$review_profiles_section" '担当: 別モデルCLIのレビュー結果を扱う `codex-review-normalizer` / `claude-review-normalizer`、および GitHub App 方式で並列実行する2件目の `reviewer`。'
-check_section_contract "external review prioritizes specification" "$review_profiles_section" '優先順: **仕様準拠 → ガードレール違反 → 正確性 → セキュリティ → テスト**'
-check_agent_contract "agents md points at guidelines" '.ai/review-guidelines.md' AGENTS.md
-# 章マッピング表が単一ソース以外へ再掲されていないこと
-for f in AGENTS.md .ai/agents/reviewer.md architecture/README.md "$COMMON" "$SKILL"; do
-  check_absent_contract "design mapping not restated ($f)" '| `apps/web/**` |' "$f"
-done
-
-# ---- 単一ソース: 別モデルCLIレビュー正規化共通定義 ----
-check_agent_contract "common is shared source" '`codex-review-normalizer` と `claude-review-normalizer` が共有する' "$COMMON"
-check_agent_contract "codex reads common" "$COMMON" .ai/agents/codex-review-normalizer.md
-check_agent_contract "claude reads common" "$COMMON" .ai/agents/claude-review-normalizer.md
-check_agent_contract "codex toml reads common" "$COMMON" .codex/agents/codex-review-normalizer.toml
-check_agent_contract "claude toml reads common" "$COMMON" .codex/agents/claude-review-normalizer.toml
-check_agent_contract "reviewer defers to guidelines" '`.ai/review-guidelines.md` が単一ソース' .ai/agents/reviewer.md
-check_agent_contract "reviewer default profile" '`accuracy-first`（正確性優先）' .ai/agents/reviewer.md
-check_agent_contract "common delegates scope definitions to guidelines" '基本5項目（`targetFeature`、`inScopeFiles`、`acceptanceCriteria`、`outOfScopePolicy`、`committedRange`）は、`.ai/review-guidelines.md` の「レビュー範囲」に従う' "$COMMON"
-scope_validation_section=$(extract_section "$COMMON" '## 範囲と分割coverage' '## 正規化と判定') || {
-  printf '%s\n' 'failed to extract review scope validation contract' >&2
-  exit 1
-}
-normalization_section=$(extract_section "$COMMON" '## 正規化と判定' '## 出力フォーマット') || {
-  printf '%s\n' 'failed to extract review normalization contract' >&2
-  exit 1
-}
-check_section_absent_contract "missing scope fields are not consent failures" "$consent_section" 'レビュー範囲契約'
-check_section_contract "missing scope fields are brief errors" "$scope_validation_section" '「判定: error」とする'
-check_section_contract "committed range is a brief field" "$scope_validation_section" '`committedRange`'
-check_section_contract "normalizer applies specification profile" "$normalization_section" '`spec-compliance-first` で design.md の該当章を照合し、CLI出力で扱われていない論点は自分の指摘として追加する。'
-check_agent_contract "common outputs out-of-scope section" '### 別issue候補（範囲外）' "$COMMON"
-check_agent_contract "internal reviewer validates scope brief" '`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage`' .ai/agents/reviewer.md
-check_agent_contract "internal reviewer requires committed range for committed stages" '`discovery` / `verification`では`committedRange`を必須とする。' .ai/agents/reviewer.md
-check_agent_contract "internal reviewer outputs out-of-scope section" '### 別issue候補（範囲外）' .ai/agents/reviewer.md
-check_agent_contract "claude normalizer validates staged scope brief" '`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage` / `committedRange`' .ai/agents/claude-review-normalizer.md
-check_agent_contract "codex normalizer validates staged scope brief" '`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage` / `committedRange`' .ai/agents/codex-review-normalizer.md
-check_agent_contract "claude TOML validates staged scope brief" '`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage` / `committedRange`' .codex/agents/claude-review-normalizer.toml
-check_agent_contract "codex TOML validates staged scope brief" '`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `reviewStage` / `committedRange`' .codex/agents/codex-review-normalizer.toml
-
-# ---- 不変条件: レビュアー側の安全則 ----
-check_agent_contract "common rejects diff-only or out-of-scope consent" '差分だけの同意、別実行・範囲外の過去同意、スキル文書で代用してはならない' "$COMMON"
-check_agent_contract "common verifies scope" 'approvedScope' "$COMMON"
-check_agent_contract "common verifies destination" 'egressDestination' "$COMMON"
-check_agent_contract "common rejects wrong host" 'wrong-host-agent' "$COMMON"
-check_agent_contract "common never approves on failure" '指摘ゼロを `approve` と読み替えない' "$COMMON"
-check_agent_contract "common preserves failed CLI results" 'timeout、wrong-host、認証・通信・同意不足・実行失敗、未取得は正常レビューの代わりに扱わない' "$COMMON"
-check_agent_contract "runtime requires direct CLI execution" 'オーケストレーターは上表のCLIを継続セッションで直接起動する' "$RUNTIME"
-check_agent_contract "common keeps consent before first CLI execution" '最初の外部送信直前に' "$COMMON"
-check_agent_contract "common assigns CLI responsibility to orchestrator" 'CLI 実行と継続監視はオーケストレーターの責務' "$COMMON"
-check_agent_contract "common requires a clean committed review range" 'レビュー対象はコミット済み差分だけに限定し' "$COMMON"
-check_agent_contract "common validates clean working tree" '`git status --short` が空' "$COMMON"
-check_agent_contract "common validates committed range" '`committedRange` が `git diff <effectiveBase>...HEAD` と一致' "$COMMON"
-check_agent_contract "claude host guard" '**Codexホストだけ**' .ai/agents/claude-review-normalizer.md
-check_agent_contract "codex host guard" '**Claude Codeホストだけ**' .ai/agents/codex-review-normalizer.md
-check_agent_contract "claude normalizer only handles summaries" 'CLI を起動・停止・認証確認・外部送信せず' .ai/agents/claude-review-normalizer.md
-check_agent_contract "codex normalizer only handles summaries" 'CLI を起動・停止・認証確認・外部送信せず' .ai/agents/codex-review-normalizer.md
-check_agent_contract "claude execution remains orchestrator-owned" 'オーケストレーターが `.ai/scripts/run-claude-review.sh` 経由で直接実行' .ai/agents/claude-review-normalizer.md
-check_agent_contract "codex auth is explicitly orchestrator-owned" 'オーケストレーターが直接 `codex login status` を確認した後' .ai/agents/codex-review-normalizer.md
-check_absent_contract "claude normalizer has no CLI execution command" 'git diff <effective-base>...HEAD |' .ai/agents/claude-review-normalizer.md
-check_absent_contract "codex normalizer has no CLI execution command" 'codex exec review --base' .ai/agents/codex-review-normalizer.md
-check_agent_contract "Claude review wrapper loads Keychain secret" '. "$script_dir/load-secrets.sh"' .ai/scripts/run-claude-review.sh
-check_agent_contract "Claude review wrapper forwards arguments without interpolation" 'exec claude "$@"' .ai/scripts/run-claude-review.sh
-check_agent_contract "runtime requires Claude review wrapper" '`.ai/scripts/run-claude-review.sh` を使う' "$RUNTIME"
-check_agent_contract "runtime uniquely owns CLI mapping" '唯一の対応表' "$COMMON"
-check_agent_contract "runtime uniquely defines OpenAI destination" '| OpenAI |' "$RUNTIME"
-check_agent_contract "runtime uniquely defines Anthropic destination" '| Anthropic |' "$RUNTIME"
-check_absent_contract "common does not duplicate Claude CLI mapping" '| Claude Code | `codex exec review` |' "$COMMON"
-check_absent_contract "common does not duplicate Codex CLI mapping" '| Codex（App / CLI） | `.ai/scripts/run-claude-review.sh`' "$COMMON"
-
-# ---- モデル方針 ----
-check_agent_contract "model policy section exists" '## 別モデルCLIレビューのモデル方針' "$RUNTIME"
-check_agent_contract "agent-self policy is separate" '## Codexサブエージェント本体のモデル方針' "$RUNTIME"
-check_agent_contract "model must be explicit" 'モデルは必ず `-m` / `--model` で明示指定する' "$RUNTIME"
-check_agent_contract "codex sandbox default documented" '既定 Sandbox は `workspace-write`' "$RUNTIME"
-check_agent_contract "codex nested model" '`-m gpt-6-sol`' "$RUNTIME"
-check_agent_contract "claude nested model" '`--model opus`' "$RUNTIME"
-check_agent_contract "host to reviewer mapping" '| Claude Code | `codex-review-normalizer` |' "$RUNTIME"
-check_agent_contract "codex host uses claude reviewer" '| Codex（App / CLI） | `claude-review-normalizer` |' "$RUNTIME"
-check_agent_contract "effective base is derived before external review" '`git merge-base <base> HEAD`' "$RUNTIME"
-check_agent_contract "effective base is validated as a commit" '`git rev-parse --verify <effective-base>^{commit}`' "$RUNTIME"
-check_agent_contract "invalid effective base blocks external CLI" '「判定: error」とし、別モデルCLIを実行しない' "$RUNTIME"
-check_agent_contract "codex toml effort" 'model_reasoning_effort = "high"' .codex/agents/codex-review-normalizer.toml
-check_agent_contract "claude toml effort" 'model_reasoning_effort = "high"' .codex/agents/claude-review-normalizer.toml
-check_agent_contract "communication is not authentication" '通信失敗を未認証と報告しない' "$RUNTIME"
-
-# ---- Codexサブエージェントの役割別モデル方針 ----
-check_agent_contract "developer uses Luna" 'model = "gpt-6-luna"' .codex/agents/developer.toml
-check_agent_contract "developer uses xhigh" 'model_reasoning_effort = "xhigh"' .codex/agents/developer.toml
-check_agent_contract "test fixer uses Luna" 'model = "gpt-6-luna"' .codex/agents/test-fixer.toml
-check_agent_contract "test fixer uses high" 'model_reasoning_effort = "high"' .codex/agents/test-fixer.toml
-check_agent_contract "investigator uses Sol medium" 'model = "gpt-6-sol"' .codex/agents/issue-investigator.toml
-check_agent_contract "investigator uses Sol medium" 'model_reasoning_effort = "medium"' .codex/agents/issue-investigator.toml
-check_agent_contract "reviewer uses Sol high" 'model = "gpt-6-sol"' .codex/agents/reviewer.toml
-check_agent_contract "reviewer uses Sol high" 'model_reasoning_effort = "high"' .codex/agents/reviewer.toml
-check_agent_contract "content author uses Sol medium" 'model = "gpt-6-sol"' .codex/agents/content-author.toml
-check_agent_contract "content author uses Sol medium" 'model_reasoning_effort = "medium"' .codex/agents/content-author.toml
-check_agent_contract "normalizers stay Luna high" 'model = "gpt-6-luna"' .codex/agents/codex-review-normalizer.toml
-check_agent_contract "normalizers stay Luna high" 'model_reasoning_effort = "high"' .codex/agents/codex-review-normalizer.toml
-check_agent_contract "normalizers stay Luna high" 'model = "gpt-6-luna"' .codex/agents/claude-review-normalizer.toml
-check_agent_contract "normalizers stay Luna high" 'model_reasoning_effort = "high"' .codex/agents/claude-review-normalizer.toml
-check_agent_contract "runtime documents developer policy" '| `developer` | `gpt-6-luna` | `xhigh` |' "$RUNTIME"
-check_agent_contract "runtime documents test fixer policy" '| `test-fixer` | `gpt-6-luna` | `high` |' "$RUNTIME"
-check_agent_contract "runtime documents investigator policy" '| `issue-investigator` | `gpt-6-sol` | `medium` |' "$RUNTIME"
-check_agent_contract "runtime documents reviewer policy" '| `reviewer` | `gpt-6-sol` | `high` |' "$RUNTIME"
-check_agent_contract "runtime documents content author policy" '| `content-author` | `gpt-6-sol` | `medium` |' "$RUNTIME"
-check_agent_contract "runtime documents normalizer policy" '| `codex-review-normalizer` / `claude-review-normalizer` | `gpt-6-luna` | `high` |' "$RUNTIME"
-check_agent_contract "runtime documents Luna scope" '`developer` と `test-fixer` でLunaを使うのは、方針・対象範囲・受け入れ条件が明確な実装と品質ゲート修正に限定する。' "$RUNTIME"
-check_agent_contract "runtime documents Sol escalation" 'Luna担当は `gpt-6-sol` / `high`' "$RUNTIME"
-check_agent_contract "runtime documents Astra escalation" 'Sol担当は `gpt-6-astra` / `high`' "$RUNTIME"
-check_agent_contract "guide documents developer policy" '`developer` は `gpt-6-luna` / `xhigh`' "$AGENT_GUIDE"
-check_agent_contract "guide documents test fixer policy" '`test-fixer` は `gpt-6-luna` / `high`' "$AGENT_GUIDE"
-check_agent_contract "guide documents Sol policies" '`issue-investigator` と `content-author` は `gpt-6-sol` / `medium`、`reviewer` は `gpt-6-sol` / `high`' "$AGENT_GUIDE"
-check_agent_contract "guide documents normalizer policy" '`codex-review-normalizer` と `claude-review-normalizer` は `gpt-6-luna` / `high`' "$AGENT_GUIDE"
-check_agent_contract "guide documents Luna scope" '`developer` と `test-fixer` でLunaを使うのは、決定済みの方針・対象範囲・受け入れ条件に従う実装と、変更起因の品質ゲート失敗の最小修正に限る。' "$AGENT_GUIDE"
-check_agent_contract "guide documents Sol escalation" 'Luna担当を一時的に `gpt-6-sol` / `high`' "$AGENT_GUIDE"
-check_agent_contract "guide documents Astra escalation" 'Sol担当を `gpt-6-astra` / `high`' "$AGENT_GUIDE"
-
-# ---- エージェント起動フェーズの整合 ----
-check_agent_contract "reviewer runs in phase 5" 'issue-dev-orchestrate のレビュー段階で使用する' .ai/agents/reviewer.md
-check_agent_contract "test fixer runs in phases 4 and 6" 'issue-dev-orchestrate のフェーズ4・6（品質ゲート）で使用する' .ai/agents/test-fixer.md
-check_agent_contract "reviewer committed range" '`git diff <effectiveBase>...HEAD`' .ai/agents/reviewer.md
-
-# ---- Issue #164: Knowledge Graph常用モード契約 ----
-check_agent_contract "knowledge graph is always enabled" 'このフローでは Knowledge Graph を構造調査の入口として常用する' "$SKILL"
-check_agent_contract "architecture mode is explicit" '`architectureMode: knowledge-graph`' "$SKILL"
-check_agent_contract "develop is the integration base" 'Issue作業ブランチは `develop` から切る' "$SKILL"
-check_agent_contract "brief records base branch" '`baseBranch: develop`' "$SKILL"
-check_agent_contract "effective base is reproducible" '`git merge-base origin/develop HEAD`' "$SKILL"
-check_agent_contract "latest remote develop is fetched" '`git fetch origin develop`' "$SKILL"
-check_agent_contract "latest remote develop commit is resolved" '`git rev-parse --verify origin/develop^{commit}`' "$SKILL"
-check_agent_contract "work branch is prepared from refreshed integration branch" '`origin/develop` を起点に統合ブランチ `develop` をfast-forwardで更新して新規Issue作業ブランチを切る。' "$SKILL"
-check_agent_contract "existing issue branches take normal develop updates" '既存Issue作業ブランチを継続する場合は、最新 `develop` を通常のmergeで取り込んでから準備完了とする。' "$SKILL"
-check_agent_contract "non-ancestor work branches stop" '非祖先の場合は古いまたは別系統の起点として実装へ進まず停止する。' "$SKILL"
-check_agent_contract "effective base uses the remote ref" '`git merge-base origin/develop HEAD` を実行し、その単一結果を `effectiveBase` として固定する。' "$SKILL"
-check_agent_contract "architecture preflight runs on the prepared work branch" '作業ブランチの準備と祖先性検証が完了したcheckoutで `pnpm architecture:check` と `pnpm architecture:test` を実行する。' "$SKILL"
-check_order_contract "remote commit resolution precedes work branch preparation" "$SKILL" '`git rev-parse --verify origin/develop^{commit}` で存在とcommit解決を確認する。' '`origin/develop` を起点に統合ブランチ `develop` をfast-forwardで更新して新規Issue作業ブランチを切る。'
-check_order_contract "work branch preparation precedes effective base calculation" "$SKILL" '`origin/develop` を起点に統合ブランチ `develop` をfast-forwardで更新して新規Issue作業ブランチを切る。' '祖先性検証後に `git merge-base origin/develop HEAD` を実行し'
-check_order_contract "effective base follows work branch ancestry validation" "$SKILL" '作業ブランチ準備後、必ず `git merge-base --is-ancestor origin/develop HEAD` を実行する。' '祖先性検証後に `git merge-base origin/develop HEAD` を実行し'
-check_agent_contract "architecture reference is discoverable" 'references/architecture-context.md' "$SKILL"
-check_agent_contract "architecture preflight checks snapshot" 'pnpm architecture:check' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "architecture preflight tests extractor" 'pnpm architecture:test' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "query starts narrow" '既定の depth 1 で始め、必要な関係が不足した場合だけ広げる。' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "graph-first precedes broad code search" '広域のコード検索やファイル読み取りより先に query する。' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "investigation records graph evidence" '`graphEvidence`' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "investigation records graph limitations" '`graphLimitations`' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "investigation records source verification" '`sourceVerification`' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "orchestrator owns snapshot extraction" 'オーケストレーターがsnapshotを更新・照合する。' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "snapshot inclusion requires actual semantic diff" '説明できる実差分の場合だけコミット対象へ含める。' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "unchanged snapshot remains byte identical" '再生成前とbyte-identicalで、変更ファイル一覧やコミット対象へ含めず' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "architecture context refreshes remote base" '`git fetch origin develop`' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "architecture context resolves remote commit" '`git rev-parse --verify origin/develop^{commit}`' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "architecture context rejects non-ancestor heads" '非祖先の場合は古いまたは別系統の起点として実装へ進まず停止する。' "$ARCHITECTURE_CONTEXT"
-check_order_contract "architecture context prepares branch before effective base" "$ARCHITECTURE_CONTEXT" '`origin/develop` を起点に統合ブランチ `develop` をfast-forwardで更新して新規Issue作業ブランチを切る。' '祖先性検証後に `git merge-base origin/develop HEAD` を実行し'
-check_order_contract "architecture context derives effective base after ancestry validation" "$ARCHITECTURE_CONTEXT" '作業ブランチ準備後、必ず `git merge-base --is-ancestor origin/develop HEAD` を実行する。' '祖先性検証後に `git merge-base origin/develop HEAD` を実行し'
-check_agent_contract "review uses effective base" '`git diff <effectiveBase>...HEAD`' .ai/agents/reviewer.md
-check_agent_contract "investigator reports architecture evidence" '### 8. Architecture evidence' .ai/agents/issue-investigator.md
-check_agent_contract "developer does not hand edit or regenerate snapshot" '`architecture/graph.json` は手編集・再生成しない' .ai/agents/developer.md
-check_agent_contract "test fixer runs architecture gates" 'pnpm architecture:check' .ai/agents/test-fixer.md
-check_agent_contract "test fixer scopes fallback to committed range" '`git diff --name-only <effectiveBase>...HEAD` でコミット済み差分だけを確認する。' .ai/agents/test-fixer.md
-check_agent_contract "test fixer reports worktree separately" '`git status --short` は未コミット変更の報告用として別に確認する。' .ai/agents/test-fixer.md
-check_agent_contract "content changes retain content-specific gates" '`content/` が変更ファイルに含まれる場合は、Graph対象外でも教材固有ゲートを省略しない。' .ai/agents/test-fixer.md
-check_agent_contract "content workflow owner is explicit" 'オーケストレーターが`content-new`を全文読んで起動し' "$ARCHITECTURE_CONTEXT"
-check_agent_contract "content draft review is precommit" '`reviewStage: content-draft`' .ai/skills/content-new/SKILL.md
-check_agent_contract "content draft scope is exact" '`draftPaths`、同じ値の`inScopeFiles`' .ai/skills/content-new/SKILL.md
-check_agent_contract "content draft preserves basic review scope" '`targetFeature`、`acceptanceCriteria`、`outOfScopePolicy`' .ai/skills/content-new/SKILL.md
-check_agent_contract "nested content commit ownership stays outer" 'コミット対象・時点・ユーザー承認は外側のオーケストレーター契約へ委ねる。' .ai/skills/content-new/SKILL.md
-check_agent_contract "reviewer supports content draft paths" '`content-draft`では`draftPaths`' .ai/agents/reviewer.md
-check_agent_contract "content draft does not update review boundary" 'このpreflightはFinding台帳・レビュー済み境界・外部レビューを更新しない。' .ai/agents/reviewer.md
-check_agent_contract "investigator is graph-first" '広域コード検索より先に queryする。' .ai/agents/issue-investigator.md
-check_agent_contract "reviewer is graph-first" '先に`graphCoverage`、`graphEvidence`、graph差分を読み' .ai/agents/reviewer.md
-
-check_agent_contract "PR base is develop" 'ベースは `develop` とする' "$SKILL"
-for file in "$SKILL" "$ARCHITECTURE_CONTEXT" .ai/agents/issue-investigator.md .ai/agents/developer.md .ai/agents/test-fixer.md .ai/agents/reviewer.md .ai/agents/claude-review-normalizer.md .ai/agents/codex-review-normalizer.md .codex/agents/claude-review-normalizer.toml .codex/agents/codex-review-normalizer.toml "$COMMON"; do
-  check_absent_contract "legacy experimental mode removed ($file)" 'architectureMode: experimental' "$file"
-  check_absent_contract "legacy experiment base removed ($file)" 'experimentBase' "$file"
-done
-
-for file in .ai/agents/*.md; do
-  check_agent_contract "shared evidence reference ($file)" '共通実行記録' "$file"
-done
-
-# ---- Issue #124: discovery / verification state-machine contracts ----
-check_agent_contract "review stage is explicit" '`reviewStage`（`discovery` または `verification`）' "$COMMON"
-check_agent_contract "discovery reads cumulative diff from effective base" '`<effectiveBase>...HEAD`' "$COMMON"
-check_agent_contract "finding ID format" '`I<issue>-F<3桁連番>`' "$COMMON"
-check_agent_contract "finding metadata" '| ID | 出典 | 重要度 | 場所 | 内容 | 期待解消状態 | 状態 | 修正コミット | 検証結果 |' "$COMMON"
-check_agent_contract "duplicate findings merge" '同一ファイル・行かつ実質同内容' "$COMMON"
-check_agent_contract "verification brief requirement" 'verification には上記に加えて、issue固有のFinding台帳、修正要約、修正コミット範囲を含める' "$COMMON"
-check_agent_contract "low risk reuse has an explicit basis" 'verificationBasis: reused-discovery' "$COMMON"
-check_agent_contract "reuse never claims a new review" '別のverificationレビューを実行したとは報告しない' "$COMMON"
-check_agent_contract "verification internal first" 'current HEADで internal verification が approve した場合だけ' "$SKILL"
-check_agent_contract "required external path needs both approvals" 'required なら別モデルCLI verificationを行う' "$SKILL"
-check_agent_contract "non-required path stays distinct from approval" '有効な `not-required-by-policy` 判定' "$SKILL"
-check_agent_contract "verification permitted new finding classes" '修正起因回帰、明確な受け入れ条件未達、重大な security / data destruction' "$SKILL"
-check_agent_contract "orchestrator directly monitors CLI" 'オーケストレーターが別モデルCLIを直接起動・監視する' "$SKILL"
-check_agent_contract "five minutes remains running" '5分で停止しない' "$RUNTIME"
-check_agent_contract "ten-minute progress notification" '10分で進捗を通知' "$RUNTIME"
-check_agent_contract "twenty-minute single timeout" '20分で一度だけ終了して「判定: timeout」とする' "$RUNTIME"
-check_agent_contract "chunk union coverage" '`cumulativeSplit` は各chunkの `coveredCommitShas` と `coveredFiles`' "$COMMON"
-check_agent_contract "cross-cutting review required" '`crossCuttingReview` を完了する' "$COMMON"
-check_agent_contract "runtime avoids raw-output persistence" 'raw stdout / stderr はファイル、ブリーフ、scratchpadへ永続化せず' "$RUNTIME"
-check_agent_contract "common retains all egress scopes" '`committed-diff`、`brief-context`、`repository-reads`' "$COMMON"
-check_agent_contract "common remains read-only" 'read-only' "$COMMON"
-check_agent_contract "runtime assigns direct monitoring" 'オーケストレーターは上表のCLIを継続セッションで直接起動する' "$RUNTIME"
-check_agent_contract "Claude CLI restricts allowed tools" '`--allowedTools "Read Grep Glob"`' "$RUNTIME"
-check_agent_contract "Claude CLI restricts disallowed tools" '`--disallowedTools "Edit Write NotebookEdit Bash"`' "$RUNTIME"
-check_agent_contract "Codex nested review requires read-only sandbox" '`-c sandbox_mode="read-only"` を必ず付ける' "$RUNTIME"
-check_agent_contract "reviewer reports verification outcomes" '`resolved` / `partial` / `unresolved`' .ai/agents/reviewer.md
-check_agent_contract "required findings must resolve before approval" 'required Finding（must-fix / should-fix）が全件`resolved`' "$COMMON"
-check_agent_contract "zero findings still require a policy-valid path" 'Findingが0件の場合、required Finding全件resolvedは真だが' "$COMMON"
-check_agent_contract "required boundary needs external approval" '`externalReviewDecision: required`: current HEADに対する別モデルCLIも正常に`approve`' "$COMMON"
-check_agent_contract "policy skip is not external approval" '`not-required-by-policy`は外部`approve`ではない' "$COMMON"
-check_agent_contract "standard budgets do not stop autonomous continuation" '標準運用予算は進捗管理の目安であり、到達だけでは自律的な継続を止めない' "$SKILL"
-check_agent_contract "current-loop findings continue within existing issue scope" '既存の受け入れ条件と範囲内で解消できる課題は継続する' "$SKILL"
-check_agent_contract "scope expansion is the only stop trigger" '受け入れ条件・対象範囲・対象機能の実質的拡張、破壊的操作、新しい権限' "$SKILL"
-check_absent_contract "legacy standard-budget stop policy stays removed" '到達したら自律的な継続を止め、状況・残課題・継続の選択肢を報告して判断を仰ぐ' "$SKILL"
-check_agent_contract "claude wrapper remains required" '.ai/scripts/run-claude-review.sh' .ai/agents/claude-review-normalizer.md
-
-# ---- 実装担当・認証・risk-based external review ----
-check_agent_contract "review policy defaults to risk-based in orchestrator" 'ユーザー指定がなければ`risk-based`' "$SKILL"
-check_agent_contract "review policy defaults to risk-based in common rules" '未指定時は`risk-based`' "$COMMON"
-check_agent_contract "never requires explicit user choice" '`never`はユーザーが明示した場合だけ選べる' "$SKILL"
-check_agent_contract "risk-based runs internal discovery first" '`risk-based`ではinternal discoveryを先に実行し' "$SKILL"
-check_agent_contract "risk decision is bound to current head" '`decisionHead`がcurrent HEADと一致しなければ無効' "$COMMON"
-check_agent_contract "risk uncertainty requires external review" '`ER-9 uncertain-classification`' "$COMMON"
-check_agent_contract "low risk is narrowly defined" '`LR-1 non-executable-only`' "$COMMON"
-check_agent_contract "external continuity requires verification" '`ER-8 external-continuity`' "$COMMON"
-check_agent_contract "failed required review cannot be downgraded" 'オーケストレーター判断で`not-required-by-policy`へ変更してはならない' "$COMMON"
-check_agent_contract "risk based defers auth preflight" '`risk-based`は`externalReviewDecision: required`となった時点' "$RUNTIME"
-check_agent_contract "login requires confirmed unauthenticated status" 'Sandbox外の同じ状態確認でも未認証と確認できた場合だけ' "$RUNTIME"
-check_agent_contract "auth readiness is reused within a run" '`authReady: true`だけを`<scratchpad>/review-mode-<N>.md`へ記録し、同一スキル実行中は再利用' "$RUNTIME"
-check_agent_contract "authentication and egress approvals stay separate" 'コマンド実行承認、CLIログイン、private内容の外部送信同意は別の判断' "$RUNTIME"
-check_agent_contract "egress consent can be reused in scope" '同一スキル実行のverificationでは' "$COMMON"
-check_agent_contract "egress scope expansion requires fresh consent" '承認済み範囲外の内容や新しい機密カテゴリを送る' "$COMMON"
-
-# ---- Issue #131: develop -> main release PR skill contracts ----
-RELEASE_MAIN_PR_SKILL=.ai/skills/release-main-pr/SKILL.md
-
-if [ "$(readlink .claude/skills/release-main-pr)" != '../../.ai/skills/release-main-pr' ] ||
-  [ "$(readlink .agents/skills/release-main-pr)" != '../../.ai/skills/release-main-pr' ]; then
-  printf '%s\n' 'release-main-pr discovery links are invalid' >&2
-  exit 1
-fi
-
-check_agent_contract "release skill requires GitHub auth" '`gh auth status`' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill verifies default branch through repository metadata" '`gh repo view --json nameWithOwner,defaultBranchRef`' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill requires main as the default branch" 'default branchが`main`であることを確認する' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill stops PR creation for a non-main default branch" '期待値と実際の値を報告してPR作成を停止する' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill stops before keywords for a non-main default branch" 'closing keywordを含むPRは作成しない' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill requires a clean worktree" '`git status --short`が空' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill logs its explicit start command" '`./.ai/hooks/log-skill-usage.sh --runtime codex --skill release-main-pr --status started`' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill logs its explicit completion command" '`./.ai/hooks/log-skill-usage.sh --runtime codex --skill release-main-pr --status completed`' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill fetches remote release refs" '`git fetch origin main develop`' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill stops on fetch failure" '失敗したらエラーを報告して停止し、キャッシュ済みのremote-tracking refを使わない' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill checks duplicate PRs" '`base=main`かつ`head=develop`のopen PR' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill rejects an empty remote diff" '`origin/main..origin/develop`が空でない' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill distinguishes diff exit codes" '終了コード0なら差分なしとして停止、1なら差分ありとして続行、0と1以外なら検証エラーを報告して停止する' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill does not mask diff errors" '終了コードを`|| true`などで握りつぶさない' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill reconstructs remote release range" '`origin/main...origin/develop`' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill only accepts exact refs candidates" '正確な`refs #N`トークン' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill resolves candidate types through the REST Issue endpoint" 'GitHub REST Issue endpointの`gh api "repos/<nameWithOwner>/issues/<番号>"`応答' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill rejects PR resources as close candidates" '`pull_request`フィールドがあれば、その番号はPRリソースでありIssueではない' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill routes PR resources to no-keyword candidates" 'closing keywordなしの要確認候補へ「PRリソースのため」と記載する' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill requires every close proof" '全条件を満たすIssueだけを自動close対象にする' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill separates uncertain candidates" '## 要確認候補（closing keywordなし）' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill states empty close state" '<対象がなければ「なし」>' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill states empty uncertain state" '<候補がなければ「なし」>' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill scans the full generated body for every closing keyword family" '本文生成後は本文全文を対象に、大文字小文字を区別せず、`close`、`closes`、`closed`、`fix`、`fixes`、`fixed`、`resolve`、`resolves`、`resolved`と任意のコロンに続く同一または別リポジトリのIssue参照をすべてトークン単位で抽出する' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill validates every closing token against the approved set" '抽出結果が自動close対象の番号集合と完全一致し、重複がなく、すべて自動close欄の規定書式に由来することを確認する' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill requires fresh approval after closing token mismatch" '本文と候補判定を作り直して全文を再提示し、新しい承認を得る' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill requires pre-create approval" '明示的なユーザー承認を得る。承認前はPRを作成しない。' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill revalidates immediately after approval" '承認後かつ一時ファイル作成前に、`git fetch origin main develop`、remote refのSHA、差分有無、重複PR、含まれるPR、Issue候補、自動close対象、生成本文を同じ規則で再検証する' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill invalidates stale approval" '以前の承認を無効にし、タイトル、本文、候補判定を再生成して全文を再提示し、新しい明示的承認を得る' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill uses a portable final-suffix mktemp template" '`body_file=$(mktemp "${TMPDIR:-/tmp}/release-main-pr.XXXXXX")`' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill writes approved body through a non-shell file operation" '現在のランタイムのパッチ編集またはファイル書き込み機能を使い、承認済み本文全文をリテラルデータとしてそのパスへ書く。' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill forbids shell expansion while writing approved body" 'shellのheredoc、`echo`、`printf`、リダイレクトで本文を書かない。' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill verifies the approved body byte-for-byte" '書き込み後にファイルを読み、承認済み本文と完全一致することを確認する。' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill cleans up after body write failure" '本文の書き込みに失敗した場合は、返された正確な一時パスを削除して停止する。' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill cleans up after body mismatch" '不一致ならPRを作成せず、返された正確な一時パスを削除して停止する。' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill cleans up its PR body file" '`trap '\''rm -f "$body_file"'\'' EXIT`' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill creates PR with explicit non-interactive inputs" '`gh pr create --base main --head develop --title "chore: merge develop into main" --body-file "$body_file"`' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill keeps cleanup and PR creation in one shell invocation" '`trap '\''rm -f "$body_file"'\'' EXIT`の登録と`gh pr create --base main --head develop --title "chore: merge develop into main" --body-file "$body_file"`を一つのshell invocation内でこの順に非対話実行する。' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill checks post-create mergeability" '`gh pr view <PR番号> --json mergeable,mergeStateStatus,statusCheckRollup`でmergeable状態をポーリングする' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill waits for a resolved mergeable state" '`UNKNOWN`の間は完了扱いせず再確認し、`CONFLICTING`なら状態を報告して人間の判断を待つ' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill identifies required checks separately" '`gh pr checks <PR番号> --required`でrequired checkを別に特定する' "$RELEASE_MAIN_PR_SKILL"
-check_agent_contract "release skill only completes after required checks succeed" 'required checkが存在し、すべて成功した場合だけ完了扱いにする' "$RELEASE_MAIN_PR_SKILL"
-
-release_summary_section=$(extract_section "$RELEASE_MAIN_PR_SKILL" '## 概要' '## 含まれるPR')
-release_pr_section=$(extract_section "$RELEASE_MAIN_PR_SKILL" '## 含まれるPR' '## mainマージ時に自動closeするIssue')
-release_auto_close_section=$(extract_section "$RELEASE_MAIN_PR_SKILL" '## mainマージ時に自動closeするIssue' '## 要確認候補（closing keywordなし）')
-release_uncertain_section=$(extract_section "$RELEASE_MAIN_PR_SKILL" '## 要確認候補（closing keywordなし）' '## 確認結果')
-release_prohibited_section=$(extract_section "$RELEASE_MAIN_PR_SKILL" '## 禁止操作' '## 完了報告')
-
-check_section_contract "release skill places closing keywords in auto-close list" "$release_auto_close_section" 'Closes #<Issue番号>'
-extract_closing_issue_refs() {
-  awk '
-    {
-      line = tolower($0)
-      if (match(line, /(^|[^[:alnum:]_])(close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)[[:space:]]*:?[[:space:]]+/)) {
-        remainder = substr(line, RSTART + RLENGTH)
-        while (match(remainder, /([[:alnum:]_.-]+\/[[:alnum:]_.-]+)?#([0-9]+|<issue番号>)/)) {
-          print substr(remainder, RSTART, RLENGTH)
-          remainder = substr(remainder, RSTART + RLENGTH)
-        }
-      }
-    }
-  '
-}
-
-release_all_closing_refs=$(extract_closing_issue_refs < "$RELEASE_MAIN_PR_SKILL")
-release_auto_close_refs=$(printf '%s\n' "$release_auto_close_section" | extract_closing_issue_refs)
-if [ "$release_all_closing_refs" != '#<issue番号>' ] ||
-  [ "$release_auto_close_refs" != '#<issue番号>' ]; then
-  printf '%s\n' 'release skill closing references must appear exactly once and only in the auto-close list' >&2
-  exit 1
-fi
-
-release_closing_fixture_refs=$(
-  printf '%s\n' \
-    'CLOSE: #1, #10' \
-    'ClOsEs #2' \
-    'closed: #3' \
-    'FIX #4' \
-    'Fixes: #5' \
-    'fixed #6' \
-    'RESOLVE: #7' \
-    'Resolves #8' \
-    'resolved: Owner.Name/Repo-Name#9' |
-    extract_closing_issue_refs
-)
-release_closing_fixture_expected=$(printf '%s\n' '#1' '#10' '#2' '#3' '#4' '#5' '#6' '#7' '#8' 'owner.name/repo-name#9')
-if [ "$release_closing_fixture_refs" != "$release_closing_fixture_expected" ]; then
-  printf '%s\n' 'release skill closing reference extractor missed a keyword variant or same-line reference' >&2
-  exit 1
-fi
-check_section_contract "release skill prohibition forbids PR merging" "$release_prohibited_section" '`gh pr merge`、`gh issue close`、auto-mergeの有効化、リポジトリ設定の変更、関係ない変更の`git commit`・`git push`を実行しない。'
-check_section_contract "release skill prohibition leaves duplicate PRs unchanged" "$release_prohibited_section" '重複PRがあるときも、そのPRを変更・マージしない。'
-
-# ---- Issue #128: 通常Issueのマージ後照合 ----
-WEEKLY_RETRO_PROMPT=.ai/automations/weekly-retro-refine/prompt.md
+# ---- 3. weekly-retro レンダラー ----
 WEEKLY_RETRO_RENDERER=.ai/automations/weekly-retro-refine/scripts/render-report.mjs
 WEEKLY_RETRO_SAMPLE=.ai/automations/weekly-retro-refine/references/report-data.example.json
 WEEKLY_RETRO_TEMPLATE=.ai/automations/weekly-retro-refine/assets/report-template.html
@@ -717,32 +132,21 @@ WEEKLY_RETRO_OUTPUT="$log_dir/weekly-retro.html"
 WEEKLY_RETRO_NUMBER_FALLBACK_INPUT="$log_dir/weekly-retro-number-fallback.json"
 WEEKLY_RETRO_NUMBER_FALLBACK_OUTPUT="$log_dir/weekly-retro-number-fallback.html"
 
-check_agent_contract "ordinary issue reconciliation uses exact refs" '正確な `refs #<N>`' "$WEEKLY_RETRO_PROMPT"
-check_agent_contract "ordinary issue reconciliation excludes arbitrary references" '任意のIssue番号言及、参考リンク、推測から対象や親子関係を作らない' "$WEEKLY_RETRO_PROMPT"
-check_agent_contract "ordinary issue reconciliation has close candidate classification" '`close候補`' "$WEEKLY_RETRO_PROMPT"
-check_agent_contract "ordinary issue reconciliation has remaining conditions classification" '`残条件あり`' "$WEEKLY_RETRO_PROMPT"
-check_agent_contract "ordinary issue reconciliation has transferred classification" '`別Issueへ移管済み`' "$WEEKLY_RETRO_PROMPT"
-check_agent_contract "ordinary issue reconciliation preserves human close decision" 'Issueは自動closeせず、人間が最終判断する' "$WEEKLY_RETRO_PROMPT"
-check_agent_contract "ordinary issue reconciliation excludes phase and spike issues" 'スパイクまたはフェーズ分割の状態照合で扱うIssueは通常Issueから除外する' "$WEEKLY_RETRO_PROMPT"
-check_agent_contract "ordinary issue reconciliation records uncertain scope as a limitation" '通常Issueか判定できない場合は `meta.limitations` に記録し、`normalIssueReconciliation` へ入れず推測で分類しない' "$WEEKLY_RETRO_PROMPT"
-check_agent_contract "ordinary issue reconciliation uses null for missing transfer" '`transfer` では `null`' "$WEEKLY_RETRO_PROMPT"
-check_agent_contract "renderer includes ordinary issue reconciliation" 'NORMAL_ISSUE_RECONCILIATION' "$WEEKLY_RETRO_RENDERER"
-
 node "$WEEKLY_RETRO_RENDERER" --input "$WEEKLY_RETRO_SAMPLE" --output "$WEEKLY_RETRO_OUTPUT" >/dev/null
 for placeholder in $(grep -oE '\{\{[A-Z_]+\}\}' "$WEEKLY_RETRO_TEMPLATE" | sort -u); do
-  check_absent_contract "weekly retro resolves $placeholder" "$placeholder" "$WEEKLY_RETRO_OUTPUT"
+  expect_absent "weekly retro resolves $placeholder" "$placeholder" "$WEEKLY_RETRO_OUTPUT"
 done
-check_agent_contract "weekly retro renders close candidate" 'close候補' "$WEEKLY_RETRO_OUTPUT"
-check_agent_contract "weekly retro renders remaining conditions" '残条件あり' "$WEEKLY_RETRO_OUTPUT"
-check_agent_contract "weekly retro renders transfer" '別Issueへ移管済み' "$WEEKLY_RETRO_OUTPUT"
-check_agent_contract "weekly retro renders exact refs evidence" 'refs #114' "$WEEKLY_RETRO_OUTPUT"
-check_agent_contract "weekly retro renders merge destination" 'merge先: develop' "$WEEKLY_RETRO_OUTPUT"
-check_agent_contract "weekly retro renders close candidate status badge" '<span class="status good">close候補</span>' "$WEEKLY_RETRO_OUTPUT"
-check_agent_contract "weekly retro renders remaining conditions status badge" '<span class="status warn">残条件あり</span>' "$WEEKLY_RETRO_OUTPUT"
-check_agent_contract "weekly retro renders transferred status badge" '<span class="status info">別Issueへ移管済み</span>' "$WEEKLY_RETRO_OUTPUT"
-check_agent_contract "weekly retro renders transfer issue reference" '<dt>移管先</dt><dd>#118 <a href="https://github.com/example/tech-study-lab/issues/118">運用手順の自動化を実装する</a> — 運用手順を自動化する</dd>' "$WEEKLY_RETRO_OUTPUT"
-check_agent_contract "weekly retro renders parent tracker issue reference" '<li>#115 <a href="https://github.com/example/tech-study-lab/issues/115">削除操作の品質tracker</a> (GitHub sub-issue) — 子Issue: close候補</li>' "$WEEKLY_RETRO_OUTPUT"
-check_agent_contract "weekly retro renders human next action" '人間がcloseを判断' "$WEEKLY_RETRO_OUTPUT"
+expect_contains "weekly retro renders close candidate" 'close候補' "$WEEKLY_RETRO_OUTPUT"
+expect_contains "weekly retro renders remaining conditions" '残条件あり' "$WEEKLY_RETRO_OUTPUT"
+expect_contains "weekly retro renders transfer" '別Issueへ移管済み' "$WEEKLY_RETRO_OUTPUT"
+expect_contains "weekly retro renders exact refs evidence" 'refs #114' "$WEEKLY_RETRO_OUTPUT"
+expect_contains "weekly retro renders merge destination" 'merge先: develop' "$WEEKLY_RETRO_OUTPUT"
+expect_contains "weekly retro renders close candidate status badge" '<span class="status good">close候補</span>' "$WEEKLY_RETRO_OUTPUT"
+expect_contains "weekly retro renders remaining conditions status badge" '<span class="status warn">残条件あり</span>' "$WEEKLY_RETRO_OUTPUT"
+expect_contains "weekly retro renders transferred status badge" '<span class="status info">別Issueへ移管済み</span>' "$WEEKLY_RETRO_OUTPUT"
+expect_contains "weekly retro renders transfer issue reference" '<dt>移管先</dt><dd>#118 <a href="https://github.com/example/tech-study-lab/issues/118">運用手順の自動化を実装する</a> — 運用手順を自動化する</dd>' "$WEEKLY_RETRO_OUTPUT"
+expect_contains "weekly retro renders parent tracker issue reference" '<li>#115 <a href="https://github.com/example/tech-study-lab/issues/115">削除操作の品質tracker</a> (GitHub sub-issue) — 子Issue: close候補</li>' "$WEEKLY_RETRO_OUTPUT"
+expect_contains "weekly retro renders human next action" '人間がcloseを判断' "$WEEKLY_RETRO_OUTPUT"
 
 jq '
   .normalIssueReconciliation[2].transfer |= {
@@ -756,14 +160,12 @@ jq '
   }
 ' "$WEEKLY_RETRO_SAMPLE" > "$WEEKLY_RETRO_NUMBER_FALLBACK_INPUT"
 node "$WEEKLY_RETRO_RENDERER" --input "$WEEKLY_RETRO_NUMBER_FALLBACK_INPUT" --output "$WEEKLY_RETRO_NUMBER_FALLBACK_OUTPUT" >/dev/null
-check_agent_contract "weekly retro renders transfer number without title or URL" '<dt>移管先</dt><dd>#118 移管先Issue — 運用手順を自動化する</dd>' "$WEEKLY_RETRO_NUMBER_FALLBACK_OUTPUT"
-check_agent_contract "weekly retro renders parent tracker number without title or URL" '<li>#115 親tracker (GitHub sub-issue) — 子Issue: close候補</li>' "$WEEKLY_RETRO_NUMBER_FALLBACK_OUTPUT"
+expect_contains "weekly retro renders transfer number without title or URL" '<dt>移管先</dt><dd>#118 移管先Issue — 運用手順を自動化する</dd>' "$WEEKLY_RETRO_NUMBER_FALLBACK_OUTPUT"
+expect_contains "weekly retro renders parent tracker number without title or URL" '<li>#115 親tracker (GitHub sub-issue) — 子Issue: close候補</li>' "$WEEKLY_RETRO_NUMBER_FALLBACK_OUTPUT"
 
-node scripts/test-review-state-machine.mjs
-
-# ---- Issue #182: design.md 章参照の解決検査 ----
+# ---- 4. design.md 章参照 ----
 # 章番号の変更・削除で、リポジトリ中の `§N` / `design.md N.N` / `design.md#<見出しスラッグ>` が
 # 黙って腐ることを防ぐ。参照切れ検出の回帰テストはスクリプト側が持つ。
 node scripts/test-design-chapter-refs.mjs
 
-printf '%s\n' "Agent contract checks passed!"
+printf '%s\n' "Harness checks passed!"
