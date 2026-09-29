@@ -114,15 +114,16 @@ Codexのプロジェクトローカルhooksは、プロジェクトが信頼済�
 ```bash
 pnpm sync:agents          # 生成物を更新
 pnpm sync:agents --check  # 生成物の同期漏れを検出
-pnpm test:hooks           # hook fixture、共通ログ、同期、エージェント契約文書を検証
+pnpm test:hooks           # hook fixture、共通ログ、同期、両ランタイムの構成整合を検証
 ```
 
-`pnpm test:hooks`（`scripts/test-hooks.sh`）の検査は2種類ある。名前はhook由来だが、実行時間の大半と検査件数の大半は後者である。
+`pnpm test:hooks`（`scripts/test-hooks.sh`）は次を検査する。
 
 1. **hookの動作検証**: Claude/Codexの代表入力fixtureを使い、TODO検出、Codexの明示スキル指定、Claude/Codexのライフサイクルログ、Codexの編集後整形アダプター、`pnpm sync:agents --check` による生成物の同期を確認する。
-2. **エージェント契約文書の検査**: `.ai/` 配下のスキル・エージェント定義・共通契約と `docs/ai-coding-agents.md` に対し、**完全一致 grep**（現時点で387件）（`check_agent_contract` / `check_absent_contract` / `check_section_contract` / `check_order_contract`）で不変条件を検証する。レビューの成立条件、外部送信の同意、ブランチ規約、役割別モデル方針、手順の順序などが、黙って削除・改変されていないことを固定する。
+2. **両ランタイムの構成整合**: `.ai/skills/*`・`.ai/agents/*.md`・`.ai/rules/*.md` ごとに `.claude/` と `.agents/` の発見用リンクがあり `.ai/` を指すこと、取り残しのリンクがないこと、`.ai/agents/<name>.md` と `.codex/agents/<name>.toml` が1対1で `name` が一致すること、パス別ルールが `AGENTS.md` から参照されていること、権限・Sandboxの迂回フラグがハーネスに含まれないことを確認する。
+3. **weekly-retro レンダラーの出力検証**と、**`docs/design.md` の章参照の解決検査**（`scripts/test-design-chapter-refs.mjs`）。
 
-したがって契約文書の**文言**を変更すると、hookを一切触っていなくてもこのゲートは落ちる。これは副作用ではなく設計意図であり、意図した変更なら `scripts/test-hooks.sh` の期待値を同じ変更で更新する。
+契約文書の**文言**は検査しない。文言が存在してもモデルがそれに従う保証にはならず、改善のたびに期待値の更新を強いるためである。文書の内容はレビューで確認する。
 
 このゲートは `.github/workflows/ci.yml` のPR CI（`jq` を含む依存の存在確認つき）で実行され、失敗するとジョブが落ちる。実行時間は約1秒である。実際のCodex App / CLIが外部サービスへ接続してhookを発火する統合テストは、信頼済み環境で別途実施する。
 
@@ -139,7 +140,7 @@ pnpm test:hooks           # hook fixture、共通ログ、同期、エージェ�
 | --- | --- |
 | `.ai/skills/` または `.ai/agents/` | Claude/Codexのリンク切れ、対応するCodex agent TOML、`pnpm test:hooks` |
 | `.ai/hooks/`、`.claude/hooks/`、`.codex/hooks/` | `pnpm sync:agents --check` と `pnpm test:hooks` |
-| エージェント契約文書（`.ai/skills/`、`.ai/agents/`、`.ai/*.md`、`.ai/automations/`、`.ai/scripts/`、`.codex/agents/`、`.github/ISSUE_TEMPLATE/`、本書 `docs/ai-coding-agents.md`） | `pnpm test:hooks`（文言を変えた場合は `scripts/test-hooks.sh` の期待値も同じ変更で更新する） |
+| エージェント契約文書（`.ai/skills/`、`.ai/agents/`、`.ai/*.md`、`.ai/automations/`、`.ai/scripts/`、`.codex/agents/`、`.github/ISSUE_TEMPLATE/`、本書 `docs/ai-coding-agents.md`） | `pnpm test:hooks` |
 | `.claude/settings.json` のhook配線 | 手編集ではなく `pnpm sync:agents` 後の差分 |
 | `.codex/hooks.json` | 手編集ではなく `pnpm sync:agents` 後の差分、信頼済みCodex環境での必要時スモークテスト |
 

@@ -21,7 +21,7 @@ description: Knowledge Graphの影響範囲を原因特定に使い、正式な�
    pnpm architecture:check
    pnpm architecture:test
    ```
-   エージェント契約文書（`.ai/skills/`、`.ai/agents/`、`.ai/*.md`、`.ai/automations/`、`.ai/scripts/`、`.codex/agents/`、`.github/ISSUE_TEMPLATE/`、`docs/ai-coding-agents.md`）が変更ファイルに含まれる場合は、Graph対象外でも次の契約ゲートを正式判定へ含める。このゲートは `.ai/` 配下の契約文言を完全一致で検査するため、文言を変更した場合は `scripts/test-hooks.sh` の期待値を同じ変更で更新する（期待値の更新はスコープ内の修正であり、検査の削除で通すことはしない）。同じ入力に対する成功結果を再利用できない場合は実行する。PR CIでも同じゲートが実行される。
+   エージェント契約文書（`.ai/skills/`、`.ai/agents/`、`.ai/*.md`、`.ai/automations/`、`.ai/scripts/`、`.codex/agents/`、`.github/ISSUE_TEMPLATE/`、`docs/ai-coding-agents.md`）が変更ファイルに含まれる場合は、Graph対象外でも次の契約ゲートを正式判定へ含める。このゲートはhookの動作と両ランタイムの構成整合を検査する（文言は検査しない）。失敗した場合は構成側を直し、検査の削除で通すことはしない。同じ入力に対する成功結果を再利用できない場合は実行する。PR CIでも同じゲートが実行される。
    ```bash
    pnpm test:hooks
    ```
