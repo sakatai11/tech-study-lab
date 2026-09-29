@@ -14,16 +14,15 @@ tools: Bash, Read, Grep, Glob
 
 ## 入力
 
-依頼には次が含まれる。
+依頼には、Issue番号と、`.ai/review-guidelines.md` の「レビュー範囲」が定める項目が含まれる。
 
-- Issue番号
-- 対象機能
-- 対象ファイル
-- 受け入れ条件
-- 範囲外の扱い
+- `targetFeature`
+- `inScopeFiles`
+- `acceptanceCriteria`
+- `outOfScopePolicy`
 - レビュー対象（次のどちらか）
-  - コミット済み差分の範囲（例: `<effectiveBase>...HEAD`）
-  - 教材draft（`reviewStage: content-draft` と `draftPaths`）
+  - コミット済み差分: `committedRange`（例: `<effectiveBase>...HEAD`）
+  - 教材draft: `reviewStage: content-draft` と `draftPaths`（`inScopeFiles` は `draftPaths` と同じ値）
 
 再レビューの場合は、前回の指摘一覧と修正内容も含まれる。
 

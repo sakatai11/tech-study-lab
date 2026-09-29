@@ -45,11 +45,11 @@ Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runt
 
 ## 進め方の目安
 
-1. **準備**: Issueを読み、作業ブランチを用意する。`git merge-base --is-ancestor origin/develop HEAD` が成り立つことを確かめる。`pnpm architecture:check` が失敗する場合は、Knowledge Graph基盤の不整合として報告し、Issueの修正と混ぜない。
+1. **準備**: Issueを読む。ブランチを作成・更新する前に `git fetch origin develop` と `git rev-parse --verify origin/develop^{commit}` で最新のリモート参照を取得・検証し、そこから作業ブランチを用意する。取得や検証に失敗したら停止する。準備後に `git merge-base --is-ancestor origin/develop HEAD` が成り立つことを確かめる。`pnpm architecture:check` が失敗する場合は、Knowledge Graph基盤の不整合として報告し、Issueの修正と混ぜない。
 2. **調査と方針**: 受け入れ条件を分解し、`docs/design.md` の該当章を確認する。構造の調査は `references/architecture-context.md` のとおり `pnpm architecture:query` から始めると速い。方針が拮抗する場合、または要確認事項が実装を左右する場合だけユーザーに確認する。方針はIssueにコメントで残す。
 3. **実装**: 新しいロジック、特にSRSと純粋関数にはテストを書く（`.ai/rules/testing.md`）。`content/` を変更する場合は `content-new` スキルに従う。
 4. **品質ゲート**: 後述のゲートを通してからコミットする。
-5. **独立レビュー**: `reviewer` に、`<effectiveBase>...HEAD` の全累積差分（`effectiveBase` = `git merge-base origin/develop HEAD`）と、Issue番号・対象機能・対象ファイル・受け入れ条件・範囲外の扱いを渡す。
+5. **独立レビュー**: `reviewer` に、Issue番号と `.ai/review-guidelines.md` の「レビュー範囲」が求める項目（`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `committedRange`）を渡す。`committedRange` は `<effectiveBase>...HEAD` の全累積差分とする（`effectiveBase` = `git merge-base origin/develop HEAD`）。
 6. **別モデルCLIレビュー**: 後述の方針で必要な場合だけ、同意を取得してからオーケストレーター自身が直接実行する。出力は自分で読み、`.ai/review-guidelines.md` の分類と重要度で判定する。
 7. **修正と再レビュー**: 対象範囲内の must-fix / should-fix を修正し、ゲートを再度通してコミットする。修正した差分と指摘の解消状況を再レビューさせる。修正後に新しく追加してよい指摘は、修正が起こした回帰、受け入れ条件の未達、重大なセキュリティ・データ破壊だけに限る。
 8. **PR**: push とPR作成はユーザーの承認を得てから行う。ベースは `develop`、本文は `.github/pull_request_template.md` に従う。既存PRがあれば作り直さない。
