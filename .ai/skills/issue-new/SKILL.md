@@ -26,7 +26,7 @@ Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runt
 | `test` | テスト追加・修正のみ | `[Test]` | `test` |
 | `chore` | ビルド・CI・設定・依存などの雑務 | `[Chore]` | `chore` |
 
-この種別は `/issue-dev-orchestrate` フェーズ0 のブランチ種別判定（Conventional Branch）にそのまま対応する。
+この種別は `/issue-dev-orchestrate` で作業ブランチを切るときの種別（Conventional Branch）にそのまま対応する。
 
 ### 2. 内容の構造化
 

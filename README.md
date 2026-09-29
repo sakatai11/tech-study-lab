@@ -74,7 +74,7 @@ flowchart LR
   A["/issue-new<br/>粗い仕様を Issue に整形"] --> B["/issue-dev-orchestrate"]
   subgraph B2["issue-dev-orchestrate"]
     direction LR
-    I["調査<br/>issue-investigator"] --> P["方針決定"] --> D["実装<br/>developer"] --> T["品質ゲート<br/>test-fixer"] --> R["レビュー<br/>reviewer + 別モデル"] --> F["修正・再検証"]
+    I["調査・方針"] --> D["実装"] --> T["品質ゲート"] --> R["独立レビュー<br/>reviewer + 別モデル"] --> F["修正・再レビュー"]
   end
   B --> I
   F --> PR["develop 向け PR"]
@@ -86,7 +86,7 @@ flowchart LR
 
 ### 2. スキルとサブエージェント
 
-繰り返し発生する作業は、スキル（ワークフロー）とサブエージェント（役割）に切り出しています。
+繰り返し発生する作業はスキル（ワークフロー）に切り出しています。調査・実装・品質修正は1つのコンテキストで一貫して行い、サブエージェントは実装者から独立させる価値がある役割（`reviewer`、教材執筆の `content-author`）だけに絞っています。
 
 | スキル | 用途 |
 | --- | --- |
@@ -106,7 +106,7 @@ flowchart LR
 | --- | --- |
 | `pnpm typecheck` | TypeScript strict の型検査 |
 | `pnpm lint` | Biome に加え、dependency-cruiser でレイヤー間の import 方向を検証 |
-| エージェント契約の検査 | hooks の不変条件と、スキル・契約文書の記述を検査し、黙って書き換えられないようにする |
+| `pnpm test:hooks` | hooks の動作と、Claude Code / Codex から同じスキル・エージェント・ルールに届く構成になっているかを検査 |
 | `pnpm test` | Vitest（SRS ロジックは純粋関数として重点的にテスト） |
 | `pnpm architecture:check` | Knowledge Graph のスナップショットがコードと一致しているか |
 | `pnpm build` | web / api のビルド |

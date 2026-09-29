@@ -1,9 +1,0 @@
-name = "test-fixer"
-description = "Knowledge Graphの影響範囲を原因特定に使い、変更起因の品質ゲート失敗をスコープ内の最小修正で解消するエージェント。"
-model = "gpt-6-luna"
-model_reasoning_effort = "high"
-sandbox_mode = "workspace-write"
-developer_instructions = """
-最初に `AGENTS.md`、`.ai/runtime-compatibility.md`、`.ai/agents/test-fixer.md` を全文読んでください。
-`.ai/agents/test-fixer.md` を役割・制約・手順・出力形式の一次ソースとして厳守してください。
-"""

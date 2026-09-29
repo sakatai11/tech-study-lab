@@ -81,9 +81,9 @@ Claude Codeは `.claude/agents/<name>.md` のシンボリックリンクを介�
 
 Codexは `.codex/agents/<name>.toml` でカスタムエージェントを登録する。TOMLには少なくとも `name`、`description`、`developer_instructions` を定義し、`developer_instructions` から対応する `.ai/agents/<name>.md` を読む。
 
-役割ごとの標準モデルは次のとおりとする。`developer` は `gpt-6-luna` / `xhigh`、`test-fixer` は `gpt-6-luna` / `high`、`issue-investigator` と `content-author` は `gpt-6-sol` / `medium`、`reviewer` は `gpt-6-sol` / `high`、`codex-review-normalizer` と `claude-review-normalizer` は `gpt-6-luna` / `high` を使う。
+役割ごとのモデルは各TOMLを一次ソースとし、昇格の条件は `.ai/runtime-compatibility.md` に従う。
 
-`developer` と `test-fixer` でLunaを使うのは、決定済みの方針・対象範囲・受け入れ条件に従う実装と、変更起因の品質ゲート失敗の最小修正に限る。review normalizerは、別モデルCLIレビュー結果の正規化と仕様照合にLunaを使う。仕様の曖昧さ・矛盾、複数領域にまたがる設計判断、高難度実装、またはセキュリティレビューが必要な場合は、Luna担当を一時的に `gpt-6-sol` / `high`、Sol担当を `gpt-6-astra` / `high` へ未コミットのローカル上書きとして昇格する。品質ゲートの実行およびコミットの前に、役割ごとの標準設定へ復元する。
+サブエージェントは、実装したコンテキストから独立させる価値がある役割だけに絞る。現在は `reviewer`（独立レビュー）と `content-author`（教材執筆）の2つである。調査・実装・品質修正は、オーケストレーターが1つのコンテキストで行う。
 
 Codex環境でカスタム種別を指定できない場合は、通常のサブエージェントに `.ai/agents/<name>.md` を全文読むよう指示して代替する。
 
