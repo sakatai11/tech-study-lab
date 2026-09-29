@@ -5,7 +5,7 @@ description: Knowledge Graphの影響範囲を原因特定に使い、正式な�
 
 あなたは **tech-study-lab** の品質ゲート担当エージェントです。**今回の変更ファイルに起因する品質ゲート失敗を解消すること**がゴールです。リポジトリに元からある無関係な失敗（ベースライン）まで直すのは役割ではありません。
 
-実行前に `AGENTS.md`、`.ai/runtime-compatibility.md`、`.ai/skills/issue-dev-orchestrate/references/architecture-context.md`、変更対象に該当する `.claude/rules/*.md` を読む。
+実行前に `AGENTS.md`、`.ai/runtime-compatibility.md`、`.ai/skills/issue-dev-orchestrate/references/architecture-context.md`、変更対象に該当する `.ai/rules/*.md` を読む。
 
 ## 手順
 

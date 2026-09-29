@@ -10,7 +10,7 @@
 
 | エージェント | 主な役割 | 共通スキル | 共通サブエージェント | hooks | 固有設定 |
 | --- | --- | --- | --- | --- | --- |
-| Claude Code | 対話型の実装・調査・レビュー | 対応 | 対応 | 対応 | `.claude/settings.json`、`.claude/rules/` |
+| Claude Code | 対話型の実装・調査・レビュー | 対応 | 対応 | 対応 | `.claude/settings.json` |
 | Codex App / CLI | 対話型の実装・調査・レビュー | 対応 | 対応 | 対応 | `~/.codex/config.toml`、`.codex/agents/*.toml`、`.codex/hooks.json` |
 
 ## 3. 共通資産の配置
@@ -20,13 +20,14 @@
 ├── skills/<name>/SKILL.md          # 再利用可能な開発ワークフロー
 ├── agents/<name>.md                # サブエージェントの役割・制約
 ├── hooks/                          # 共通hook処理、fixture、中立定義
+├── rules/<name>.md                 # パス別ルール（paths frontmatter付き）
 └── runtime-compatibility.md        # Claude/Codexの読み替え規則
 
 .claude/                            # Claude Code固有の発見・配線
 ├── skills -> ../.ai/skills
 ├── agents -> ../.ai/agents
 ├── hooks/                          # Claudeペイロードのアダプター
-├── rules/                          # Claude固有のパスベース規則
+├── rules/<name>.md -> ../../.ai/rules/<name>.md  # ファイル単位のリンク（自動読み込み入口）
 └── settings.json                   # 権限と生成済みhook配線
 
 .agents/                            # Codexのスキル発見入口
@@ -46,9 +47,9 @@
 | 共通エージェント指示 | `.ai/agents/` | `.claude/agents/` |
 | Claude/Codex共通hook処理 | `.ai/hooks/` | 設定JSONへ処理をインライン記述すること |
 | Claude/Codex入力の正規化 | `.claude/hooks/`、`.codex/hooks/` | 共通処理へ製品固有ペイロードを持ち込むこと |
-| Claude固有ルール | `.claude/rules/` | `AGENTS.md`へClaude専用挙動を混在させること |
+| パス別ルール | `.ai/rules/`（追加・削除時は `.claude/rules/<name>.md` のリンクと `AGENTS.md` の対応も同じ変更で追加・削除する） | `.claude/rules/` の実体ファイル |
 
-`.claude/skills/`、`.agents/skills/`、`.claude/agents/` は発見用のシンボリックリンクである。リンクを通常ファイルに置換したり、リンク経由で本文を複製・直接編集したりしない。
+`.claude/skills/`、`.agents/skills/`、`.claude/agents/`、`.claude/rules/` は発見用のシンボリックリンクである。リンクを通常ファイルに置換したり、リンク経由で本文を複製・直接編集したりしない。
 
 ## 4. Skills
 
@@ -130,7 +131,7 @@ pnpm test:hooks           # hook fixture、共通ログ、同期、両ランタ�
 ## 8. 恒久ルールと権限
 
 - 共通の開発規約、コマンド、検証手順は `AGENTS.md` に置く。
-- Claude固有のパスベースルールは `.claude/rules/` に置く。Codexへ自動適用されない。
+- パス別ルールは `.ai/rules/` に置く。Claude Code は `.claude/rules/` のリンク経由で自動読み込みし、Codex は `AGENTS.md` の「パス別ルール」の対応から参照する。
 - Claudeの `settings.json` にあるallow / denyはCodexの権限を変更しない。
 - Codex App / CLIはセッションのsandbox・approval設定と `AGENTS.md` に従う。`gh auth status` が成功した場合は認証済みの `gh` CLI を使える。失敗時はCodex Appの接続済みGitHubコネクタを使い、利用できなければ `auth-required` または `error` として明示的に扱う。
 
@@ -139,6 +140,7 @@ pnpm test:hooks           # hook fixture、共通ログ、同期、両ランタ�
 | 変更内容 | 必須確認 |
 | --- | --- |
 | `.ai/skills/` または `.ai/agents/` | Claude/Codexのリンク切れ、対応するCodex agent TOML、`pnpm test:hooks` |
+| `.ai/rules/` | `.claude/rules/` のリンク切れ、`AGENTS.md` の「パス別ルール」の対応との一致 |
 | `.ai/hooks/`、`.claude/hooks/`、`.codex/hooks/` | `pnpm sync:agents --check` と `pnpm test:hooks` |
 | エージェント契約文書（`.ai/skills/`、`.ai/agents/`、`.ai/*.md`、`.ai/automations/`、`.ai/scripts/`、`.codex/agents/`、`.github/ISSUE_TEMPLATE/`、本書 `docs/ai-coding-agents.md`） | `pnpm test:hooks` |
 | `.claude/settings.json` のhook配線 | 手編集ではなく `pnpm sync:agents` 後の差分 |
