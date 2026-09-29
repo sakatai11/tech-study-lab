@@ -118,4 +118,4 @@ Graphは設計契約の本文を持たないのと同様に、契約への**参�
 
 ## issue-dev-orchestrate との連携
 
-`develop` をbaseBranchとするIssue開発では、`.ai/skills/issue-dev-orchestrate/references/architecture-context.md` の契約に従う。開始時にsnapshotの鮮度と抽出テストを確認し、調査はIssue内の具体語を使った`query`から始める。`covered`ではGraphが示す関係からコード確認を開始し、`partial` / `outside` / `unmatched` / 空結果 / 曖昧な結果の場合だけLSP・`rg`へフォールバックする。実装後は`extract`でsnapshotを再生成し、graph差分を確認してから`check`・`architecture:test`を品質ゲートへ含める。
+Issue開発での使い方は `.ai/skills/issue-dev-orchestrate/references/architecture-context.md` にまとめている。調査はIssue内の具体語を使った`query`から始め、結果が空・曖昧・対象外の場合はLSP・`rg`で補う。実装後は`extract`でsnapshotを再生成し、graph差分を確認してから`check`・`architecture:test`を品質ゲートへ含める。

@@ -1,1 +1,0 @@
-../../.ai/agents/issue-investigator.md
