@@ -27,7 +27,7 @@
 ├── skills -> ../.ai/skills
 ├── agents -> ../.ai/agents
 ├── hooks/                          # Claudeペイロードのアダプター
-├── rules -> ../.ai/rules           # パス別ルールの自動読み込み入口
+├── rules/<name>.md -> ../../.ai/rules/<name>.md  # ファイル単位のリンク（自動読み込み入口）
 └── settings.json                   # 権限と生成済みhook配線
 
 .agents/                            # Codexのスキル発見入口
@@ -47,7 +47,7 @@
 | 共通エージェント指示 | `.ai/agents/` | `.claude/agents/` |
 | Claude/Codex共通hook処理 | `.ai/hooks/` | 設定JSONへ処理をインライン記述すること |
 | Claude/Codex入力の正規化 | `.claude/hooks/`、`.codex/hooks/` | 共通処理へ製品固有ペイロードを持ち込むこと |
-| パス別ルール | `.ai/rules/`（追加・削除時は `AGENTS.md` の対応表も更新） | `.claude/rules/` |
+| パス別ルール | `.ai/rules/`（追加・削除時は `.claude/rules/<name>.md` のリンクと `AGENTS.md` の対応も同じ変更で追加・削除する） | `.claude/rules/` の実体ファイル |
 
 `.claude/skills/`、`.agents/skills/`、`.claude/agents/`、`.claude/rules/` は発見用のシンボリックリンクである。リンクを通常ファイルに置換したり、リンク経由で本文を複製・直接編集したりしない。
 
