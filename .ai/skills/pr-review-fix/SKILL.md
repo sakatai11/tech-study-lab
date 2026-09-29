@@ -1,154 +1,57 @@
 ---
 name: pr-review-fix
-description: PRのレビューコメント・指摘事項を確認し、各指摘の適用可否を判断した上で修正を実装、品質ゲート（typecheck/lint/test）を通してコミット・プッシュし、レビュースレッドへの返信・解決まで一気通貫で行う。認証済みのgh CLIを使い、Codex Appでは接続済みGitHubコネクタも利用できる。「PRの指摘に対応して」「レビューコメントを直して」「PRコメントを解消して」などで使用する。
+description: PRのレビューコメント・指摘事項を確認し、各指摘の適用可否を判断した上で修正を実装、issue-dev-orchestrate と同じ品質ゲートを通してコミット・プッシュし、レビュースレッドへの返信・解決まで一気通貫で行う。認証済みのgh CLIを使い、Codex Appでは接続済みGitHubコネクタも利用できる。「PRの指摘に対応して」「レビューコメントを直して」「PRコメントを解消して」などで使用する。
 ---
 
 # PR レビュー指摘対応
+
+PR についたレビュー指摘を、適用可否を判断したうえで修正・返信・解決まで処理する。進め方は任せる。以下の流れ・不変条件・完了条件を守ること。
 
 実行前に `.ai/runtime-compatibility.md` を全文読み、現在のランタイムに合わせてツールを読み替える。
 
 Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runtime codex --skill pr-review-fix --status started|completed` を実行して共通ログへ記録する（Claudeではhookが自動記録する）。
 
-`gh auth status` で認証を確認してから、認証済みの `gh pr-review` 拡張または `gh api` を使い、PR・コメント・レビュー スレッドを取得・返信・解決する。Codex AppでGitHubコネクタが接続済みの場合は、同等の操作にコネクタを使ってよい。ローカルの修正・コミット・プッシュは Git を使う。
+## GitHub 操作
 
-進捗は現在のランタイムで利用可能な plan/todo 機能でフェーズごとに管理する。利用できなければフェーズ完了時の短い報告で代替する。
+`gh auth status` で認証を確認してから、PR・コメント・レビュースレッドの取得・返信・解決には、認証済みの `gh pr-review` 拡張（スレッド操作）と `gh pr view` / `gh pr comment` / `gh api`（通常コメント・行コメント）を使う。Codex App で GitHub コネクタが接続済みの場合は、本スキル内のすべての GitHub 操作を同等のコネクタ操作に置き換えてよい。ローカルの修正・コミット・プッシュは Git で行う。
 
-## フェーズ0: PRコンテキスト取得
-
-```bash
-gh auth status
-gh extension list
-gh pr view <PR番号（省略可）> --json number,title,author,state,baseRefName
-git remote get-url origin
-git status --porcelain
-```
-
-- `baseRefName` を確認する（本プロジェクトの feature ブランチは `develop` がベース）。
-- 作業ツリーがクリーンでない場合はユーザーに確認してから進める。
-- `gh` の認証状態を確認する。Codex AppでGitHubコネクタが接続済みの場合は、PRメタデータ・コメント・レビュー スレッドの取得にコネクタを使ってよい。
-
-## フェーズ1: レビュースレッド一覧取得
-
-レビュースレッド一覧を取得する。Codex AppでGitHubコネクタが接続済みの場合は、同等の取得にコネクタを使ってよい:
+主なコマンド:
 
 ```bash
+gh pr view <N> --json number,title,author,state,baseRefName
 gh pr-review threads list --pr <N> --repo <OWNER/REPO>
-```
-
-スレッドが無ければ、通常コメントを検索する。Codex AppでGitHubコネクタが接続済みの場合は、同等の取得にコネクタを使ってよい:
-
-```bash
 gh pr view <N> --comments --json author,comments,reviews
-```
-
-## フェーズ2: 指摘内容の分析・適用可否判断
-
-対象コメント・行・投稿者を確認する。Codex AppでGitHubコネクタが接続済みの場合は、同等の取得にコネクタを使ってよい:
-
-```bash
-gh api repos/<OWNER>/<REPO>/pulls/<N>/comments --jq '.[] | {id,body,author,created_at,line,path}'
-```
-
-- 指摘されたファイルを読み、`docs/design.md`・既存パターンと照らして**現在のコードに対して的確か**を確認する。
-- 重要度分類: High（セキュリティ・バグ・破壊的変更）/ Medium（品質・保守性・テスト不足）/ Low（スタイル・ドキュメント）。
-- 指摘が不正確・古い・このコードベースで意味をなさない場合は、**実装せず理由を添えて返信する**（面倒だからスキップは禁止。必ず対応するか、明確な理由を説明する）。
-
-## フェーズ3: 修正実装
-
-- パッチ編集機能で修正する。既存パターン・Biome設定・AGENTS.md / `docs/design.md` のガードレールに従う。
-- 型は `packages/shared` から共有し、二重定義しない。SRSロジックなど純粋関数部分に触れる場合は Vitest のテストも追加・更新する。
-- API入力バリデーションは Zod（`zValidator`）に集約する。
-
-## フェーズ4: 品質ゲート検証（返信前に必須）
-
-```bash
-pnpm typecheck
-pnpm lint    # biome check .
-pnpm test
-```
-
-変更起因のゲートが全て通ることを確認する。落ちた場合は原因を分析して修正し再実行する（同じ失敗を繰り返さない）。
-
-> **スコープの注意**: `pnpm lint` / `pnpm test` はリポジトリ全体が対象のため、今回の変更と無関係な既存失敗が出ることがある。その場合は変更ファイルにスコープを絞って判断し、既存失敗はベースラインとして報告する。
-
-## フェーズ5: コミット・プッシュ
-
-```bash
-git status
-git add <files>
-git commit -m "$(cat <<'EOF'
-fix: PRレビュー指摘対応
-
-- 対応した指摘の要約
-EOF
-)"
-git push
-```
-
-- 現在の feature ブランチにそのままプッシュする（新規ブランチ作成や `main` への操作は行わない）。
-
-## フェーズ6: レビュースレッドへ返信
-
-全てのオープンスレッドに、対応内容 or スキップ理由を返信する。
-
-対象のインラインコメントへ返信する。Codex AppでGitHubコネクタが接続済みの場合は、同等の操作にコネクタを使ってよい:
-
-```bash
-gh pr-review comments reply \
-  --pr <N> --repo <OWNER/REPO> --thread-id <THREAD_ID> \
-  --body "$(cat <<'EOF'
-@reviewer フィードバックありがとうございます。以下の対応を行いました:
-
-1. ...
-2. ...
-
-変更はコミット <hash> に含まれています。typecheck / lint / test すべてパス済みです。
-EOF
-)"
-```
-
-指摘を適用しなかった場合は、上記の代わりに理由を明記して返信する。通常コメントへも返信する。Codex AppでGitHubコネクタが接続済みの場合は、同等の操作にコネクタを使ってよい:
-
-```bash
-gh pr comment <N> --body-file <返信本文を保存した一時ファイル>
-```
-
-## フェーズ7: フォローアップ待機・スレッド解決
-
-ユーザーが待機を明示した場合のみ最大5分フォローアップを待つ。ランタイムの wait/monitor 機能を優先し、CLI しかない場合は短い poll を別々に実行して進捗を共有する:
-
-レビュースレッドを再取得する。Codex AppでGitHubコネクタが接続済みの場合は、同等の取得にコネクタを使ってよい:
-
-```bash
-gh pr-review threads list --pr <N> --repo <OWNER/REPO>
-```
-
-- この5分は目安であり固定値ではない。人間レビュアーの即時応答は稀なので、状況（レビュアーがボット/自動化ツールか、緊急度が高いか等）に応じて待機回数を減らしたり省略してよい。
-
-新たな返信があればフェーズ2〜6を繰り返す。なければ:
-
-- outdated スレッド（`isOutdated: true`）: 返信不要で解決
-- active スレッド: 返信確認後に解決
-
-アクティブなスレッドを解決する。Codex AppでGitHubコネクタが接続済みの場合は、同等の操作にコネクタを使ってよい:
-
-```bash
+gh api repos/<OWNER>/<REPO>/pulls/<N>/comments --jq '.[] | {id,body,user:.user.login,line,path}'
+gh pr-review comments reply --pr <N> --repo <OWNER/REPO> --thread-id <THREAD_ID> --body-file <file>
+gh pr comment <N> --body-file <file>
 gh pr-review threads resolve --pr <N> --repo <OWNER/REPO> --thread-id <THREAD_ID>
 ```
 
-## フェーズ8: 最終確認
+## 不変条件
 
-スレッド状態を確認し、`git status` で作業ツリーを確認する。Codex AppでGitHubコネクタが接続済みの場合は、スレッド状態の確認にコネクタを使ってよい:
+**効率や「今回は問題ない」を理由に破らない。**
 
-```bash
-gh pr-review threads list --pr <N> --repo <OWNER/REPO>
-git status
-```
+- **`gh pr merge` を使わない**。マージは常に人間が判断する。本スキルは `develop` → `main` の判断にも関与しない。
+- **品質ゲートは返信の前に通す**。ゲートを通していない修正を「対応済み」と返信しない。
+- **適用しない指摘には理由を返信する**。不正確・古い・`docs/design.md` や既存方針と矛盾する指摘は実装せず、技術的な根拠を示して返信する。面倒だからという理由のスキップは禁止。
+- **同じ操作が2回失敗したら繰り返さない**。根本原因を分析して別の方法を取る。
+- 現在の PR ブランチにそのまま push する。新規ブランチの作成、`main` への操作、force push や履歴の書き換えはしない。
+- 作業開始時に未コミット変更があれば、ユーザーに確認してから進める。ユーザー変更を stash・破棄・コミットしない。
+- 失敗を `|| true` などで隠さない。テストを弱めて通さない。
 
-全スレッド `isResolved: true`、作業ツリークリーンを確認し、ユーザーに完了報告する（対応した指摘 / スキップした指摘と理由 / 品質ゲート結果 / コミットハッシュ）。
+## 流れ
 
-## 注意事項
+1. **指摘の取得**: PR（`baseRefName` を含む）、レビュースレッド、通常コメントを取得する。スレッドが無ければ通常コメントを確認する。
+2. **適用可否の判断**: 指摘されたファイルを読み、`docs/design.md`・変更領域の `.ai/rules/*.md`・既存パターンと照らして**現在のコードに対して的確か**を確かめる。重要度は `.ai/review-guidelines.md` の定義（must-fix / should-fix / nit）で分類する。
+3. **修正**: 既存パターンと AGENTS.md / `docs/design.md` のガードレールに従う。SRS などの純粋関数に触れる場合はテストを追加・更新する（`.ai/rules/testing.md`）。
+4. **品質ゲート**: `issue-dev-orchestrate` スキルの「品質ゲート」節（`.ai/skills/issue-dev-orchestrate/SKILL.md`）をそのまま適用する。条件付きのゲート（snapshot 更新、ハーネス変更時、教材変更時）とベースライン失敗の扱いも同節に従う。
+5. **コミット・push**: 対応した指摘の要約をコミットメッセージに含め、現在のブランチへ push する。
+6. **返信・スレッド解決**: すべてのオープンスレッドに、対応内容（コミットハッシュ・ゲート結果）または適用しない理由を返信する。インラインのスレッドには `gh pr-review comments reply`、通常コメントには `gh pr comment` で返信する。返信済みのスレッドは解決する。`isOutdated: true` のスレッドは、指摘がすでに解消していれば返信せずに解決してよい。フォローアップを待つのはユーザーが明示した場合だけとし、待ち方はランタイムに合わせて判断する。新しい指摘が来たら 2〜6 を繰り返す。
+7. **最終確認**: スレッドを再取得して全スレッドが解決済みであること、`git status` で作業ツリーがクリーンであることを確認する。
 
-- **`gh pr merge` は使わない**（マージは常に人間の判断。`AGENTS.md` で禁止されている）。
-- 本スキルは PR の指摘対応・返信・スレッド解決のみを行い、`develop` → `main` のマージ判断には関与しない。
-- 同じコマンド・操作が2回失敗した場合は繰り返さず、根本原因を分析して別のアプローチを取る。
+## 完了報告
+
+- 対応した指摘と、適用しなかった指摘・その理由
+- 品質ゲートの結果（ベースライン失敗を含む）
+- コミットハッシュ
+- 未解決のスレッドが残る場合はその理由
