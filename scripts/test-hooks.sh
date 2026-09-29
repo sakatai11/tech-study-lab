@@ -96,6 +96,9 @@ for agent in .ai/agents/*.md; do
   toml=".codex/agents/$name.toml"
   [ -f "$toml" ] || fail "Codex agent TOML missing for $agent: $toml"
   grep -qx "name = \"$name\"" "$toml" || fail "Codex agent TOML name does not match $name: $toml"
+  # developer_instructions が読む役割定義が、自分自身の定義だけであること。
+  referenced=$(grep -oE '\.ai/agents/[A-Za-z0-9_-]+\.md' "$toml" | sort -u)
+  [ "$referenced" = ".ai/agents/$name.md" ] || fail "Codex agent TOML must load only .ai/agents/$name.md: $toml (found: $(printf '%s' "$referenced" | tr '\n' ' '))"
 done
 
 for toml in .codex/agents/*.toml; do
@@ -120,7 +123,7 @@ done
 
 # 権限・Sandbox の迂回フラグをハーネスへ持ち込まないこと（文字列はここで分割して自己一致を避ける）。
 bypass_flag=$(printf '%s%s' '--dangerously' '-')
-if grep -rF -- "$bypass_flag" .ai .codex .claude/settings.json AGENTS.md 2>/dev/null | grep -v '^\.ai/logs/' >/dev/null; then
+if grep -rF -- "$bypass_flag" .ai .codex .claude/settings.json .claude/hooks AGENTS.md 2>/dev/null | grep -v '^\.ai/logs/' >/dev/null; then
   fail "permission or sandbox bypass flag found in harness files"
 fi
 
