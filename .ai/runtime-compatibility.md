@@ -21,7 +21,7 @@
 
 ### 認証preflightと承認の分離
 
-- 別モデルCLIの認証preflightは、そのCLIを実行する可能性が確定した時点で1回だけ行う。`reviewPolicy: always`はフェーズ0、`risk-based`は`externalReviewDecision: required`となった時点、`never`は実施しない。
+- 別モデルCLIの認証preflightは、そのCLIを実行する可能性が確定した時点で1回だけ行う。`reviewPolicy: always`は作業開始時、`risk-based`は実行が必要と判定した時点、`never`は実施しない。
 - Sandbox外の同じ状態確認でも未認証と確認できた場合だけ、ユーザーへCLIのログイン操作を依頼する。Sandbox承認、Keychain不可視、通信失敗、CLI不存在を「ユーザー認証が必要」と表現しない。
 - 認証済みならCLI名・バージョン・確認コマンド・時刻・`authReady: true`だけを`<scratchpad>/review-mode-<N>.md`へ記録し、同一スキル実行中は再利用する。トークン、アカウント識別子、認証出力の全文は記録しない。CLIがauth errorを返した、CLI実体が変わった、または別スキル実行になった場合だけ再確認する。
 - ランタイムのコマンド実行承認、CLIログイン、private内容の外部送信同意は別の判断である。どれか1つを他の承認として代用しない。ランタイムがセッション限定・対象コマンド限定の承認再利用を提供する場合だけ、同一スキル実行のread-onlyレビューに利用してよい。永続的またはCLI全体を許可する広い承認規則は作らない。
@@ -56,37 +56,30 @@
 
 `.codex/agents/*.toml` に登録するエージェント**自身**のモデル設定。別モデルCLIレビューで nested に呼ぶモデル（次節）とは別物である。
 
-| 役割 | 標準モデル | reasoning effort | 適用範囲 |
-| --- | --- | --- | --- |
-| `developer` | `gpt-6-luna` | `xhigh` | 決定済みの実装方針・対象範囲・受け入れ条件に沿う実装 |
-| `test-fixer` | `gpt-6-luna` | `high` | 変更起因の型チェック・Biome・テスト失敗の最小修正 |
-| `issue-investigator` | `gpt-6-sol` | `medium` | 調査と実装方針の作成 |
-| `reviewer` | `gpt-6-sol` | `high` | 正確性を優先する差分レビュー |
-| `content-author` | `gpt-6-sol` | `medium` | 教材・問題の執筆と改訂 |
-| `codex-review-normalizer` / `claude-review-normalizer` | `gpt-6-luna` | `high` | 別モデルCLIレビュー結果の正規化と仕様照合 |
+モデルと reasoning effort の一次ソースは各TOMLの `model` / `model_reasoning_effort` である（現在は `reviewer` が `gpt-6-sol` / `high`、`content-author` が `gpt-6-sol` / `medium`）。
 
-`developer` と `test-fixer` でLunaを使うのは、方針・対象範囲・受け入れ条件が明確な実装と品質ゲート修正に限定する。review normalizerは、上表のとおり別モデルCLIレビュー結果の正規化と仕様照合にLunaを使う。仕様が曖昧または矛盾している場合、複数領域をまたぐ設計判断が必要な場合、高難度の実装、またはセキュリティレビューでは、Luna担当は `gpt-6-sol` / `high`、Sol担当は `gpt-6-astra` / `high` へ該当TOMLを未コミットのローカル上書きとして一時的に昇格する。品質ゲートの実行およびコミットの前に、役割ごとの標準設定へ復元する。
+仕様が曖昧・矛盾している場合、複数領域をまたぐ設計判断が必要な場合、またはセキュリティレビューでは、該当TOMLを `gpt-6-astra` / `high` へ未コミットのローカル上書きとして一時的に昇格してよい。コミットの前に標準設定へ戻す。
 
 ## 別モデルCLIレビューのモデル方針
 
-レビュー方針で外部レビューが必須となったコミット済み差分は、**ホストランタイムとは別のモデルのCLI**で独立レビューする。使用するCLIと正規化エージェントはホストで決まる。ホストと同じ提供元のCLIを別モデルレビューに使ってはならない（「独立した第二の目」が成立しなくなる）。
+レビュー方針で外部レビューが必須となったコミット済み差分は、**ホストランタイムとは別のモデルのCLI**で独立レビューする。使用するCLIはホストで決まる。ホストと同じ提供元のCLIを別モデルレビューに使ってはならない（「独立した第二の目」が成立しなくなる）。
 
-| ホストランタイム | 正規化エージェント | オーケストレーターが直接実行するコマンド | モデル指定 | 送信先 |
-|---|---|---|---|---|
-| Claude Code | `codex-review-normalizer` | `codex exec review --base <effective-base> -c sandbox_mode="read-only"` | `-m gpt-6-sol` | OpenAI |
-| Codex（App / CLI） | `claude-review-normalizer` | `git diff <effective-base>...HEAD \| .ai/scripts/run-claude-review.sh -p ...` | `--model opus` | Anthropic |
+| ホストランタイム | オーケストレーターが直接実行するコマンド | モデル指定 | 送信先 |
+|---|---|---|---|
+| Claude Code | `codex exec review --base <effective-base> -c sandbox_mode="read-only"` | `-m gpt-6-sol` | OpenAI |
+| Codex（App / CLI） | `git diff <effective-base>...HEAD \| .ai/scripts/run-claude-review.sh -p ...` | `--model opus` | Anthropic |
 
 - モデルは必ず `-m` / `--model` で明示指定する。既定モデルに委ねてはならない。指定モデルが利用可能か、起動前に契約・クライアントの環境で確認する。
-- どちらの経路でも、ホストの `reviewer` とは提供元が異なるモデルを使う。レビュー観点の分担は `reviewer` が正確性優先、別モデルCLIと正規化エージェントが仕様準拠優先であり、詳細は `.ai/review-guidelines.md` に従う。
+- どちらの経路でも、ホストの `reviewer` とは提供元が異なるモデルを使う。レビュー観点の分担は `reviewer` が正確性優先、別モデルCLIが仕様準拠優先であり、詳細は `.ai/review-guidelines.md` に従う。CLIの出力はオーケストレーターが直接読み、同規約の分類と重要度で判定する。
 
 ## 別モデルCLIの実行契約
 
-外部レビューが必要な場合、オーケストレーターは上表のCLIを継続セッションで直接起動する。別モデルCLIはサブエージェントから起動しない。レビュー用ブリーフは `<scratchpad>` のファイルとして渡し、長文を起動プロンプトへ直接貼らない。ブリーフは `.ai/cross-model-reviewer-common.md` の契約と同意済みの送信範囲に一致させる。
+外部レビューが必要な場合、オーケストレーターは上表のCLIを継続セッションで直接起動する。別モデルCLIはサブエージェントから起動しない。レビュー用ブリーフは `<scratchpad>` のファイルとして渡し、長文を起動プロンプトへ直接貼らない。ブリーフには対象Issue・対象機能・受け入れ条件・範囲外の扱い・差分範囲を含め、同意済みの送信範囲に一致させる。
 
 起動前に `git merge-base <base> HEAD` で単一の effective base を算出し、`git rev-parse --verify <effective-base>^{commit}` で検証する。終了コードが非0、出力が空または複数行、検証失敗のいずれかなら「判定: error」とし、別モデルCLIを実行しない。レビュー対象はコミット済み差分に限り、`git status --short` が空であることとブリーフの `committedRange` が実差分と一致することを確認する。
 
 Codexホストは `.ai/scripts/run-claude-review.sh`、Claude Codeホストは `codex exec review` を使う。`codex exec review` の既定 Sandbox は `workspace-write` なので、`-c sandbox_mode="read-only"` を必ず付ける（`-s` / `--sandbox` は `review` サブコマンドでは使わない）。Claude CLIには `--allowedTools "Read Grep Glob"` と `--disallowedTools "Edit Write NotebookEdit Bash"` を付け、Keychain wrapper以外へ資格情報を渡さない。raw stdout / stderr はファイル、ブリーフ、scratchpadへ永続化せず、正規化に必要な機密を除いた要約だけを渡す。
 
-生存中で無出力のプロセスは `running` とし、5分で停止しない。10分で進捗を通知し、20分で一度だけ終了して「判定: timeout」とする。自動リトライは行わず、timeout・認証・通信・同意不足・実行失敗を `approve` と読み替えない。これらの結果ではFinding台帳とレビュー境界を更新しない。累積discoveryが20分timeoutした場合に限り、commonで定義するcoverage契約に沿ったchunk分割を選べる。これはtimeout後の明示的な例外であり、通常の自動retryではない。
+生存中で無出力のプロセスは `running` とし、5分で停止しない。10分で進捗を通知し、20分で一度だけ終了して「判定: timeout」とする。自動リトライは行わず、timeout・認証・通信・同意不足・実行失敗を `approve` と読み替えない。これらの結果では指摘の解消状況を更新しない。差分が大きく timeout した場合は、ユーザーに状況を報告して分割レビューの可否を判断してもらう。
 
-認証preflightの実行時点、`authReady: true` の記録、トークンを保存しない条件、同意の種類とCLI認証を混同しない条件は、このファイルの「認証preflightと承認の分離」に従う。レビュー結果・進捗・エラーを永続化する場合は、機密を含めず、正常レビューの判定に必要なメタ情報だけを記録する。サブエージェント機能がない環境では、オーケストレーター自身が該当エージェント定義を全文読み、同じ制約でCLIを実行する。
+認証preflightの実行時点、`authReady: true` の記録、トークンを保存しない条件、同意の種類とCLI認証を混同しない条件は、このファイルの「認証preflightと承認の分離」に従う。レビュー結果・進捗・エラーを永続化する場合は、機密を含めず、正常レビューの判定に必要なメタ情報だけを記録する。

@@ -12,6 +12,18 @@
 
 すべての層を一律にテストファーストで実装せず、**仕様先行の選択的 TDD**を採用する。
 
+### パス別ルール
+
+変更・レビューするファイルの領域に対応する `.ai/rules/*.md` を、作業前に読む。Claude Code は `.claude/rules/` のリンク経由で `paths` frontmatter に従い自動読み込みするが、他のランタイムは自動では読まないため、次の対応で参照する。
+
+- `.ai/rules/api.md`: `apps/api/` 配下
+- `.ai/rules/web.md`: `apps/web/` 配下
+- `.ai/rules/shared.md`: `packages/shared/` 配下
+- `.ai/rules/content.md`: `content/` 配下
+- `.ai/rules/testing.md`: `apps/api` / `apps/web` / `packages/shared/src` の TypeScript、テストファイル、`vitest.config.*`
+
+対象パスの一次ソースは各ルールの `paths` frontmatter である。
+
 ### レビュー規約
 
 コードレビューの規約は [`.ai/review-guidelines.md`](./.ai/review-guidelines.md) を単一ソースとする。`docs/design.md` の章マッピング（変更ファイルの領域 → 読む章）、レビュー観点、役割別のレビュープロファイル（`accuracy-first` / `spec-compliance-first`）、重要度（must-fix / should-fix / nit）の定義はすべてそこにある。**本書を含む他の文書で再掲しない。**

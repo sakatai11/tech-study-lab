@@ -13,7 +13,7 @@
 | 実装状況・残タスク・完了記録 | GitHub Issue / PR。完了済みタスク一覧は本書に残さない |
 | 過去の調査・比較・検証結果 | 日付と対象を明記した独立した検証記録またはADR。現在も有効な制約は本書から参照できるようにする |
 
-Knowledge Graphの抽出対象・制限・更新方法は [architecture/README.md](../architecture/README.md)、Issue開発での調査・証跡引き継ぎは[開発フローの契約](../.ai/skills/issue-dev-orchestrate/references/architecture-context.md)を参照する。Graphで候補を絞った後、コード・型・テストと本書の契約で再確認する。Graph対象外の文書・UI・教材も、仕様確認や通常の検索の対象から外さない。
+Knowledge Graphの抽出対象・制限・更新方法は [architecture/README.md](../architecture/README.md)、Issue開発での使い方は[Knowledge Graph の使い方](../.ai/skills/issue-dev-orchestrate/references/architecture-context.md)を参照する。Graphで候補を絞った後、コード・型・テストと本書の契約で再確認する。Graph対象外の文書・UI・教材も、仕様確認や通常の検索の対象から外さない。
 
 設計文書の一次ソースは本ファイル（`docs/design.md`）の Markdown のみとし、全文の HTML ミラーは持たない。HTML は実装時に参照しやすい形へ再構成した補助資料（[`docs/api-spec.html`](./api-spec.html)・[`docs/frontend-architecture.html`](./frontend-architecture.html)・[`docs/backend-architecture.html`](./backend-architecture.html)・[`docs/authentication-architecture.html`](./authentication-architecture.html)）に限る。
 
@@ -180,7 +180,7 @@ SM-2 の計算式は [sm2.ts](../packages/shared/src/srs/sm2.ts)、その周辺�
 - Zod でスキーマ駆動バリデーション（`zValidator` ＋ フロント共有）
 - 依存境界（レイヤー間の import 許可）を dependency-cruiser（`.dependency-cruiser.cjs`）で機械検証
 - GitHub Actions で型チェック・lint（Biome＋依存境界）・test・build を **PR ゲート**化
-- AIエージェントの契約（`.ai/` 配下のスキル・エージェント定義・共通契約と `docs/ai-coding-agents.md`）と hook の不変条件を `pnpm test:hooks` で機械検証し、同じ **PR ゲート**に含める。仕様・契約の文言を黙って削除・改変できないようにするための検査であり、文言変更時は期待値の更新を伴う
+- AIハーネスの hook の動作と、Claude Code / Codex の構成整合（発見用リンク、Codex agent TOML、パス別ルールの参照）を `pnpm test:hooks` で機械検証し、同じ **PR ゲート**に含める。契約文書の文言そのものは検査しない
 
 ### 依存境界の機械検証（dependency-cruiser）
 
