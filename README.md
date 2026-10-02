@@ -92,7 +92,7 @@ flowchart LR
 | --- | --- |
 | `issue-new` / `issue-dev-orchestrate` | Issue の登録から PR 作成までの開発パイプライン |
 | `pr-review-fix` | PR のレビュー指摘の反映 |
-| `content-new` / `content-quality-gate` | 教材・問題の執筆と品質検証 |
+| `content-new` | 教材・問題の執筆と品質検証（検証のみの依頼にも対応） |
 | `d1-migration` | スキーマ変更からマイグレーション適用までの安全手順 |
 | `app-verify` | dev サーバーを起動し、教材表示から SRS までを実際に動かして確認 |
 | `release-main-pr` | `develop` → `main` のリリース PR 作成 |
