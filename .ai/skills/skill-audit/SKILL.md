@@ -35,10 +35,11 @@ hook 生成物の同期（`sync:agents --check`）も、このコマンドに含
 | 参照の実在 | 参照しているファイル・pnpm script・スキル名・エージェント名・見出しアンカーが実在するか | 存在しない参照は must-fix |
 | 絶対パス | `/Users/...` などマシン固有のパスを含んでいないか | must-fix |
 | 権限の衝突 | スキルが指示するコマンドが、`.claude/settings.json` の deny や Codex の sandbox・approval と衝突しないか（例: deny 済みの `gh pr close` を手順に含める） | 衝突は must-fix |
+| Codex agent の設定 | `.codex/agents/<name>.toml` の `sandbox_mode` が `.ai/agents/<name>.md` の役割と合っているか（読み取り専用の役割は `read-only`）。`description` が空でないか。`model` / `model_reasoning_effort` が `.ai/runtime-compatibility.md` の方針と合っているか | 権限の過剰は must-fix、それ以外は should-fix |
 | 記述と実態の乖離 | 手順・品質ゲート・前提が、現在のスクリプト・設定・他スキルと食い違っていないか | should-fix |
 | 役割の重複 | description や役割が他のスキルと重なり、どちらが起動されるか曖昧になっていないか | should-fix |
 | 環境依存 | `gh` / `codex` / ブラウザなど、環境によって存在しないツールに依存する箇所に、前提やフォールバックが書かれているか | should-fix |
-| hook の移植性 | hook が POSIX sh（dash）で動くか（`set -o pipefail` や bash 固有の構文を使っていないか）、依存コマンド（`jq` など）がない場合に明示的に失敗するか | should-fix |
+| hook の移植性 | hook スクリプト（`.ai/hooks/`、`.claude/hooks/`、`.codex/hooks/`）が POSIX sh（dash）で動くか（`set -o pipefail` や bash 固有の構文を使っていないか）、依存コマンド（`jq` など）がない場合に明示的に失敗するか。`.claude/settings.json` と `.codex/hooks.json` の hook 配線は `sync:agents` の生成物であり、手で編集されていないことは機械検査で確認される | should-fix |
 
 ## 3. 利用ログの棚卸し
 
