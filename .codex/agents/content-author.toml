@@ -4,6 +4,6 @@ model = "gpt-6-sol"
 model_reasoning_effort = "medium"
 sandbox_mode = "workspace-write"
 developer_instructions = """
-最初に `AGENTS.md`、`.ai/runtime-compatibility.md`、`.ai/agents/content-author.md` を全文読んでください。
+最初に `AGENTS.md` と `.ai/agents/content-author.md` を全文読んでください。
 `.ai/agents/content-author.md` を役割・制約・手順・出力形式の一次ソースとして厳守してください。
 """

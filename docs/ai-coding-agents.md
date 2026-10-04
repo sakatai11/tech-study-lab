@@ -21,7 +21,7 @@
 ├── agents/<name>.md                # サブエージェントの役割・制約
 ├── hooks/                          # 共通hook処理、fixture、中立定義
 ├── rules/<name>.md                 # パス別ルール（paths frontmatter付き）
-└── runtime-compatibility.md        # Claude/Codexの読み替え規則
+└── runtime-compatibility.md        # Claude/Codexの実行差分（GitHub認証、サブエージェント、別モデルCLI）
 
 .claude/                            # Claude Code固有の発見・配線
 ├── skills -> ../.ai/skills
@@ -55,7 +55,7 @@
 
 共通スキルは `.ai/skills/<name>/SKILL.md` を一次ソースとする。Claude Codeは `.claude/skills/` のリンクから、Codexは実行環境で提供されたスキル発見機構を通じて同じ本文を利用する。CLIの発見入口は `.agents/skills/` である。
 
-スキル本文は特定製品のツール名に依存せず、詳細な読み替えは `.ai/runtime-compatibility.md` に集約する。例えば、進捗管理、ユーザー確認、バックグラウンド実行、ブラウザ確認は、各ランタイムに備わる同等機能で実施する。
+スキル本文は特定製品のツール名に依存しない。進捗管理、ユーザー確認、バックグラウンド実行、ブラウザ確認は、各ランタイムに備わる同等機能で実施する（`.ai/runtime-compatibility.md` の「ランタイム差分の原則」）。スキルは同ファイルを全文読まず、必要な節だけを参照する。
 
 ### 4.1 スキル利用ログ
 
@@ -98,6 +98,8 @@ hookは「共通の処理本体」と「製品固有の入力アダプター」�
 | スキルログ | `.ai/hooks/log-skill-usage.sh` | `Skill` の開始・完了hook | 明示指定検出 + スキル本文の開始・完了記録 |
 
 `block-deferred-markers.sh` はコメント中の TODO / FIXME / HACK / XXX を検出して編集を失敗させる。パッチの追加行を示す `+` も検出対象に含む。
+
+hookの生成物（`.claude/settings.json` の `hooks`、`.codex/hooks.json`）は相互にsymlinkせず、`pnpm sync:agents` で生成する。
 
 Codexのプロジェクトローカルhooksは、プロジェクトが信頼済みの場合にだけ有効となる。信頼確認を迂回する実行オプションは通常使用しない。
 
@@ -146,4 +148,4 @@ pnpm test:hooks           # hook fixture、共通ログ、同期、両ランタ�
 | `.claude/settings.json` のhook配線 | 手編集ではなく `pnpm sync:agents` 後の差分 |
 | `.codex/hooks.json` | 手編集ではなく `pnpm sync:agents` 後の差分、信頼済みCodex環境での必要時スモークテスト |
 
-`skill-audit` は共通スキル、リンク、エージェント、hooks、ローカルスキルログをまとめて監査する。AIハーネスの変更後は、必要に応じてこの監査も実行する。
+リンク・TOML・パス別ルールの参照・迂回フラグなど、機械的に判定できる構成は `pnpm test:hooks` が CI で検査する。`skill-audit` は、その結果に加えて、参照の実在・絶対パス・権限の衝突・記述と実態の乖離など判断が必要な監査と、ローカルスキルログによる棚卸しを行う。AIハーネスを大きく変更した後や、定期的な棚卸しのときに実行する。
