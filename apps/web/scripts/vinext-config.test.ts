@@ -37,7 +37,10 @@ describe('Vinext Cloudflare configuration', () => {
 
   it('keeps shared compatibility settings and serves built client assets', () => {
     expect(vinextConfig.compatibility_date).toBe(openNextConfig.compatibility_date)
-    expect(vinextConfig.compatibility_flags).toEqual(openNextConfig.compatibility_flags)
+    expect(vinextConfig.compatibility_flags).toEqual([
+      ...openNextConfig.compatibility_flags,
+      'enable_weak_ref',
+    ])
     expect(vinextConfig.assets).toMatchObject({ binding: 'ASSETS', directory: 'dist/client' })
   })
 
