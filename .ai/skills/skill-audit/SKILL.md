@@ -17,12 +17,17 @@ Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runt
 pnpm test:hooks
 ```
 
-次の4項目は、このコマンドが検査する。手作業で確認し直さない。
+次の項目は、このコマンドが検査する。手作業で確認し直さない。
 
-- `.claude/` と `.agents/` の発見用リンク
-- `.codex/agents/*.toml` の対応・`name`・`developer_instructions`
-- パス別ルールの `AGENTS.md` からの参照
-- 権限・Sandbox の迂回フラグ
+- `.ai/skills/*`・`.ai/agents/*.md`・`.ai/rules/*.md` ごとに、期待する発見用リンクが存在し、対応する `.ai/` を指していること。リンク切れがないこと
+- `.ai/agents/<name>.md` と `.codex/agents/<name>.toml` が1対1で対応し、toml に `name = "<name>"` の行があり、toml が参照する `.ai/agents/*.md` が自分の定義だけであること
+- パス別ルールが `AGENTS.md` から参照されていること
+- 権限・Sandbox の迂回フラグがないこと
+
+次の項目は文字列の一致しか見ていない、または検査していないため、2章で確認する。
+
+- toml の構文が正しいか、参照が `developer_instructions` の中にあるか
+- 期待外の発見用リンクが、名前と異なる既存スキルを指していないか
 
 hook 生成物の同期（`sync:agents --check`）も、このコマンドに含まれる。失敗した場合は、その内容を must-fix として報告する。
 
@@ -35,7 +40,8 @@ hook 生成物の同期（`sync:agents --check`）も、このコマンドに含
 | 参照の実在 | 参照しているファイル・pnpm script・スキル名・エージェント名・見出しアンカーが実在するか | 存在しない参照は must-fix |
 | 絶対パス | `/Users/...` などマシン固有のパスを含んでいないか | must-fix |
 | 権限の衝突 | スキルが指示するコマンドが、`.claude/settings.json` の deny や Codex の sandbox・approval と衝突しないか（例: deny 済みの `gh pr close` を手順に含める） | 衝突は must-fix |
-| Codex agent の設定 | `.codex/agents/<name>.toml` の `sandbox_mode` が `.ai/agents/<name>.md` の役割と合っているか（読み取り専用の役割は `read-only`）。`description` が空でないか。`model` / `model_reasoning_effort` が `.ai/runtime-compatibility.md` の方針と合っているか | 権限の過剰は must-fix、それ以外は should-fix |
+| 発見用リンクの対応 | `.claude/skills/`・`.agents/skills/`・`.claude/agents/`・`.claude/rules/` の各リンクについて、名前とリンク先（`readlink`）が同じ `.ai/` の一次ソースを指しているか。期待外のリンクがないか | 誤リンクは must-fix |
+| Codex agent の設定 | `.codex/agents/<name>.toml` を TOML パーサーで読めるか（例: `python3 -c 'import tomllib,sys; tomllib.load(open(sys.argv[1],"rb"))' <file>`）。`developer_instructions` の中で `.ai/agents/<name>.md` を読むよう指示しているか。 `sandbox_mode` が `.ai/agents/<name>.md` の役割と合っているか（読み取り専用の役割は `read-only`）。`description` が空でないか。`model` / `model_reasoning_effort` が `.ai/runtime-compatibility.md` の方針と合っているか | 権限の過剰は must-fix、それ以外は should-fix |
 | 記述と実態の乖離 | 手順・品質ゲート・前提が、現在のスクリプト・設定・他スキルと食い違っていないか | should-fix |
 | 役割の重複 | description や役割が他のスキルと重なり、どちらが起動されるか曖昧になっていないか | should-fix |
 | 環境依存 | `gh` / `codex` / ブラウザなど、環境によって存在しないツールに依存する箇所に、前提やフォールバックが書かれているか | should-fix |
