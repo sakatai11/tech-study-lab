@@ -5,6 +5,7 @@
     "jsx": "preserve",
     "types": ["@cloudflare/workers-types"],
     "allowJs": true,
+    "allowImportingTsExtensions": true,
     "incremental": true,
     "noEmit": true,
     "declaration": false,

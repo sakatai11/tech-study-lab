@@ -829,6 +829,8 @@ topic frontmatter の `order` も同様に表示順（0 以上の整数、小さ
 4. `pnpm --filter @tsl/api db:seed:dev`（任意。固定ユーザーの解答ログ・SRS 状態を開発用データへ再投入。§10.8）
 5. `pnpm --filter @tsl/api dev`（`:8787`）と `pnpm --filter @tsl/web dev`（`:3000`）を並走
 
+Vinext 1.0 の並行 PoC（Issue #199、[検証記録](./investigations/2026-10-04-vinext-migration.md)）は `pnpm --filter @tsl/web dev:vinext`（`:3001`）、`build:vinext`、`start:vinext`（`:3002`）で起動する。PoC は `apps/web/wrangler.vinext.jsonc` の別 Worker（`tech-study-lab-web-vinext`、migration なし）を使い、`wrangler.jsonc` と OpenNext の手順を置き換えない。
+
 ### 12.4 本番デプロイ手順（順序が仕様）
 
 初回のみ：`wrangler d1 create tech-study-lab` を実行し、発行された非秘密の `database_id` を `apps/api/wrangler.toml` に設定して Git 管理する。外部リソースの作成・更新を伴うため、実行前に対象アカウント・D1・Worker・入力値を確認し、明示的な承認を得る。`WEB_ORIGIN`・`ACCESS_ISSUER`・`ACCESS_AUDIENCE` の production 値はリポジトリや `.env` に保存しない。
@@ -841,6 +843,8 @@ topic frontmatter の `order` も同様に表示順（0 以上の整数、小さ
 4. **web デプロイ**：`NEXT_PUBLIC_API_BASE_URL=<api-public-url> pnpm --filter @tsl/web run deploy` を実行する。`NEXT_PUBLIC_API_BASE_URL` は OpenNext build 時に必要であり、API の公開 URL を使う。OpenNext は API Service Binding と静的 asset を含む通常 SSR / 標準 SSG の Worker を更新する。
 
 順序の根拠：**スキーマ → データ → API → 画面** の順なら、各ステップの完了時点で稼働中の旧バージョンが壊れない（マイグレーションが追加中心の後方互換であることが前提。§12.6）。
+
+`deploy:vinext` は検証用であり、本番デプロイ手順に含めない。
 
 - MVP は**手動実行**とする。Walking Skeleton の本番確認後に GitHub Actions による main ブランチ自動デプロイを検討する。将来の CI でも、remote D1 mutation または deploy の前に保護された production 環境の明示的な承認ゲートを置く（PR ゲート CI ＝型・lint・test・buildは §5 のとおり先行整備）。
 - 各ステップの成功を確認するまで後続ステップへ進まない。失敗時はそこで停止し、後続の migration/content sync/API/Web deploy を実行しない。復旧が必要な場合は、稼働中の既知の Worker version を確認してから、対象と影響を明示した承認を得てロールバックする。

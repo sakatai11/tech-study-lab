@@ -44,11 +44,33 @@ describe('Vinext Cloudflare configuration', () => {
     expect(vinextConfig.assets).toMatchObject({ binding: 'ASSETS', directory: 'dist/client' })
   })
 
+  it('registers the OpenNext alias before the Cloudflare plugin', () => {
+    const viteConfig = readFileSync(new URL('../vite.config.ts', import.meta.url), 'utf8')
+    const aliasPluginIndex = viteConfig.indexOf('openNextCloudflareAlias()')
+    const cloudflarePluginIndex = viteConfig.indexOf('cloudflare(')
+
+    expect(aliasPluginIndex).toBeGreaterThanOrEqual(0)
+    expect(cloudflarePluginIndex).toBeGreaterThan(aliasPluginIndex)
+  })
+
   it('enables the Vinext runtime only in its scripts and skips the OpenNext dev proxy', () => {
     const packageJson = JSON.parse(
       readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
     ) as { scripts: Record<string, string> }
     const nextConfig = readFileSync(new URL('../next.config.ts', import.meta.url), 'utf8')
+
+    expect(packageJson.scripts.build).toBe('next build')
+    expect(packageJson.scripts.preview).toBe(
+      'pnpm content:generate && opennextjs-cloudflare build && opennextjs-cloudflare preview',
+    )
+    expect(packageJson.scripts.deploy).toBe(
+      'pnpm content:generate && opennextjs-cloudflare build && opennextjs-cloudflare deploy',
+    )
+
+    for (const scriptName of ['build', 'preview', 'deploy'] as const) {
+      const script = packageJson.scripts[scriptName] ?? ''
+      expect(script).not.toMatch(/VINEXT|dist\/server/)
+    }
 
     expect(packageJson.scripts['dev:vinext']).toContain('VINEXT=1')
     expect(packageJson.scripts['build:vinext']).toContain('VINEXT=1')
