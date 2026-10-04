@@ -146,4 +146,4 @@ pnpm test:hooks           # hook fixture、共通ログ、同期、両ランタ�
 | `.claude/settings.json` のhook配線 | 手編集ではなく `pnpm sync:agents` 後の差分 |
 | `.codex/hooks.json` | 手編集ではなく `pnpm sync:agents` 後の差分、信頼済みCodex環境での必要時スモークテスト |
 
-`skill-audit` は共通スキル、リンク、エージェント、hooks、ローカルスキルログをまとめて監査する。AIハーネスの変更後は、必要に応じてこの監査も実行する。
+リンク・TOML・パス別ルールの参照・迂回フラグなど、機械的に判定できる構成は `pnpm test:hooks` が CI で検査する。`skill-audit` は、その結果に加えて、参照の実在・絶対パス・権限の衝突・記述と実態の乖離など判断が必要な監査と、ローカルスキルログによる棚卸しを行う。AIハーネスを大きく変更した後や、定期的な棚卸しのときに実行する。
