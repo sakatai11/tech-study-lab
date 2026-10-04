@@ -27,7 +27,7 @@
 | scripts | `build` / `preview` / `deploy` | `dev:vinext`（:3001）/ `build:vinext` / `start:vinext`（:3002）/ `deploy:vinext` |
 | Worker 設定 | `wrangler.jsonc`（変更なし。`v1`/`v2` migration を保持） | `wrangler.vinext.jsonc`（別 Worker 名 `tech-study-lab-web-vinext`、migration なし） |
 | Service Binding | `API` → `tech-study-lab-api#InternalApi` | 同じ |
-| binding 取得 | `getCloudflareContext({ async: true })` | `vite.config.ts` が rsc/ssr 環境でのみ `@opennextjs/cloudflare` を `vinext/opennext-cloudflare.ts`（`import { env } from 'cloudflare:workers'`）へ解決する。`src/lib/api.ts` は無変更 |
+| binding 取得 | `getCloudflareContext({ async: true })` | `vite.config.ts` に登録した `vinext/opennext-alias-plugin.ts` が rsc/ssr 環境でのみ `@opennextjs/cloudflare` を `vinext/opennext-cloudflare.ts`（`import { env } from 'cloudflare:workers'`）へ解決する。`src/lib/api.ts` は無変更 |
 | 型 | `CloudflareEnv`（`src/lib/api.ts` の global 宣言）+ `@cloudflare/workers-types` | 同じ。`cloudflare:workers` の `env` は `@cloudflare/workers-types` が型付けし、shim で `CloudflareEnv` に変換する。`wrangler types` による型生成は両経路とも未導入のまま |
 
 PoC で見つけ、構成で回避した非互換：
@@ -52,7 +52,7 @@ PoC で見つけ、構成で回避した非互換：
 | Middleware / `next/image` | 未使用 | 影響なし |
 | Cache Components / PPR | 未使用（§12.8） | 影響なし |
 
-テストへの影響：既存の Vitest（Next 非依存）はそのまま通る。PoC の設定不変条件は `scripts/vinext-config.test.ts`、shim は `scripts/vinext-opennext-shim.test.ts` で固定した。
+テストへの影響：既存の Vitest（Next 非依存）はそのまま通る。PoC の設定不変条件は `scripts/vinext-config.test.ts`、shim は `scripts/vinext-opennext-shim.test.ts`、server 環境だけに shim を適用する alias plugin は `scripts/vinext-opennext-alias-plugin.test.ts` で固定した。
 
 ## ビルド・成果物
 
