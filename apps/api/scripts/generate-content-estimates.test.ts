@@ -8,6 +8,7 @@ import {
   checkGeneratedContentEstimatesModule,
   createGeneratedContentEstimatesModule,
   renderContentEstimatesModule,
+  validateContent,
 } from './generate-content-estimates'
 
 const fixture: ContentBundle = {
@@ -51,5 +52,12 @@ describe('generate-content-estimates', () => {
       readFileSync(fileURLToPath(new URL('../src/content-estimates.ts', import.meta.url)), 'utf8'),
     )
     expect(checkGeneratedContentEstimatesModule).not.toThrow()
+  })
+
+  it('validates the content tree without checking generated artifact freshness', () => {
+    const bundle = validateContent()
+
+    expect(bundle.lessons.length).toBeGreaterThan(0)
+    expect(bundle.questions.length).toBeGreaterThan(0)
   })
 })

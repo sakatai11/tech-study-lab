@@ -1,0 +1,5377 @@
+{
+  "version": 2,
+  "sources": {
+    ".dependency-cruiser.cjs": {
+      "sha256": "d68195ac1ecce85c073a53a959ce25b81bcef7b3e1004b7c1e543e8d58cedc6a",
+      "lines": 277
+    },
+    "apps/api/src/app.ts": {
+      "sha256": "f36bca1e73b2d2e56c20f7c59e4575edbd43a2dff068900fb80ed5a243ea0ae8",
+      "lines": 101
+    },
+    "apps/api/src/client.ts": {
+      "sha256": "7b19181656a919764e930a1893f1735061fa225a98420c9d4b4e17176ac3e0c7",
+      "lines": 11
+    },
+    "apps/api/src/content-estimates.ts": {
+      "sha256": "4920551b3c98764f6ca8a0dc89f80ee22ee0b3aa5a0e4154436938c11f275c6c",
+      "lines": 5
+    },
+    "apps/api/src/content-sync.ts": {
+      "sha256": "56a2e0a25cdb86dec1b4f927ae17e861cabed4737cc113030af41d9d1b3168b8",
+      "lines": 122
+    },
+    "apps/api/src/dal/activity-repository.ts": {
+      "sha256": "94fb0c0543358024a5d69a977324f43f8cafbe9c064a194d4b629b446724572a",
+      "lines": 56
+    },
+    "apps/api/src/dal/analytics-repository.ts": {
+      "sha256": "adf40b50f9e409d9e350822845e1fc60d353bc724a9a5bdb63023742d681250e",
+      "lines": 176
+    },
+    "apps/api/src/dal/answer-repository.ts": {
+      "sha256": "2dedc6e513b1cbdd4f61b82ab9b1de303fa77ce9ac01f4a88d33ad0eec53bee3",
+      "lines": 96
+    },
+    "apps/api/src/dal/domains-repository.ts": {
+      "sha256": "770d12a5d167bb95cf8156d840d30fe99446bbebcdb7fb69cee8925c3e94610b",
+      "lines": 42
+    },
+    "apps/api/src/dal/lesson-view-repository.ts": {
+      "sha256": "5685d2506bfd1a08e11f622589f7affc7d6ff668718b4700c225fd9f7a72ab5d",
+      "lines": 19
+    },
+    "apps/api/src/dal/review-repository.ts": {
+      "sha256": "535859cf10b319e2ec8f3cf2a75c6c6d7a064b068048078c079dea91a0ab3d39",
+      "lines": 42
+    },
+    "apps/api/src/dev-seed.ts": {
+      "sha256": "78086cbb68a7fb906666945a64a6e2518c0623d6d733faa4baed3cac0b3fc07f",
+      "lines": 109
+    },
+    "apps/api/src/env.ts": {
+      "sha256": "8c166584c2e2ed7e8d2cc4347dca757767d2afcedde4a540748b79de2f58a4bd",
+      "lines": 18
+    },
+    "apps/api/src/fixed-user.ts": {
+      "sha256": "63b6bedb1ddbf9640663ab0433565c6bcd3be5bc2fd84fb2a323cf4003b41150",
+      "lines": 6
+    },
+    "apps/api/src/index.ts": {
+      "sha256": "cc6672ef3ad105d9cd5fd3787977d37857ecf1652da187a4a92f0dfdd68534f8",
+      "lines": 5
+    },
+    "apps/api/src/internal-api.ts": {
+      "sha256": "d970557be8b840287d40093ea4c0eecb5153b651ac3652e4044c4273c3bd5c1f",
+      "lines": 14
+    },
+    "apps/api/src/middleware/access-boundary.ts": {
+      "sha256": "163cdc1932a9213343ee0b6a959547466dd3be4ea8514d660d54725720eaeeea",
+      "lines": 96
+    },
+    "apps/api/src/middleware/user-context.ts": {
+      "sha256": "00b6539029083dd9f7229777eb672dc63ac794d61462224c0c26f546b63808e7",
+      "lines": 14
+    },
+    "apps/api/src/persistent-write-observability.ts": {
+      "sha256": "c020ff2b6be8ac455152168ebf16e3d9a2d8a820ac4b1b18d523f78837b01b16",
+      "lines": 21
+    },
+    "apps/api/src/persistent-write-rate-limit-guard.ts": {
+      "sha256": "559c2dadf9a3c513d196aa23d2d84d3c758371a9ef148c3535787cdd96dcaa7b",
+      "lines": 40
+    },
+    "apps/api/src/persistent-write-rate-limit.ts": {
+      "sha256": "57039dfb3642ac1d888531c1c91925aa83d1af47a630811d21b71fcf66df65c8",
+      "lines": 45
+    },
+    "apps/api/src/routes/activity.ts": {
+      "sha256": "0ba636533478c5ab18e8218de7e9a97751316ddce901fdee75037b85bb8a6b8e",
+      "lines": 21
+    },
+    "apps/api/src/routes/analytics.ts": {
+      "sha256": "ae7aab7c0c35260d5412d45ece641ee3aa82db6b8d63de00e3162af70bcaef49",
+      "lines": 58
+    },
+    "apps/api/src/routes/answers.ts": {
+      "sha256": "eb9cfb67d3883812577bba4bd6f1f46786a1e56e09b2f1baa5303595fbc88832",
+      "lines": 43
+    },
+    "apps/api/src/routes/dashboard.ts": {
+      "sha256": "a77f928770d28a297dc0e26d60b8809fa8b5844a3b300bf99fdc2d5ace993291",
+      "lines": 17
+    },
+    "apps/api/src/routes/domains.ts": {
+      "sha256": "1adf5f931a14bc03b259f8b4682ab579ff451ee34356085a4c6523b747757211",
+      "lines": 21
+    },
+    "apps/api/src/routes/lesson-views.ts": {
+      "sha256": "2437ebf7625220f0431b6bf408a1fa61f3d436a0bd888200a9087e983215dde4",
+      "lines": 41
+    },
+    "apps/api/src/routes/review.ts": {
+      "sha256": "7ab2e6198094ab83efaa4ff82c3beed4a88ba87d626485365916adbd6161fc92",
+      "lines": 17
+    },
+    "apps/api/src/services/activity-service.ts": {
+      "sha256": "01dc7d95b0e118c42b9d0ad311e2db13fe5f2df6e6ca8b2daa7e7048fcad8040",
+      "lines": 27
+    },
+    "apps/api/src/services/analytics-service.ts": {
+      "sha256": "3272ab75b910e44c1d62a1eec744e26869380dfede7a9929cc2cefee3d111758",
+      "lines": 210
+    },
+    "apps/api/src/services/answer-service.ts": {
+      "sha256": "837c693bfd39de992b02f732a968cb63ebcdf5f7dc7e913005803be597bb8103",
+      "lines": 68
+    },
+    "apps/api/src/services/domains-service.ts": {
+      "sha256": "1da1db708dea5993713db44447be1a5e540641c8483aeebc71266c19ab735a76",
+      "lines": 48
+    },
+    "apps/api/src/services/errors.ts": {
+      "sha256": "ed990d459b3ed78052d40c2845d706bdac7d7a3ab0b38b99710313120b9b6b56",
+      "lines": 14
+    },
+    "apps/api/src/services/lesson-view-service.ts": {
+      "sha256": "75f6efc236175c968ae37356be51da8f60e2ab24516e99f9a8593cfdf742cab2",
+      "lines": 25
+    },
+    "apps/api/src/services/review-service.ts": {
+      "sha256": "efc2e7b014c413c74d249c3d8140e30bca88f2124ebcbe78407a5fbdce180614",
+      "lines": 34
+    },
+    "apps/api/wrangler.toml": {
+      "sha256": "5467174a7be6dbc59e4d8e2a9170180641c887fbf2c21dfc6794dee9c729798f",
+      "lines": 30
+    },
+    "apps/web/src/features/analytics/api/analytics-api.ts": {
+      "sha256": "6913bde09ebf050e14ed957603cbe51d0b38e40cb80ffddc386c74eabd9270f2",
+      "lines": 36
+    },
+    "apps/web/src/features/analytics/server/load-analytics.ts": {
+      "sha256": "9abada70ff12d5316ba6cdc4262590881b70656b4c996abb080db15697d93078",
+      "lines": 23
+    },
+    "apps/web/src/features/dashboard/api/dashboard-api.ts": {
+      "sha256": "0ae7c65068548e7870da1fc33856de275ae8f29fe443cbb4b150a2911e036eda",
+      "lines": 62
+    },
+    "apps/web/src/features/dashboard/server/load-dashboard.ts": {
+      "sha256": "9a04af35f3280e06ddffcbfdabb9abc031cfc4374fb21e1110b62e1224d7e240",
+      "lines": 75
+    },
+    "apps/web/src/features/domains/api/domains-api.ts": {
+      "sha256": "3ce4c3b7c3faf0bf02bbf5bff0fe41b610477cf6a05b4b58fe69c0830226d33e",
+      "lines": 13
+    },
+    "apps/web/src/features/domains/server/load-domains.ts": {
+      "sha256": "c16304312186e267d9f8ce137752b2c2c4efbe800f5159be20ba31f796b2d175",
+      "lines": 20
+    },
+    "apps/web/src/features/lesson/api/lesson-api.ts": {
+      "sha256": "559ff7f01dd1a48916142b10579aa78b5df4d322bfb647e11ab447093f9a7d15",
+      "lines": 21
+    },
+    "apps/web/src/features/lesson/server/load-lesson.ts": {
+      "sha256": "afeeacc1703912e8a84b34a977783f98161278c474c270cdcb1454b7fc33b625",
+      "lines": 26
+    },
+    "apps/web/src/features/lesson/server/load-topic.ts": {
+      "sha256": "181a2372dae0fedfa07bfd015f6dcb2a295c8bd4b554ee02f5eb7d3064c7f96e",
+      "lines": 25
+    },
+    "apps/web/src/features/quiz/api/quiz-api.ts": {
+      "sha256": "6b94e642585a5c07f6c8457911887817641b6142d7e7148e990033c9bc1795fd",
+      "lines": 21
+    },
+    "apps/web/src/features/quiz/server/load-quiz.ts": {
+      "sha256": "7869e3a0ee3be735ff134816f5660a588b7114002cea8bcfd58c5d4f6a3dde34",
+      "lines": 26
+    },
+    "apps/web/src/features/review/api/review-api.ts": {
+      "sha256": "da43e1fefd17a6afa191cf3f41efab008e58c6f9795fde246317f33f995a84bd",
+      "lines": 13
+    },
+    "apps/web/src/features/review/server/load-review.ts": {
+      "sha256": "90bac7a5413a55b7800a9c4a9496450be56e9c5befbed8f61b5e59061dabd5b7",
+      "lines": 26
+    },
+    "apps/web/src/lib/api.ts": {
+      "sha256": "8f1aebf207376f01d9fbfb91f99229e3c2ee6c7011c10c7665c8d8a30d851d4a",
+      "lines": 68
+    },
+    "apps/web/wrangler.jsonc": {
+      "sha256": "c14480e747d5315243435967c181d6af6372bf0964ec2bfc377ff60b16bc1949",
+      "lines": 17
+    },
+    "packages/shared/src/content-parser.ts": {
+      "sha256": "d64e767b7f296f0768b5e1a0474d46c720889db2b68576615a0097b8a189be44",
+      "lines": 197
+    },
+    "packages/shared/src/db/schema.ts": {
+      "sha256": "78657a23c772b1b959e224c3a336bf329a403501544684a58d22dc6a13a635e8",
+      "lines": 67
+    },
+    "packages/shared/src/index.ts": {
+      "sha256": "49876ffbb0b2eb507cac459c054d41722e2b729eb150a414beec1610a8b69af3",
+      "lines": 6
+    },
+    "packages/shared/src/schema/api.ts": {
+      "sha256": "c14bffa5be6f79ef2e5e9743185e4cce78caf0349086527fcf14aa5a44316de8",
+      "lines": 344
+    },
+    "packages/shared/src/schema/content.ts": {
+      "sha256": "fff3a444a72dbb360c287fbd064d82449e59f4b963cdbc10215b9748d4d717d9",
+      "lines": 82
+    },
+    "packages/shared/src/srs/sm2.ts": {
+      "sha256": "5db38483dbe4545dd8693c5c9ec2a10a7e3d271bc09c3327b5908f0354263c96",
+      "lines": 78
+    }
+  },
+  "nodes": [
+    {
+      "id": ".dependency-cruiser.cjs",
+      "kind": "module",
+      "source": {
+        "file": ".dependency-cruiser.cjs",
+        "line": 1
+      },
+      "layer": "config",
+      "symbols": []
+    },
+    {
+      "id": "apps/api/src/app.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/src/app.ts",
+        "line": 1
+      },
+      "layer": "api-app",
+      "symbols": []
+    },
+    {
+      "id": "apps/api/src/client.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/src/client.ts",
+        "line": 1
+      },
+      "layer": "api-app",
+      "symbols": []
+    },
+    {
+      "id": "apps/api/src/content-estimates.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/src/content-estimates.ts",
+        "line": 1
+      },
+      "layer": "api-app",
+      "symbols": []
+    },
+    {
+      "id": "apps/api/src/content-sync.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/src/content-sync.ts",
+        "line": 1
+      },
+      "layer": "api-app",
+      "symbols": []
+    },
+    {
+      "id": "apps/api/src/dal/activity-repository.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/src/dal/activity-repository.ts",
+        "line": 1
+      },
+      "layer": "api-dal",
+      "symbols": ["createActivityDeps"]
+    },
+    {
+      "id": "apps/api/src/dal/analytics-repository.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/src/dal/analytics-repository.ts",
+        "line": 1
+      },
+      "layer": "api-dal",
+      "symbols": ["AnalyticsRepositoryOptions", "createAnalyticsDeps", "toNumber"]
+    },
+    {
+      "id": "apps/api/src/dal/answer-repository.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/src/dal/answer-repository.ts",
+        "line": 1
+      },
+      "layer": "api-dal",
+      "symbols": ["createAnswerDeps"]
+    },
+    {
+      "id": "apps/api/src/dal/domains-repository.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/src/dal/domains-repository.ts",
+        "line": 1
+      },
+      "layer": "api-dal",
+      "symbols": ["createDomainsDeps"]
+    },
+    {
+      "id": "apps/api/src/dal/lesson-view-repository.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/src/dal/lesson-view-repository.ts",
+        "line": 1
+      },
+      "layer": "api-dal",
+      "symbols": ["createLessonViewDeps"]
+    },
+    {
+      "id": "apps/api/src/dal/review-repository.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/src/dal/review-repository.ts",
+        "line": 1
+      },
+      "layer": "api-dal",
+      "symbols": ["createReviewDeps"]
+    },
+    {
+      "id": "apps/api/src/dev-seed.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/src/dev-seed.ts",
+        "line": 1
+      },
+      "layer": "api-app",
+      "symbols": []
+    },
+    {
+      "id": "apps/api/src/env.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/src/env.ts",
+        "line": 1
+      },
+      "layer": "api-app",
+      "symbols": []
+    },
+    {
+      "id": "apps/api/src/fixed-user.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/src/fixed-user.ts",
+        "line": 1
+      },
+      "layer": "api-app",
+      "symbols": []
+    },
+    {
+      "id": "apps/api/src/index.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/src/index.ts",
+        "line": 1
+      },
+      "layer": "api-app",
+      "symbols": []
+    },
+    {
+      "id": "apps/api/src/internal-api.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/src/internal-api.ts",
+        "line": 1
+      },
+      "layer": "api-app",
+      "symbols": []
+    },
+    {
+      "id": "apps/api/src/middleware/access-boundary.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/src/middleware/access-boundary.ts",
+        "line": 1
+      },
+      "layer": "api-middleware",
+      "symbols": []
+    },
+    {
+      "id": "apps/api/src/middleware/user-context.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/src/middleware/user-context.ts",
+        "line": 1
+      },
+      "layer": "api-middleware",
+      "symbols": []
+    },
+    {
+      "id": "apps/api/src/persistent-write-observability.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/src/persistent-write-observability.ts",
+        "line": 1
+      },
+      "layer": "api-app",
+      "symbols": []
+    },
+    {
+      "id": "apps/api/src/persistent-write-rate-limit-guard.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/src/persistent-write-rate-limit-guard.ts",
+        "line": 1
+      },
+      "layer": "api-app",
+      "symbols": []
+    },
+    {
+      "id": "apps/api/src/persistent-write-rate-limit.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/src/persistent-write-rate-limit.ts",
+        "line": 1
+      },
+      "layer": "api-app",
+      "symbols": []
+    },
+    {
+      "id": "apps/api/src/routes/activity.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/src/routes/activity.ts",
+        "line": 1
+      },
+      "layer": "api-route",
+      "symbols": []
+    },
+    {
+      "id": "apps/api/src/routes/analytics.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/src/routes/analytics.ts",
+        "line": 1
+      },
+      "layer": "api-route",
+      "symbols": []
+    },
+    {
+      "id": "apps/api/src/routes/answers.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/src/routes/answers.ts",
+        "line": 1
+      },
+      "layer": "api-route",
+      "symbols": []
+    },
+    {
+      "id": "apps/api/src/routes/dashboard.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/src/routes/dashboard.ts",
+        "line": 1
+      },
+      "layer": "api-route",
+      "symbols": []
+    },
+    {
+      "id": "apps/api/src/routes/domains.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/src/routes/domains.ts",
+        "line": 1
+      },
+      "layer": "api-route",
+      "symbols": []
+    },
+    {
+      "id": "apps/api/src/routes/lesson-views.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/src/routes/lesson-views.ts",
+        "line": 1
+      },
+      "layer": "api-route",
+      "symbols": []
+    },
+    {
+      "id": "apps/api/src/routes/review.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/src/routes/review.ts",
+        "line": 1
+      },
+      "layer": "api-route",
+      "symbols": []
+    },
+    {
+      "id": "apps/api/src/services/activity-service.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/src/services/activity-service.ts",
+        "line": 1
+      },
+      "layer": "api-service",
+      "symbols": ["ActivityDeps", "ActivityInput", "getRecentActivity"]
+    },
+    {
+      "id": "apps/api/src/services/analytics-service.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/src/services/analytics-service.ts",
+        "line": 1
+      },
+      "layer": "api-service",
+      "symbols": [
+        "AnalyticsDeps",
+        "AnalyticsHeatmapRow",
+        "AnalyticsInput",
+        "AnalyticsLessonViewCount",
+        "AnalyticsMistakeRow",
+        "AnalyticsSrsRow",
+        "AnalyticsSummaryData",
+        "AnalyticsWeeklyRow",
+        "currentStreakDays",
+        "getAnalyticsHeatmap",
+        "getAnalyticsMistakes",
+        "getAnalyticsSummary",
+        "getAnalyticsWeekly",
+        "recentHeatmapDays",
+        "recentUtcDays",
+        "utcDateKey",
+        "utcDayStart",
+        "utcWeekStart"
+      ]
+    },
+    {
+      "id": "apps/api/src/services/answer-service.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/src/services/answer-service.ts",
+        "line": 1
+      },
+      "layer": "api-service",
+      "symbols": ["AnswerDeps", "SubmitAnswerInput", "VersionedSrsInput", "submitAnswer"]
+    },
+    {
+      "id": "apps/api/src/services/domains-service.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/src/services/domains-service.ts",
+        "line": 1
+      },
+      "layer": "api-service",
+      "symbols": ["DomainStatsRow", "DomainsDeps", "DomainsInput", "getDomains", "toSummary"]
+    },
+    {
+      "id": "apps/api/src/services/errors.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/src/services/errors.ts",
+        "line": 1
+      },
+      "layer": "api-service",
+      "symbols": []
+    },
+    {
+      "id": "apps/api/src/services/lesson-view-service.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/src/services/lesson-view-service.ts",
+        "line": 1
+      },
+      "layer": "api-service",
+      "symbols": ["LessonViewDeps", "RecordLessonViewInput", "recordLessonView"]
+    },
+    {
+      "id": "apps/api/src/services/review-service.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/src/services/review-service.ts",
+        "line": 1
+      },
+      "layer": "api-service",
+      "symbols": [
+        "ReviewDeps",
+        "ReviewInput",
+        "ReviewQueueItem",
+        "ReviewQueueResult",
+        "getDueCount",
+        "getReviewQueue"
+      ]
+    },
+    {
+      "id": "apps/api/wrangler.toml",
+      "kind": "module",
+      "source": {
+        "file": "apps/api/wrangler.toml",
+        "line": 1
+      },
+      "layer": "config",
+      "symbols": []
+    },
+    {
+      "id": "apps/web/src/features/analytics/api/analytics-api.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/web/src/features/analytics/api/analytics-api.ts",
+        "line": 1
+      },
+      "layer": "web-api",
+      "symbols": []
+    },
+    {
+      "id": "apps/web/src/features/analytics/server/load-analytics.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/web/src/features/analytics/server/load-analytics.ts",
+        "line": 1
+      },
+      "layer": "web-loader",
+      "symbols": []
+    },
+    {
+      "id": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+        "line": 1
+      },
+      "layer": "web-api",
+      "symbols": []
+    },
+    {
+      "id": "apps/web/src/features/dashboard/server/load-dashboard.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/web/src/features/dashboard/server/load-dashboard.ts",
+        "line": 1
+      },
+      "layer": "web-loader",
+      "symbols": []
+    },
+    {
+      "id": "apps/web/src/features/domains/api/domains-api.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/web/src/features/domains/api/domains-api.ts",
+        "line": 1
+      },
+      "layer": "web-api",
+      "symbols": []
+    },
+    {
+      "id": "apps/web/src/features/domains/server/load-domains.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/web/src/features/domains/server/load-domains.ts",
+        "line": 1
+      },
+      "layer": "web-loader",
+      "symbols": []
+    },
+    {
+      "id": "apps/web/src/features/lesson/api/lesson-api.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/web/src/features/lesson/api/lesson-api.ts",
+        "line": 1
+      },
+      "layer": "web-api",
+      "symbols": []
+    },
+    {
+      "id": "apps/web/src/features/lesson/server/load-lesson.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/web/src/features/lesson/server/load-lesson.ts",
+        "line": 1
+      },
+      "layer": "web-loader",
+      "symbols": []
+    },
+    {
+      "id": "apps/web/src/features/lesson/server/load-topic.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/web/src/features/lesson/server/load-topic.ts",
+        "line": 1
+      },
+      "layer": "web-loader",
+      "symbols": []
+    },
+    {
+      "id": "apps/web/src/features/quiz/api/quiz-api.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/web/src/features/quiz/api/quiz-api.ts",
+        "line": 1
+      },
+      "layer": "web-api",
+      "symbols": []
+    },
+    {
+      "id": "apps/web/src/features/quiz/server/load-quiz.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/web/src/features/quiz/server/load-quiz.ts",
+        "line": 1
+      },
+      "layer": "web-loader",
+      "symbols": []
+    },
+    {
+      "id": "apps/web/src/features/review/api/review-api.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/web/src/features/review/api/review-api.ts",
+        "line": 1
+      },
+      "layer": "web-api",
+      "symbols": []
+    },
+    {
+      "id": "apps/web/src/features/review/server/load-review.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/web/src/features/review/server/load-review.ts",
+        "line": 1
+      },
+      "layer": "web-loader",
+      "symbols": []
+    },
+    {
+      "id": "apps/web/src/lib/api.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/web/src/lib/api.ts",
+        "line": 1
+      },
+      "layer": "web-api",
+      "symbols": []
+    },
+    {
+      "id": "apps/web/wrangler.jsonc",
+      "kind": "module",
+      "source": {
+        "file": "apps/web/wrangler.jsonc",
+        "line": 1
+      },
+      "layer": "config",
+      "symbols": []
+    },
+    {
+      "id": "binding:D1:DB",
+      "kind": "worker-binding",
+      "source": {
+        "file": "apps/api/wrangler.toml",
+        "line": 7
+      },
+      "layer": "config",
+      "name": "tech-study-lab"
+    },
+    {
+      "id": "endpoint:GET /activity/recent",
+      "kind": "http-endpoint",
+      "source": {
+        "file": "apps/api/src/routes/activity.ts",
+        "line": 10
+      },
+      "layer": "api-route",
+      "method": "GET",
+      "path": "/activity/recent"
+    },
+    {
+      "id": "endpoint:GET /analytics/heatmap",
+      "kind": "http-endpoint",
+      "source": {
+        "file": "apps/api/src/routes/analytics.ts",
+        "line": 43
+      },
+      "layer": "api-route",
+      "method": "GET",
+      "path": "/analytics/heatmap"
+    },
+    {
+      "id": "endpoint:GET /analytics/mistakes",
+      "kind": "http-endpoint",
+      "source": {
+        "file": "apps/api/src/routes/analytics.ts",
+        "line": 51
+      },
+      "layer": "api-route",
+      "method": "GET",
+      "path": "/analytics/mistakes"
+    },
+    {
+      "id": "endpoint:GET /analytics/summary",
+      "kind": "http-endpoint",
+      "source": {
+        "file": "apps/api/src/routes/analytics.ts",
+        "line": 27
+      },
+      "layer": "api-route",
+      "method": "GET",
+      "path": "/analytics/summary"
+    },
+    {
+      "id": "endpoint:GET /analytics/weekly",
+      "kind": "http-endpoint",
+      "source": {
+        "file": "apps/api/src/routes/analytics.ts",
+        "line": 35
+      },
+      "layer": "api-route",
+      "method": "GET",
+      "path": "/analytics/weekly"
+    },
+    {
+      "id": "endpoint:GET /dashboard/due-count",
+      "kind": "http-endpoint",
+      "source": {
+        "file": "apps/api/src/routes/dashboard.ts",
+        "line": 9
+      },
+      "layer": "api-route",
+      "method": "GET",
+      "path": "/dashboard/due-count"
+    },
+    {
+      "id": "endpoint:GET /domains",
+      "kind": "http-endpoint",
+      "source": {
+        "file": "apps/api/src/routes/domains.ts",
+        "line": 10
+      },
+      "layer": "api-route",
+      "method": "GET",
+      "path": "/domains"
+    },
+    {
+      "id": "endpoint:GET /health",
+      "kind": "http-endpoint",
+      "source": {
+        "file": "apps/api/src/app.ts",
+        "line": 89
+      },
+      "layer": "api-app",
+      "method": "GET",
+      "path": "/health"
+    },
+    {
+      "id": "endpoint:GET /review/queue",
+      "kind": "http-endpoint",
+      "source": {
+        "file": "apps/api/src/routes/review.ts",
+        "line": 9
+      },
+      "layer": "api-route",
+      "method": "GET",
+      "path": "/review/queue"
+    },
+    {
+      "id": "endpoint:POST /answers",
+      "kind": "http-endpoint",
+      "source": {
+        "file": "apps/api/src/routes/answers.ts",
+        "line": 18
+      },
+      "layer": "api-route",
+      "method": "POST",
+      "path": "/answers"
+    },
+    {
+      "id": "endpoint:POST /lesson-views",
+      "kind": "http-endpoint",
+      "source": {
+        "file": "apps/api/src/routes/lesson-views.ts",
+        "line": 18
+      },
+      "layer": "api-route",
+      "method": "POST",
+      "path": "/lesson-views"
+    },
+    {
+      "id": "packages/shared/src/content-parser.ts",
+      "kind": "module",
+      "source": {
+        "file": "packages/shared/src/content-parser.ts",
+        "line": 1
+      },
+      "layer": "shared-domain",
+      "symbols": [
+        "BundledLesson",
+        "BundledTopic",
+        "ContentBundle",
+        "ContentPath",
+        "ParsedContentSourceFile",
+        "contentPathFor",
+        "createContentBundle",
+        "invalidContent",
+        "lessonFor",
+        "topicFor"
+      ]
+    },
+    {
+      "id": "packages/shared/src/db/schema.ts",
+      "kind": "module",
+      "source": {
+        "file": "packages/shared/src/db/schema.ts",
+        "line": 1
+      },
+      "layer": "shared-db",
+      "symbols": [
+        "AnswerLog",
+        "LessonView",
+        "QuestionRow",
+        "SrsState",
+        "User",
+        "answerLogs",
+        "lessonViews",
+        "questions",
+        "srsStates",
+        "users"
+      ]
+    },
+    {
+      "id": "packages/shared/src/index.ts",
+      "kind": "module",
+      "source": {
+        "file": "packages/shared/src/index.ts",
+        "line": 1
+      },
+      "layer": "shared-domain",
+      "symbols": []
+    },
+    {
+      "id": "packages/shared/src/schema/api.ts",
+      "kind": "module",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 1
+      },
+      "layer": "shared-schema",
+      "symbols": [
+        "AnalyticsHeatmapDay",
+        "AnalyticsHeatmapResponse",
+        "AnalyticsRequest",
+        "AnalyticsSummaryResponse",
+        "AnalyticsWeeklyDay",
+        "AnalyticsWeeklyResponse",
+        "AnswerRequest",
+        "AnswerResponse",
+        "DomainSummary",
+        "DomainsRequest",
+        "DomainsResponse",
+        "DueCountResponse",
+        "LessonViewRequest",
+        "LessonViewResponse",
+        "MistakeItem",
+        "MistakesResponse",
+        "RateLimitUnavailableErrorResponse",
+        "RateLimitedErrorResponse",
+        "RecentActivityAnswerRecorded",
+        "RecentActivityItem",
+        "RecentActivityLessonViewed",
+        "RecentActivityResponse",
+        "RetentionDistribution",
+        "ReviewQueueResponse",
+        "analyticsHeatmapDaySchema",
+        "analyticsHeatmapResponseSchema",
+        "analyticsRequestSchema",
+        "analyticsSummaryResponseSchema",
+        "analyticsWeeklyDateSchema",
+        "analyticsWeeklyDaySchema",
+        "analyticsWeeklyResponseSchema",
+        "answerRequestSchema",
+        "answerResponseSchema",
+        "compareMistakeRank",
+        "compareRecentActivity",
+        "domainSummarySchema",
+        "domainsRequestSchema",
+        "domainsResponseSchema",
+        "dueCountResponseSchema",
+        "isValidCalendarDate",
+        "isoCalendarDatePattern",
+        "lessonViewRequestSchema",
+        "lessonViewResponseSchema",
+        "mistakeItemSchema",
+        "mistakesResponseSchema",
+        "rateLimitUnavailableErrorResponseSchema",
+        "rateLimitedErrorResponseSchema",
+        "recentActivityAnswerRecordedSchema",
+        "recentActivityBaseSchema",
+        "recentActivityItemSchema",
+        "recentActivityLessonViewedSchema",
+        "recentActivityResponseSchema",
+        "retentionDistributionSchema",
+        "reviewQueueResponseSchema"
+      ]
+    },
+    {
+      "id": "packages/shared/src/schema/content.ts",
+      "kind": "module",
+      "source": {
+        "file": "packages/shared/src/schema/content.ts",
+        "line": 1
+      },
+      "layer": "shared-schema",
+      "symbols": [
+        "DOMAIN_LABELS",
+        "DomainKey",
+        "LessonFrontmatter",
+        "McqQuestion",
+        "Question",
+        "TopicFrontmatter",
+        "domainKeySchema",
+        "lessonFrontmatterSchema",
+        "lessonIdSchema",
+        "mcqQuestionSchema",
+        "questionIdSchema",
+        "questionSchema",
+        "topicFrontmatterSchema",
+        "validatedLessonFrontmatterSchema",
+        "validatedMcqSchema"
+      ]
+    },
+    {
+      "id": "packages/shared/src/srs/sm2.ts",
+      "kind": "module",
+      "source": {
+        "file": "packages/shared/src/srs/sm2.ts",
+        "line": 1
+      },
+      "layer": "shared-domain",
+      "symbols": [
+        "DAY_MS",
+        "INITIAL_EASE",
+        "MIN_EASE",
+        "SrsInput",
+        "SrsResult",
+        "initialSrs",
+        "isDue",
+        "reviewSrs"
+      ]
+    },
+    {
+      "id": "symbol:apps/api/src/dal/activity-repository.ts#createActivityDeps",
+      "kind": "function",
+      "source": {
+        "file": "apps/api/src/dal/activity-repository.ts",
+        "line": 8
+      },
+      "layer": "api-dal"
+    },
+    {
+      "id": "symbol:apps/api/src/dal/analytics-repository.ts#AnalyticsRepositoryOptions",
+      "kind": "type",
+      "source": {
+        "file": "apps/api/src/dal/analytics-repository.ts",
+        "line": 15
+      },
+      "layer": "api-dal"
+    },
+    {
+      "id": "symbol:apps/api/src/dal/analytics-repository.ts#createAnalyticsDeps",
+      "kind": "function",
+      "source": {
+        "file": "apps/api/src/dal/analytics-repository.ts",
+        "line": 31
+      },
+      "layer": "api-dal"
+    },
+    {
+      "id": "symbol:apps/api/src/dal/analytics-repository.ts#toNumber",
+      "kind": "function",
+      "source": {
+        "file": "apps/api/src/dal/analytics-repository.ts",
+        "line": 27
+      },
+      "layer": "api-dal"
+    },
+    {
+      "id": "symbol:apps/api/src/dal/answer-repository.ts#createAnswerDeps",
+      "kind": "function",
+      "source": {
+        "file": "apps/api/src/dal/answer-repository.ts",
+        "line": 9
+      },
+      "layer": "api-dal"
+    },
+    {
+      "id": "symbol:apps/api/src/dal/domains-repository.ts#createDomainsDeps",
+      "kind": "function",
+      "source": {
+        "file": "apps/api/src/dal/domains-repository.ts",
+        "line": 9
+      },
+      "layer": "api-dal"
+    },
+    {
+      "id": "symbol:apps/api/src/dal/lesson-view-repository.ts#createLessonViewDeps",
+      "kind": "function",
+      "source": {
+        "file": "apps/api/src/dal/lesson-view-repository.ts",
+        "line": 7
+      },
+      "layer": "api-dal"
+    },
+    {
+      "id": "symbol:apps/api/src/dal/review-repository.ts#createReviewDeps",
+      "kind": "function",
+      "source": {
+        "file": "apps/api/src/dal/review-repository.ts",
+        "line": 10
+      },
+      "layer": "api-dal"
+    },
+    {
+      "id": "symbol:apps/api/src/services/activity-service.ts#ActivityDeps",
+      "kind": "deps-type",
+      "source": {
+        "file": "apps/api/src/services/activity-service.ts",
+        "line": 9
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/activity-service.ts#ActivityInput",
+      "kind": "type",
+      "source": {
+        "file": "apps/api/src/services/activity-service.ts",
+        "line": 13
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/activity-service.ts#getRecentActivity",
+      "kind": "function",
+      "source": {
+        "file": "apps/api/src/services/activity-service.ts",
+        "line": 17
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/analytics-service.ts#AnalyticsDeps",
+      "kind": "deps-type",
+      "source": {
+        "file": "apps/api/src/services/analytics-service.ts",
+        "line": 50
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/analytics-service.ts#AnalyticsHeatmapRow",
+      "kind": "type",
+      "source": {
+        "file": "apps/api/src/services/analytics-service.ts",
+        "line": 39
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/analytics-service.ts#AnalyticsInput",
+      "kind": "type",
+      "source": {
+        "file": "apps/api/src/services/analytics-service.ts",
+        "line": 65
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/analytics-service.ts#AnalyticsLessonViewCount",
+      "kind": "type",
+      "source": {
+        "file": "apps/api/src/services/analytics-service.ts",
+        "line": 17
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/analytics-service.ts#AnalyticsMistakeRow",
+      "kind": "type",
+      "source": {
+        "file": "apps/api/src/services/analytics-service.ts",
+        "line": 44
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/analytics-service.ts#AnalyticsSrsRow",
+      "kind": "type",
+      "source": {
+        "file": "apps/api/src/services/analytics-service.ts",
+        "line": 12
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/analytics-service.ts#AnalyticsSummaryData",
+      "kind": "type",
+      "source": {
+        "file": "apps/api/src/services/analytics-service.ts",
+        "line": 23
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/analytics-service.ts#AnalyticsWeeklyRow",
+      "kind": "type",
+      "source": {
+        "file": "apps/api/src/services/analytics-service.ts",
+        "line": 34
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/analytics-service.ts#currentStreakDays",
+      "kind": "function",
+      "source": {
+        "file": "apps/api/src/services/analytics-service.ts",
+        "line": 103
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/analytics-service.ts#getAnalyticsHeatmap",
+      "kind": "function",
+      "source": {
+        "file": "apps/api/src/services/analytics-service.ts",
+        "line": 177
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/analytics-service.ts#getAnalyticsMistakes",
+      "kind": "function",
+      "source": {
+        "file": "apps/api/src/services/analytics-service.ts",
+        "line": 192
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/analytics-service.ts#getAnalyticsSummary",
+      "kind": "function",
+      "source": {
+        "file": "apps/api/src/services/analytics-service.ts",
+        "line": 116
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/analytics-service.ts#getAnalyticsWeekly",
+      "kind": "function",
+      "source": {
+        "file": "apps/api/src/services/analytics-service.ts",
+        "line": 162
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/analytics-service.ts#recentHeatmapDays",
+      "kind": "function",
+      "source": {
+        "file": "apps/api/src/services/analytics-service.ts",
+        "line": 89
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/analytics-service.ts#recentUtcDays",
+      "kind": "function",
+      "source": {
+        "file": "apps/api/src/services/analytics-service.ts",
+        "line": 79
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/analytics-service.ts#utcDateKey",
+      "kind": "function",
+      "source": {
+        "file": "apps/api/src/services/analytics-service.ts",
+        "line": 75
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/analytics-service.ts#utcDayStart",
+      "kind": "function",
+      "source": {
+        "file": "apps/api/src/services/analytics-service.ts",
+        "line": 70
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/analytics-service.ts#utcWeekStart",
+      "kind": "function",
+      "source": {
+        "file": "apps/api/src/services/analytics-service.ts",
+        "line": 97
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/answer-service.ts#AnswerDeps",
+      "kind": "deps-type",
+      "source": {
+        "file": "apps/api/src/services/answer-service.ts",
+        "line": 7
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/answer-service.ts#submitAnswer",
+      "kind": "function",
+      "source": {
+        "file": "apps/api/src/services/answer-service.ts",
+        "line": 29
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/answer-service.ts#SubmitAnswerInput",
+      "kind": "type",
+      "source": {
+        "file": "apps/api/src/services/answer-service.ts",
+        "line": 21
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/answer-service.ts#VersionedSrsInput",
+      "kind": "type",
+      "source": {
+        "file": "apps/api/src/services/answer-service.ts",
+        "line": 5
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/domains-service.ts#DomainsDeps",
+      "kind": "deps-type",
+      "source": {
+        "file": "apps/api/src/services/domains-service.ts",
+        "line": 13
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/domains-service.ts#DomainsInput",
+      "kind": "type",
+      "source": {
+        "file": "apps/api/src/services/domains-service.ts",
+        "line": 17
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/domains-service.ts#DomainStatsRow",
+      "kind": "type",
+      "source": {
+        "file": "apps/api/src/services/domains-service.ts",
+        "line": 5
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/domains-service.ts#getDomains",
+      "kind": "function",
+      "source": {
+        "file": "apps/api/src/services/domains-service.ts",
+        "line": 42
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/domains-service.ts#toSummary",
+      "kind": "function",
+      "source": {
+        "file": "apps/api/src/services/domains-service.ts",
+        "line": 27
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/lesson-view-service.ts#LessonViewDeps",
+      "kind": "deps-type",
+      "source": {
+        "file": "apps/api/src/services/lesson-view-service.ts",
+        "line": 1
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/lesson-view-service.ts#recordLessonView",
+      "kind": "function",
+      "source": {
+        "file": "apps/api/src/services/lesson-view-service.ts",
+        "line": 15
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/lesson-view-service.ts#RecordLessonViewInput",
+      "kind": "type",
+      "source": {
+        "file": "apps/api/src/services/lesson-view-service.ts",
+        "line": 9
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/review-service.ts#getDueCount",
+      "kind": "function",
+      "source": {
+        "file": "apps/api/src/services/review-service.ts",
+        "line": 28
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/review-service.ts#getReviewQueue",
+      "kind": "function",
+      "source": {
+        "file": "apps/api/src/services/review-service.ts",
+        "line": 21
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/review-service.ts#ReviewDeps",
+      "kind": "deps-type",
+      "source": {
+        "file": "apps/api/src/services/review-service.ts",
+        "line": 6
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/review-service.ts#ReviewInput",
+      "kind": "type",
+      "source": {
+        "file": "apps/api/src/services/review-service.ts",
+        "line": 16
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/review-service.ts#ReviewQueueItem",
+      "kind": "type",
+      "source": {
+        "file": "apps/api/src/services/review-service.ts",
+        "line": 1
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:apps/api/src/services/review-service.ts#ReviewQueueResult",
+      "kind": "type",
+      "source": {
+        "file": "apps/api/src/services/review-service.ts",
+        "line": 11
+      },
+      "layer": "api-service"
+    },
+    {
+      "id": "symbol:packages/shared/src/content-parser.ts#BundledLesson",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/content-parser.ts",
+        "line": 29
+      },
+      "layer": "shared-domain"
+    },
+    {
+      "id": "symbol:packages/shared/src/content-parser.ts#BundledTopic",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/content-parser.ts",
+        "line": 24
+      },
+      "layer": "shared-domain"
+    },
+    {
+      "id": "symbol:packages/shared/src/content-parser.ts#ContentBundle",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/content-parser.ts",
+        "line": 35
+      },
+      "layer": "shared-domain"
+    },
+    {
+      "id": "symbol:packages/shared/src/content-parser.ts#ContentPath",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/content-parser.ts",
+        "line": 17
+      },
+      "layer": "shared-domain"
+    },
+    {
+      "id": "symbol:packages/shared/src/content-parser.ts#contentPathFor",
+      "kind": "function",
+      "source": {
+        "file": "packages/shared/src/content-parser.ts",
+        "line": 45
+      },
+      "layer": "shared-domain"
+    },
+    {
+      "id": "symbol:packages/shared/src/content-parser.ts#createContentBundle",
+      "kind": "function",
+      "source": {
+        "file": "packages/shared/src/content-parser.ts",
+        "line": 140
+      },
+      "layer": "shared-domain"
+    },
+    {
+      "id": "symbol:packages/shared/src/content-parser.ts#invalidContent",
+      "kind": "function",
+      "source": {
+        "file": "packages/shared/src/content-parser.ts",
+        "line": 41
+      },
+      "layer": "shared-domain"
+    },
+    {
+      "id": "symbol:packages/shared/src/content-parser.ts#lessonFor",
+      "kind": "function",
+      "source": {
+        "file": "packages/shared/src/content-parser.ts",
+        "line": 90
+      },
+      "layer": "shared-domain"
+    },
+    {
+      "id": "symbol:packages/shared/src/content-parser.ts#ParsedContentSourceFile",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/content-parser.ts",
+        "line": 11
+      },
+      "layer": "shared-domain"
+    },
+    {
+      "id": "symbol:packages/shared/src/content-parser.ts#topicFor",
+      "kind": "function",
+      "source": {
+        "file": "packages/shared/src/content-parser.ts",
+        "line": 71
+      },
+      "layer": "shared-domain"
+    },
+    {
+      "id": "symbol:packages/shared/src/db/schema.ts#AnswerLog",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/db/schema.ts",
+        "line": 63
+      },
+      "layer": "shared-db"
+    },
+    {
+      "id": "symbol:packages/shared/src/db/schema.ts#answerLogs",
+      "kind": "db-table",
+      "source": {
+        "file": "packages/shared/src/db/schema.ts",
+        "line": 15
+      },
+      "layer": "shared-db"
+    },
+    {
+      "id": "symbol:packages/shared/src/db/schema.ts#LessonView",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/db/schema.ts",
+        "line": 66
+      },
+      "layer": "shared-db"
+    },
+    {
+      "id": "symbol:packages/shared/src/db/schema.ts#lessonViews",
+      "kind": "db-table",
+      "source": {
+        "file": "packages/shared/src/db/schema.ts",
+        "line": 55
+      },
+      "layer": "shared-db"
+    },
+    {
+      "id": "symbol:packages/shared/src/db/schema.ts#QuestionRow",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/db/schema.ts",
+        "line": 64
+      },
+      "layer": "shared-db"
+    },
+    {
+      "id": "symbol:packages/shared/src/db/schema.ts#questions",
+      "kind": "db-table",
+      "source": {
+        "file": "packages/shared/src/db/schema.ts",
+        "line": 25
+      },
+      "layer": "shared-db"
+    },
+    {
+      "id": "symbol:packages/shared/src/db/schema.ts#SrsState",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/db/schema.ts",
+        "line": 65
+      },
+      "layer": "shared-db"
+    },
+    {
+      "id": "symbol:packages/shared/src/db/schema.ts#srsStates",
+      "kind": "db-table",
+      "source": {
+        "file": "packages/shared/src/db/schema.ts",
+        "line": 37
+      },
+      "layer": "shared-db"
+    },
+    {
+      "id": "symbol:packages/shared/src/db/schema.ts#User",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/db/schema.ts",
+        "line": 62
+      },
+      "layer": "shared-db"
+    },
+    {
+      "id": "symbol:packages/shared/src/db/schema.ts#users",
+      "kind": "db-table",
+      "source": {
+        "file": "packages/shared/src/db/schema.ts",
+        "line": 9
+      },
+      "layer": "shared-db"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#AnalyticsHeatmapDay",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 198
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#analyticsHeatmapDaySchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 194
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#AnalyticsHeatmapResponse",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 228
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#analyticsHeatmapResponseSchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 200
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#AnalyticsRequest",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 107
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#analyticsRequestSchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 106
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#AnalyticsSummaryResponse",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 125
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#analyticsSummaryResponseSchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 116
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#analyticsWeeklyDateSchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 142
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#AnalyticsWeeklyDay",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 162
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#analyticsWeeklyDaySchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 147
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#AnalyticsWeeklyResponse",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 192
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#analyticsWeeklyResponseSchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 164
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#AnswerRequest",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 19
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#answerRequestSchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 11
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#AnswerResponse",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 26
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#answerResponseSchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 21
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#compareMistakeRank",
+      "kind": "function",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 316
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#compareRecentActivity",
+      "kind": "function",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 259
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#DomainsRequest",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 104
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#domainsRequestSchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 103
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#DomainsResponse",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 101
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#domainsResponseSchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 87
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#DomainSummary",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 85
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#domainSummarySchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 77
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#DueCountResponse",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 75
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#dueCountResponseSchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 72
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#isoCalendarDatePattern",
+      "kind": "constant",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 127
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#isValidCalendarDate",
+      "kind": "function",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 129
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#LessonViewRequest",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 33
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#lessonViewRequestSchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 28
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#LessonViewResponse",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 38
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#lessonViewResponseSchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 35
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#MistakeItem",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 313
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#mistakeItemSchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 290
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#MistakesResponse",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 343
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#mistakesResponseSchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 327
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#RateLimitedErrorResponse",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 46
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#rateLimitedErrorResponseSchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 40
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#RateLimitUnavailableErrorResponse",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 54
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#rateLimitUnavailableErrorResponseSchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 48
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#RecentActivityAnswerRecorded",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 251
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#recentActivityAnswerRecordedSchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 243
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#recentActivityBaseSchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 230
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#RecentActivityItem",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 257
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#recentActivityItemSchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 253
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#RecentActivityLessonViewed",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 241
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#recentActivityLessonViewedSchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 235
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#RecentActivityResponse",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 288
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#recentActivityResponseSchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 263
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#RetentionDistribution",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 114
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#retentionDistributionSchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 109
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#ReviewQueueResponse",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 70
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/api.ts#reviewQueueResponseSchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 58
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/content.ts#DOMAIN_LABELS",
+      "kind": "constant",
+      "source": {
+        "file": "packages/shared/src/schema/content.ts",
+        "line": 12
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/content.ts#DomainKey",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/schema/content.ts",
+        "line": 10
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/content.ts#domainKeySchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/content.ts",
+        "line": 9
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/content.ts#LessonFrontmatter",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/schema/content.ts",
+        "line": 56
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/content.ts#lessonFrontmatterSchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/content.ts",
+        "line": 48
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/content.ts#lessonIdSchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/content.ts",
+        "line": 26
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/content.ts#McqQuestion",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/schema/content.ts",
+        "line": 42
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/content.ts#mcqQuestionSchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/content.ts",
+        "line": 34
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/content.ts#Question",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/schema/content.ts",
+        "line": 46
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/content.ts#questionIdSchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/content.ts",
+        "line": 30
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/content.ts#questionSchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/content.ts",
+        "line": 45
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/content.ts#TopicFrontmatter",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/schema/content.ts",
+        "line": 24
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/content.ts#topicFrontmatterSchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/content.ts",
+        "line": 19
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/content.ts#validatedLessonFrontmatterSchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/content.ts",
+        "line": 67
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/content.ts#validatedMcqSchema",
+      "kind": "contract-schema",
+      "source": {
+        "file": "packages/shared/src/schema/content.ts",
+        "line": 59
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/srs/sm2.ts#DAY_MS",
+      "kind": "constant",
+      "source": {
+        "file": "packages/shared/src/srs/sm2.ts",
+        "line": 8
+      },
+      "layer": "shared-domain"
+    },
+    {
+      "id": "symbol:packages/shared/src/srs/sm2.ts#INITIAL_EASE",
+      "kind": "constant",
+      "source": {
+        "file": "packages/shared/src/srs/sm2.ts",
+        "line": 10
+      },
+      "layer": "shared-domain"
+    },
+    {
+      "id": "symbol:packages/shared/src/srs/sm2.ts#initialSrs",
+      "kind": "function",
+      "source": {
+        "file": "packages/shared/src/srs/sm2.ts",
+        "line": 27
+      },
+      "layer": "shared-domain"
+    },
+    {
+      "id": "symbol:packages/shared/src/srs/sm2.ts#isDue",
+      "kind": "function",
+      "source": {
+        "file": "packages/shared/src/srs/sm2.ts",
+        "line": 75
+      },
+      "layer": "shared-domain"
+    },
+    {
+      "id": "symbol:packages/shared/src/srs/sm2.ts#MIN_EASE",
+      "kind": "constant",
+      "source": {
+        "file": "packages/shared/src/srs/sm2.ts",
+        "line": 9
+      },
+      "layer": "shared-domain"
+    },
+    {
+      "id": "symbol:packages/shared/src/srs/sm2.ts#reviewSrs",
+      "kind": "function",
+      "source": {
+        "file": "packages/shared/src/srs/sm2.ts",
+        "line": 39
+      },
+      "layer": "shared-domain"
+    },
+    {
+      "id": "symbol:packages/shared/src/srs/sm2.ts#SrsInput",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/srs/sm2.ts",
+        "line": 12
+      },
+      "layer": "shared-domain"
+    },
+    {
+      "id": "symbol:packages/shared/src/srs/sm2.ts#SrsResult",
+      "kind": "type",
+      "source": {
+        "file": "packages/shared/src/srs/sm2.ts",
+        "line": 19
+      },
+      "layer": "shared-domain"
+    }
+  ],
+  "edges": [
+    {
+      "from": "apps/api/src/app.ts",
+      "relation": "imports",
+      "to": "apps/api/src/env.ts",
+      "source": {
+        "file": "apps/api/src/app.ts",
+        "line": 5
+      },
+      "specifier": "./env",
+      "typeOnly": true
+    },
+    {
+      "from": "apps/api/src/app.ts",
+      "relation": "imports",
+      "to": "apps/api/src/middleware/access-boundary.ts",
+      "source": {
+        "file": "apps/api/src/app.ts",
+        "line": 6
+      },
+      "specifier": "./middleware/access-boundary",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/app.ts",
+      "relation": "imports",
+      "to": "apps/api/src/middleware/user-context.ts",
+      "source": {
+        "file": "apps/api/src/app.ts",
+        "line": 7
+      },
+      "specifier": "./middleware/user-context",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/app.ts",
+      "relation": "imports",
+      "to": "apps/api/src/persistent-write-rate-limit.ts",
+      "source": {
+        "file": "apps/api/src/app.ts",
+        "line": 8
+      },
+      "specifier": "./persistent-write-rate-limit",
+      "typeOnly": true
+    },
+    {
+      "from": "apps/api/src/app.ts",
+      "relation": "imports",
+      "to": "apps/api/src/routes/activity.ts",
+      "source": {
+        "file": "apps/api/src/app.ts",
+        "line": 9
+      },
+      "specifier": "./routes/activity",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/app.ts",
+      "relation": "imports",
+      "to": "apps/api/src/routes/analytics.ts",
+      "source": {
+        "file": "apps/api/src/app.ts",
+        "line": 10
+      },
+      "specifier": "./routes/analytics",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/app.ts",
+      "relation": "imports",
+      "to": "apps/api/src/routes/answers.ts",
+      "source": {
+        "file": "apps/api/src/app.ts",
+        "line": 11
+      },
+      "specifier": "./routes/answers",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/app.ts",
+      "relation": "imports",
+      "to": "apps/api/src/routes/dashboard.ts",
+      "source": {
+        "file": "apps/api/src/app.ts",
+        "line": 12
+      },
+      "specifier": "./routes/dashboard",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/app.ts",
+      "relation": "imports",
+      "to": "apps/api/src/routes/domains.ts",
+      "source": {
+        "file": "apps/api/src/app.ts",
+        "line": 13
+      },
+      "specifier": "./routes/domains",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/app.ts",
+      "relation": "imports",
+      "to": "apps/api/src/routes/lesson-views.ts",
+      "source": {
+        "file": "apps/api/src/app.ts",
+        "line": 14
+      },
+      "specifier": "./routes/lesson-views",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/app.ts",
+      "relation": "imports",
+      "to": "apps/api/src/routes/review.ts",
+      "source": {
+        "file": "apps/api/src/app.ts",
+        "line": 15
+      },
+      "specifier": "./routes/review",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/app.ts",
+      "relation": "imports",
+      "to": "apps/api/src/services/errors.ts",
+      "source": {
+        "file": "apps/api/src/app.ts",
+        "line": 16
+      },
+      "specifier": "./services/errors",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/app.ts",
+      "relation": "mounts",
+      "to": "apps/api/src/routes/activity.ts",
+      "source": {
+        "file": "apps/api/src/app.ts",
+        "line": 64
+      },
+      "prefix": "/activity"
+    },
+    {
+      "from": "apps/api/src/app.ts",
+      "relation": "mounts",
+      "to": "apps/api/src/routes/analytics.ts",
+      "source": {
+        "file": "apps/api/src/app.ts",
+        "line": 63
+      },
+      "prefix": "/analytics"
+    },
+    {
+      "from": "apps/api/src/app.ts",
+      "relation": "mounts",
+      "to": "apps/api/src/routes/answers.ts",
+      "source": {
+        "file": "apps/api/src/app.ts",
+        "line": 58
+      },
+      "prefix": "/answers"
+    },
+    {
+      "from": "apps/api/src/app.ts",
+      "relation": "mounts",
+      "to": "apps/api/src/routes/dashboard.ts",
+      "source": {
+        "file": "apps/api/src/app.ts",
+        "line": 61
+      },
+      "prefix": "/dashboard"
+    },
+    {
+      "from": "apps/api/src/app.ts",
+      "relation": "mounts",
+      "to": "apps/api/src/routes/domains.ts",
+      "source": {
+        "file": "apps/api/src/app.ts",
+        "line": 62
+      },
+      "prefix": "/domains"
+    },
+    {
+      "from": "apps/api/src/app.ts",
+      "relation": "mounts",
+      "to": "apps/api/src/routes/lesson-views.ts",
+      "source": {
+        "file": "apps/api/src/app.ts",
+        "line": 59
+      },
+      "prefix": "/lesson-views"
+    },
+    {
+      "from": "apps/api/src/app.ts",
+      "relation": "mounts",
+      "to": "apps/api/src/routes/review.ts",
+      "source": {
+        "file": "apps/api/src/app.ts",
+        "line": 60
+      },
+      "prefix": "/review"
+    },
+    {
+      "from": "apps/api/src/client.ts",
+      "relation": "imports",
+      "to": "apps/api/src/index.ts",
+      "source": {
+        "file": "apps/api/src/client.ts",
+        "line": 3
+      },
+      "specifier": "./index",
+      "typeOnly": true
+    },
+    {
+      "from": "apps/api/src/content-sync.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/content-parser.ts#createContentBundle",
+      "source": {
+        "file": "apps/api/src/content-sync.ts",
+        "line": 3
+      }
+    },
+    {
+      "from": "apps/api/src/content-sync.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/content-parser.ts#ParsedContentSourceFile",
+      "source": {
+        "file": "apps/api/src/content-sync.ts",
+        "line": 3
+      }
+    },
+    {
+      "from": "apps/api/src/content-sync.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#DomainKey",
+      "source": {
+        "file": "apps/api/src/content-sync.ts",
+        "line": 3
+      }
+    },
+    {
+      "from": "apps/api/src/content-sync.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/api/src/content-sync.ts",
+        "line": 3
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/dal/activity-repository.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#RecentActivityItem",
+      "source": {
+        "file": "apps/api/src/dal/activity-repository.ts",
+        "line": 4
+      }
+    },
+    {
+      "from": "apps/api/src/dal/activity-repository.ts",
+      "relation": "imports",
+      "to": "apps/api/src/services/activity-service.ts",
+      "source": {
+        "file": "apps/api/src/dal/activity-repository.ts",
+        "line": 6
+      },
+      "specifier": "../services/activity-service",
+      "typeOnly": true
+    },
+    {
+      "from": "apps/api/src/dal/activity-repository.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/api/src/dal/activity-repository.ts",
+        "line": 4
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/dal/analytics-repository.ts",
+      "relation": "imports",
+      "to": "apps/api/src/services/analytics-service.ts",
+      "source": {
+        "file": "apps/api/src/dal/analytics-repository.ts",
+        "line": 6
+      },
+      "specifier": "../services/analytics-service",
+      "typeOnly": true
+    },
+    {
+      "from": "apps/api/src/dal/analytics-repository.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/api/src/dal/analytics-repository.ts",
+        "line": 4
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/dal/answer-repository.ts",
+      "relation": "imports",
+      "to": "apps/api/src/services/answer-service.ts",
+      "source": {
+        "file": "apps/api/src/dal/answer-repository.ts",
+        "line": 6
+      },
+      "specifier": "../services/answer-service",
+      "typeOnly": true
+    },
+    {
+      "from": "apps/api/src/dal/answer-repository.ts",
+      "relation": "imports",
+      "to": "apps/api/src/services/errors.ts",
+      "source": {
+        "file": "apps/api/src/dal/answer-repository.ts",
+        "line": 7
+      },
+      "specifier": "../services/errors",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/dal/answer-repository.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/api/src/dal/answer-repository.ts",
+        "line": 4
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/dal/domains-repository.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#domainKeySchema",
+      "source": {
+        "file": "apps/api/src/dal/domains-repository.ts",
+        "line": 4
+      }
+    },
+    {
+      "from": "apps/api/src/dal/domains-repository.ts",
+      "relation": "imports",
+      "to": "apps/api/src/services/domains-service.ts",
+      "source": {
+        "file": "apps/api/src/dal/domains-repository.ts",
+        "line": 6
+      },
+      "specifier": "../services/domains-service",
+      "typeOnly": true
+    },
+    {
+      "from": "apps/api/src/dal/domains-repository.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/api/src/dal/domains-repository.ts",
+        "line": 4
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/dal/lesson-view-repository.ts",
+      "relation": "imports",
+      "to": "apps/api/src/services/lesson-view-service.ts",
+      "source": {
+        "file": "apps/api/src/dal/lesson-view-repository.ts",
+        "line": 5
+      },
+      "specifier": "../services/lesson-view-service",
+      "typeOnly": true
+    },
+    {
+      "from": "apps/api/src/dal/lesson-view-repository.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/api/src/dal/lesson-view-repository.ts",
+        "line": 3
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/dal/review-repository.ts",
+      "relation": "imports",
+      "to": "apps/api/src/services/review-service.ts",
+      "source": {
+        "file": "apps/api/src/dal/review-repository.ts",
+        "line": 6
+      },
+      "specifier": "../services/review-service",
+      "typeOnly": true
+    },
+    {
+      "from": "apps/api/src/dal/review-repository.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/api/src/dal/review-repository.ts",
+        "line": 4
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/dev-seed.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/srs/sm2.ts#DAY_MS",
+      "source": {
+        "file": "apps/api/src/dev-seed.ts",
+        "line": 1
+      }
+    },
+    {
+      "from": "apps/api/src/dev-seed.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/srs/sm2.ts#initialSrs",
+      "source": {
+        "file": "apps/api/src/dev-seed.ts",
+        "line": 1
+      }
+    },
+    {
+      "from": "apps/api/src/dev-seed.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/srs/sm2.ts#reviewSrs",
+      "source": {
+        "file": "apps/api/src/dev-seed.ts",
+        "line": 1
+      }
+    },
+    {
+      "from": "apps/api/src/dev-seed.ts",
+      "relation": "imports",
+      "to": "apps/api/src/content-sync.ts",
+      "source": {
+        "file": "apps/api/src/dev-seed.ts",
+        "line": 3
+      },
+      "specifier": "./content-sync",
+      "typeOnly": true
+    },
+    {
+      "from": "apps/api/src/dev-seed.ts",
+      "relation": "imports",
+      "to": "apps/api/src/fixed-user.ts",
+      "source": {
+        "file": "apps/api/src/dev-seed.ts",
+        "line": 4
+      },
+      "specifier": "./fixed-user",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/dev-seed.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/api/src/dev-seed.ts",
+        "line": 1
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/index.ts",
+      "relation": "imports",
+      "to": "apps/api/src/app.ts",
+      "source": {
+        "file": "apps/api/src/index.ts",
+        "line": 1
+      },
+      "specifier": "./app",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/index.ts",
+      "relation": "imports",
+      "to": "apps/api/src/app.ts",
+      "source": {
+        "file": "apps/api/src/index.ts",
+        "line": 2
+      },
+      "specifier": "./app",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/index.ts",
+      "relation": "imports",
+      "to": "apps/api/src/app.ts",
+      "source": {
+        "file": "apps/api/src/index.ts",
+        "line": 3
+      },
+      "specifier": "./app",
+      "typeOnly": true
+    },
+    {
+      "from": "apps/api/src/index.ts",
+      "relation": "imports",
+      "to": "apps/api/src/internal-api.ts",
+      "source": {
+        "file": "apps/api/src/index.ts",
+        "line": 4
+      },
+      "specifier": "./internal-api",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/internal-api.ts",
+      "relation": "imports",
+      "to": "apps/api/src/app.ts",
+      "source": {
+        "file": "apps/api/src/internal-api.ts",
+        "line": 3
+      },
+      "specifier": "./app",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/internal-api.ts",
+      "relation": "imports",
+      "to": "apps/api/src/env.ts",
+      "source": {
+        "file": "apps/api/src/internal-api.ts",
+        "line": 4
+      },
+      "specifier": "./env",
+      "typeOnly": true
+    },
+    {
+      "from": "apps/api/src/middleware/access-boundary.ts",
+      "relation": "imports",
+      "to": "apps/api/src/env.ts",
+      "source": {
+        "file": "apps/api/src/middleware/access-boundary.ts",
+        "line": 5
+      },
+      "specifier": "../env",
+      "typeOnly": true
+    },
+    {
+      "from": "apps/api/src/middleware/user-context.ts",
+      "relation": "imports",
+      "to": "apps/api/src/env.ts",
+      "source": {
+        "file": "apps/api/src/middleware/user-context.ts",
+        "line": 3
+      },
+      "specifier": "../env",
+      "typeOnly": true
+    },
+    {
+      "from": "apps/api/src/middleware/user-context.ts",
+      "relation": "imports",
+      "to": "apps/api/src/fixed-user.ts",
+      "source": {
+        "file": "apps/api/src/middleware/user-context.ts",
+        "line": 4
+      },
+      "specifier": "../fixed-user",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/persistent-write-observability.ts",
+      "relation": "imports",
+      "to": "apps/api/src/persistent-write-rate-limit.ts",
+      "source": {
+        "file": "apps/api/src/persistent-write-observability.ts",
+        "line": 1
+      },
+      "specifier": "./persistent-write-rate-limit",
+      "typeOnly": true
+    },
+    {
+      "from": "apps/api/src/persistent-write-rate-limit-guard.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#RateLimitedErrorResponse",
+      "source": {
+        "file": "apps/api/src/persistent-write-rate-limit-guard.ts",
+        "line": 1
+      }
+    },
+    {
+      "from": "apps/api/src/persistent-write-rate-limit-guard.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#RateLimitUnavailableErrorResponse",
+      "source": {
+        "file": "apps/api/src/persistent-write-rate-limit-guard.ts",
+        "line": 1
+      }
+    },
+    {
+      "from": "apps/api/src/persistent-write-rate-limit-guard.ts",
+      "relation": "imports",
+      "to": "apps/api/src/env.ts",
+      "source": {
+        "file": "apps/api/src/persistent-write-rate-limit-guard.ts",
+        "line": 4
+      },
+      "specifier": "./env",
+      "typeOnly": true
+    },
+    {
+      "from": "apps/api/src/persistent-write-rate-limit-guard.ts",
+      "relation": "imports",
+      "to": "apps/api/src/persistent-write-observability.ts",
+      "source": {
+        "file": "apps/api/src/persistent-write-rate-limit-guard.ts",
+        "line": 5
+      },
+      "specifier": "./persistent-write-observability",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/persistent-write-rate-limit-guard.ts",
+      "relation": "imports",
+      "to": "apps/api/src/persistent-write-rate-limit.ts",
+      "source": {
+        "file": "apps/api/src/persistent-write-rate-limit-guard.ts",
+        "line": 6
+      },
+      "specifier": "./persistent-write-rate-limit",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/persistent-write-rate-limit-guard.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/api/src/persistent-write-rate-limit-guard.ts",
+        "line": 1
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": true
+    },
+    {
+      "from": "apps/api/src/routes/activity.ts",
+      "relation": "calls-symbol",
+      "to": "symbol:apps/api/src/dal/activity-repository.ts#createActivityDeps",
+      "source": {
+        "file": "apps/api/src/routes/activity.ts",
+        "line": 14
+      }
+    },
+    {
+      "from": "apps/api/src/routes/activity.ts",
+      "relation": "calls-symbol",
+      "to": "symbol:apps/api/src/services/activity-service.ts#getRecentActivity",
+      "source": {
+        "file": "apps/api/src/routes/activity.ts",
+        "line": 14
+      }
+    },
+    {
+      "from": "apps/api/src/routes/activity.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#analyticsRequestSchema",
+      "source": {
+        "file": "apps/api/src/routes/activity.ts",
+        "line": 2
+      }
+    },
+    {
+      "from": "apps/api/src/routes/activity.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#RecentActivityResponse",
+      "source": {
+        "file": "apps/api/src/routes/activity.ts",
+        "line": 2
+      }
+    },
+    {
+      "from": "apps/api/src/routes/activity.ts",
+      "relation": "imports",
+      "to": "apps/api/src/dal/activity-repository.ts",
+      "source": {
+        "file": "apps/api/src/routes/activity.ts",
+        "line": 6
+      },
+      "specifier": "../dal/activity-repository",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/routes/activity.ts",
+      "relation": "imports",
+      "to": "apps/api/src/env.ts",
+      "source": {
+        "file": "apps/api/src/routes/activity.ts",
+        "line": 7
+      },
+      "specifier": "../env",
+      "typeOnly": true
+    },
+    {
+      "from": "apps/api/src/routes/activity.ts",
+      "relation": "imports",
+      "to": "apps/api/src/services/activity-service.ts",
+      "source": {
+        "file": "apps/api/src/routes/activity.ts",
+        "line": 8
+      },
+      "specifier": "../services/activity-service",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/routes/activity.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/api/src/routes/activity.ts",
+        "line": 2
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/routes/analytics.ts",
+      "relation": "calls-symbol",
+      "to": "symbol:apps/api/src/dal/analytics-repository.ts#createAnalyticsDeps",
+      "source": {
+        "file": "apps/api/src/routes/analytics.ts",
+        "line": 23
+      }
+    },
+    {
+      "from": "apps/api/src/routes/analytics.ts",
+      "relation": "calls-symbol",
+      "to": "symbol:apps/api/src/services/analytics-service.ts#getAnalyticsHeatmap",
+      "source": {
+        "file": "apps/api/src/routes/analytics.ts",
+        "line": 44
+      }
+    },
+    {
+      "from": "apps/api/src/routes/analytics.ts",
+      "relation": "calls-symbol",
+      "to": "symbol:apps/api/src/services/analytics-service.ts#getAnalyticsMistakes",
+      "source": {
+        "file": "apps/api/src/routes/analytics.ts",
+        "line": 52
+      }
+    },
+    {
+      "from": "apps/api/src/routes/analytics.ts",
+      "relation": "calls-symbol",
+      "to": "symbol:apps/api/src/services/analytics-service.ts#getAnalyticsSummary",
+      "source": {
+        "file": "apps/api/src/routes/analytics.ts",
+        "line": 28
+      }
+    },
+    {
+      "from": "apps/api/src/routes/analytics.ts",
+      "relation": "calls-symbol",
+      "to": "symbol:apps/api/src/services/analytics-service.ts#getAnalyticsWeekly",
+      "source": {
+        "file": "apps/api/src/routes/analytics.ts",
+        "line": 36
+      }
+    },
+    {
+      "from": "apps/api/src/routes/analytics.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsHeatmapResponse",
+      "source": {
+        "file": "apps/api/src/routes/analytics.ts",
+        "line": 3
+      }
+    },
+    {
+      "from": "apps/api/src/routes/analytics.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#analyticsRequestSchema",
+      "source": {
+        "file": "apps/api/src/routes/analytics.ts",
+        "line": 7
+      }
+    },
+    {
+      "from": "apps/api/src/routes/analytics.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsSummaryResponse",
+      "source": {
+        "file": "apps/api/src/routes/analytics.ts",
+        "line": 4
+      }
+    },
+    {
+      "from": "apps/api/src/routes/analytics.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsWeeklyResponse",
+      "source": {
+        "file": "apps/api/src/routes/analytics.ts",
+        "line": 5
+      }
+    },
+    {
+      "from": "apps/api/src/routes/analytics.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#MistakesResponse",
+      "source": {
+        "file": "apps/api/src/routes/analytics.ts",
+        "line": 6
+      }
+    },
+    {
+      "from": "apps/api/src/routes/analytics.ts",
+      "relation": "imports",
+      "to": "apps/api/src/content-estimates.ts",
+      "source": {
+        "file": "apps/api/src/routes/analytics.ts",
+        "line": 12
+      },
+      "specifier": "../content-estimates",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/routes/analytics.ts",
+      "relation": "imports",
+      "to": "apps/api/src/dal/analytics-repository.ts",
+      "source": {
+        "file": "apps/api/src/routes/analytics.ts",
+        "line": 13
+      },
+      "specifier": "../dal/analytics-repository",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/routes/analytics.ts",
+      "relation": "imports",
+      "to": "apps/api/src/env.ts",
+      "source": {
+        "file": "apps/api/src/routes/analytics.ts",
+        "line": 14
+      },
+      "specifier": "../env",
+      "typeOnly": true
+    },
+    {
+      "from": "apps/api/src/routes/analytics.ts",
+      "relation": "imports",
+      "to": "apps/api/src/services/analytics-service.ts",
+      "source": {
+        "file": "apps/api/src/routes/analytics.ts",
+        "line": 15
+      },
+      "specifier": "../services/analytics-service",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/routes/analytics.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/api/src/routes/analytics.ts",
+        "line": 2
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/routes/answers.ts",
+      "relation": "calls-symbol",
+      "to": "symbol:apps/api/src/dal/answer-repository.ts#createAnswerDeps",
+      "source": {
+        "file": "apps/api/src/routes/answers.ts",
+        "line": 31
+      }
+    },
+    {
+      "from": "apps/api/src/routes/answers.ts",
+      "relation": "calls-symbol",
+      "to": "symbol:apps/api/src/services/answer-service.ts#submitAnswer",
+      "source": {
+        "file": "apps/api/src/routes/answers.ts",
+        "line": 31
+      }
+    },
+    {
+      "from": "apps/api/src/routes/answers.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#answerRequestSchema",
+      "source": {
+        "file": "apps/api/src/routes/answers.ts",
+        "line": 2
+      }
+    },
+    {
+      "from": "apps/api/src/routes/answers.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#AnswerResponse",
+      "source": {
+        "file": "apps/api/src/routes/answers.ts",
+        "line": 2
+      }
+    },
+    {
+      "from": "apps/api/src/routes/answers.ts",
+      "relation": "imports",
+      "to": "apps/api/src/dal/answer-repository.ts",
+      "source": {
+        "file": "apps/api/src/routes/answers.ts",
+        "line": 6
+      },
+      "specifier": "../dal/answer-repository",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/routes/answers.ts",
+      "relation": "imports",
+      "to": "apps/api/src/env.ts",
+      "source": {
+        "file": "apps/api/src/routes/answers.ts",
+        "line": 7
+      },
+      "specifier": "../env",
+      "typeOnly": true
+    },
+    {
+      "from": "apps/api/src/routes/answers.ts",
+      "relation": "imports",
+      "to": "apps/api/src/persistent-write-observability.ts",
+      "source": {
+        "file": "apps/api/src/routes/answers.ts",
+        "line": 8
+      },
+      "specifier": "../persistent-write-observability",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/routes/answers.ts",
+      "relation": "imports",
+      "to": "apps/api/src/persistent-write-rate-limit-guard.ts",
+      "source": {
+        "file": "apps/api/src/routes/answers.ts",
+        "line": 10
+      },
+      "specifier": "../persistent-write-rate-limit-guard",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/routes/answers.ts",
+      "relation": "imports",
+      "to": "apps/api/src/persistent-write-rate-limit.ts",
+      "source": {
+        "file": "apps/api/src/routes/answers.ts",
+        "line": 9
+      },
+      "specifier": "../persistent-write-rate-limit",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/routes/answers.ts",
+      "relation": "imports",
+      "to": "apps/api/src/services/answer-service.ts",
+      "source": {
+        "file": "apps/api/src/routes/answers.ts",
+        "line": 11
+      },
+      "specifier": "../services/answer-service",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/routes/answers.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/api/src/routes/answers.ts",
+        "line": 2
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/routes/dashboard.ts",
+      "relation": "calls-symbol",
+      "to": "symbol:apps/api/src/dal/review-repository.ts#createReviewDeps",
+      "source": {
+        "file": "apps/api/src/routes/dashboard.ts",
+        "line": 10
+      }
+    },
+    {
+      "from": "apps/api/src/routes/dashboard.ts",
+      "relation": "calls-symbol",
+      "to": "symbol:apps/api/src/services/review-service.ts#getDueCount",
+      "source": {
+        "file": "apps/api/src/routes/dashboard.ts",
+        "line": 10
+      }
+    },
+    {
+      "from": "apps/api/src/routes/dashboard.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#DueCountResponse",
+      "source": {
+        "file": "apps/api/src/routes/dashboard.ts",
+        "line": 1
+      }
+    },
+    {
+      "from": "apps/api/src/routes/dashboard.ts",
+      "relation": "imports",
+      "to": "apps/api/src/dal/review-repository.ts",
+      "source": {
+        "file": "apps/api/src/routes/dashboard.ts",
+        "line": 5
+      },
+      "specifier": "../dal/review-repository",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/routes/dashboard.ts",
+      "relation": "imports",
+      "to": "apps/api/src/env.ts",
+      "source": {
+        "file": "apps/api/src/routes/dashboard.ts",
+        "line": 6
+      },
+      "specifier": "../env",
+      "typeOnly": true
+    },
+    {
+      "from": "apps/api/src/routes/dashboard.ts",
+      "relation": "imports",
+      "to": "apps/api/src/services/review-service.ts",
+      "source": {
+        "file": "apps/api/src/routes/dashboard.ts",
+        "line": 7
+      },
+      "specifier": "../services/review-service",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/routes/dashboard.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/api/src/routes/dashboard.ts",
+        "line": 1
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": true
+    },
+    {
+      "from": "apps/api/src/routes/domains.ts",
+      "relation": "calls-symbol",
+      "to": "symbol:apps/api/src/dal/domains-repository.ts#createDomainsDeps",
+      "source": {
+        "file": "apps/api/src/routes/domains.ts",
+        "line": 14
+      }
+    },
+    {
+      "from": "apps/api/src/routes/domains.ts",
+      "relation": "calls-symbol",
+      "to": "symbol:apps/api/src/services/domains-service.ts#getDomains",
+      "source": {
+        "file": "apps/api/src/routes/domains.ts",
+        "line": 14
+      }
+    },
+    {
+      "from": "apps/api/src/routes/domains.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#domainsRequestSchema",
+      "source": {
+        "file": "apps/api/src/routes/domains.ts",
+        "line": 2
+      }
+    },
+    {
+      "from": "apps/api/src/routes/domains.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#DomainsResponse",
+      "source": {
+        "file": "apps/api/src/routes/domains.ts",
+        "line": 2
+      }
+    },
+    {
+      "from": "apps/api/src/routes/domains.ts",
+      "relation": "imports",
+      "to": "apps/api/src/dal/domains-repository.ts",
+      "source": {
+        "file": "apps/api/src/routes/domains.ts",
+        "line": 6
+      },
+      "specifier": "../dal/domains-repository",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/routes/domains.ts",
+      "relation": "imports",
+      "to": "apps/api/src/env.ts",
+      "source": {
+        "file": "apps/api/src/routes/domains.ts",
+        "line": 7
+      },
+      "specifier": "../env",
+      "typeOnly": true
+    },
+    {
+      "from": "apps/api/src/routes/domains.ts",
+      "relation": "imports",
+      "to": "apps/api/src/services/domains-service.ts",
+      "source": {
+        "file": "apps/api/src/routes/domains.ts",
+        "line": 8
+      },
+      "specifier": "../services/domains-service",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/routes/domains.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/api/src/routes/domains.ts",
+        "line": 2
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/routes/lesson-views.ts",
+      "relation": "calls-symbol",
+      "to": "symbol:apps/api/src/dal/lesson-view-repository.ts#createLessonViewDeps",
+      "source": {
+        "file": "apps/api/src/routes/lesson-views.ts",
+        "line": 31
+      }
+    },
+    {
+      "from": "apps/api/src/routes/lesson-views.ts",
+      "relation": "calls-symbol",
+      "to": "symbol:apps/api/src/services/lesson-view-service.ts#recordLessonView",
+      "source": {
+        "file": "apps/api/src/routes/lesson-views.ts",
+        "line": 31
+      }
+    },
+    {
+      "from": "apps/api/src/routes/lesson-views.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#lessonViewRequestSchema",
+      "source": {
+        "file": "apps/api/src/routes/lesson-views.ts",
+        "line": 2
+      }
+    },
+    {
+      "from": "apps/api/src/routes/lesson-views.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#LessonViewResponse",
+      "source": {
+        "file": "apps/api/src/routes/lesson-views.ts",
+        "line": 2
+      }
+    },
+    {
+      "from": "apps/api/src/routes/lesson-views.ts",
+      "relation": "imports",
+      "to": "apps/api/src/dal/lesson-view-repository.ts",
+      "source": {
+        "file": "apps/api/src/routes/lesson-views.ts",
+        "line": 6
+      },
+      "specifier": "../dal/lesson-view-repository",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/routes/lesson-views.ts",
+      "relation": "imports",
+      "to": "apps/api/src/env.ts",
+      "source": {
+        "file": "apps/api/src/routes/lesson-views.ts",
+        "line": 7
+      },
+      "specifier": "../env",
+      "typeOnly": true
+    },
+    {
+      "from": "apps/api/src/routes/lesson-views.ts",
+      "relation": "imports",
+      "to": "apps/api/src/persistent-write-observability.ts",
+      "source": {
+        "file": "apps/api/src/routes/lesson-views.ts",
+        "line": 8
+      },
+      "specifier": "../persistent-write-observability",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/routes/lesson-views.ts",
+      "relation": "imports",
+      "to": "apps/api/src/persistent-write-rate-limit-guard.ts",
+      "source": {
+        "file": "apps/api/src/routes/lesson-views.ts",
+        "line": 10
+      },
+      "specifier": "../persistent-write-rate-limit-guard",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/routes/lesson-views.ts",
+      "relation": "imports",
+      "to": "apps/api/src/persistent-write-rate-limit.ts",
+      "source": {
+        "file": "apps/api/src/routes/lesson-views.ts",
+        "line": 9
+      },
+      "specifier": "../persistent-write-rate-limit",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/routes/lesson-views.ts",
+      "relation": "imports",
+      "to": "apps/api/src/services/lesson-view-service.ts",
+      "source": {
+        "file": "apps/api/src/routes/lesson-views.ts",
+        "line": 11
+      },
+      "specifier": "../services/lesson-view-service",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/routes/lesson-views.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/api/src/routes/lesson-views.ts",
+        "line": 2
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/routes/review.ts",
+      "relation": "calls-symbol",
+      "to": "symbol:apps/api/src/dal/review-repository.ts#createReviewDeps",
+      "source": {
+        "file": "apps/api/src/routes/review.ts",
+        "line": 10
+      }
+    },
+    {
+      "from": "apps/api/src/routes/review.ts",
+      "relation": "calls-symbol",
+      "to": "symbol:apps/api/src/services/review-service.ts#getReviewQueue",
+      "source": {
+        "file": "apps/api/src/routes/review.ts",
+        "line": 10
+      }
+    },
+    {
+      "from": "apps/api/src/routes/review.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#ReviewQueueResponse",
+      "source": {
+        "file": "apps/api/src/routes/review.ts",
+        "line": 1
+      }
+    },
+    {
+      "from": "apps/api/src/routes/review.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#reviewQueueResponseSchema",
+      "source": {
+        "file": "apps/api/src/routes/review.ts",
+        "line": 1
+      }
+    },
+    {
+      "from": "apps/api/src/routes/review.ts",
+      "relation": "imports",
+      "to": "apps/api/src/dal/review-repository.ts",
+      "source": {
+        "file": "apps/api/src/routes/review.ts",
+        "line": 5
+      },
+      "specifier": "../dal/review-repository",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/routes/review.ts",
+      "relation": "imports",
+      "to": "apps/api/src/env.ts",
+      "source": {
+        "file": "apps/api/src/routes/review.ts",
+        "line": 6
+      },
+      "specifier": "../env",
+      "typeOnly": true
+    },
+    {
+      "from": "apps/api/src/routes/review.ts",
+      "relation": "imports",
+      "to": "apps/api/src/services/review-service.ts",
+      "source": {
+        "file": "apps/api/src/routes/review.ts",
+        "line": 7
+      },
+      "specifier": "../services/review-service",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/routes/review.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/api/src/routes/review.ts",
+        "line": 1
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/services/activity-service.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#compareRecentActivity",
+      "source": {
+        "file": "apps/api/src/services/activity-service.ts",
+        "line": 4
+      }
+    },
+    {
+      "from": "apps/api/src/services/activity-service.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#RecentActivityItem",
+      "source": {
+        "file": "apps/api/src/services/activity-service.ts",
+        "line": 2
+      }
+    },
+    {
+      "from": "apps/api/src/services/activity-service.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#RecentActivityResponse",
+      "source": {
+        "file": "apps/api/src/services/activity-service.ts",
+        "line": 3
+      }
+    },
+    {
+      "from": "apps/api/src/services/activity-service.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/api/src/services/activity-service.ts",
+        "line": 1
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/services/analytics-service.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsHeatmapResponse",
+      "source": {
+        "file": "apps/api/src/services/analytics-service.ts",
+        "line": 2
+      }
+    },
+    {
+      "from": "apps/api/src/services/analytics-service.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsSummaryResponse",
+      "source": {
+        "file": "apps/api/src/services/analytics-service.ts",
+        "line": 3
+      }
+    },
+    {
+      "from": "apps/api/src/services/analytics-service.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsWeeklyResponse",
+      "source": {
+        "file": "apps/api/src/services/analytics-service.ts",
+        "line": 4
+      }
+    },
+    {
+      "from": "apps/api/src/services/analytics-service.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#compareMistakeRank",
+      "source": {
+        "file": "apps/api/src/services/analytics-service.ts",
+        "line": 6
+      }
+    },
+    {
+      "from": "apps/api/src/services/analytics-service.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#MistakesResponse",
+      "source": {
+        "file": "apps/api/src/services/analytics-service.ts",
+        "line": 5
+      }
+    },
+    {
+      "from": "apps/api/src/services/analytics-service.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/api/src/services/analytics-service.ts",
+        "line": 1
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/services/answer-service.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/srs/sm2.ts#initialSrs",
+      "source": {
+        "file": "apps/api/src/services/answer-service.ts",
+        "line": 1
+      }
+    },
+    {
+      "from": "apps/api/src/services/answer-service.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/srs/sm2.ts#reviewSrs",
+      "source": {
+        "file": "apps/api/src/services/answer-service.ts",
+        "line": 1
+      }
+    },
+    {
+      "from": "apps/api/src/services/answer-service.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/srs/sm2.ts#SrsInput",
+      "source": {
+        "file": "apps/api/src/services/answer-service.ts",
+        "line": 1
+      }
+    },
+    {
+      "from": "apps/api/src/services/answer-service.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/srs/sm2.ts#SrsResult",
+      "source": {
+        "file": "apps/api/src/services/answer-service.ts",
+        "line": 1
+      }
+    },
+    {
+      "from": "apps/api/src/services/answer-service.ts",
+      "relation": "imports",
+      "to": "apps/api/src/services/errors.ts",
+      "source": {
+        "file": "apps/api/src/services/answer-service.ts",
+        "line": 3
+      },
+      "specifier": "./errors",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/services/answer-service.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/api/src/services/answer-service.ts",
+        "line": 1
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/services/domains-service.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#DomainsResponse",
+      "source": {
+        "file": "apps/api/src/services/domains-service.ts",
+        "line": 3
+      }
+    },
+    {
+      "from": "apps/api/src/services/domains-service.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#DOMAIN_LABELS",
+      "source": {
+        "file": "apps/api/src/services/domains-service.ts",
+        "line": 1
+      }
+    },
+    {
+      "from": "apps/api/src/services/domains-service.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#DomainKey",
+      "source": {
+        "file": "apps/api/src/services/domains-service.ts",
+        "line": 1
+      }
+    },
+    {
+      "from": "apps/api/src/services/domains-service.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/api/src/services/domains-service.ts",
+        "line": 1
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/api/src/services/domains-service.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/api/src/services/domains-service.ts",
+        "line": 3
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": true
+    },
+    {
+      "from": "apps/api/wrangler.toml",
+      "relation": "binds-database",
+      "to": "binding:D1:DB",
+      "source": {
+        "file": "apps/api/wrangler.toml",
+        "line": 7
+      }
+    },
+    {
+      "from": "apps/web/src/features/analytics/api/analytics-api.ts",
+      "relation": "calls-endpoint",
+      "to": "endpoint:GET /analytics/mistakes",
+      "source": {
+        "file": "apps/web/src/features/analytics/api/analytics-api.ts",
+        "line": 31
+      }
+    },
+    {
+      "from": "apps/web/src/features/analytics/api/analytics-api.ts",
+      "relation": "calls-endpoint",
+      "to": "endpoint:GET /analytics/summary",
+      "source": {
+        "file": "apps/web/src/features/analytics/api/analytics-api.ts",
+        "line": 15
+      }
+    },
+    {
+      "from": "apps/web/src/features/analytics/api/analytics-api.ts",
+      "relation": "calls-endpoint",
+      "to": "endpoint:GET /analytics/weekly",
+      "source": {
+        "file": "apps/web/src/features/analytics/api/analytics-api.ts",
+        "line": 23
+      }
+    },
+    {
+      "from": "apps/web/src/features/analytics/api/analytics-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#analyticsRequestSchema",
+      "source": {
+        "file": "apps/web/src/features/analytics/api/analytics-api.ts",
+        "line": 5
+      }
+    },
+    {
+      "from": "apps/web/src/features/analytics/api/analytics-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsSummaryResponse",
+      "source": {
+        "file": "apps/web/src/features/analytics/api/analytics-api.ts",
+        "line": 2
+      }
+    },
+    {
+      "from": "apps/web/src/features/analytics/api/analytics-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#analyticsSummaryResponseSchema",
+      "source": {
+        "file": "apps/web/src/features/analytics/api/analytics-api.ts",
+        "line": 6
+      }
+    },
+    {
+      "from": "apps/web/src/features/analytics/api/analytics-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsWeeklyResponse",
+      "source": {
+        "file": "apps/web/src/features/analytics/api/analytics-api.ts",
+        "line": 3
+      }
+    },
+    {
+      "from": "apps/web/src/features/analytics/api/analytics-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#analyticsWeeklyResponseSchema",
+      "source": {
+        "file": "apps/web/src/features/analytics/api/analytics-api.ts",
+        "line": 7
+      }
+    },
+    {
+      "from": "apps/web/src/features/analytics/api/analytics-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#MistakesResponse",
+      "source": {
+        "file": "apps/web/src/features/analytics/api/analytics-api.ts",
+        "line": 4
+      }
+    },
+    {
+      "from": "apps/web/src/features/analytics/api/analytics-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#mistakesResponseSchema",
+      "source": {
+        "file": "apps/web/src/features/analytics/api/analytics-api.ts",
+        "line": 8
+      }
+    },
+    {
+      "from": "apps/web/src/features/analytics/api/analytics-api.ts",
+      "relation": "imports",
+      "to": "apps/web/src/lib/api.ts",
+      "source": {
+        "file": "apps/web/src/features/analytics/api/analytics-api.ts",
+        "line": 11
+      },
+      "specifier": "@/lib/api",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/analytics/api/analytics-api.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/web/src/features/analytics/api/analytics-api.ts",
+        "line": 1
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/analytics/server/load-analytics.ts",
+      "relation": "imports",
+      "to": "apps/web/src/features/analytics/api/analytics-api.ts",
+      "source": {
+        "file": "apps/web/src/features/analytics/server/load-analytics.ts",
+        "line": 5
+      },
+      "specifier": "../api/analytics-api",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/analytics/server/load-analytics.ts",
+      "relation": "imports",
+      "to": "apps/web/src/lib/api.ts",
+      "source": {
+        "file": "apps/web/src/features/analytics/server/load-analytics.ts",
+        "line": 3
+      },
+      "specifier": "@/lib/api",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+      "relation": "calls-endpoint",
+      "to": "endpoint:GET /activity/recent",
+      "source": {
+        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+        "line": 56
+      }
+    },
+    {
+      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+      "relation": "calls-endpoint",
+      "to": "endpoint:GET /analytics/heatmap",
+      "source": {
+        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+        "line": 38
+      }
+    },
+    {
+      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+      "relation": "calls-endpoint",
+      "to": "endpoint:GET /analytics/summary",
+      "source": {
+        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+        "line": 29
+      }
+    },
+    {
+      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+      "relation": "calls-endpoint",
+      "to": "endpoint:GET /dashboard/due-count",
+      "source": {
+        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+        "line": 20
+      }
+    },
+    {
+      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+      "relation": "calls-endpoint",
+      "to": "endpoint:GET /domains",
+      "source": {
+        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+        "line": 47
+      }
+    },
+    {
+      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsHeatmapResponse",
+      "source": {
+        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+        "line": 2
+      }
+    },
+    {
+      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#analyticsHeatmapResponseSchema",
+      "source": {
+        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+        "line": 7
+      }
+    },
+    {
+      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#analyticsRequestSchema",
+      "source": {
+        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+        "line": 8
+      }
+    },
+    {
+      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#AnalyticsSummaryResponse",
+      "source": {
+        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+        "line": 3
+      }
+    },
+    {
+      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#analyticsSummaryResponseSchema",
+      "source": {
+        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+        "line": 9
+      }
+    },
+    {
+      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#DomainsResponse",
+      "source": {
+        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+        "line": 4
+      }
+    },
+    {
+      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#domainsResponseSchema",
+      "source": {
+        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+        "line": 10
+      }
+    },
+    {
+      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#DueCountResponse",
+      "source": {
+        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+        "line": 5
+      }
+    },
+    {
+      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#dueCountResponseSchema",
+      "source": {
+        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+        "line": 11
+      }
+    },
+    {
+      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#RecentActivityResponse",
+      "source": {
+        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+        "line": 6
+      }
+    },
+    {
+      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#recentActivityResponseSchema",
+      "source": {
+        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+        "line": 12
+      }
+    },
+    {
+      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+      "relation": "imports",
+      "to": "apps/web/src/lib/api.ts",
+      "source": {
+        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+        "line": 15
+      },
+      "specifier": "@/lib/api",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+        "line": 1
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/dashboard/server/load-dashboard.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#domainKeySchema",
+      "source": {
+        "file": "apps/web/src/features/dashboard/server/load-dashboard.ts",
+        "line": 3
+      }
+    },
+    {
+      "from": "apps/web/src/features/dashboard/server/load-dashboard.ts",
+      "relation": "imports",
+      "to": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+      "source": {
+        "file": "apps/web/src/features/dashboard/server/load-dashboard.ts",
+        "line": 8
+      },
+      "specifier": "../api/dashboard-api",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/dashboard/server/load-dashboard.ts",
+      "relation": "imports",
+      "to": "apps/web/src/lib/api.ts",
+      "source": {
+        "file": "apps/web/src/features/dashboard/server/load-dashboard.ts",
+        "line": 5
+      },
+      "specifier": "@/lib/api",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/dashboard/server/load-dashboard.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/web/src/features/dashboard/server/load-dashboard.ts",
+        "line": 3
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/domains/api/domains-api.ts",
+      "relation": "calls-endpoint",
+      "to": "endpoint:GET /domains",
+      "source": {
+        "file": "apps/web/src/features/domains/api/domains-api.ts",
+        "line": 7
+      }
+    },
+    {
+      "from": "apps/web/src/features/domains/api/domains-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#DomainsResponse",
+      "source": {
+        "file": "apps/web/src/features/domains/api/domains-api.ts",
+        "line": 1
+      }
+    },
+    {
+      "from": "apps/web/src/features/domains/api/domains-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#domainsResponseSchema",
+      "source": {
+        "file": "apps/web/src/features/domains/api/domains-api.ts",
+        "line": 1
+      }
+    },
+    {
+      "from": "apps/web/src/features/domains/api/domains-api.ts",
+      "relation": "imports",
+      "to": "apps/web/src/lib/api.ts",
+      "source": {
+        "file": "apps/web/src/features/domains/api/domains-api.ts",
+        "line": 3
+      },
+      "specifier": "@/lib/api",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/domains/api/domains-api.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/web/src/features/domains/api/domains-api.ts",
+        "line": 1
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/domains/server/load-domains.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#domainKeySchema",
+      "source": {
+        "file": "apps/web/src/features/domains/server/load-domains.ts",
+        "line": 3
+      }
+    },
+    {
+      "from": "apps/web/src/features/domains/server/load-domains.ts",
+      "relation": "imports",
+      "to": "apps/web/src/features/domains/api/domains-api.ts",
+      "source": {
+        "file": "apps/web/src/features/domains/server/load-domains.ts",
+        "line": 8
+      },
+      "specifier": "../api/domains-api",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/domains/server/load-domains.ts",
+      "relation": "imports",
+      "to": "apps/web/src/lib/api.ts",
+      "source": {
+        "file": "apps/web/src/features/domains/server/load-domains.ts",
+        "line": 5
+      },
+      "specifier": "@/lib/api",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/domains/server/load-domains.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/web/src/features/domains/server/load-domains.ts",
+        "line": 3
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/lesson/api/lesson-api.ts",
+      "relation": "calls-endpoint",
+      "to": "endpoint:POST /lesson-views",
+      "source": {
+        "file": "apps/web/src/features/lesson/api/lesson-api.ts",
+        "line": 15
+      }
+    },
+    {
+      "from": "apps/web/src/features/lesson/api/lesson-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#LessonViewRequest",
+      "source": {
+        "file": "apps/web/src/features/lesson/api/lesson-api.ts",
+        "line": 2
+      }
+    },
+    {
+      "from": "apps/web/src/features/lesson/api/lesson-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#lessonViewRequestSchema",
+      "source": {
+        "file": "apps/web/src/features/lesson/api/lesson-api.ts",
+        "line": 4
+      }
+    },
+    {
+      "from": "apps/web/src/features/lesson/api/lesson-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#LessonViewResponse",
+      "source": {
+        "file": "apps/web/src/features/lesson/api/lesson-api.ts",
+        "line": 3
+      }
+    },
+    {
+      "from": "apps/web/src/features/lesson/api/lesson-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#lessonViewResponseSchema",
+      "source": {
+        "file": "apps/web/src/features/lesson/api/lesson-api.ts",
+        "line": 5
+      }
+    },
+    {
+      "from": "apps/web/src/features/lesson/api/lesson-api.ts",
+      "relation": "imports",
+      "to": "apps/web/src/lib/api.ts",
+      "source": {
+        "file": "apps/web/src/features/lesson/api/lesson-api.ts",
+        "line": 8
+      },
+      "specifier": "@/lib/api",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/lesson/api/lesson-api.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/web/src/features/lesson/api/lesson-api.ts",
+        "line": 1
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/lesson/server/load-topic.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#domainKeySchema",
+      "source": {
+        "file": "apps/web/src/features/lesson/server/load-topic.ts",
+        "line": 3
+      }
+    },
+    {
+      "from": "apps/web/src/features/lesson/server/load-topic.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/web/src/features/lesson/server/load-topic.ts",
+        "line": 3
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/quiz/api/quiz-api.ts",
+      "relation": "calls-endpoint",
+      "to": "endpoint:POST /answers",
+      "source": {
+        "file": "apps/web/src/features/quiz/api/quiz-api.ts",
+        "line": 15
+      }
+    },
+    {
+      "from": "apps/web/src/features/quiz/api/quiz-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#AnswerRequest",
+      "source": {
+        "file": "apps/web/src/features/quiz/api/quiz-api.ts",
+        "line": 2
+      }
+    },
+    {
+      "from": "apps/web/src/features/quiz/api/quiz-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#answerRequestSchema",
+      "source": {
+        "file": "apps/web/src/features/quiz/api/quiz-api.ts",
+        "line": 4
+      }
+    },
+    {
+      "from": "apps/web/src/features/quiz/api/quiz-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#AnswerResponse",
+      "source": {
+        "file": "apps/web/src/features/quiz/api/quiz-api.ts",
+        "line": 3
+      }
+    },
+    {
+      "from": "apps/web/src/features/quiz/api/quiz-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#answerResponseSchema",
+      "source": {
+        "file": "apps/web/src/features/quiz/api/quiz-api.ts",
+        "line": 5
+      }
+    },
+    {
+      "from": "apps/web/src/features/quiz/api/quiz-api.ts",
+      "relation": "imports",
+      "to": "apps/web/src/lib/api.ts",
+      "source": {
+        "file": "apps/web/src/features/quiz/api/quiz-api.ts",
+        "line": 8
+      },
+      "specifier": "@/lib/api",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/quiz/api/quiz-api.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/web/src/features/quiz/api/quiz-api.ts",
+        "line": 1
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/review/api/review-api.ts",
+      "relation": "calls-endpoint",
+      "to": "endpoint:GET /review/queue",
+      "source": {
+        "file": "apps/web/src/features/review/api/review-api.ts",
+        "line": 7
+      }
+    },
+    {
+      "from": "apps/web/src/features/review/api/review-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#ReviewQueueResponse",
+      "source": {
+        "file": "apps/web/src/features/review/api/review-api.ts",
+        "line": 1
+      }
+    },
+    {
+      "from": "apps/web/src/features/review/api/review-api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#reviewQueueResponseSchema",
+      "source": {
+        "file": "apps/web/src/features/review/api/review-api.ts",
+        "line": 1
+      }
+    },
+    {
+      "from": "apps/web/src/features/review/api/review-api.ts",
+      "relation": "imports",
+      "to": "apps/web/src/lib/api.ts",
+      "source": {
+        "file": "apps/web/src/features/review/api/review-api.ts",
+        "line": 3
+      },
+      "specifier": "@/lib/api",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/review/api/review-api.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/web/src/features/review/api/review-api.ts",
+        "line": 1
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/review/server/load-review.ts",
+      "relation": "imports",
+      "to": "apps/web/src/features/review/api/review-api.ts",
+      "source": {
+        "file": "apps/web/src/features/review/server/load-review.ts",
+        "line": 8
+      },
+      "specifier": "../api/review-api",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/review/server/load-review.ts",
+      "relation": "imports",
+      "to": "apps/web/src/lib/api.ts",
+      "source": {
+        "file": "apps/web/src/features/review/server/load-review.ts",
+        "line": 5
+      },
+      "specifier": "@/lib/api",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/lib/api.ts",
+      "relation": "imports",
+      "to": "apps/api/src/client.ts",
+      "source": {
+        "file": "apps/web/src/lib/api.ts",
+        "line": 1
+      },
+      "specifier": "@tsl/api/client",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/wrangler.jsonc",
+      "relation": "binds-service",
+      "to": "apps/api/src/internal-api.ts",
+      "source": {
+        "file": "apps/web/wrangler.jsonc",
+        "line": 7
+      },
+      "binding": "API",
+      "service": "tech-study-lab-api",
+      "entrypoint": "InternalApi"
+    },
+    {
+      "from": "endpoint:GET /activity/recent",
+      "relation": "implements",
+      "to": "apps/api/src/routes/activity.ts",
+      "source": {
+        "file": "apps/api/src/routes/activity.ts",
+        "line": 10
+      }
+    },
+    {
+      "from": "endpoint:GET /analytics/heatmap",
+      "relation": "implements",
+      "to": "apps/api/src/routes/analytics.ts",
+      "source": {
+        "file": "apps/api/src/routes/analytics.ts",
+        "line": 43
+      }
+    },
+    {
+      "from": "endpoint:GET /analytics/mistakes",
+      "relation": "implements",
+      "to": "apps/api/src/routes/analytics.ts",
+      "source": {
+        "file": "apps/api/src/routes/analytics.ts",
+        "line": 51
+      }
+    },
+    {
+      "from": "endpoint:GET /analytics/summary",
+      "relation": "implements",
+      "to": "apps/api/src/routes/analytics.ts",
+      "source": {
+        "file": "apps/api/src/routes/analytics.ts",
+        "line": 27
+      }
+    },
+    {
+      "from": "endpoint:GET /analytics/weekly",
+      "relation": "implements",
+      "to": "apps/api/src/routes/analytics.ts",
+      "source": {
+        "file": "apps/api/src/routes/analytics.ts",
+        "line": 35
+      }
+    },
+    {
+      "from": "endpoint:GET /dashboard/due-count",
+      "relation": "implements",
+      "to": "apps/api/src/routes/dashboard.ts",
+      "source": {
+        "file": "apps/api/src/routes/dashboard.ts",
+        "line": 9
+      }
+    },
+    {
+      "from": "endpoint:GET /domains",
+      "relation": "implements",
+      "to": "apps/api/src/routes/domains.ts",
+      "source": {
+        "file": "apps/api/src/routes/domains.ts",
+        "line": 10
+      }
+    },
+    {
+      "from": "endpoint:GET /health",
+      "relation": "implements",
+      "to": "apps/api/src/app.ts",
+      "source": {
+        "file": "apps/api/src/app.ts",
+        "line": 89
+      }
+    },
+    {
+      "from": "endpoint:GET /review/queue",
+      "relation": "implements",
+      "to": "apps/api/src/routes/review.ts",
+      "source": {
+        "file": "apps/api/src/routes/review.ts",
+        "line": 9
+      }
+    },
+    {
+      "from": "endpoint:POST /answers",
+      "relation": "implements",
+      "to": "apps/api/src/routes/answers.ts",
+      "source": {
+        "file": "apps/api/src/routes/answers.ts",
+        "line": 18
+      }
+    },
+    {
+      "from": "endpoint:POST /lesson-views",
+      "relation": "implements",
+      "to": "apps/api/src/routes/lesson-views.ts",
+      "source": {
+        "file": "apps/api/src/routes/lesson-views.ts",
+        "line": 18
+      }
+    },
+    {
+      "from": "packages/shared/src/content-parser.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#domainKeySchema",
+      "source": {
+        "file": "packages/shared/src/content-parser.ts",
+        "line": 5
+      }
+    },
+    {
+      "from": "packages/shared/src/content-parser.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#LessonFrontmatter",
+      "source": {
+        "file": "packages/shared/src/content-parser.ts",
+        "line": 2
+      }
+    },
+    {
+      "from": "packages/shared/src/content-parser.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#McqQuestion",
+      "source": {
+        "file": "packages/shared/src/content-parser.ts",
+        "line": 3
+      }
+    },
+    {
+      "from": "packages/shared/src/content-parser.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#TopicFrontmatter",
+      "source": {
+        "file": "packages/shared/src/content-parser.ts",
+        "line": 4
+      }
+    },
+    {
+      "from": "packages/shared/src/content-parser.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#topicFrontmatterSchema",
+      "source": {
+        "file": "packages/shared/src/content-parser.ts",
+        "line": 6
+      }
+    },
+    {
+      "from": "packages/shared/src/content-parser.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#validatedLessonFrontmatterSchema",
+      "source": {
+        "file": "packages/shared/src/content-parser.ts",
+        "line": 7
+      }
+    },
+    {
+      "from": "packages/shared/src/content-parser.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#validatedMcqSchema",
+      "source": {
+        "file": "packages/shared/src/content-parser.ts",
+        "line": 8
+      }
+    },
+    {
+      "from": "packages/shared/src/content-parser.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/schema/content.ts",
+      "source": {
+        "file": "packages/shared/src/content-parser.ts",
+        "line": 1
+      },
+      "specifier": "./schema/content",
+      "typeOnly": false
+    },
+    {
+      "from": "packages/shared/src/index.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/content-parser.ts",
+      "source": {
+        "file": "packages/shared/src/index.ts",
+        "line": 2
+      },
+      "specifier": "./content-parser",
+      "typeOnly": false
+    },
+    {
+      "from": "packages/shared/src/index.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/db/schema.ts",
+      "source": {
+        "file": "packages/shared/src/index.ts",
+        "line": 1
+      },
+      "specifier": "./db/schema",
+      "typeOnly": false
+    },
+    {
+      "from": "packages/shared/src/index.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/schema/api.ts",
+      "source": {
+        "file": "packages/shared/src/index.ts",
+        "line": 3
+      },
+      "specifier": "./schema/api",
+      "typeOnly": false
+    },
+    {
+      "from": "packages/shared/src/index.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/schema/content.ts",
+      "source": {
+        "file": "packages/shared/src/index.ts",
+        "line": 4
+      },
+      "specifier": "./schema/content",
+      "typeOnly": false
+    },
+    {
+      "from": "packages/shared/src/index.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/srs/sm2.ts",
+      "source": {
+        "file": "packages/shared/src/index.ts",
+        "line": 5
+      },
+      "specifier": "./srs/sm2",
+      "typeOnly": false
+    },
+    {
+      "from": "packages/shared/src/schema/api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#domainKeySchema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 3
+      }
+    },
+    {
+      "from": "packages/shared/src/schema/api.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/schema/content.ts",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 3
+      },
+      "specifier": "./content",
+      "typeOnly": false
+    },
+    {
+      "from": "symbol:apps/api/src/dal/activity-repository.ts#createActivityDeps",
+      "relation": "returns-deps",
+      "to": "symbol:apps/api/src/services/activity-service.ts#ActivityDeps",
+      "source": {
+        "file": "apps/api/src/dal/activity-repository.ts",
+        "line": 8
+      }
+    },
+    {
+      "from": "symbol:apps/api/src/dal/analytics-repository.ts#createAnalyticsDeps",
+      "relation": "returns-deps",
+      "to": "symbol:apps/api/src/services/analytics-service.ts#AnalyticsDeps",
+      "source": {
+        "file": "apps/api/src/dal/analytics-repository.ts",
+        "line": 34
+      }
+    },
+    {
+      "from": "symbol:apps/api/src/dal/answer-repository.ts#createAnswerDeps",
+      "relation": "returns-deps",
+      "to": "symbol:apps/api/src/services/answer-service.ts#AnswerDeps",
+      "source": {
+        "file": "apps/api/src/dal/answer-repository.ts",
+        "line": 9
+      }
+    },
+    {
+      "from": "symbol:apps/api/src/dal/domains-repository.ts#createDomainsDeps",
+      "relation": "returns-deps",
+      "to": "symbol:apps/api/src/services/domains-service.ts#DomainsDeps",
+      "source": {
+        "file": "apps/api/src/dal/domains-repository.ts",
+        "line": 9
+      }
+    },
+    {
+      "from": "symbol:apps/api/src/dal/lesson-view-repository.ts#createLessonViewDeps",
+      "relation": "returns-deps",
+      "to": "symbol:apps/api/src/services/lesson-view-service.ts#LessonViewDeps",
+      "source": {
+        "file": "apps/api/src/dal/lesson-view-repository.ts",
+        "line": 7
+      }
+    },
+    {
+      "from": "symbol:apps/api/src/dal/review-repository.ts#createReviewDeps",
+      "relation": "returns-deps",
+      "to": "symbol:apps/api/src/services/review-service.ts#ReviewDeps",
+      "source": {
+        "file": "apps/api/src/dal/review-repository.ts",
+        "line": 10
+      }
+    },
+    {
+      "from": "symbol:apps/api/src/services/activity-service.ts#getRecentActivity",
+      "relation": "accepts-deps",
+      "to": "symbol:apps/api/src/services/activity-service.ts#ActivityDeps",
+      "source": {
+        "file": "apps/api/src/services/activity-service.ts",
+        "line": 18
+      }
+    },
+    {
+      "from": "symbol:apps/api/src/services/analytics-service.ts#getAnalyticsHeatmap",
+      "relation": "accepts-deps",
+      "to": "symbol:apps/api/src/services/analytics-service.ts#AnalyticsDeps",
+      "source": {
+        "file": "apps/api/src/services/analytics-service.ts",
+        "line": 178
+      }
+    },
+    {
+      "from": "symbol:apps/api/src/services/analytics-service.ts#getAnalyticsMistakes",
+      "relation": "accepts-deps",
+      "to": "symbol:apps/api/src/services/analytics-service.ts#AnalyticsDeps",
+      "source": {
+        "file": "apps/api/src/services/analytics-service.ts",
+        "line": 193
+      }
+    },
+    {
+      "from": "symbol:apps/api/src/services/analytics-service.ts#getAnalyticsSummary",
+      "relation": "accepts-deps",
+      "to": "symbol:apps/api/src/services/analytics-service.ts#AnalyticsDeps",
+      "source": {
+        "file": "apps/api/src/services/analytics-service.ts",
+        "line": 117
+      }
+    },
+    {
+      "from": "symbol:apps/api/src/services/analytics-service.ts#getAnalyticsWeekly",
+      "relation": "accepts-deps",
+      "to": "symbol:apps/api/src/services/analytics-service.ts#AnalyticsDeps",
+      "source": {
+        "file": "apps/api/src/services/analytics-service.ts",
+        "line": 163
+      }
+    },
+    {
+      "from": "symbol:apps/api/src/services/answer-service.ts#submitAnswer",
+      "relation": "accepts-deps",
+      "to": "symbol:apps/api/src/services/answer-service.ts#AnswerDeps",
+      "source": {
+        "file": "apps/api/src/services/answer-service.ts",
+        "line": 30
+      }
+    },
+    {
+      "from": "symbol:apps/api/src/services/domains-service.ts#getDomains",
+      "relation": "accepts-deps",
+      "to": "symbol:apps/api/src/services/domains-service.ts#DomainsDeps",
+      "source": {
+        "file": "apps/api/src/services/domains-service.ts",
+        "line": 42
+      }
+    },
+    {
+      "from": "symbol:apps/api/src/services/lesson-view-service.ts#recordLessonView",
+      "relation": "accepts-deps",
+      "to": "symbol:apps/api/src/services/lesson-view-service.ts#LessonViewDeps",
+      "source": {
+        "file": "apps/api/src/services/lesson-view-service.ts",
+        "line": 16
+      }
+    },
+    {
+      "from": "symbol:apps/api/src/services/review-service.ts#getDueCount",
+      "relation": "accepts-deps",
+      "to": "symbol:apps/api/src/services/review-service.ts#ReviewDeps",
+      "source": {
+        "file": "apps/api/src/services/review-service.ts",
+        "line": 29
+      }
+    },
+    {
+      "from": "symbol:apps/api/src/services/review-service.ts#getReviewQueue",
+      "relation": "accepts-deps",
+      "to": "symbol:apps/api/src/services/review-service.ts#ReviewDeps",
+      "source": {
+        "file": "apps/api/src/services/review-service.ts",
+        "line": 22
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/db/schema.ts#AnswerLog",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/db/schema.ts#answerLogs",
+      "source": {
+        "file": "packages/shared/src/db/schema.ts",
+        "line": 63
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/db/schema.ts#LessonView",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/db/schema.ts#lessonViews",
+      "source": {
+        "file": "packages/shared/src/db/schema.ts",
+        "line": 66
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/db/schema.ts#QuestionRow",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/db/schema.ts#questions",
+      "source": {
+        "file": "packages/shared/src/db/schema.ts",
+        "line": 64
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/db/schema.ts#SrsState",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/db/schema.ts#srsStates",
+      "source": {
+        "file": "packages/shared/src/db/schema.ts",
+        "line": 65
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/db/schema.ts#User",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/db/schema.ts#users",
+      "source": {
+        "file": "packages/shared/src/db/schema.ts",
+        "line": 62
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/schema/api.ts#AnalyticsHeatmapDay",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/schema/api.ts#analyticsHeatmapDaySchema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 198
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/schema/api.ts#AnalyticsHeatmapResponse",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/schema/api.ts#analyticsHeatmapResponseSchema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 228
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/schema/api.ts#AnalyticsRequest",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/schema/api.ts#analyticsRequestSchema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 107
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/schema/api.ts#AnalyticsSummaryResponse",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/schema/api.ts#analyticsSummaryResponseSchema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 125
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/schema/api.ts#AnalyticsWeeklyDay",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/schema/api.ts#analyticsWeeklyDaySchema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 162
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/schema/api.ts#AnalyticsWeeklyResponse",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/schema/api.ts#analyticsWeeklyResponseSchema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 192
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/schema/api.ts#AnswerRequest",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/schema/api.ts#answerRequestSchema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 19
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/schema/api.ts#AnswerResponse",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/schema/api.ts#answerResponseSchema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 26
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/schema/api.ts#DomainsRequest",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/schema/api.ts#domainsRequestSchema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 104
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/schema/api.ts#DomainsResponse",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/schema/api.ts#domainsResponseSchema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 101
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/schema/api.ts#DomainSummary",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/schema/api.ts#domainSummarySchema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 85
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/schema/api.ts#DueCountResponse",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/schema/api.ts#dueCountResponseSchema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 75
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/schema/api.ts#LessonViewRequest",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/schema/api.ts#lessonViewRequestSchema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 33
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/schema/api.ts#LessonViewResponse",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/schema/api.ts#lessonViewResponseSchema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 38
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/schema/api.ts#MistakeItem",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/schema/api.ts#mistakeItemSchema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 313
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/schema/api.ts#MistakesResponse",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/schema/api.ts#mistakesResponseSchema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 343
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/schema/api.ts#RateLimitedErrorResponse",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/schema/api.ts#rateLimitedErrorResponseSchema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 46
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/schema/api.ts#RateLimitUnavailableErrorResponse",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/schema/api.ts#rateLimitUnavailableErrorResponseSchema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 55
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/schema/api.ts#RecentActivityAnswerRecorded",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/schema/api.ts#recentActivityAnswerRecordedSchema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 251
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/schema/api.ts#RecentActivityItem",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/schema/api.ts#recentActivityItemSchema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 257
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/schema/api.ts#RecentActivityLessonViewed",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/schema/api.ts#recentActivityLessonViewedSchema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 241
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/schema/api.ts#RecentActivityResponse",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/schema/api.ts#recentActivityResponseSchema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 288
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/schema/api.ts#RetentionDistribution",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/schema/api.ts#retentionDistributionSchema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 114
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/schema/api.ts#ReviewQueueResponse",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/schema/api.ts#reviewQueueResponseSchema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 70
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/schema/content.ts#DomainKey",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/schema/content.ts#domainKeySchema",
+      "source": {
+        "file": "packages/shared/src/schema/content.ts",
+        "line": 10
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/schema/content.ts#LessonFrontmatter",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/schema/content.ts#lessonFrontmatterSchema",
+      "source": {
+        "file": "packages/shared/src/schema/content.ts",
+        "line": 56
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/schema/content.ts#McqQuestion",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/schema/content.ts#mcqQuestionSchema",
+      "source": {
+        "file": "packages/shared/src/schema/content.ts",
+        "line": 42
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/schema/content.ts#Question",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/schema/content.ts#questionSchema",
+      "source": {
+        "file": "packages/shared/src/schema/content.ts",
+        "line": 46
+      }
+    },
+    {
+      "from": "symbol:packages/shared/src/schema/content.ts#TopicFrontmatter",
+      "relation": "derives-schema",
+      "to": "symbol:packages/shared/src/schema/content.ts#topicFrontmatterSchema",
+      "source": {
+        "file": "packages/shared/src/schema/content.ts",
+        "line": 24
+      }
+    }
+  ],
+  "dependencyRules": [
+    {
+      "name": "web-app-no-content-or-feature-internals",
+      "source": {
+        "file": ".dependency-cruiser.cjs",
+        "line": 34
+      }
+    },
+    {
+      "name": "web-mapper-pure-transform-only",
+      "source": {
+        "file": ".dependency-cruiser.cjs",
+        "line": 49
+      }
+    },
+    {
+      "name": "web-client-no-server-or-content",
+      "source": {
+        "file": ".dependency-cruiser.cjs",
+        "line": 59
+      }
+    },
+    {
+      "name": "web-ui-no-lower-layers",
+      "source": {
+        "file": ".dependency-cruiser.cjs",
+        "line": 69
+      }
+    },
+    {
+      "name": "web-no-cross-feature-internals",
+      "source": {
+        "file": ".dependency-cruiser.cjs",
+        "line": 84
+      }
+    },
+    {
+      "name": "web-server-no-client-hooks",
+      "source": {
+        "file": ".dependency-cruiser.cjs",
+        "line": 101
+      }
+    },
+    {
+      "name": "web-shared-pure-transform-only",
+      "source": {
+        "file": ".dependency-cruiser.cjs",
+        "line": 109
+      }
+    },
+    {
+      "name": "web-components-root-no-lower-layers",
+      "source": {
+        "file": ".dependency-cruiser.cjs",
+        "line": 119
+      }
+    },
+    {
+      "name": "web-lib-no-app-or-features",
+      "source": {
+        "file": ".dependency-cruiser.cjs",
+        "line": 136
+      }
+    },
+    {
+      "name": "api-service-no-http-db-framework",
+      "source": {
+        "file": ".dependency-cruiser.cjs",
+        "line": 150
+      }
+    },
+    {
+      "name": "api-dal-no-http",
+      "source": {
+        "file": ".dependency-cruiser.cjs",
+        "line": 165
+      }
+    },
+    {
+      "name": "api-dal-services-type-only",
+      "source": {
+        "file": ".dependency-cruiser.cjs",
+        "line": 173
+      }
+    },
+    {
+      "name": "api-middleware-no-routes-services-dal",
+      "source": {
+        "file": ".dependency-cruiser.cjs",
+        "line": 185
+      }
+    },
+    {
+      "name": "api-content-sync-shared-only",
+      "source": {
+        "file": ".dependency-cruiser.cjs",
+        "line": 195
+      }
+    }
+  ]
+}

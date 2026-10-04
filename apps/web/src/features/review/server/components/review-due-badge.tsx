@@ -5,8 +5,8 @@ import { Badge } from '@/components/ui/badge'
 import { loadReviewOnce } from '../load-review'
 
 /**
- * ユーザー固有の due 件数。<Suspense> の内側でのみ描画し、キャッシュしない
- * （`user_id` を共有キャッシュキーに含められないため。design.md 8.3）。
+ * ユーザー固有の due 件数。共有キャッシュには載せず、React cache() の
+ * リクエスト内 dedupe だけを利用する（design.md 8.3・9.2）。
  */
 export async function ReviewDueBadge() {
   const { dueCount } = await loadReviewOnce()

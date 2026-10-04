@@ -48,6 +48,10 @@ export const estimatedMinutesByLesson = ${JSON.stringify(estimates, null, 2)} as
 `
 }
 
+export function validateContent(): ContentBundle {
+  return createContentBundle(collectContentFiles(contentRoot))
+}
+
 function formatGeneratedContentEstimatesModule(source: string): string {
   const biomeBin = process.platform === 'win32' ? 'biome.cmd' : 'biome'
   const result = spawnSync(
@@ -64,8 +68,9 @@ function formatGeneratedContentEstimatesModule(source: string): string {
 }
 
 export function renderContentEstimatesModule(): string {
-  const bundle = createContentBundle(collectContentFiles(contentRoot))
-  return formatGeneratedContentEstimatesModule(createGeneratedContentEstimatesModule(bundle))
+  return formatGeneratedContentEstimatesModule(
+    createGeneratedContentEstimatesModule(validateContent()),
+  )
 }
 
 export function generateContentEstimatesModule(): void {
@@ -83,7 +88,9 @@ export function checkGeneratedContentEstimatesModule(): void {
 
 const entryPath = process.argv[1]
 if (entryPath && import.meta.url === pathToFileURL(entryPath).href) {
-  if (process.argv.includes('--check')) {
+  if (process.argv.includes('--validate')) {
+    validateContent()
+  } else if (process.argv.includes('--check')) {
     checkGeneratedContentEstimatesModule()
   } else {
     generateContentEstimatesModule()

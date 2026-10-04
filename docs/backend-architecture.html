@@ -1205,18 +1205,11 @@ export const answersRoute = new Hono&lt;AppEnv&gt;().post(
           <code>hc&lt;AppType&gt;</code> です）。
         </p>
         <div class="note">
-          <span class="callout-title">実装時の注意（design.md §10.10）</span>
-          本資料のコードが前提とする差分：<code>questions</code>
-          テーブルの追加、<code>srs_states</code> の複合主キー
-          <code>(user_id, question_id)</code>、<code>answer_logs</code> への任意列
-          <code>response_time_ms</code> 追加、<code>lesson_views</code>
-          テーブルの追加（アナリティクス用）、<code>schema/api.ts</code>
-          の新設、wrangler の Worker 名を
-          <code>tech-study-lab-api</code> へ変更（web 側 Service Binding
-          が参照する名前）、<code>vars</code> への
-          <code>WEB_ORIGIN</code>
-          追加。集計系エンドポイント（<code>/domains</code>・<code>/analytics/*</code>・<code>/activity/recent</code>）の
-          route/service/dal は Walking Skeleton 貫通後に同パターンで追加。
+          <span class="callout-title">実装の参照先（design.md §10.10）</span>
+          本資料の例は設計を説明する補助資料です。現在の型・schema・route合成は
+          実コード、構造の探索は <a href="../architecture/README.md">Knowledge Graph</a>、
+          設計契約は <a href="design.md">design.md</a> を参照してください。
+          実装状況と残タスクはGitHub Issue / PRで管理します。
         </div>
       </section>
     </main>

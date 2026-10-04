@@ -1,7 +1,9 @@
-import type {
-  AnalyticsSummaryResponse,
-  AnalyticsWeeklyResponse,
-  MistakesResponse,
+import {
+  type AnalyticsHeatmapResponse,
+  type AnalyticsSummaryResponse,
+  type AnalyticsWeeklyResponse,
+  type MistakesResponse,
+  compareMistakeRank,
 } from '@tsl/shared'
 
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -34,6 +36,11 @@ export type AnalyticsWeeklyRow = {
   answerCount: number
 }
 
+export type AnalyticsHeatmapRow = {
+  date: string
+  answerCount: number
+}
+
 export type AnalyticsMistakeRow = {
   questionId: string
   answerCount: number
@@ -47,6 +54,11 @@ export type AnalyticsDeps = {
     startAt: number,
     endAt: number,
   ): Promise<AnalyticsWeeklyRow[]>
+  findHeatmapAnswerCounts(
+    userId: string,
+    startAt: number,
+    endAt: number,
+  ): Promise<AnalyticsHeatmapRow[]>
   findMistakes(userId: string): Promise<AnalyticsMistakeRow[]>
 }
 
@@ -72,6 +84,14 @@ export function recentUtcDays(now: number): { date: string; weekday: number }[] 
     const weekday = new Date(timestamp).getUTCDay() || 7
     return { date: utcDateKey(timestamp), weekday }
   })
+}
+
+export function recentHeatmapDays(now: number): { date: string }[] {
+  const today = utcDayStart(now)
+
+  return Array.from({ length: 182 }, (_, index) => ({
+    date: utcDateKey(today - (181 - index) * DAY_MS),
+  }))
 }
 
 export function utcWeekStart(now: number): number {
@@ -154,6 +174,21 @@ export async function getAnalyticsWeekly(
   }
 }
 
+export async function getAnalyticsHeatmap(
+  deps: AnalyticsDeps,
+  input: AnalyticsInput,
+): Promise<AnalyticsHeatmapResponse> {
+  const days = recentHeatmapDays(input.now)
+  const startAt = utcDayStart(input.now) - 181 * DAY_MS
+  const endAt = utcDayStart(input.now) + DAY_MS
+  const rows = await deps.findHeatmapAnswerCounts(input.userId, startAt, endAt)
+  const countsByDate = new Map(rows.map((row) => [row.date, row.answerCount]))
+
+  return {
+    days: days.map((day) => ({ ...day, answerCount: countsByDate.get(day.date) ?? 0 })),
+  }
+}
+
 export async function getAnalyticsMistakes(
   deps: AnalyticsDeps,
   input: Pick<AnalyticsInput, 'userId'>,
@@ -161,19 +196,14 @@ export async function getAnalyticsMistakes(
   const rows = await deps.findMistakes(input.userId)
   const items = rows
     .filter((row) => row.answerCount >= 2)
+    .sort(compareMistakeRank)
+    .slice(0, 10)
     .map((row) => ({
       questionId: row.questionId,
       incorrectRate: Math.round((row.incorrectAnswerCount / row.answerCount) * 1000) / 10,
       answerCount: row.answerCount,
       incorrectAnswerCount: row.incorrectAnswerCount,
     }))
-    .sort(
-      (left, right) =>
-        right.incorrectRate - left.incorrectRate ||
-        right.answerCount - left.answerCount ||
-        left.questionId.localeCompare(right.questionId, 'en'),
-    )
-    .slice(0, 10)
 
   return { items }
 }

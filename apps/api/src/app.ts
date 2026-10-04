@@ -6,6 +6,7 @@ import type { AppEnv } from './env'
 import { type AccessTokenVerifier, createAccessBoundary } from './middleware/access-boundary'
 import { userContext } from './middleware/user-context'
 import type { PlatformRateLimiter } from './persistent-write-rate-limit'
+import { activityRoute } from './routes/activity'
 import { analyticsRoute } from './routes/analytics'
 import { createAnswersRoute } from './routes/answers'
 import { dashboardRoute } from './routes/dashboard'
@@ -60,6 +61,7 @@ function createUserRoutes({ rateLimiters }: ApiAppOptions = {}) {
     .route('/dashboard', dashboardRoute)
     .route('/domains', domainsRoute)
     .route('/analytics', analyticsRoute)
+    .route('/activity', activityRoute)
 }
 
 export function createInternalApiApp(options?: ApiAppOptions) {

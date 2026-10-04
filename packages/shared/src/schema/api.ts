@@ -144,11 +144,21 @@ const analyticsWeeklyDateSchema = z
   .regex(isoCalendarDatePattern)
   .refine(isValidCalendarDate, { message: 'date must be a valid calendar date' })
 
-export const analyticsWeeklyDaySchema = z.object({
-  date: analyticsWeeklyDateSchema,
-  weekday: z.number().int().min(1).max(7),
-  answerCount: z.number().int().nonnegative(),
-})
+export const analyticsWeeklyDaySchema = z
+  .object({
+    date: analyticsWeeklyDateSchema,
+    weekday: z.number().int().min(1).max(7),
+    answerCount: z.number().int().nonnegative(),
+  })
+  .superRefine(({ date, weekday }, context) => {
+    if (isValidCalendarDate(date) && (new Date(`${date}T00:00:00Z`).getUTCDay() || 7) !== weekday) {
+      context.addIssue({
+        code: 'custom',
+        path: ['weekday'],
+        message: 'weekday must match the UTC date',
+      })
+    }
+  })
 export type AnalyticsWeeklyDay = z.infer<typeof analyticsWeeklyDaySchema>
 
 export const analyticsWeeklyResponseSchema = z
@@ -157,6 +167,20 @@ export const analyticsWeeklyResponseSchema = z
   })
   .superRefine(({ days }, context) => {
     const uniqueDates = new Set(days.map(({ date }) => date))
+    days.forEach((day, index) => {
+      const previous = days[index - 1]
+      if (
+        previous &&
+        Date.parse(`${day.date}T00:00:00Z`) - Date.parse(`${previous.date}T00:00:00Z`) !==
+          86_400_000
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['days', index, 'date'],
+          message: 'days must be consecutive and in ascending order',
+        })
+      }
+    })
     if (uniqueDates.size !== days.length) {
       context.addIssue({
         code: 'custom',
@@ -167,6 +191,102 @@ export const analyticsWeeklyResponseSchema = z
   })
 export type AnalyticsWeeklyResponse = z.infer<typeof analyticsWeeklyResponseSchema>
 
+export const analyticsHeatmapDaySchema = z.object({
+  date: analyticsWeeklyDateSchema,
+  answerCount: z.number().int().nonnegative(),
+})
+export type AnalyticsHeatmapDay = z.infer<typeof analyticsHeatmapDaySchema>
+
+export const analyticsHeatmapResponseSchema = z
+  .object({
+    days: z.array(analyticsHeatmapDaySchema).length(182),
+  })
+  .superRefine(({ days }, context) => {
+    const uniqueDates = new Set(days.map(({ date }) => date))
+    days.forEach((day, index) => {
+      const previous = days[index - 1]
+      if (
+        previous &&
+        Date.parse(`${day.date}T00:00:00Z`) - Date.parse(`${previous.date}T00:00:00Z`) !==
+          86_400_000
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['days', index, 'date'],
+          message: 'days must be consecutive and in ascending order',
+        })
+      }
+    })
+    if (uniqueDates.size !== days.length) {
+      context.addIssue({
+        code: 'custom',
+        path: ['days'],
+        message: 'days must contain unique dates',
+      })
+    }
+  })
+export type AnalyticsHeatmapResponse = z.infer<typeof analyticsHeatmapResponseSchema>
+
+const recentActivityBaseSchema = z.object({
+  id: z.string().min(1),
+  occurredAt: z.number().int().nonnegative(),
+})
+
+export const recentActivityLessonViewedSchema = recentActivityBaseSchema
+  .extend({
+    type: z.literal('lesson_viewed'),
+    lessonId: z.string().min(1),
+  })
+  .strict()
+export type RecentActivityLessonViewed = z.infer<typeof recentActivityLessonViewedSchema>
+
+export const recentActivityAnswerRecordedSchema = recentActivityBaseSchema
+  .extend({
+    type: z.literal('answer_recorded'),
+    questionId: z.string().min(1),
+    lessonId: z.string().min(1).nullable(),
+    isCorrect: z.boolean(),
+  })
+  .strict()
+export type RecentActivityAnswerRecorded = z.infer<typeof recentActivityAnswerRecordedSchema>
+
+export const recentActivityItemSchema = z.discriminatedUnion('type', [
+  recentActivityLessonViewedSchema,
+  recentActivityAnswerRecordedSchema,
+])
+export type RecentActivityItem = z.infer<typeof recentActivityItemSchema>
+
+export function compareRecentActivity(left: RecentActivityItem, right: RecentActivityItem): number {
+  return right.occurredAt - left.occurredAt || left.id.localeCompare(right.id, 'en')
+}
+
+export const recentActivityResponseSchema = z
+  .object({
+    items: z.array(recentActivityItemSchema).max(10),
+  })
+  .superRefine(({ items }, context) => {
+    const uniqueIds = new Set(items.map(({ id }) => id))
+    if (uniqueIds.size !== items.length) {
+      context.addIssue({
+        code: 'custom',
+        path: ['items'],
+        message: 'items must contain unique IDs',
+      })
+    }
+
+    items.forEach((item, index) => {
+      const previous = items[index - 1]
+      if (previous && compareRecentActivity(previous, item) > 0) {
+        context.addIssue({
+          code: 'custom',
+          path: ['items', index],
+          message: 'items must follow occurredAt descending and ID ascending order',
+        })
+      }
+    })
+  })
+export type RecentActivityResponse = z.infer<typeof recentActivityResponseSchema>
+
 export const mistakeItemSchema = z
   .object({
     questionId: z.string().min(1),
@@ -174,7 +294,14 @@ export const mistakeItemSchema = z
     answerCount: z.number().int().min(2),
     incorrectAnswerCount: z.number().int().nonnegative(),
   })
-  .superRefine(({ answerCount, incorrectAnswerCount }, context) => {
+  .superRefine(({ answerCount, incorrectAnswerCount, incorrectRate }, context) => {
+    if (incorrectRate !== Math.round((incorrectAnswerCount / answerCount) * 1000) / 10) {
+      context.addIssue({
+        code: 'custom',
+        path: ['incorrectRate'],
+        message: 'incorrectRate must match the counts rounded to one decimal place',
+      })
+    }
     if (incorrectAnswerCount > answerCount) {
       context.addIssue({
         code: 'custom',
@@ -185,7 +312,32 @@ export const mistakeItemSchema = z
   })
 export type MistakeItem = z.infer<typeof mistakeItemSchema>
 
-export const mistakesResponseSchema = z.object({
-  items: z.array(mistakeItemSchema).max(10),
-})
+/** Compare the unrounded error rate, then answer count and question ID. */
+export function compareMistakeRank(
+  left: Pick<MistakeItem, 'answerCount' | 'incorrectAnswerCount' | 'questionId'>,
+  right: Pick<MistakeItem, 'answerCount' | 'incorrectAnswerCount' | 'questionId'>,
+): number {
+  return (
+    right.incorrectAnswerCount / right.answerCount - left.incorrectAnswerCount / left.answerCount ||
+    right.answerCount - left.answerCount ||
+    left.questionId.localeCompare(right.questionId, 'en')
+  )
+}
+
+export const mistakesResponseSchema = z
+  .object({
+    items: z.array(mistakeItemSchema).max(10),
+  })
+  .superRefine(({ items }, context) => {
+    items.forEach((item, index) => {
+      const previous = items[index - 1]
+      if (previous && compareMistakeRank(previous, item) > 0) {
+        context.addIssue({
+          code: 'custom',
+          path: ['items', index],
+          message: 'items must follow mistake ranking order',
+        })
+      }
+    })
+  })
 export type MistakesResponse = z.infer<typeof mistakesResponseSchema>

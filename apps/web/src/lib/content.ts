@@ -40,8 +40,7 @@ export function getTopicContent(domain: string, topic: string): BundledTopic | u
 
 /**
  * `generateStaticParams` に渡す route params。
- * Cache Components では動的セグメントを build 時に列挙できないと、content 由来の route が
- * prerender されずリクエスト時のシェルに落ちるため、全件を返す（design.md 8.2）。
+ * content 由来の route を標準 SSG するため、全件を返す（design.md 8.2）。
  */
 export function getLessonRouteParams(): {
   domain: string
