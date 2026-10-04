@@ -1,0 +1,10 @@
+{
+  // PoC 専用の新規 Worker 名を使い、production の v1/v2 migration 履歴には触れない。
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": "vinext/server/fetch-handler",
+  "name": "tech-study-lab-web-vinext",
+  "compatibility_date": "2025-01-09",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "services": [{ "binding": "API", "service": "tech-study-lab-api", "entrypoint": "InternalApi" }],
+  "assets": { "directory": "dist/client", "not_found_handling": "none", "binding": "ASSETS" }
+}
