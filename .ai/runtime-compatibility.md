@@ -2,14 +2,14 @@
 
 このリポジトリでは `.ai/skills/` と `.ai/agents/` を共通定義の一次配置とする。Claude Code は `.claude/` から、Codex は `.agents/skills/` からスキルを発見する。Codex 固有のカスタムエージェントは `.codex/agents/*.toml` で登録する。配置・hook・ログの仕様は `docs/ai-coding-agents.md` にある。
 
-全文を読む必要はない。必要な場面で該当する節だけを読む。
+全文を読む必要はない。必要な場面で該当する節だけを読む。複数の節で使う `<scratchpad>` は `.claude/logs/briefs/`（gitignore 対象）を指す。
 
 | 場面 | 読む節 |
 |---|---|
 | ランタイム固有のツールを使う（進捗管理、ユーザー確認、バックグラウンド実行、ブラウザ、sandbox・approval） | ランタイム差分の原則 |
 | GitHub を操作する | GitHub 操作と認証 |
 | サブエージェントを起動する | サブエージェントの起動 |
-| 別モデル CLI でレビューする | 認証 preflight と承認の分離／Claude CLI の認証情報／別モデル CLI レビュー |
+| 別モデル CLI でレビューする | GitHub 操作と認証（Sandbox 内外の認証診断を含む）／認証 preflight と承認の分離／Claude CLI の認証情報／別モデル CLI レビュー |
 
 ## ランタイム差分の原則
 
@@ -49,7 +49,7 @@
 - **Codex**: `.codex/agents/<name>.toml` に登録したカスタムエージェント `<name>` を指定する。カスタムエージェントの種別を直接指定できない場合は、通常のサブエージェントを起動し、プロンプトで `.ai/agents/<name>.md` を全文読むよう明記する。Codex には、Claude の `subagent_type` や `model: sonnet` を渡さない。
 - **サブエージェント機能がない環境**: 定義を全文読み、同じ制約で作業する。ただし独立レビューは、実装したコンテキストで代替せず、別セッションでのレビューを求める。
 
-`<scratchpad>` は `.claude/logs/briefs/`（gitignore 対象）と定義する。長いブリーフはここに保存し、サブエージェントにはファイルパスを渡す。短い依頼は直接渡してよい。
+長いブリーフは `<scratchpad>` に保存し、サブエージェントにはファイルパスを渡す。短い依頼は直接渡してよい。
 
 ### Codex サブエージェントのモデル
 
