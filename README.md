@@ -96,7 +96,7 @@ flowchart LR
 | `d1-migration` | スキーマ変更からマイグレーション適用までの安全手順 |
 | `app-verify` | dev サーバーを起動し、教材表示から SRS までを実際に動かして確認 |
 | `release-main-pr` | `develop` → `main` のリリース PR 作成 |
-| `skill-audit` | スキル・エージェント・hooks の参照切れや設定の監査 |
+| `skill-audit` | 機械検査では拾えないスキルの参照切れ・記述の乖離・権限の衝突の監査と、利用ログによる棚卸し |
 
 構成と編集ルールは [AI コーディングエージェント連携仕様](./docs/ai-coding-agents.md) にまとめています。
 
