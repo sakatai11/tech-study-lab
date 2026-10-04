@@ -9,7 +9,7 @@ description: リポジトリ管理の共通スキル（.ai/skills/）・エー�
 
 Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runtime codex --skill skill-audit --status started|completed` を実行して共通ログへ記録する（Claudeではhookが自動記録する）。
 
-対象は引数で指定されたスキルとする。指定がなければ、共通定義（`.ai/skills/`・`.ai/agents/`・`.ai/hooks/`）と、ランタイム固有のファイル（`.codex/agents/*.toml`・`.claude/hooks/`・`.codex/hooks/`・`.claude/settings.json`）の全体を対象にする。このスキル自身も監査の対象に含める。
+対象は引数で指定されたスキルとする。指定がなければ、共通定義（`.ai/skills/`・`.ai/agents/`・`.ai/hooks/`）、発見用リンクのディレクトリ（`.claude/skills/`・`.agents/skills/`・`.claude/agents/`・`.claude/rules/`）、ランタイム固有のファイル（`.codex/agents/*.toml`・`.claude/hooks/`・`.codex/hooks/`・`.claude/settings.json`）の全体を対象にする。このスキル自身も監査の対象に含める。
 
 ## 1. 機械検査
 
