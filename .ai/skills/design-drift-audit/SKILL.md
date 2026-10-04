@@ -22,8 +22,8 @@ Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runt
 
 ## 1. 対象スナップショットを確定する
 
-1. 現在のブランチ、HEAD SHA、作業ツリー状態、`develop` と `origin/develop` のSHAを確認する。
-2. GitHubへの読み取りアクセスが利用できる場合は `origin/develop` をfetchし、監査対象を最新化する。利用できなければ取得済みrefの日時と制約を報告する。
+1. 現在のブランチ、HEAD SHA、作業ツリー状態を確認し、対象ref（既定は `develop`、ユーザーが別のrefを指定した場合はそのref）を決める。
+2. 対象refがリモートブランチの場合、GitHubへの読み取りアクセスが利用できるなら `git fetch origin <対象ブランチ>` でそのrefを最新化する。`develop` に固定して fetch しない。タグやSHAを指定された場合は fetch を省略してよい。fetch の後、`git rev-parse --verify <対象ref>^{commit}` で対象を1つのSHAに確定する。fetch できない場合は、取得済みrefの日時と制約を報告する。確定できない場合は、監査を `error` として止める。
 3. 対象スナップショットと異なるブランチや未コミット変更を、監査結果へ混入させない。ブランチ切替、stash、変更破棄は行わない。対象を安全に分離できない場合は監査を `error` として止め、必要な実行条件を報告する。
 4. レポート用に対象ref、確定SHA、モード、対象期間を記録する。
 
