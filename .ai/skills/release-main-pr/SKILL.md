@@ -7,7 +7,7 @@ description: developからmainへのリリースPRを安全に作成し、完了
 
 `develop` を `main` へ反映するPRだけを扱う。PRのマージ、Issueの直接close、auto-merge、リポジトリ設定の変更、関係ない変更のcommit/pushは行わない。Issueが閉じるのは、承認済みの`main`ベースPRを人間がマージしたときだけにする。
 
-実行前に`.ai/runtime-compatibility.md`を全文読む。Codexでは開始直後に`./.ai/hooks/log-skill-usage.sh --runtime codex --skill release-main-pr --status started`を実行し、完了直前に`./.ai/hooks/log-skill-usage.sh --runtime codex --skill release-main-pr --status completed`を実行する。Claudeではhookが記録する。
+GitHub操作は`.ai/runtime-compatibility.md`の「GitHub 操作と認証」に従う。Codexでは開始直後に`./.ai/hooks/log-skill-usage.sh --runtime codex --skill release-main-pr --status started`を実行し、完了直前に`./.ai/hooks/log-skill-usage.sh --runtime codex --skill release-main-pr --status completed`を実行する。Claudeではhookが記録する。
 
 ## 事前確認
 

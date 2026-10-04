@@ -5,7 +5,7 @@ description: 会話やメモの粗い仕様・タスクを、構造化された 
 
 # 仕様・タスク → GitHub issue 登録
 
-実行前に `.ai/runtime-compatibility.md` を全文読み、ユーザー確認方法を現在のランタイムに合わせる。
+ユーザー確認と GitHub 操作は、`.ai/runtime-compatibility.md` の「ランタイム差分の原則」と「GitHub 操作と認証」に従う。
 
 Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runtime codex --skill issue-new --status started|completed` を実行して共通ログへ記録する（Claudeではhookが自動記録する）。
 

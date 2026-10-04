@@ -5,7 +5,7 @@ description: Drizzle スキーマ変更から D1 マイグレーション生成�
 
 # D1 / Drizzle マイグレーション手順
 
-実行前に `.ai/runtime-compatibility.md` を全文読み、現在のランタイムの sandbox・approval 規則に従う。
+コマンドの実行は、`.ai/runtime-compatibility.md` の「ランタイム差分の原則」に従い、現在のランタイムの sandbox・approval 規則を守る。
 
 Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runtime codex --skill d1-migration --status started|completed` を実行して共通ログへ記録する（Claudeではhookが自動記録する）。
 

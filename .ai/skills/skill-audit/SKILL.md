@@ -5,7 +5,7 @@ description: リポジトリ管理の共通スキル（.ai/skills/）・エー�
 
 # スキル監査
 
-実行前に `.ai/runtime-compatibility.md` を全文読む。
+`.ai/runtime-compatibility.md` は、監査の観点（権限、Codex agent の設定、別モデル CLI の手順など）に関係する節を読む。
 
 Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runtime codex --skill skill-audit --status started|completed` を実行して共通ログへ記録する（Claudeではhookが自動記録する）。
 
