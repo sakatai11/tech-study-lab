@@ -7,7 +7,7 @@ description: PRのレビュー指摘を取得し、適用可否の判断・修�
 
 PRの指摘を現在のコードと仕様に照らして判断し、修正内容または適用しない理由をレビュアーへ返す。進め方は状況に合わせて判断し、以下の不変条件と完了条件を守る。
 
-実行前に [実行互換ルール](../../runtime-compatibility.md) を全文読む。GitHub操作は認証確認済みの `gh` CLI（`gh pr-review` 拡張または `gh api`）を使い、Codex Appでは接続済みGitHubコネクタも利用できる。ローカルの修正・コミット・pushは Git を使う。
+GitHub 操作は [実行互換ルール](../../runtime-compatibility.md) の「GitHub 操作と認証」に従う。GitHub操作は認証確認済みの `gh` CLI（`gh pr-review` 拡張または `gh api`）を使い、Codex Appでは接続済みGitHubコネクタも利用できる。ローカルの修正・コミット・pushは Git を使う。
 
 Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runtime codex --skill pr-review-fix --status started|completed` を実行して共通ログへ記録する（Claudeではhookが自動記録する）。
 

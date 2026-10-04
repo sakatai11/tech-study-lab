@@ -5,7 +5,7 @@ description: 教材・4択問題（content/）の執筆と品質検証のワー�
 
 # 教材の執筆と検証
 
-実行前に `.ai/runtime-compatibility.md` を全文読み、エージェントの起動方法を現在のランタイムに合わせる。
+エージェントの起動方法は、`.ai/runtime-compatibility.md` の「サブエージェントの起動」に従う。
 
 Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runtime codex --skill content-new --status started|completed` を実行して共通ログへ記録する（Claudeではhookが自動記録する）。
 
