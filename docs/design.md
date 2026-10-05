@@ -831,6 +831,15 @@ topic frontmatter の `order` も同様に表示順（0 以上の整数、小さ
 
 Vinext 1.0 の並行 PoC（Issue #199、[検証記録](./investigations/2026-10-04-vinext-migration.md)）は `pnpm --filter @tsl/web dev:vinext`（`:3001`）、`build:vinext`、`start:vinext`（`:3002`）で起動する。PoC は `apps/web/wrangler.vinext.jsonc` の別 Worker（`tech-study-lab-web-vinext`、migration なし）を使い、`wrangler.jsonc` と OpenNext の手順を置き換えない。
 
+PoC のブラウザから API を呼ぶときは、手順5の API 起動を以下のいずれかに置き換え、Web と別ターミナルで並走する。`WEB_ORIGIN` はブラウザの Origin と一致させる。
+
+| Web の起動方法 | API の起動コマンド |
+| --- | --- |
+| `dev:vinext`（`http://localhost:3001`） | `pnpm --filter @tsl/api run dev --var WEB_ORIGIN:http://localhost:3001` |
+| `start:vinext`（`http://localhost:3002`） | `pnpm --filter @tsl/api run dev --var WEB_ORIGIN:http://localhost:3002` |
+
+API の既定値は Next.js 用の `http://localhost:3000` である。許可 Origin は1つなので、Next.js と Vinext を切り替えるときは対応するコマンドで API を再起動する。
+
 Vinext PoC の SSG 検証では `prerender` と `@vinext/cloudflare` の `staticAssetsAdapter` を使い、content route のビルド時 HTML / RSC を `ASSETS` binding から配信する。認証後 route は通常 SSR と API Service Binding を維持する。内部 cache artifact の URL は `assets.run_worker_first` で Worker へ通し、外部からの直接取得を防ぐ。生成 manifest と全 content params を照合し、配信内容が生成物と一致すること、SSR の取得・ブラウザ操作が維持されることを確認する。これは正式移行の承認や本番経路の変更を意味しない。
 
 ### 12.4 本番デプロイ手順（順序が仕様）

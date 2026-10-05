@@ -108,6 +108,16 @@ API Worker（`wrangler dev` :8787、ローカル D1 に migrate / content sync /
 
 ### 再実行手順
 
+開発サーバー（`:3001`）でブラウザ操作を確認する場合は、API の CORS 許可 Origin を合わせて起動する。API の既定値（`:3000`）では解答送信・教材閲覧記録の preflight が許可されない。
+
+```bash
+pnpm --filter @tsl/api run dev --var WEB_ORIGIN:http://localhost:3001
+# 別ターミナル。上記API Workerと並走する。
+pnpm --filter @tsl/web run dev:vinext
+```
+
+SSG build の配信（`:3002`）を確認する場合は以下を使う。開発サーバーから切り替えるときは API を停止し、`WEB_ORIGIN` を `:3002` にして再起動する。
+
 ```bash
 pnpm --filter @tsl/api db:migrate:local
 pnpm --filter @tsl/api content:sync
@@ -157,6 +167,7 @@ API を呼ぶ通常 SSR route は同程度だった。OpenNext のローカル p
 ## 未実施
 
 - Cloudflare Preview Worker へのデプロイ、deploy 時間、Workers Logs / Observability の比較（Cloudflare の認証情報が無いため）。
+- Preview Worker での内部 cache artifact への URL 別表記（パーセントエンコードや連続スラッシュ）による直接取得防止。レビュー時の最小構成の Miniflare 試験では、通常表記と7種類の別表記は Worker 経由または保護対象 URL への307リダイレクトとなり、内部成果物の直接配信は非再現だった。通常の公開アセットは200、`run_worker_first: false` の負の対照では内部 index が200となることも確認した。この試験は実際の Vinext Worker や Cloudflare edge の保証ではない。実環境ではリダイレクトを追跡し、index / HTML / RSC の本文が外部へ返らないことを確認する。
 - Cloudflare Access 環境での認証 cookie・preflight・authReady の確認。
 
 ローカル Vinext Worker の再読み込み後、各リクエストで `workerd/util/sqlite.c++:662: SQLITE_CANTOPEN` のログが出たが応答は 200 のままだった。同じ `.wrangler/state` を別の `wrangler dev` と共有していたことによるローカル環境の事象と考えられるが、原因は未確認である。
