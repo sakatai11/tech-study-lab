@@ -11,7 +11,7 @@ type WranglerConfig = {
   migrations?: unknown
   durable_objects?: unknown
   r2_buckets?: unknown
-  assets?: { binding: string; directory: string }
+  assets?: { binding: string; directory: string; run_worker_first?: string[] }
 }
 
 function readJsonc(url: URL): WranglerConfig {
@@ -42,6 +42,10 @@ describe('Vinext Cloudflare configuration', () => {
       'enable_weak_ref',
     ])
     expect(vinextConfig.assets).toMatchObject({ binding: 'ASSETS', directory: 'dist/client' })
+  })
+
+  it('routes private static cache artifacts through the Worker', () => {
+    expect(vinextConfig.assets?.run_worker_first).toContain('/_vinext/static-cache/*')
   })
 
   it('registers the OpenNext alias before the Cloudflare plugin', () => {

@@ -7,5 +7,10 @@
   "compatibility_date": "2025-01-09",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public", "enable_weak_ref"],
   "services": [{ "binding": "API", "service": "tech-study-lab-api", "entrypoint": "InternalApi" }],
-  "assets": { "directory": "dist/client", "not_found_handling": "none", "binding": "ASSETS" }
+  "assets": {
+    "directory": "dist/client",
+    "not_found_handling": "none",
+    "binding": "ASSETS",
+    "run_worker_first": ["/_vinext/static-cache/*"]
+  }
 }

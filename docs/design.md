@@ -831,6 +831,8 @@ topic frontmatter の `order` も同様に表示順（0 以上の整数、小さ
 
 Vinext 1.0 の並行 PoC（Issue #199、[検証記録](./investigations/2026-10-04-vinext-migration.md)）は `pnpm --filter @tsl/web dev:vinext`（`:3001`）、`build:vinext`、`start:vinext`（`:3002`）で起動する。PoC は `apps/web/wrangler.vinext.jsonc` の別 Worker（`tech-study-lab-web-vinext`、migration なし）を使い、`wrangler.jsonc` と OpenNext の手順を置き換えない。
 
+Vinext PoC の SSG 検証では `prerender` と `@vinext/cloudflare` の `staticAssetsAdapter` を使い、content route のビルド時 HTML / RSC を `ASSETS` binding から配信する。認証後 route は通常 SSR と API Service Binding を維持する。内部 cache artifact の URL は `assets.run_worker_first` で Worker へ通し、外部からの直接取得を防ぐ。生成 manifest と全 content params を照合し、配信内容が生成物と一致すること、SSR の取得・ブラウザ操作が維持されることを確認する。これは正式移行の承認や本番経路の変更を意味しない。
+
 ### 12.4 本番デプロイ手順（順序が仕様）
 
 初回のみ：`wrangler d1 create tech-study-lab` を実行し、発行された非秘密の `database_id` を `apps/api/wrangler.toml` に設定して Git 管理する。外部リソースの作成・更新を伴うため、実行前に対象アカウント・D1・Worker・入力値を確認し、明示的な承認を得る。`WEB_ORIGIN`・`ACCESS_ISSUER`・`ACCESS_AUDIENCE` の production 値はリポジトリや `.env` に保存しない。

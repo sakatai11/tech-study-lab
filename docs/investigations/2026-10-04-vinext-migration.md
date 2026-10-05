@@ -1,18 +1,20 @@
 # Vinext 1.0 移行可否の検証記録
 
-この文書は2026-10-04のIssue #199で行った検証の記録であり、現在の動作保証や実装状況を表さない。現在の設計契約は [design.md §8.3](../design.md#83-server--client-コンポーネント境界)、デプロイと実行確認の条件は同書 §12.4・§12.8を参照する。外部Issueの状態はこの記録では保証しない。
+この文書は2026-10-04のIssue #199で行った初回検証と、2026-10-05のSSG追加検証の記録である。初回の表は prerender 無効の構成の測定値として残し、追加検証の結果と区別する。現在の設計契約は [design.md §8.3](../design.md#83-server--client-コンポーネント境界)、デプロイと実行確認の条件は同書 §12.4・§12.8を参照する。外部Issueの状態はこの記録では保証しない。
 
 ## 結論
 
 **現時点では正式移行を見送る。** Vinext 経路は `apps/web` に並行 PoC として残し、OpenNext を本番経路として維持する。
 
-見送りの主因は、今回の Vinext 1.0.1 + Cloudflare PoC では `/learn/**`・`/quiz/[lesson]` の標準 SSG（§12.8）を維持する方法を確立・検証できていないこと、および Cloudflare 実環境（Preview Worker）での deploy 時間・Observability を未検証であること。Vinext 自体には SSG / prerender 機能があるため、SSG が実現不可能と結論づけたものではない。ビルド時間と Worker upload size は Vinext が大幅に小さく、通常 SSR・Service Binding・正解データ非漏洩は PoC で成立した。
+**2026-10-05の追加検証で、Vinext 1.0.1 + Cloudflare 構成の教材・演習 SSG と認証後 SSR の両立をローカル workerd 上で確認した。** `prerender` と `@vinext/cloudflare@1.0.1` の `staticAssetsAdapter()` で成立し、`cloudflare:workers` の import エラーは再現しなかった。したがって「SSG にならない」は移行を見送る理由から除く。初回 PoC は prerender を有効にしておらず、Issue #2911 の報告を固定版の実行結果として扱っていた点を訂正する。
+
+残る見送り理由は、Cloudflare 実環境（Preview Worker）での静的配信・Access 認証・deploy 時間・Observability が未検証であること。ローカルでは通常 SSR・Service Binding・正解データ非漏洩に加え、Quiz / Review のブラウザ操作も確認した。正式移行には実環境での確認と人間の判断が必要であり、OpenNext の本番経路を維持する。
 
 再評価の条件：
 
-1. 下記「SSG 実現方法の追加検証」で、`cloudflare:workers` を使う SSR と教材・演習のビルド時 SSG を両立する構成を確立し、`generateStaticParams` の全 route を Static Assets 等で配信できる。
+1. ローカルで成立した SSG / SSR 構成を Preview Worker でも確認する。ローカルでの生成・配信・ブラウザ操作の結果は下記「SSG 実現方法の追加検証」を参照する。
 2. Preview Worker へデプロイし、deploy 時間・Workers Logs・エラー時のログを OpenNext と比較できる。
-3. ブラウザで Quiz / Review の状態遷移（採点・`router.refresh()`・state reset）と hydration を確認できる。
+3. Cloudflare Access 環境でブラウザの Quiz / Review 操作、認証 cookie と preflight を確認できる。
 
 ## 検証環境
 
@@ -81,29 +83,58 @@ API Worker（`wrangler dev` :8787、ローカル D1 に migrate / content sync /
 
 解説文は `QuizViewModel` の仕様（design.md §7.2：選択肢と解説のみ持ち、正解を含めない）どおり両経路とも quiz の HTML・RSC payload に含まれ、`dist/client` の bundle には含まれなかった。
 
-Vinext は既定では prerender しない。`prerender: { routes: "*" }` を有効にしても、Cloudflare では Static Assets として配信する構成が別途必要で、build 時 prerender は Node 上で workerd 向け bundle を読むため `cloudflare:workers` を import するアプリでは失敗する（vinext#2911）。本 PoC は `src/lib/api.ts` 経由で shim がこの import を持つため、prerender は有効にしていない。
+初回 PoC では prerender を有効にしていない。当初は vinext#2911 を根拠に `cloudflare:workers` の import が失敗すると判断していたが、有効化しての再現確認は行っていなかった。下記の追試では同じ Vinext 1.0.1 で prerender が成功し、その判断を訂正した。
 
-## SSG 実現方法の追加検証（2026-10-05 追加、未実施）
+## SSG 実現方法の追加検証（2026-10-05、ローカル検証済み）
 
-目的は、現在の PoC が SSR であることの確認に加え、構成変更によって design.md §8.2・§8.3・§12.8 のビルド時 SSG を維持できるかを検証すること。以下は検証計画であり、実現済みの結果ではない。
+目的は、構成変更によって design.md §8.2・§8.3・§12.8 のビルド時 SSG を維持できるかを検証すること。Node.js 24.19.0 / pnpm 9.15.0、Linux のローカル workerd、Chromium / Playwright 1.58.2 で実施した。Vinext と既存 PoC のバージョンは据え置き、`@vinext/cloudflare@1.0.1` を追加した。
 
-### 検証する構成
+### 検証した構成と結果
 
-1. **現構成での失敗再現**：Vinext 1.0.1 の対象 route に prerender を有効化し、build ログで失敗箇所と `cloudflare:workers` の import 経路を確認する。[vinext#2911](https://github.com/cloudflare/vinext/issues/2911) の報告と、本アプリで再現した事実を分けて記録する。
-2. **prerender 用と Worker 用の依存分離**：教材・演習の prerender に Worker 専用モジュールが入り込まないよう、ビルド先・alias・binding 取得の分離を試す。単に binding の参照を遅延するだけでは ESM 読み込みエラーを回避できるとは限らないため、実際の bundle と build で確認する。prerender 用 shim を試す場合は API 呼び出しを明示的に失敗させ、空データやダミーのユーザー情報を焼き込んで成功扱いにしない。SSR では実際の Service Binding を使う。
-3. **Cloudflare 対応 prerender と静的配信**：固定版での対応範囲を確認し、必要なら候補版を別途固定して、上流修正または workerd / Miniflare 上の prerender を評価する。HTML と RSC の静的配信には、対応版の Static Assets adapter または同等の構成を検討する。現行 upstream の機能が 1.0.1 でも利用できると仮定しない。
+1. **prerender 有効化のみ：生成成功、import エラーは非再現。** `vinext({ prerender: { routes: '*', concurrency: 2 } })` で、教材一覧・教材本文・演習と公開トップ・404をビルド時に生成した。認証後4 route は `dynamic = 'force-dynamic'` により skipped。配布された 1.0.1 の `dist/build/prerender-cloudflare-loader.js` は `cloudflare:workers` の Node 用 loader を登録し、binding 参照時には明示的に throw する。教材・演習は binding を参照しないため生成可能だった。Issue が Open であることだけでは、この固定版での再現を意味しない。
+2. **prerender + Static Assets adapter：ローカル配信成功。** `cache: { cdn: staticAssetsAdapter() }` を追加すると、生成済み HTML / RSC が `dist/client/_vinext/static-cache/` に梱包され、Worker が `ASSETS` binding 経由で読む。manifest は4つの正常ページと404を rendered とし、静的 cache artifact は9個（HTML 5個、RSC 4個）と index 1個。`assets.run_worker_first: ['/_vinext/static-cache/*']` で内部成果物の直接取得を防ぐ。
+3. **独自の依存分離・shim・候補版への更新：不要。** 標準 loader と上記 adapter で成立したため、この検証では独自の Node binding stub、別ビルド先、workerd prerender の改造は採用しない。`src/lib/api.ts` と Worker 用 shim、API Service Binding はそのまま使用する。
 
-デプロイ後の prewarm / CDN キャッシュを試す場合は別方式として記録する。初回アクセスやデプロイ後に生成する方式は、ビルド時 SSG の成功には数えない。通常 SSR が必要なため、アプリ全体の `output: 'export'` だけで要件を満たしたとは扱わない。
+生成は deploy や初回アクセス前の `vite build` 内で完了しており、prewarm / CDN キャッシュへの依存やアプリ全体の `output: 'export'` はない。OpenNext の Worker、binding、migration 履歴は変更していない。
 
-### 成功条件と記録する証拠
+### 配信と操作の証拠
 
-- **全 content route の生成**：`generateStaticParams` が列挙する教材一覧・教材本文・演習の全 URL について、ビルド時に HTML / RSC を生成する。params 一覧、生成 manifest、成果物の対応を照合する。HTTP 200 や Cache-Control のみで SSG と判定しない。
-- **Cloudflare での配信**：ローカル workerd で full GET と RSC navigation が生成済み成果物を返し、教材・演習の Server render がリクエストごとに実行されないことをログ等で確認する。API Worker 停止時も本文と問題の初期表示が成立する。認証後画面の SSR は別途維持する。
-- **境界の維持**：`/home`・`/review`・`/domains`・`/analytics` は request ごとの SSR と実際の API Service Binding を保ち、ユーザー固有データを静的成果物や共有キャッシュへ含めない。quiz の HTML・RSC・client bundle に `answerIndex` の正解値を含めない。
-- **表示・操作の維持**：未定義 route は 404、生成済み route の metadata と本文が正しい。ブラウザで hydration、採点・解答記録、教材閲覧記録、再挑戦、`router.refresh()`、SSR / SSG 間の navigation を確認する。
-- **実環境と比較**：専用 Preview Worker でも静的配信と Access 認証を確認し、SSG を含む build 時間・Worker upload size・静的成果物サイズを OpenNext と比較する。必要な環境がない項目は未検証として残す。
+- **全 content params と配信内容：pass。** 教材一覧 `/learn/security/xss`、教材本文 `/learn/security/xss/security-xss-01`、演習 `/quiz/security-xss-01` の全3 route と公開トップについて、HTML / canonical RSC の応答と生成ファイルの SHA-256 が一致した。`X-Vinext-Cache: HIT`、`Cache-Control: s-maxage=31536000, stale-while-revalidate`。RSC は `text/x-component`。確認スクリプトは `apps/web/scripts/verify-vinext-ssg.ts` に残した。
+- **リクエスト時の再描画不要：pass。** 追加の一時的な検証 build では、教材・演習の各 page に `VINEXT_PRERENDER !== '1'` のとき throw する guard を挿入した。ビルド時生成は成功し、実行時の HTML / RSC はすべて生成物と一致した。空の ASSETS を使う別 Worker を起動した負の対照では、教材・演習の error boundary が表示された。guard のある build でも、静的成果物があると Server render を実行せず配信できることを確認した。guard と検証用の refresh hook 公開コードは除去し、通常構成で再ビルド・HTTP確認した。
+- **API 依存の分離：pass。** API Worker を停止しても全3 content route は200 / HITで初期表示できた。一方 `/home` は error boundary を返し、API再起動後に回復した。`API_BASE_URL` を到達不能な値にした起動でも、API Worker 接続時は4つの SSR route が正常に表示され、Service Binding の接続ログも確認した。
+- **認証後 SSR とデータ境界：pass（ローカル）。** `/home`・`/review`・`/domains`・`/analytics` は manifest 上 skipped、配信は `private, no-cache, no-store, max-age=0, must-revalidate` で静的 HIT なし。初期 HTML / RSC と client JS に正解の `answerIndex` 値は0件。存在しない lesson / quiz、内部 cache の index / HTML 直接取得は404。
+- **ブラウザ操作：pass（ローカル、Accessなし）。** Review と Quiz の各3問を採点し、6件の `POST /answers` が200、教材閲覧の `POST /lesson-views` が201。採点後の選択肢ロック、結果、再挑戦、reloadによるintroへのリセットを確認した。D1でも解答ログとSRS version更新・閲覧記録を確認。SSGからQuizへのRSC遷移はHIT、SSR画面間の遷移は非HITで、1280pxと390pxで操作した。Review の実際の `router.refresh()` を一時的な検証hookから呼び、RSCが200 / no-store、解答済み問題を除く2問への更新とexercise→introの状態リセットを確認した。pageerror / hydration errorは0件。favicon未配置による404は残る。
+- **Cloudflare Preview / Access：未検証。** この環境にCloudflare認証情報がなく、外部へのdeployは実行していない。ローカルの成功を実環境での保証とは扱わない。
 
-各候補について、依存バージョン、変更した設定、実行コマンド、build ログ、生成ファイル、配信時の観測、保守上の追加負担を残し、「成功／失敗／未検証」で判定する。SSG と SSR の両立を確認した後、Preview・ブラウザ等の残る検証結果と合わせて移行可否を再評価する。
+### 再実行手順
+
+```bash
+pnpm --filter @tsl/api db:migrate:local
+pnpm --filter @tsl/api content:sync
+pnpm --filter @tsl/api db:seed:dev
+pnpm --filter @tsl/api run dev --var WEB_ORIGIN:http://localhost:3002
+# 別ターミナル。上記API Workerと並走する。
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8787 pnpm --filter @tsl/web run build:vinext
+pnpm --filter @tsl/web run start:vinext
+# 別ターミナル。react-server条件は検証script内のserver-only importに必要。
+NODE_OPTIONS=--conditions=react-server pnpm --filter @tsl/web exec tsx scripts/verify-vinext-ssg.ts
+pnpm --filter @tsl/web exec wrangler deploy --dry-run --config dist/server/wrangler.json
+```
+
+確認スクリプトは、全paramsとmanifestの一致、生成物と応答の一致、SSRのno-storeとerror boundary不在、正解値非漏洩、404と内部成果物への直接アクセス拒否を検証する。ブラウザ操作と一時guardによる負の対照は別途確認した。
+
+### SSG構成での比較と追加負担
+
+| 指標（2026-10-05の同じローカル環境） | OpenNext | Vinext + SSG |
+| --- | --- | --- |
+| build実測（content生成を含む、成功した2回の参考値） | 20.31 s / 33.27 s | 6.50 s / 6.99 s |
+| Worker upload（dry-run） | 6296.92 KiB / gzip 1295.37 KiB | 1532.73 KiB / gzip 426.99 KiB |
+| client assetsのファイル総バイト数 | 1,209,867 bytes | 1,164,579 bytes |
+| 静的cache成果物（index含む） | 上記assetsに含む | 215,015 bytes / 10 files |
+
+正式なdeploy時間や本番edgeのTTFBの比較ではない。ローカルのcache状態と同時実行するチェックの負荷を固定しておらず、build時間は参考値である。追加した直接依存は `@vinext/cloudflare@1.0.1`（推移的に `@cloudflare/workers-response-store@1.0.1` を含む）。この構成はStatic Assetsだけを使用し、新しいR2 / Durable Object / KV / Queue bindingは不要。コンテンツ更新では再ビルド・再deployが必要。初回PoCのビルド警告、既存のpeer version警告、ローカルworkerdの接続切断ログは別途残り、SSG不成立の根拠にはしない。
+
+最終構成で `pnpm typecheck` / `pnpm lint` / `pnpm test` と、Vinext SSG build / OpenNext build / 両Workerのdeploy dry-runが成功した。`vinext-config.test.ts` には内部cache artifactをWorker経由にする設定の確認を追加した。検証scriptの型エラーは修正し、最終チェックとOpenNext buildで再確認済み。
 
 ## SSR 応答（ローカル workerd、参考値）
 
@@ -125,9 +156,7 @@ API を呼ぶ通常 SSR route は同程度だった。OpenNext のローカル p
 
 ## 未実施
 
-- 上記「SSG 実現方法の追加検証」全項目（prerender の失敗再現、構成変更によるビルド時 SSG と SSR の両立、生成済み HTML / RSC の静的配信）。
 - Cloudflare Preview Worker へのデプロイ、deploy 時間、Workers Logs / Observability の比較（Cloudflare の認証情報が無いため）。
-- ブラウザでの Quiz / Review の操作（採点・`router.refresh()`・state reset）と hydration の確認。
 - Cloudflare Access 環境での認証 cookie・preflight・authReady の確認。
 
 ローカル Vinext Worker の再読み込み後、各リクエストで `workerd/util/sqlite.c++:662: SQLITE_CANTOPEN` のログが出たが応答は 200 のままだった。同じ `.wrangler/state` を別の `wrangler dev` と共有していたことによるローカル環境の事象と考えられるが、原因は未確認である。
