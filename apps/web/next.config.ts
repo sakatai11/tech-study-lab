@@ -13,4 +13,5 @@ const nextConfig: NextConfig = {
 
 export default nextConfig
 
-initOpenNextCloudflareForDev()
+// Vinext も next.config.ts を読み込み、OpenNext の Miniflare proxy が Vite process を終了できなくするため Vinext 時は初期化しない。
+if (!process.env.VINEXT) initOpenNextCloudflareForDev()
