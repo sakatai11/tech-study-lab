@@ -81,13 +81,7 @@ describe('Vinext Cloudflare configuration', () => {
     expect(nextConfig).toMatch(/if\s*\(!process\.env\.VINEXT\)\s*initOpenNextCloudflareForDev\(\)/)
 
     const buildCommand = packageJson.scripts['build:vinext'] ?? ''
-    const viteBuildIndex = buildCommand.indexOf('VINEXT=1 vite build')
-    const cleanupIndex = buildCommand.indexOf(
-      `require('node:fs').rmSync('.wrangler/deploy/config.json',{force:true})`,
-    )
-
-    expect(viteBuildIndex).toBeGreaterThanOrEqual(0)
-    expect(cleanupIndex).toBeGreaterThan(viteBuildIndex)
+    expect(buildCommand).toContain('node scripts/build-vinext.mjs')
     expect(packageJson.scripts['start:vinext']).toContain('--config dist/server/wrangler.json')
     expect(packageJson.scripts['deploy:vinext']).toContain('--config dist/server/wrangler.json')
   })

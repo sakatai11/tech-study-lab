@@ -35,7 +35,7 @@
 PoC で見つけ、構成で回避した非互換：
 
 - **build が終了しない**：Vinext は `next.config.ts` を読み込むため、`initOpenNextCloudflareForDev()` が wrangler `getPlatformProxy()`（Miniflare / workerd）を起動し、破棄されないまま Vite process が残る。`VINEXT=1` のとき初期化しないよう `next.config.ts` で分岐した。
-- **OpenNext deploy の乗っ取り**：`@cloudflare/vite-plugin` は build 後に `.wrangler/deploy/config.json` を書き、以後 `--config` なしの wrangler コマンドを `dist/server/wrangler.json` へリダイレクトする。`opennextjs-cloudflare deploy` は既定で `--config` を渡さないため、そのままでは OpenNext の deploy が Vinext Worker を上げる。`build:vinext` の最後にこのファイルを削除し、Vinext 側コマンドは `--config` を明示した。
+- **OpenNext deploy の乗っ取り**：`@cloudflare/vite-plugin` は Worker bundle の書き出し時に `.wrangler/deploy/config.json` を書き、以後 `--config` なしの wrangler コマンドを `dist/server/wrangler.json` へリダイレクトする。`opennextjs-cloudflare deploy` は既定で `--config` を渡さないため、そのままでは OpenNext の deploy が Vinext Worker を上げる。`build:vinext` は `scripts/build-vinext.mjs` で Vite を実行し、成功・失敗のどちらでも `finally` でこのファイルを削除する。prerender 失敗時もビルドの終了コードを保持し、Vinext 側コマンドは `--config` を明示した。回帰テストは実際の package script を一時ディレクトリで実行し、成功時・失敗時の削除と終了コードを確認する。
 - **`vite dev` で `WeakRef is not defined`**：React の development 用 RSC client が `WeakRef` を使うが、compat date `2025-01-09` の workerd では既定で無効である。OpenNext と同じ compat date を保ち、`wrangler.vinext.jsonc` にだけ `enable_weak_ref` を追加した。
 - **client 環境での `cloudflare:workers` 解決失敗**：shim を global alias にすると client build が `cloudflare:workers` を解決できず失敗するため、rsc/ssr 環境だけに適用する plugin で解決した。
 
