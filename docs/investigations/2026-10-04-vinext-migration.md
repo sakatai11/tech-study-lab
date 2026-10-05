@@ -6,11 +6,11 @@
 
 **現時点では正式移行を見送る。** Vinext 経路は `apps/web` に並行 PoC として残し、OpenNext を本番経路として維持する。
 
-見送りの主因は、Vinext の Cloudflare 構成では `/learn/**`・`/quiz/[lesson]` の標準 SSG（§12.8）が成立しないこと、および Cloudflare 実環境（Preview Worker）での deploy 時間・Observability を未検証であること。ビルド時間と Worker upload size は Vinext が大幅に小さく、通常 SSR・Service Binding・正解データ非漏洩は PoC で成立した。
+見送りの主因は、今回の Vinext 1.0.1 + Cloudflare PoC では `/learn/**`・`/quiz/[lesson]` の標準 SSG（§12.8）を維持する方法を確立・検証できていないこと、および Cloudflare 実環境（Preview Worker）での deploy 時間・Observability を未検証であること。Vinext 自体には SSG / prerender 機能があるため、SSG が実現不可能と結論づけたものではない。ビルド時間と Worker upload size は Vinext が大幅に小さく、通常 SSR・Service Binding・正解データ非漏洩は PoC で成立した。
 
 再評価の条件：
 
-1. Vinext の Cloudflare prerender が `cloudflare:workers` を使うアプリで動作し（vinext#2911 の解消または同等の手段）、`generateStaticParams` の route を Static Assets 等で配信できる。
+1. 下記「SSG 実現方法の追加検証」で、`cloudflare:workers` を使う SSR と教材・演習のビルド時 SSG を両立する構成を確立し、`generateStaticParams` の全 route を Static Assets 等で配信できる。
 2. Preview Worker へデプロイし、deploy 時間・Workers Logs・エラー時のログを OpenNext と比較できる。
 3. ブラウザで Quiz / Review の状態遷移（採点・`router.refresh()`・state reset）と hydration を確認できる。
 
@@ -83,6 +83,28 @@ API Worker（`wrangler dev` :8787、ローカル D1 に migrate / content sync /
 
 Vinext は既定では prerender しない。`prerender: { routes: "*" }` を有効にしても、Cloudflare では Static Assets として配信する構成が別途必要で、build 時 prerender は Node 上で workerd 向け bundle を読むため `cloudflare:workers` を import するアプリでは失敗する（vinext#2911）。本 PoC は `src/lib/api.ts` 経由で shim がこの import を持つため、prerender は有効にしていない。
 
+## SSG 実現方法の追加検証（2026-10-05 追加、未実施）
+
+目的は、現在の PoC が SSR であることの確認に加え、構成変更によって design.md §8.2・§8.3・§12.8 のビルド時 SSG を維持できるかを検証すること。以下は検証計画であり、実現済みの結果ではない。
+
+### 検証する構成
+
+1. **現構成での失敗再現**：Vinext 1.0.1 の対象 route に prerender を有効化し、build ログで失敗箇所と `cloudflare:workers` の import 経路を確認する。[vinext#2911](https://github.com/cloudflare/vinext/issues/2911) の報告と、本アプリで再現した事実を分けて記録する。
+2. **prerender 用と Worker 用の依存分離**：教材・演習の prerender に Worker 専用モジュールが入り込まないよう、ビルド先・alias・binding 取得の分離を試す。単に binding の参照を遅延するだけでは ESM 読み込みエラーを回避できるとは限らないため、実際の bundle と build で確認する。prerender 用 shim を試す場合は API 呼び出しを明示的に失敗させ、空データやダミーのユーザー情報を焼き込んで成功扱いにしない。SSR では実際の Service Binding を使う。
+3. **Cloudflare 対応 prerender と静的配信**：固定版での対応範囲を確認し、必要なら候補版を別途固定して、上流修正または workerd / Miniflare 上の prerender を評価する。HTML と RSC の静的配信には、対応版の Static Assets adapter または同等の構成を検討する。現行 upstream の機能が 1.0.1 でも利用できると仮定しない。
+
+デプロイ後の prewarm / CDN キャッシュを試す場合は別方式として記録する。初回アクセスやデプロイ後に生成する方式は、ビルド時 SSG の成功には数えない。通常 SSR が必要なため、アプリ全体の `output: 'export'` だけで要件を満たしたとは扱わない。
+
+### 成功条件と記録する証拠
+
+- **全 content route の生成**：`generateStaticParams` が列挙する教材一覧・教材本文・演習の全 URL について、ビルド時に HTML / RSC を生成する。params 一覧、生成 manifest、成果物の対応を照合する。HTTP 200 や Cache-Control のみで SSG と判定しない。
+- **Cloudflare での配信**：ローカル workerd で full GET と RSC navigation が生成済み成果物を返し、教材・演習の Server render がリクエストごとに実行されないことをログ等で確認する。API Worker 停止時も本文と問題の初期表示が成立する。認証後画面の SSR は別途維持する。
+- **境界の維持**：`/home`・`/review`・`/domains`・`/analytics` は request ごとの SSR と実際の API Service Binding を保ち、ユーザー固有データを静的成果物や共有キャッシュへ含めない。quiz の HTML・RSC・client bundle に `answerIndex` の正解値を含めない。
+- **表示・操作の維持**：未定義 route は 404、生成済み route の metadata と本文が正しい。ブラウザで hydration、採点・解答記録、教材閲覧記録、再挑戦、`router.refresh()`、SSR / SSG 間の navigation を確認する。
+- **実環境と比較**：専用 Preview Worker でも静的配信と Access 認証を確認し、SSG を含む build 時間・Worker upload size・静的成果物サイズを OpenNext と比較する。必要な環境がない項目は未検証として残す。
+
+各候補について、依存バージョン、変更した設定、実行コマンド、build ログ、生成ファイル、配信時の観測、保守上の追加負担を残し、「成功／失敗／未検証」で判定する。SSG と SSR の両立を確認した後、Preview・ブラウザ等の残る検証結果と合わせて移行可否を再評価する。
+
 ## SSR 応答（ローカル workerd、参考値）
 
 各 route を warm-up 3 回の後 20 回取得した中央値（ms、TTFB）。同一マシンのローカル計測で、ネットワークや edge cache を含まない。
@@ -103,6 +125,7 @@ API を呼ぶ通常 SSR route は同程度だった。OpenNext のローカル p
 
 ## 未実施
 
+- 上記「SSG 実現方法の追加検証」全項目（prerender の失敗再現、構成変更によるビルド時 SSG と SSR の両立、生成済み HTML / RSC の静的配信）。
 - Cloudflare Preview Worker へのデプロイ、deploy 時間、Workers Logs / Observability の比較（Cloudflare の認証情報が無いため）。
 - ブラウザでの Quiz / Review の操作（採点・`router.refresh()`・state reset）と hydration の確認。
 - Cloudflare Access 環境での認証 cookie・preflight・authReady の確認。
