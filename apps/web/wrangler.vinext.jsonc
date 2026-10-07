@@ -3,7 +3,9 @@
   // React の開発用 RSC クライアントが WeakRef を使うため、OpenNext と同じ互換日付のまま有効化する。
   "$schema": "node_modules/wrangler/config-schema.json",
   "main": "vinext/server/fetch-handler",
-  "name": "tech-study-lab-web-vinext",
+  "name": "tech-study-lab-web-vinext-local",
+  "workers_dev": false,
+  "preview_urls": false,
   "compatibility_date": "2025-01-09",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public", "enable_weak_ref"],
   "services": [{ "binding": "API", "service": "tech-study-lab-api", "entrypoint": "InternalApi" }],
@@ -16,6 +18,7 @@
   "env": {
     "edge": {
       "name": "tech-study-lab-web-vinext",
+      "workers_dev": true,
       "services": [
         { "binding": "API", "service": "tech-study-lab-api-vinext", "entrypoint": "InternalApi" }
       ],

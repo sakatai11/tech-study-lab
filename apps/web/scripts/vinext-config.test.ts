@@ -15,6 +15,7 @@ type WranglerConfig = {
   env?: Record<string, Partial<WranglerConfig>>
   observability?: { enabled: boolean; head_sampling_rate: number }
   preview_urls?: boolean
+  workers_dev?: boolean
   account_id?: string
   d1_databases?: Array<{ binding: string; database_name: string; database_id: string }>
   ratelimits?: Array<{ name: string; namespace_id: string }>
@@ -31,8 +32,11 @@ describe('Vinext Cloudflare configuration', () => {
   const openNextConfig = readJsonc(new URL('../wrangler.jsonc', import.meta.url))
 
   it('uses an isolated Worker with no production migration history', () => {
-    expect(vinextConfig.name).toBe('tech-study-lab-web-vinext')
+    expect(vinextConfig.name).toBe('tech-study-lab-web-vinext-local')
     expect(vinextConfig.name).not.toBe(openNextConfig.name)
+    expect(vinextConfig.name).not.toBe(vinextConfig.env?.edge?.name)
+    expect(vinextConfig.workers_dev).toBe(false)
+    expect(vinextConfig.preview_urls).toBe(false)
     expect(vinextConfig.main).toBe('vinext/server/fetch-handler')
     expect(vinextConfig.services).toEqual([
       { binding: 'API', service: 'tech-study-lab-api', entrypoint: 'InternalApi' },
@@ -65,6 +69,7 @@ describe('Vinext Cloudflare configuration', () => {
     expect(edge?.services?.some(({ service }) => service === 'tech-study-lab-api')).toBe(false)
     expect(edge?.observability).toEqual({ enabled: true, head_sampling_rate: 1 })
     expect(edge?.preview_urls).toBe(false)
+    expect(edge?.workers_dev).toBe(true)
   })
 
   it('keeps edge writes in a dedicated D1 and rate limit namespace', () => {
@@ -124,6 +129,6 @@ describe('Vinext Cloudflare configuration', () => {
     const buildCommand = packageJson.scripts['build:vinext'] ?? ''
     expect(buildCommand).toContain('node scripts/build-vinext.mjs')
     expect(packageJson.scripts['start:vinext']).toContain('--config dist/server/wrangler.json')
-    expect(packageJson.scripts['deploy:vinext']).toContain('--config dist/server/wrangler.json')
+    expect(packageJson.scripts['deploy:vinext']).toBe('node scripts/deploy-vinext.mjs')
   })
 })

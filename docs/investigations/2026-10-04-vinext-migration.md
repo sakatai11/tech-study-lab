@@ -288,7 +288,15 @@ pnpm --filter @tsl/api exec wrangler d1 migrations apply tech-study-lab-vinext -
 pnpm --filter @tsl/api exec wrangler deploy --config wrangler.vinext.jsonc --var WEB_ORIGIN:<検証WebURL> --var ACCESS_ISSUER:<Access issuer> --var ACCESS_AUDIENCE:<専用application AUD>
 
 CLOUDFLARE_ENV=edge NEXT_PUBLIC_API_BASE_URL=https://tech-study-lab-api-vinext.sakai111893.workers.dev pnpm --filter @tsl/web run build:vinext
-pnpm --filter @tsl/web exec wrangler deploy --config dist/server/wrangler.json
+pnpm --filter @tsl/web run deploy:vinext
 ```
 
 今回の作業で検証環境の作成・反映と初回の認証・接続・採点が完了した。Issue #218 のうち、認証済みの全 content HTML/RSC の成果物との一致、SSR の full GET/RSC の no-store 応答、認証済み内部 RSC artifact、認証切れと回復、Review の実際の採点と `router.refresh()`、隔離した API 障害・復旧試験、OpenNext との同条件性能比較、実際の Workers Logs と `SQLITE_CANTOPEN` の有無、PR #217 の review thread / #199 への結果反映は残っている。これらを完了済みとしてチェックしたり、Issue を close したりしない。
+
+### PR #219 のレビュー修正（2026-10-07）
+
+既定設定と `edge` 設定で Worker 名が一致しており、`CLOUDFLARE_ENV=edge` を省略したビルドをデプロイすると、検証 Web の API binding が本番へ戻る問題を修正した。既定名を `tech-study-lab-web-vinext-local` に分離し、既定設定の `workers.dev` / preview URL を無効化した。`edge` は既存の検証用 Worker 名と専用 API binding、`workers_dev: true` を明示する。ローカルの API binding 名と起動手順は維持する。
+
+`deploy:vinext` は生成 config の検証用 Worker 名、専用 API binding、公開・preview 設定を確認してから Wrangler を起動する。環境指定を省いたローカル用ビルド、同名で本番 API に接続する旧成果物、追加の service binding、`--name` / `--config` / `--env` 等の CLI 上書きを拒否する。`--dry-run` は同じ検査を通して許可する。回帰テストは実際の package script と Wrangler stub を使い、拒否時に CLI が起動しないことと、正常時の引数・失敗終了コードを確認する。
+
+修正後は `pnpm typecheck` / `pnpm lint` / `pnpm test`（272件）、`pnpm architecture:check` / `pnpm architecture:test`（22件）が成功した。snapshot 再生成は意味的差分なし。実際の既定ビルドはローカル用 Worker 名と公開 URL 無効設定を生成し、`deploy:vinext --dry-run` は Wrangler 起動前に拒否された。`edge` の再ビルドと同コマンドの dry-run は成功し、専用 API binding を確認した。このレビュー修正では外部リソースの反映は行っていない。

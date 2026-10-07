@@ -831,7 +831,7 @@ Issue #218 の Vinext 実環境 PoC に限り、手動で管理する隔離さ�
 4. `pnpm --filter @tsl/api db:seed:dev`（任意。固定ユーザーの解答ログ・SRS 状態を開発用データへ再投入。§10.8）
 5. `pnpm --filter @tsl/api dev`（`:8787`）と `pnpm --filter @tsl/web dev`（`:3000`）を並走
 
-Vinext 1.0 の並行 PoC（Issue #199、[検証記録](./investigations/2026-10-04-vinext-migration.md)）は `pnpm --filter @tsl/web dev:vinext`（`:3001`）、`build:vinext`、`start:vinext`（`:3002`）で起動する。PoC は `apps/web/wrangler.vinext.jsonc` の別 Worker（`tech-study-lab-web-vinext`、migration なし）を使い、`wrangler.jsonc` と OpenNext の手順を置き換えない。
+Vinext 1.0 の並行 PoC（Issue #199、[検証記録](./investigations/2026-10-04-vinext-migration.md)）は `pnpm --filter @tsl/web dev:vinext`（`:3001`）、`build:vinext`、`start:vinext`（`:3002`）で起動する。PoC は `apps/web/wrangler.vinext.jsonc` のローカル用 Worker 名 `tech-study-lab-web-vinext-local`（migration なし）を使い、`wrangler.jsonc` と OpenNext の手順を置き換えない。既定設定の API binding はローカルの `tech-study-lab-api` に接続し、`workers.dev` と preview URL は無効にする。
 
 PoC のブラウザから API を呼ぶときは、手順5の API 起動を以下のいずれかに置き換え、Web と別ターミナルで並走する。`WEB_ORIGIN` はブラウザの Origin と一致させる。
 
@@ -859,7 +859,7 @@ Vinext PoC の SSG 検証では `prerender` と `@vinext/cloudflare` の `static
 
 `deploy:vinext` は検証用であり、本番デプロイ手順に含めない。
 
-Issue #218 の実環境 PoC は、`CLOUDFLARE_ENV=edge` と検証用 API の `NEXT_PUBLIC_API_BASE_URL` を指定して `build:vinext` を実行する。`wrangler.vinext.jsonc` の `edge` 設定で `API` Service Binding を `tech-study-lab-api-vinext#InternalApi` に向け、生成された `dist/server/wrangler.json` の Worker 名・binding・公開先を確認してから、同ファイルを明示指定してデプロイする。設定選択はビルド時に行い、deploy 時の環境変数だけで接続先が切り替わると扱わない。
+Issue #218 の実環境 PoC は、`CLOUDFLARE_ENV=edge` と検証用 API の `NEXT_PUBLIC_API_BASE_URL` を指定して `build:vinext` を実行する。`wrangler.vinext.jsonc` の `edge` 設定は別名の Worker `tech-study-lab-web-vinext` と `API` Service Binding `tech-study-lab-api-vinext#InternalApi` を使う。生成された `dist/server/wrangler.json` の Worker 名・binding・公開先を確認し、`pnpm --filter @tsl/web run deploy:vinext` で同ファイルを明示指定してデプロイする。このコマンドは生成 config の Worker 名、専用 API binding、`workers_dev: true`、`preview_urls: false` を検査し、ローカル用ビルドや旧構成の本番 API binding を含むビルドを Wrangler 起動前に拒否する。追加引数は `--dry-run` だけを許可し、CLI による接続先の上書きを防ぐ。設定選択はビルド時に行い、deploy 時の環境変数だけで接続先が切り替わると扱わない。
 
 検証用 hostname でも公開 `/` と Access で保護する `/home`・`/learn`・`/quiz`・`/review`・`/domains`・`/analytics` の境界を適用する。検証用 API は専用 Access application で保護し、`OPTIONS` は API の credentialed CORS 応答へ転送する。API の deploy と検証 D1 の操作には `apps/api/wrangler.vinext.jsonc` を明示指定する。API の `WEB_ORIGIN`・`ACCESS_ISSUER`・`ACCESS_AUDIENCE` はデプロイごとに明示指定し、Git や `.env` に保存しない。外部リソース作成、remote D1 への migration/content SQL 実行、Worker/Access 更新は、対象アカウント・検証用リソース・入力値・SQL を確認した承認を得てから行う。実施結果と再実行手順は [Vinext 検証記録](./investigations/2026-10-04-vinext-migration.md) に記録する。
 
