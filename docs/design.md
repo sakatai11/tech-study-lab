@@ -805,6 +805,8 @@ topic frontmatter の `order` も同様に表示順（0 以上の整数、小さ
 
 **local / production の 2 環境のみ**。preview 環境（PR ごとのデプロイ等）は将来検討とする。
 
+Issue #218 の Vinext 実環境 PoC に限り、手動で管理する隔離された検証用 Worker と D1 を使う。Web は `tech-study-lab-web-vinext`、API は `tech-study-lab-api-vinext`、D1 は `tech-study-lab-vinext` とし、本番の Worker・route・Origin・学習記録は変更しない。D1 へは同じ commit の migration と content から生成した問題キャッシュ・固定ユーザーだけを投入し、解答・閲覧記録は検証用 D1 に保存する。本番データの複製はしない。これは PR ごとの自動 preview 環境や正式移行の導入ではない。
+
 ### 12.2 環境変数・バインディング一覧
 
 §3.1 / §8.4 / §10.5 に散在していた設定値の単一の一覧。**設定値をコードにハードコードしない**（§8.4）。
@@ -856,6 +858,10 @@ Vinext PoC の SSG 検証では `prerender` と `@vinext/cloudflare` の `static
 順序の根拠：**スキーマ → データ → API → 画面** の順なら、各ステップの完了時点で稼働中の旧バージョンが壊れない（マイグレーションが追加中心の後方互換であることが前提。§12.6）。
 
 `deploy:vinext` は検証用であり、本番デプロイ手順に含めない。
+
+Issue #218 の実環境 PoC は、`CLOUDFLARE_ENV=edge` と検証用 API の `NEXT_PUBLIC_API_BASE_URL` を指定して `build:vinext` を実行する。`wrangler.vinext.jsonc` の `edge` 設定で `API` Service Binding を `tech-study-lab-api-vinext#InternalApi` に向け、生成された `dist/server/wrangler.json` の Worker 名・binding・公開先を確認してから、同ファイルを明示指定してデプロイする。設定選択はビルド時に行い、deploy 時の環境変数だけで接続先が切り替わると扱わない。
+
+検証用 hostname でも公開 `/` と Access で保護する `/home`・`/learn`・`/quiz`・`/review`・`/domains`・`/analytics` の境界を適用する。検証用 API は専用 Access application で保護し、`OPTIONS` は API の credentialed CORS 応答へ転送する。API の deploy と検証 D1 の操作には `apps/api/wrangler.vinext.jsonc` を明示指定する。API の `WEB_ORIGIN`・`ACCESS_ISSUER`・`ACCESS_AUDIENCE` はデプロイごとに明示指定し、Git や `.env` に保存しない。外部リソース作成、remote D1 への migration/content SQL 実行、Worker/Access 更新は、対象アカウント・検証用リソース・入力値・SQL を確認した承認を得てから行う。実施結果と再実行手順は [Vinext 検証記録](./investigations/2026-10-04-vinext-migration.md) に記録する。
 
 - MVP は**手動実行**とする。Walking Skeleton の本番確認後に GitHub Actions による main ブランチ自動デプロイを検討する。将来の CI でも、remote D1 mutation または deploy の前に保護された production 環境の明示的な承認ゲートを置く（PR ゲート CI ＝型・lint・test・buildは §5 のとおり先行整備）。
 - 各ステップの成功を確認するまで後続ステップへ進まない。失敗時はそこで停止し、後続の migration/content sync/API/Web deploy を実行しない。復旧が必要な場合は、稼働中の既知の Worker version を確認してから、対象と影響を明示した承認を得てロールバックする。

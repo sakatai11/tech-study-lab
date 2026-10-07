@@ -1,0 +1,31 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "account_id": "4459a4d59a634a07eac0400d39b84f20",
+  "name": "tech-study-lab-api-vinext",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-01-09",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": false,
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "tech-study-lab-vinext",
+      "database_id": "db179ef0-7349-407b-8323-71ff91889a82",
+      "migrations_dir": "drizzle/migrations"
+    }
+  ],
+  "ratelimits": [
+    {
+      "name": "ANSWERS_RATE_LIMITER",
+      "namespace_id": "21801",
+      "simple": { "limit": 60, "period": 60 }
+    },
+    {
+      "name": "LESSON_VIEWS_RATE_LIMITER",
+      "namespace_id": "21802",
+      "simple": { "limit": 30, "period": 60 }
+    }
+  ]
+}

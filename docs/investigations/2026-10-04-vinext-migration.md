@@ -171,3 +171,124 @@ API を呼ぶ通常 SSR route は同程度だった。OpenNext のローカル p
 - Cloudflare Access 環境での認証 cookie・preflight・authReady の確認。
 
 ローカル Vinext Worker の再読み込み後、各リクエストで `workerd/util/sqlite.c++:662: SQLITE_CANTOPEN` のログが出たが応答は 200 のままだった。同じ `.wrangler/state` を別の `wrangler dev` と共有していたことによるローカル環境の事象と考えられるが、原因は未確認である。
+
+## 2026-10-06: Issue #218 の Cloudflare 環境準備
+
+この節は外部反映前の準備記録である。Worker/D1/Access の新規作成・更新、remote migration/content sync、認証済みブラウザ操作、edge の SSG/SSR 検証は未実施。Issue #218 の実環境に関する完了条件を達成したとは扱わない。
+
+検証基準は PR #217 を含む `develop` の commit `90965350d336e47dd06eae86deca5955d4f04baa`。環境設定の作業ブランチは `chore/issue-218-cloudflare-vinext`。Cloudflare dashboard で対象アカウント、既存 API の Origin・Access・D1 binding を確認した。Wrangler 4.147.0 のログインは期限切れであり、認証情報ファイルを読み取らず、利用者による `wrangler login` の完了を待つ。
+
+### 反映対象
+
+| 項目 | 検証用の対象 |
+| --- | --- |
+| Cloudflare account | `4459a4d59a634a07eac0400d39b84f20`（既存の tech-study-lab と同じアカウント） |
+| Web Worker | `tech-study-lab-web-vinext` |
+| Web hostname | `tech-study-lab-web-vinext.sakai111893.workers.dev` |
+| API Worker | `tech-study-lab-api-vinext` |
+| API hostname | `tech-study-lab-api-vinext.sakai111893.workers.dev` |
+| API Service Binding | `API` → `tech-study-lab-api-vinext#InternalApi` |
+| D1 | 新規 `tech-study-lab-vinext`。ID は作成成功後に確定する |
+| Access application | 新規 `tech-study-lab-vinext`。既存の `Allow owner` policy を再利用し、その policy 自体は変更しない |
+| Access 保護対象 | API の全パス、および Web の `home*`・`learn*`・`quiz*`・`review*`・`domains*`・`analytics*`。Web の `/` と公開アセットは保護対象に含めない |
+| API health | 新規 `tech-study-lab-vinext-health-public` application に API の `/health` のみを指定し、既存 `Bypass health` policy を再利用する |
+| CORS | API の `WEB_ORIGIN` を検証用 Web URL と完全一致させる。Access は `OPTIONS` を origin に転送する |
+| Access Cookie | Web/API を同じ検証用 application に含め、既存構成と同様に eager redirect を使う。Cookie の内容を取得・記録せず、実際のブラウザ操作で送信の成立を確認する |
+| Logs | 検証用 Web/API で Observability を有効化、sampling 1。version preview URL は無効化する |
+| Rate limit | 検証用 namespace `21801`（answers: 60/60s）と `21802`（lesson-views: 30/60s） |
+
+既存 API の `WEB_ORIGIN` は本番 Web の URL だけを許可している。これを検証用 URL へ置き換えると本番の credentialed CORS が成立しないため、API/D1 を分離する。既存の `tech-study-lab-web`・`tech-study-lab-api`・本番 D1・本番 Access application は反映対象に含めない。
+
+### D1 へ投入する内容と順序
+
+空の検証用 D1 に以下の順で適用する。既存の migration SQL を変更せず、本番 D1 のデータを複製しない。
+
+1. `0000_flowery_quasar.sql`: `answer_logs`・`lesson_views`・`questions`・`srs_states`・`users` を作成。
+2. `0001_add_srs_version.sql`: `srs_states.version` を追加。
+3. `0002_nasty_guardsmen.sql`: 問題の domain/topic/lesson/is_active を追加。
+4. 同じ commit の content から既存の `createContentSyncPayload` / `createContentSyncSql` で生成した SQL: 固定ユーザー `user-local-001` と問題3件を upsert、active membership を更新（合計5文）。解答・閲覧・SRS 記録の投入は含まない。
+
+準備した SQL は `/private/tmp/issue-218-content.sql`、SHA-256 は `215128ca58b9182009d8033fcda4b58cb6d943cad4d6f603059691bb97b44ae1`。ファイルが残っていることと内容・hash を再確認してから、この対象・SQL・順序について得た承認の範囲で実行する。再生成して SQL が変わった場合は入力値を再確認する。既存の `content:sync:remote` は本番 D1 `tech-study-lab` を固定指定するため、隔離環境への同期には使用しない。
+
+### ローカルで確認できたこと
+
+- `pnpm install --frozen-lockfile`: 成功。
+- `CLOUDFLARE_ENV=edge NEXT_PUBLIC_API_BASE_URL=https://tech-study-lab-api-vinext.sakai111893.workers.dev pnpm --filter @tsl/web run build:vinext`: 成功。
+- 生成された `dist/server/wrangler.json` の Worker 名・`API#InternalApi` 接続先・静的 asset 保護・Observability・preview URL 無効化を確認。
+- prerender manifest: `/`・教材3 route と `/404` が rendered、`/home`・`/review`・`/domains`・`/analytics` が skipped/dynamic。
+- Web の明示的 config による deploy dry-run: 成功。upload `1532.76 KiB` / gzip `426.12 KiB`。
+- 隔離 API の deploy dry-run: 成功。upload `460.91 KiB` / gzip `89.25 KiB`。D1 ID と Access audience は dry-run 専用のダミーであり、実デプロイには使用しない。
+- 既存 Vinext config/build wrapper テスト: 7件成功。edge の応答や Cookie 認証の検証結果ではない。
+- architecture snapshot: 再生成後の意味的差分なし。`architecture:check` 成功。
+
+### 外部反映後の再実行順序
+
+1. 対象アカウント・新規リソース・Access 設定・上記 SQL を確認した承認と、Wrangler のログインを確認する。
+2. 検証用 Access application を作成し、許可 policy、全 hostname/path、OPTIONS 転送、Cookie 設定を確認する。新規 application の AUD は dashboard から参照し、Git や `.env` に保存しない。
+3. `wrangler d1 create tech-study-lab-vinext` を対象アカウントで実行する。発行された ID を用いて検証用 API config を作成し、本番 D1 の ID と異なることを確認する。
+4. 検証用 API config を明示指定して `wrangler d1 migrations apply tech-study-lab-vinext --remote`、続いて確認済み SQL を `wrangler d1 execute tech-study-lab-vinext --remote --file <確認済みSQL>` で適用する。各ステップの成功を確認するまで次に進まない。
+5. 同じ検証用 API config を明示指定して deploy。`WEB_ORIGIN`・`ACCESS_ISSUER`・新規 application の `ACCESS_AUDIENCE` を毎回すべて `--var` で渡す。公開 `/health`、未認証の Access 境界、検証 Web Origin に対する POST の preflight を確認する。
+6. 上記 `CLOUDFLARE_ENV=edge` と API URL を明示して Web をビルドし、`wrangler deploy --config dist/server/wrangler.json` で反映する。生成 config が検証用 Worker/API だけを指すことを毎回確認する。
+7. Worker version・hostname・deploy 計測値と、未認証/認証済みの境界、SSG/SSR、内部 cache URL の別表記、ブラウザ操作、Logs の実環境結果を追記する。現在この節にはこれらの実環境証跡はない。
+
+## 2026-10-07: Issue #218 の隔離環境への反映と初回確認
+
+対象リソース、Access 設定、migration 3件、上記 SHA-256 の投入 SQL に対する利用者の明示承認と、Wrangler の再ログイン完了を確認して反映した。`issue-dev-orchestrate` は利用者の指定により使用していない。この節は環境反映と実施済み試験の記録であり、後述の未検証項目を含む Issue #218 全体の完了や Vinext の正式採用を意味しない。
+
+### 確定したリソースとデプロイ結果
+
+実行コードは `90965350d336e47dd06eae86deca5955d4f04baa`（PR #217 を含む）。追加した隔離環境設定は本作業ブランチの差分であり、検証用の設定を選択してビルド・反映した。アカウントと hostname は前節の反映対象どおり。
+
+| 項目 | 結果 |
+| --- | --- |
+| Web version | `4576e2ac-4b00-4426-b22e-da0b050383f4` |
+| API version | `477da598-6185-4bdd-a3e2-9db8b9e4c4f9` |
+| D1 ID | `db179ef0-7349-407b-8323-71ff91889a82`（本番 D1 と異なる） |
+| Access application ID | `90f65b99-7e6b-4039-ba4c-c74bddd6e90b`（`Allow owner` を関連付け） |
+| health application ID | `18e2c017-d4ae-4a25-9793-59d67838f087`（`Bypass health`、検証 API の `/health` のみ） |
+| API config | `apps/api/wrangler.vinext.jsonc`。認証・Origin の値を保存せず、deploy 時に指定 |
+| Web config | `apps/web/wrangler.vinext.jsonc` の `edge` → 生成された `dist/server/wrangler.json` |
+| Web upload / gzip / startup | `1532.76 KiB` / `426.13 KiB` / `12 ms` |
+| API upload / gzip / startup | `452.92 KiB` / `88.98 KiB` / `13 ms` |
+| Web upload / triggers | Wrangler 表示値 `12.00 sec` / `1.64 sec`（assets 52件の upload `5.28 sec` は前者に含む） |
+| API upload / triggers | Wrangler 表示値 `3.43 sec` / `1.40 sec` |
+| 使用 CLI | Web: Wrangler `4.147.0`、API: Wrangler `4.103.0`（各 workspace の既存依存） |
+
+上記時間は初回反映時の Wrangler のフェーズ表示であり、build を含む全体時間や SSR 応答時間ではない。OpenNext との同条件比較はまだ行っていない。
+
+新規 Access application の保存済み設定は、API 全パスと Web の6パス、OPTIONS の origin 転送、HttpOnly、SameSite Lax、先行リダイレクト Cookie 有効、Cookie のパス固定無効を確認した。既存の本番 application / policy、Worker、route、Origin、D1 を更新する操作は実施していない。Web/API とも Observability を有効化し、version preview URL を無効化している。
+
+### edge とブラウザで確認したこと
+
+- API `/health`: 未認証 GET が `200 {"status":"ok"}`。公開 API の `/review` は Access ログインへ 302。
+- API `/answers`: 検証 Web Origin、POST、`content-type` を指定した OPTIONS が204。`Access-Control-Allow-Origin` は検証 Web と完全一致、credentials は `true`、methods は `GET,POST,OPTIONS`、headers は `Content-Type`。
+- 公開 `/`: full GET と RSC がともに200 / `x-vinext-cache: HIT`。同じ build の生成物と SHA-256 が一致（HTML: `90a8a1859944d7f44e504dc558ddb55fbbcbc7a234683231028160f600274dc8`、RSC: `eb6d8e12e6cb9f91bdd643ac0401f8fed6c8d4600282fc300cbdec794c4ba72e`）。
+- 未認証 Web: `/home`・`/review`・`/domains`・`/analytics` と content 3 route がすべて Access ログインへ302。存在しない `/does-not-exist` は404。
+- 内部 cache: index と全9 artifact に対し、通常表記、`%5Fvinext`、`%73tatic-cache`、区切りの `%2F`、先頭の連続スラッシュ、namespace 内の連続スラッシュ、ファイル前の連続スラッシュ、`/x/../` の8表記を、raw request path を指定した HTTPS GET で試験。80件中、初回は307が50件・404が30件。同一 hostname のリダイレクトを追跡した最終応答は80件とも404で、ビルド成果物の本文との一致は0件。
+- 認証済みブラウザ: index と HTML の同じ8表記、計16件が404画面。RSC artifact へのブラウザ navigation は `ERR_BLOCKED_BY_CLIENT` となり、認証済み RSC artifact の本文・HTTP応答を検証できたとは扱わない。
+- 生成 manifest: 公開トップ・content 3 route・404 が rendered、`/home`・`/review`・`/domains`・`/analytics` は dynamic/skipped。client JS と生成 HTML/RSC 計45ファイルの数値 `answerIndex` 検査で一致0件。認証済みの全 content 応答との hash 照合は未実施。
+- 既存 Cloudflare ID プロバイダーで認証し、`/home` の本番データと分離された初期表示、教材、Quiz、復習の空キュー、学習分析、学習領域を確認。SSR と SSG の間のリンク遷移が成立した。
+- デスクトップ Quiz: 3問を採点し、選択肢ロック、FAIL/PASS/PASS、結果の2/3正解、不正解だけの再挑戦が1問になること、reload 後の intro への reset を確認。
+- モバイル幅390×844: 学習分析と navigation、Quiz の開始・正解の採点・選択肢ロックを確認。演習の `clientWidth` / `scrollWidth` はともに390。ブラウザの viewport override は検証後に解除した。
+- D1 の読み取り確認: デスクトップ3回答後に users=1、questions=3、answer_logs=3、srs_states=3、lesson_views=1。モバイルでは追加で1回答した。Cookie/JWT を抽出して別の HTTP クライアントへ渡す操作は行っていない。
+- ローカル品質検証: `pnpm typecheck`、`pnpm lint`、`pnpm test`（259件）、`pnpm architecture:check`、`pnpm architecture:test`（22件）が成功。snapshot 再生成は意味的差分なし。検証 API/D1 と本番の分離、および edge の Service Binding / preview URL を確認する設定テストを追加した。
+
+ブラウザ自動操作では「次へ」の Playwright click / press が dispatch timeout となった。DOM 上は有効なボタンであることを確認し、同じブラウザの accessibility API の click に切り替えると次問・結果へ遷移した。アプリのエラーや採点失敗としては扱っていない。API integration test 内の古い Wrangler は既存 `ratelimits` 設定への警告を出すが、テスト失敗は0件。
+
+### 再反映の手順と残っている検証
+
+再反映も §12.4 の対象・入力値確認と承認に従う。既存の検証 D1 への migration/content 再適用が必要かを先に判断し、生成 config が検証専用の接続先であることを確認する。
+
+```sh
+# D1 は毎回専用 config と検証 DB 名を明示する。
+pnpm --filter @tsl/api exec wrangler d1 migrations apply tech-study-lab-vinext --remote --config wrangler.vinext.jsonc
+# content SQL は前節の内容・hashを再確認してから、同じDB/configへ適用する。
+
+# 3つの設定値は各回すべて指定する。以下は実値を保存しないための手順表記。
+pnpm --filter @tsl/api exec wrangler deploy --config wrangler.vinext.jsonc --var WEB_ORIGIN:<検証WebURL> --var ACCESS_ISSUER:<Access issuer> --var ACCESS_AUDIENCE:<専用application AUD>
+
+CLOUDFLARE_ENV=edge NEXT_PUBLIC_API_BASE_URL=https://tech-study-lab-api-vinext.sakai111893.workers.dev pnpm --filter @tsl/web run build:vinext
+pnpm --filter @tsl/web exec wrangler deploy --config dist/server/wrangler.json
+```
+
+今回の作業で検証環境の作成・反映と初回の認証・接続・採点が完了した。Issue #218 のうち、認証済みの全 content HTML/RSC の成果物との一致、SSR の full GET/RSC の no-store 応答、認証済み内部 RSC artifact、認証切れと回復、Review の実際の採点と `router.refresh()`、隔離した API 障害・復旧試験、OpenNext との同条件性能比較、実際の Workers Logs と `SQLITE_CANTOPEN` の有無、PR #217 の review thread / #199 への結果反映は残っている。これらを完了済みとしてチェックしたり、Issue を close したりしない。
