@@ -101,6 +101,7 @@ function runDeploy(config: unknown, options: DeployOptions = {}) {
       `
       const { writeFileSync } = require('node:fs')
       writeFileSync('wrangler-invocation.json', JSON.stringify(process.argv.slice(2)))
+      writeFileSync('wrangler-env.json', JSON.stringify({ cloudflareEnv: process.env.CLOUDFLARE_ENV ?? null }))
       process.exit(${wranglerStatus})
     `,
     )
@@ -128,6 +129,7 @@ function runDeploy(config: unknown, options: DeployOptions = {}) {
       stderr: result.stderr,
       build: readJson('build-env.json') as { cloudflareEnv: string | null } | undefined,
       invocation: readJson('wrangler-invocation.json') as string[] | undefined,
+      wrangler: readJson('wrangler-env.json') as { cloudflareEnv: string | null } | undefined,
     }
   } finally {
     rmSync(directory, { recursive: true, force: true })
@@ -147,7 +149,7 @@ describe('Web deploy command', () => {
       cloudflareEnv: 'edge',
     },
   ])(
-    'builds $script for its own environment and deploys the generated config',
+    'builds and deploys $script for its own environment regardless of the caller CLOUDFLARE_ENV',
     ({ script, config, cloudflareEnv }) => {
       const result = runDeploy(config, {
         script,
@@ -156,6 +158,7 @@ describe('Web deploy command', () => {
 
       expect(result.status, result.stderr).toBe(0)
       expect(result.build).toEqual({ cloudflareEnv })
+      expect(result.wrangler).toEqual({ cloudflareEnv })
       expect(result.invocation).toEqual(['deploy', '--config', 'dist/server/wrangler.json'])
     },
   )

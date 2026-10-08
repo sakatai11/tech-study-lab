@@ -49,12 +49,13 @@ try {
     throw new Error('NEXT_PUBLIC_API_BASE_URL must be the public https URL of the target API.')
   }
 
-  // The target decides the Wrangler env; a caller's CLOUDFLARE_ENV must not redirect the build.
+  // The target decides the Wrangler env; a caller's CLOUDFLARE_ENV must not redirect the build
+  // or the deploy of the verified config.
   const { CLOUDFLARE_ENV: _callerEnv, ...inheritedEnv } = process.env
-  const buildEnv = target.cloudflareEnv
+  const targetEnv = target.cloudflareEnv
     ? { ...inheritedEnv, CLOUDFLARE_ENV: target.cloudflareEnv }
     : inheritedEnv
-  const buildStatus = run('pnpm', ['run', 'build'], buildEnv)
+  const buildStatus = run('pnpm', ['run', 'build'], targetEnv)
   if (buildStatus !== 0) {
     process.exitCode = buildStatus
   } else {
@@ -78,13 +79,17 @@ try {
       throw new Error(rebuildMessage)
     }
 
-    process.exitCode = run(process.execPath, [
-      fileURLToPath(new URL('node_modules/wrangler/bin/wrangler.js', rootUrl)),
-      'deploy',
-      '--config',
-      'dist/server/wrangler.json',
-      ...args,
-    ])
+    process.exitCode = run(
+      process.execPath,
+      [
+        fileURLToPath(new URL('node_modules/wrangler/bin/wrangler.js', rootUrl)),
+        'deploy',
+        '--config',
+        'dist/server/wrangler.json',
+        ...args,
+      ],
+      targetEnv,
+    )
   }
 } catch (error) {
   console.error(error instanceof Error ? error.message : 'Web deployment failed.')
