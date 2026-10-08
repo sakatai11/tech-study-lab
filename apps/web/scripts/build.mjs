@@ -12,6 +12,7 @@ try {
   if (result.error) throw result.error
   process.exitCode = result.status ?? 1
 } finally {
-  // Vite writes this before prerendering; a failed PoC must not redirect the next OpenNext deploy.
+  // Vite writes this redirect before prerendering. Remove it so a failed or stale build never
+  // becomes the implicit target of a later Wrangler command; deploy always passes the config.
   rmSync(new URL('../.wrangler/deploy/config.json', import.meta.url), { force: true })
 }

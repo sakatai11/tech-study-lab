@@ -13,7 +13,7 @@
 - **機械で守るガードレール**：TypeScript strict、Zod、Biome、dependency-cruiser による依存境界の検証、エージェント契約の検査をすべて CI の PR ゲートに入れています。
 - **Knowledge Graph による影響範囲の特定**：コードと設定から構造グラフを抽出します。エージェントは全文検索の前にグラフで影響範囲を絞り込みます。
 - **Claude Code と Codex の両対応**：スキル・エージェント定義・hooks を `.ai/` に一元化し、どちらのランタイムからも同じワークフローを使えます。
-- **Cloudflare 構成**：Next.js（OpenNext）と Hono を別々の Worker としてデプロイし、Service Binding と型安全 RPC（`hc`）でつないでいます。
+- **Cloudflare 構成**：Next.js 互換の Vinext と Hono を別々の Worker としてデプロイし、Service Binding と型安全 RPC（`hc`）でつないでいます。
 
 ## 主な機能
 
@@ -42,7 +42,7 @@ SRS は問題単位で管理しており、弱点を1問ごとに追跡できま
 
 | レイヤー | 技術 |
 | --- | --- |
-| フロントエンド | Next.js（App Router）/ Tailwind CSS / OpenNext for Cloudflare |
+| フロントエンド | Next.js（App Router）互換 API / Vinext（Vite）/ Tailwind CSS |
 | API | Hono（Cloudflare Workers） |
 | データベース | Cloudflare D1（SQLite）/ Drizzle ORM |
 | 型・バリデーション | TypeScript strict / Zod（フロントエンドと API で共有） |
@@ -109,14 +109,14 @@ flowchart LR
 | `pnpm test:hooks` | hooks の動作と、Claude Code / Codex から同じスキル・エージェント・ルールに届く構成になっているかを検査 |
 | `pnpm test` | Vitest（SRS ロジックは純粋関数として重点的にテスト） |
 | `pnpm architecture:check` | Knowledge Graph のスナップショットがコードと一致しているか |
-| `pnpm build` | web / api のビルド |
+| `pnpm build` | web（Vinext production build）/ api のビルド |
 
 ## リポジトリ構成
 
 ```text
 tech-study-lab/
 ├── apps/
-│   ├── web/           # Next.js（OpenNext）フロントエンド
+│   ├── web/           # Vinext（Next.js 互換）フロントエンド
 │   └── api/           # Hono API・D1 マイグレーション・content 同期
 ├── packages/
 │   └── shared/        # Zod / Drizzle スキーマ、SRS（SM-2）ロジック

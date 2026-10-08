@@ -5,10 +5,10 @@ import { fileURLToPath } from 'node:url'
 
 import { getLessonRouteParams, getQuizRouteParams, getTopicRouteParams } from '../src/lib/content'
 
-// Run after build:vinext and start:vinext:
-// NODE_OPTIONS=--conditions=react-server pnpm exec tsx scripts/verify-vinext-ssg.ts
+// Run after build and start, with the local API serving SSR routes:
+// pnpm --filter @tsl/web verify:ssg
 const root = new URL('../', import.meta.url)
-const baseUrl = process.env.VINEXT_VERIFY_BASE_URL ?? 'http://localhost:3002'
+const baseUrl = process.env.WEB_VERIFY_BASE_URL ?? 'http://localhost:3000'
 const read = (path: string) => readFileSync(new URL(path, root))
 const digest = (body: Uint8Array) => createHash('sha256').update(body).digest('hex')
 const manifest = JSON.parse(read('dist/server/vinext-prerender.json').toString()) as {

@@ -2,7 +2,7 @@ import 'server-only'
 
 import { cache } from 'react'
 
-import { createServerApiClient } from '@/lib/api'
+import { createServerApiClient } from '@/lib/api-server'
 import { getBundledQuestions } from '@/lib/content'
 
 import { fetchReviewQueue } from '../api/review-api'

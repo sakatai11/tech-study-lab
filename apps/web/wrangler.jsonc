@@ -1,16 +1,34 @@
 {
+  // Vinext の Web Worker 設定。build 時に dist/server/wrangler.json へ解決され、deploy はその生成 config だけを使う。
+  // React の開発用 RSC クライアントが WeakRef を使うため、既存の互換日付のまま有効化する。
   "$schema": "node_modules/wrangler/config-schema.json",
-  "main": ".open-next/worker.js",
+  "main": "vinext/server/fetch-handler",
   "name": "tech-study-lab-web",
   "compatibility_date": "2025-01-09",
-  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public", "enable_weak_ref"],
   "services": [{ "binding": "API", "service": "tech-study-lab-api", "entrypoint": "InternalApi" }],
+  // OpenNext 時代に本番 Worker へ登録した DOQueueHandler の作成・削除履歴。外部履歴なので削除しない。
   "migrations": [
     { "tag": "v1", "new_sqlite_classes": ["DOQueueHandler"] },
     { "tag": "v2", "deleted_classes": ["DOQueueHandler"] }
   ],
   "assets": {
-    "directory": ".open-next/assets",
-    "binding": "ASSETS"
+    "directory": "dist/client",
+    "not_found_handling": "none",
+    "binding": "ASSETS",
+    "run_worker_first": ["/_vinext/static-cache/*"]
+  },
+  "env": {
+    // Issue #218 の隔離検証環境。本番 API・D1・migration 履歴を継承しない。
+    "edge": {
+      "name": "tech-study-lab-web-vinext",
+      "workers_dev": true,
+      "preview_urls": false,
+      "services": [
+        { "binding": "API", "service": "tech-study-lab-api-vinext", "entrypoint": "InternalApi" }
+      ],
+      "migrations": [],
+      "observability": { "enabled": true, "head_sampling_rate": 1 }
+    }
   }
 }

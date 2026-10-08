@@ -571,13 +571,12 @@
         </div>
         <div class="note">
           <strong>検証結果と残る制約</strong><br />
-          OpenNext <code>#1130</code>（production-only <code>SyntaxError</code>／Suspense 描画失敗）と
-          <code>#1225</code>（Suspense streaming が完了せず <code>Connection closed</code>）は
-          未 close ですが、issue #93 の検証では本リポジトリの構成で<strong>再現しませんでした</strong>。
-          <code>opennextjs-cloudflare preview</code> で静的シェル → streaming 差し替え、hydration、
-          解答後に動的領域が再実行されること（共有キャッシュに乗らないこと）を確認済みです。
-          ただし現行 CI は <code>next build</code> のみで OpenNext preview のストリーミングを検知しません。
-          PPR の描画・streaming に関わる変更と、OpenNext / Next の更新時は手動 preview で再確認します。
+          Web は Vinext（Vite + <code>@cloudflare/vite-plugin</code>）で build し、content route は
+          build 時の HTML / RSC を <code>ASSETS</code> から配信、認証後 route は通常 SSR です。
+          CI は <code>pnpm build</code> 後の <code>verify:build</code> で prerender manifest と
+          content params の一致、正解データの非漏洩、内部 cache artifact の Worker 経由配信を検査します。
+          実行時の配信内容・SSR・404 境界は <code>build</code> + <code>start</code> 上の
+          <code>verify:ssg</code> で確認します。
           詳細は design.md §12.8 を参照してください。
         </div>
         <div class="note">
@@ -1337,7 +1336,7 @@ export default async function ReviewPage() {
 
         <h3>Worker 構成と接続（design.md §3.1・§8.4）</h3>
         <p>
-          <code>apps/web</code>（OpenNext）と <code>apps/api</code>（Hono）は
+          <code>apps/web</code>（Vinext）と <code>apps/api</code>（Hono）は
           <strong>別 Worker</strong> としてデプロイします。Next.js の Route
           Handler 上に Hono を載せる同居構成は採用しません（wrangler
           設定の所有権・デプロイ独立性・§8.3
@@ -1362,7 +1361,7 @@ flowchart LR
   classDef client fill:#fff7ed,stroke:#fdba74,color:#1f2328;
   classDef api fill:#ecfdf5,stroke:#86efac,color:#1f2328;
 
-  subgraph webWorker["web Worker（OpenNext / Next.js）"]
+  subgraph webWorker["web Worker（Vinext / Next.js 互換）"]
     loader["Server loader\ncreateServerApiClient"]:::server
   end
 
@@ -1379,31 +1378,25 @@ flowchart LR
   routes --> d1</pre>
         </div>
         <pre
-          data-code-title="apps/web/src/lib/api.ts"
-        ><code class="language-ts">// apps/web/src/lib/api.ts
-import { createClient } from '@tsl/api/client';
+          data-code-title="apps/web/src/lib/api-server.ts / api.ts"
+        ><code class="language-ts">// apps/web/src/lib/api-server.ts（Client bundle へ入れない Server 専用）
+import 'server-only';
+import { env } from 'cloudflare:workers';
 
-// Server loader 用: 本番は Service Binding 必須、ローカルのみ URL へフォールバック
+// Server loader 用: 本番は Service Binding 必須、production 以外で binding がない場合だけ URL へフォールバック
 export async function createServerApiClient(): Promise&lt;ApiClient&gt; {
-  const isLocalRuntime = process.env.NODE_ENV !== 'production';
-
-  try {
-    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
-    const { env } = await getCloudflareContext({ async: true });
-    if (env.API) {
-      // ホスト名はダミー（Service Binding はパスのみ使用）
-      return createClient('https://api.internal', {
-        fetch: env.API.fetch.bind(env.API),
-      });
-    }
-    if (!isLocalRuntime) throw new Error('Cloudflare API service binding (API) is not configured.');
-  } catch (error) {
-    if (!isLocalRuntime) throw error; // 本番は fail-fast
+  const { API: api }: { API?: Fetcher } = env;
+  if (api) {
+    // ホスト名はダミー（Service Binding はパスのみ使用）
+    return createClient('https://api.internal', { fetch: api.fetch.bind(api) });
   }
-
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('Cloudflare API service binding (API) is not configured.'); // 本番は fail-fast
+  }
   return createClient(process.env.API_BASE_URL ?? 'http://localhost:8787');
 }
 
+// apps/web/src/lib/api.ts
 // Client hook 用: env から解決した公開 baseURL。生成は初回送信まで遅らせる
 // （render 時に呼ぶと prerender でも評価され、未設定時に throw する）。
 export function createBrowserApiClient(): ApiClient {

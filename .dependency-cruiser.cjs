@@ -59,10 +59,14 @@ module.exports = {
       name: 'web-client-no-server-or-content',
       severity: 'error',
       comment:
-        'features/*/client/** は同/他 feature を問わず server 専用モジュールと content ローダーを直接 import しない。docs/design.md §8.1 の依存許可表を参照。',
+        'features/*/client/** は同/他 feature を問わず server 専用モジュール（Server API client を含む）と content ローダーを直接 import しない。docs/design.md §8.1 の依存許可表を参照。',
       from: { path: '^apps/web/src/features/[^/]+/client/' },
       to: {
-        path: ['^apps/web/src/features/[^/]+/server/', '^apps/web/src/lib/content'],
+        path: [
+          '^apps/web/src/features/[^/]+/server/',
+          '^apps/web/src/lib/api-server',
+          '^apps/web/src/lib/content',
+        ],
       },
     },
     {
