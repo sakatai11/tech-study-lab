@@ -1,5 +1,7 @@
 # Vinext 1.0 移行可否の検証記録
 
+> **2026-10-08 追記**：Issue #221 で Vinext を正式な Web 基盤へ移行した。以下は移行判断までの履歴であり、本文中の `dev:vinext` / `build:vinext` / `start:vinext` / `deploy:vinext`、`wrangler.vinext.jsonc`（web）、OpenNext alias shim は現在 `dev` / `build` / `start` / `deploy:edge`、`apps/web/wrangler.jsonc` の `env.edge`、`cloudflare:workers` を直接使う `lib/api-server.ts` に置き換わっている。本番切替の条件（Issue #220 の CPU 上限超過の解消を含む）は [design.md §12.4](../design.md#124-本番デプロイ手順順序が仕様) を参照する。
+
 この文書は2026-10-04のIssue #199で行った初回検証と、2026-10-05のSSG追加検証の記録である。初回の表は prerender 無効の構成の測定値として残し、追加検証の結果と区別する。現在の設計契約は [design.md §8.3](../design.md#83-server--client-コンポーネント境界)、デプロイと実行確認の条件は同書 §12.4・§12.8を参照する。外部Issueの状態はこの記録では保証しない。
 
 ## 結論

@@ -2,8 +2,8 @@
   "version": 2,
   "sources": {
     ".dependency-cruiser.cjs": {
-      "sha256": "d68195ac1ecce85c073a53a959ce25b81bcef7b3e1004b7c1e543e8d58cedc6a",
-      "lines": 277
+      "sha256": "d8e47f62e9d80ec154dfa377f51c0ea2795718f3ff9d2c9c09706ac747272827",
+      "lines": 281
     },
     "apps/api/src/app.ts": {
       "sha256": "f36bca1e73b2d2e56c20f7c59e4575edbd43a2dff068900fb80ed5a243ea0ae8",
@@ -150,7 +150,7 @@
       "lines": 36
     },
     "apps/web/src/features/analytics/server/load-analytics.ts": {
-      "sha256": "9abada70ff12d5316ba6cdc4262590881b70656b4c996abb080db15697d93078",
+      "sha256": "4a30a948f79b69e445ff412bd2c00a051b71e91c78f5cb2a0a27670de3d8f165",
       "lines": 23
     },
     "apps/web/src/features/dashboard/api/dashboard-api.ts": {
@@ -158,7 +158,7 @@
       "lines": 62
     },
     "apps/web/src/features/dashboard/server/load-dashboard.ts": {
-      "sha256": "9a04af35f3280e06ddffcbfdabb9abc031cfc4374fb21e1110b62e1224d7e240",
+      "sha256": "c19138ce1fcede1425094dbe381ac66a3eb3839f0e2822b10d61c154657e977e",
       "lines": 75
     },
     "apps/web/src/features/domains/api/domains-api.ts": {
@@ -166,7 +166,7 @@
       "lines": 13
     },
     "apps/web/src/features/domains/server/load-domains.ts": {
-      "sha256": "c16304312186e267d9f8ce137752b2c2c4efbe800f5159be20ba31f796b2d175",
+      "sha256": "f1e109b745afa7a8791eb47db4bfe224fd4eb3f11f411db30ecc33d6b1536e56",
       "lines": 20
     },
     "apps/web/src/features/lesson/api/lesson-api.ts": {
@@ -194,16 +194,16 @@
       "lines": 13
     },
     "apps/web/src/features/review/server/load-review.ts": {
-      "sha256": "90bac7a5413a55b7800a9c4a9496450be56e9c5befbed8f61b5e59061dabd5b7",
+      "sha256": "b3dbcae24f421433608164779bb4bf1ba5b1ea48ed1cb1276373852b915096f8",
       "lines": 26
     },
     "apps/web/src/lib/api.ts": {
-      "sha256": "8f1aebf207376f01d9fbfb91f99229e3c2ee6c7011c10c7665c8d8a30d851d4a",
-      "lines": 68
+      "sha256": "c3d4992a420b04cf132305963e6b55d2cafbd6e2a3a86b3cb16fabfbb8bf79cf",
+      "lines": 34
     },
     "apps/web/wrangler.jsonc": {
-      "sha256": "c14480e747d5315243435967c181d6af6372bf0964ec2bfc377ff60b16bc1949",
-      "lines": 17
+      "sha256": "0af442f4ca5b01149d151c213db54ef2acbff9ff6fb03070b10d0bb39090852a",
+      "lines": 35
     },
     "packages/shared/src/content-parser.ts": {
       "sha256": "d64e767b7f296f0768b5e1a0474d46c720889db2b68576615a0097b8a189be44",
@@ -4018,17 +4018,6 @@
       "typeOnly": false
     },
     {
-      "from": "apps/web/src/features/analytics/server/load-analytics.ts",
-      "relation": "imports",
-      "to": "apps/web/src/lib/api.ts",
-      "source": {
-        "file": "apps/web/src/features/analytics/server/load-analytics.ts",
-        "line": 3
-      },
-      "specifier": "@/lib/api",
-      "typeOnly": false
-    },
-    {
       "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
       "relation": "calls-endpoint",
       "to": "endpoint:GET /activity/recent",
@@ -4217,17 +4206,6 @@
     {
       "from": "apps/web/src/features/dashboard/server/load-dashboard.ts",
       "relation": "imports",
-      "to": "apps/web/src/lib/api.ts",
-      "source": {
-        "file": "apps/web/src/features/dashboard/server/load-dashboard.ts",
-        "line": 5
-      },
-      "specifier": "@/lib/api",
-      "typeOnly": false
-    },
-    {
-      "from": "apps/web/src/features/dashboard/server/load-dashboard.ts",
-      "relation": "imports",
       "to": "packages/shared/src/index.ts",
       "source": {
         "file": "apps/web/src/features/dashboard/server/load-dashboard.ts",
@@ -4303,17 +4281,6 @@
         "line": 8
       },
       "specifier": "../api/domains-api",
-      "typeOnly": false
-    },
-    {
-      "from": "apps/web/src/features/domains/server/load-domains.ts",
-      "relation": "imports",
-      "to": "apps/web/src/lib/api.ts",
-      "source": {
-        "file": "apps/web/src/features/domains/server/load-domains.ts",
-        "line": 5
-      },
-      "specifier": "@/lib/api",
       "typeOnly": false
     },
     {
@@ -4542,17 +4509,6 @@
       "typeOnly": false
     },
     {
-      "from": "apps/web/src/features/review/server/load-review.ts",
-      "relation": "imports",
-      "to": "apps/web/src/lib/api.ts",
-      "source": {
-        "file": "apps/web/src/features/review/server/load-review.ts",
-        "line": 5
-      },
-      "specifier": "@/lib/api",
-      "typeOnly": false
-    },
-    {
       "from": "apps/web/src/lib/api.ts",
       "relation": "imports",
       "to": "apps/api/src/client.ts",
@@ -4569,7 +4525,7 @@
       "to": "apps/api/src/internal-api.ts",
       "source": {
         "file": "apps/web/wrangler.jsonc",
-        "line": 7
+        "line": 9
       },
       "binding": "API",
       "service": "tech-study-lab-api",
@@ -5300,77 +5256,77 @@
       "name": "web-ui-no-lower-layers",
       "source": {
         "file": ".dependency-cruiser.cjs",
-        "line": 69
+        "line": 73
       }
     },
     {
       "name": "web-no-cross-feature-internals",
       "source": {
         "file": ".dependency-cruiser.cjs",
-        "line": 84
+        "line": 88
       }
     },
     {
       "name": "web-server-no-client-hooks",
       "source": {
         "file": ".dependency-cruiser.cjs",
-        "line": 101
+        "line": 105
       }
     },
     {
       "name": "web-shared-pure-transform-only",
       "source": {
         "file": ".dependency-cruiser.cjs",
-        "line": 109
+        "line": 113
       }
     },
     {
       "name": "web-components-root-no-lower-layers",
       "source": {
         "file": ".dependency-cruiser.cjs",
-        "line": 119
+        "line": 123
       }
     },
     {
       "name": "web-lib-no-app-or-features",
       "source": {
         "file": ".dependency-cruiser.cjs",
-        "line": 136
+        "line": 140
       }
     },
     {
       "name": "api-service-no-http-db-framework",
       "source": {
         "file": ".dependency-cruiser.cjs",
-        "line": 150
+        "line": 154
       }
     },
     {
       "name": "api-dal-no-http",
       "source": {
         "file": ".dependency-cruiser.cjs",
-        "line": 165
+        "line": 169
       }
     },
     {
       "name": "api-dal-services-type-only",
       "source": {
         "file": ".dependency-cruiser.cjs",
-        "line": 173
+        "line": 177
       }
     },
     {
       "name": "api-middleware-no-routes-services-dal",
       "source": {
         "file": ".dependency-cruiser.cjs",
-        "line": 185
+        "line": 189
       }
     },
     {
       "name": "api-content-sync-shared-only",
       "source": {
         "file": ".dependency-cruiser.cjs",
-        "line": 195
+        "line": 199
       }
     }
   ]

@@ -539,30 +539,29 @@
             （<code>answerIndex</code>）を含めない。
           </li>
           <li>
-            <code>cacheComponents</code> は有効化済み。<code>dynamic</code> /
-            <code>dynamicParams</code> の route segment config は併用できないため置かない。
-            <code>/</code> は API・Service Binding・ユーザー固有 hook を読まない静的な公開トップです。
-            PPR streaming の対象は <code>/home</code>・<code>/review</code>・<code>/domains</code> で、<code>/home</code> は
-            <code>DashboardDueCard</code>、<code>/review</code> は静的シェルに <code>ReviewQueueFallback</code> を表示してから、queue 完了後は
-            <code>ReviewUserContent</code> が joined 表示件数と <code>hasMore</code> に応じて
-            route error boundary、空キュー、または1件以上の場合だけ
-            <code>ReviewRunner</code> を選ぶ。<code>/domains</code> は静的シェルの
-            <code>&lt;Suspense fallback={&lt;DomainProgressFallback /&gt;}&gt;</code> 内で、非キャッシュの
-            <code>loadDomains</code> が読む4領域カードをストリーミングし、取得失敗は専用の route error boundary で扱う。
+            <code>cacheComponents</code> は使わない（design.md §8.3）。<code>/</code> は API・Service Binding・
+            ユーザー固有 hook を読まない静的な公開トップです。<code>/home</code>・<code>/review</code>・<code>/domains</code>・
+            <code>/analytics</code> は <code>dynamic = 'force-dynamic'</code> の通常 SSR で、Server loader の取得が
+            完了してからページ全体を返します（Suspense による streaming・fallback は使わない）。
+            <code>/home</code> は <code>DashboardDueCard</code> と本体を同一 SSR 内で並列取得し、
+            <code>/review</code> は <code>ReviewDueBadge</code> と <code>ReviewUserContent</code> を同じ
+            <code>loadReviewOnce</code> から取得します。<code>ReviewUserContent</code> は joined 表示件数と
+            <code>hasMore</code> に応じて route error boundary、空キュー、または1件以上の場合だけ
+            <code>ReviewRunner</code> を選ぶ。<code>/domains</code> は <code>loadDomains</code> で4領域カードを取得し、
+            取得失敗は専用の route error boundary で扱う。
           </li>
         </ul>
         <div class="note">
-          <strong>Cache Components / PPR 方針</strong><br />
-          <code>/home</code> の due 件数・ダッシュボード統計・<code>/review</code> の queue・<code>/domains</code> の集計は API が <code>user_id</code> を
-          権威的に注入する一方、web の共有キャッシュキーには含まれません。したがって
-          <code>'use cache'</code>・<code>cacheLife</code>・<code>cacheTag</code>・
-          <code>revalidateTag</code> は使わず、Suspense による分離だけを行います。解答後は
-          <code>router.refresh()</code> で Server loader を再実行します。未実装の
-          <code>/analytics</code> は、実装時に静的シェルと非キャッシュ動的領域を分離し、
-          PPR streaming 対象への追加は別途判断します。
-          <code>/learn/...</code> と <code>/quiz/...</code> は content 由来の prerender を維持し、
-          PPR streaming の対象外です（<code>generateStaticParams</code> と
-          <code>'use cache'</code> で全件を build 時に生成します）。
+          <strong>通常 SSR・標準 SSG の方針</strong><br />
+          <code>/home</code> の due 件数・ダッシュボード統計・<code>/review</code> の queue・<code>/domains</code>・
+          <code>/analytics</code> の集計は API が <code>user_id</code> を権威的に注入する一方、web の共有キャッシュキーには
+          含まれません。したがって <code>cacheComponents</code>・<code>'use cache'</code>・<code>cacheLife</code>・
+          <code>cacheTag</code>・<code>revalidateTag</code>・PPR streaming は使わず、これらの route は
+          リクエストごとの通常 SSR とします（応答は <code>no-store</code>）。リクエスト内の取得共有は React の
+          <code>cache()</code> だけを使います。解答後は <code>router.refresh()</code> で Server loader を再実行します。
+          <code>/learn/...</code> と <code>/quiz/...</code> は <code>generateStaticParams</code> で全 content params を
+          列挙する標準 SSG とし、Vinext の prerender で生成した HTML / RSC を静的 asset として配信します
+          （design.md §8.2・§8.3・§12.8）。
         </div>
         <div class="note">
           <strong>公開・Access 境界</strong><br />
@@ -571,13 +570,12 @@
         </div>
         <div class="note">
           <strong>検証結果と残る制約</strong><br />
-          OpenNext <code>#1130</code>（production-only <code>SyntaxError</code>／Suspense 描画失敗）と
-          <code>#1225</code>（Suspense streaming が完了せず <code>Connection closed</code>）は
-          未 close ですが、issue #93 の検証では本リポジトリの構成で<strong>再現しませんでした</strong>。
-          <code>opennextjs-cloudflare preview</code> で静的シェル → streaming 差し替え、hydration、
-          解答後に動的領域が再実行されること（共有キャッシュに乗らないこと）を確認済みです。
-          ただし現行 CI は <code>next build</code> のみで OpenNext preview のストリーミングを検知しません。
-          PPR の描画・streaming に関わる変更と、OpenNext / Next の更新時は手動 preview で再確認します。
+          Web は Vinext（Vite + <code>@cloudflare/vite-plugin</code>）で build し、content route は
+          build 時の HTML / RSC を <code>ASSETS</code> から配信、認証後 route は通常 SSR です。
+          CI は <code>pnpm build</code> 後の <code>verify:build</code> で prerender manifest と
+          content params の一致、正解データの非漏洩、内部 cache artifact の Worker 経由配信を検査します。
+          実行時の配信内容・SSR・404 境界は <code>build</code> + <code>start</code> 上の
+          <code>verify:ssg</code> で確認します。
           詳細は design.md §12.8 を参照してください。
         </div>
         <div class="note">
@@ -657,12 +655,12 @@ flowchart LR
 
   top["/\n公開・静的 product top\nAPI / Service Binding なし"]:::public
   cta["ログインして学習を始める CTA"]:::public
-  home["/home\ndashboard shell\nPPR"]:::user
+  home["/home\ndashboard\n通常 SSR"]:::user
   due["DashboardDueCard\n非キャッシュ user data"]:::dynamic
-  review["/review\nPPR"]:::user
-  domains["/domains\n4領域カード shell\nPPR"]:::user
-  domainProgress["DomainProgressFallback → loadDomains\n非キャッシュ user data\nroute error boundary"]:::dynamic
-  learning["/learn/...・/quiz/...\ncontent prerender"]:::user
+  review["/review\n通常 SSR"]:::user
+  domains["/domains\n4領域カード\n通常 SSR"]:::user
+  domainProgress["loadDomains\n非キャッシュ user data\nroute error boundary"]:::dynamic
+  learning["/learn/...・/quiz/...\n標準 SSG（content prerender）"]:::user
 
   top --&gt; cta --&gt; home
   home --&gt; due
@@ -791,13 +789,12 @@ flowchart LR
         <h3>復習ページ初回表示</h3>
         <div class="diagram">
           <p>
-            静的シェルと <code>ReviewQueueFallback</code> を先に返し、
-            Suspense 内の非キャッシュ Server Component が
+            通常 SSR として、非キャッシュの Server Component が
             API から due queue のIDとSRSメタを受け、本文・解説を content index へ join します。
             <code>ReviewUserContent</code> は joined 表示件数と <code>hasMore</code> を判定し、
             0件かつ <code>hasMore: true</code> は content 整合性エラー、0件かつ
             <code>hasMore: false</code> は空キューカード、1件以上は
-            <code>ReviewRunner</code> をストリーミングします。
+            <code>ReviewRunner</code> を選び、取得完了後にページ全体を返します。
           </p>
           <div class="diagram-toolbar" aria-label="復習ページ初回表示の図操作">
             <button type="button" data-zoom-action="in">拡大</button>
@@ -812,7 +809,7 @@ flowchart LR
   classDef content fill:#f6f8fa,stroke:#d1d5db,color:#1f2328;
 
   subgraph server["Server / RSC"]
-    page["app/review/page.tsx\n静的 shell + Suspense"]:::server
+    page["app/review/page.tsx\nforce-dynamic 通常 SSR"]:::server
     userContent["ReviewUserContent\n非キャッシュ・user 固有\n0/true: error boundary\n0/false: empty queue\n1+: ReviewRunner"]:::server
     serverLoader["features/review/server\nloadReview"]:::server
     rpcWrapper["features/review/api\nfetchReviewQueue"]:::server
@@ -828,7 +825,7 @@ flowchart LR
 
   runner["ReviewRunner\nviewModel props（state に複製しない）"]:::client
 
-  page --&gt;|Suspense| userContent --&gt;|calls| serverLoader --&gt;|uses wrapper| rpcWrapper --&gt;|"hc $get（Service Binding）"| endpoint
+  page --&gt;|await| userContent --&gt;|calls| serverLoader --&gt;|uses wrapper| rpcWrapper --&gt;|"hc $get（Service Binding）"| endpoint
   endpoint -->|query| service -->|returns| dto
   dto -->|join by question_id| contentIndex -->|map| mapper -->|props| runner</pre>
           <div class="note">
@@ -889,11 +886,11 @@ flowchart LR
         <pre><code>apps/web/src/app/
 ├── _components/               # 共通 shell と feature の合成（route にならない）
 ├── page.tsx                   # / 公開トップ（静的・APIなし）
-├── home/page.tsx              # /home dashboard（PPR）
-├── domains/                   # /domains スキルツリー
-├── review/                    # /review（PPR）
-├── learn/[domain]/[topic]/... # content prerender
-└── quiz/[lesson]/             # content prerender + Client state</code></pre>
+├── home/page.tsx              # /home dashboard（通常 SSR）
+├── domains/                   # /domains スキルツリー（通常 SSR）
+├── review/                    # /review（通常 SSR）
+├── learn/[domain]/[topic]/... # 標準 SSG（content prerender）
+└── quiz/[lesson]/             # 標準 SSG + Client state</code></pre>
         <pre><code>features/quiz/
 ├── client/
 │   ├── components/       # Client Components・表示操作 state
@@ -1022,13 +1019,13 @@ flowchart LR
               </td>
             </tr>
             <tr>
-              <td><code>apps/web/src/lib/api.ts</code></td>
+              <td><code>apps/web/src/lib/api.ts</code>・<code>apps/web/src/lib/api-server.ts</code></td>
               <td>
-                <code>createServerApiClient</code>（本番は Service Binding の
-                fetch、dev は URL フォールバック）/
-                <code>createBrowserApiClient</code>（公開 URL）の Hono client
+                <code>api.ts</code>：<code>createBrowserApiClient</code>（公開 URL）の Hono client
                 生成と、<code>requestJson</code> による
                 <code>res.ok</code>・<code>res.json()</code> の共通処理。
+                <code>api-server.ts</code>（<code>server-only</code>）：<code>createServerApiClient</code>（本番は
+                <code>cloudflare:workers</code> の Service Binding の fetch、binding 未設定の非 production は URL フォールバック）。
               </td>
               <td>
                 endpoint 固有の path・method・引数・Zod 検証、ViewModel
@@ -1135,10 +1132,9 @@ export async function fetchReviewQueue(client: ApiClient): Promise&lt;ReviewQueu
         ><code class="language-ts">// apps/web/src/features/review/server/load-review.ts
 import 'server-only';
 
-import { connection } from 'next/server';
 import { cache } from 'react';
 
-import { createServerApiClient } from '@/lib/api';
+import { createServerApiClient } from '@/lib/api-server';
 import { getBundledQuestions } from '@/lib/content';
 import { fetchReviewQueue } from '../api/review-api';
 import { reviewQueueToViewModel } from '../mapper';
@@ -1146,47 +1142,35 @@ import type { ReviewViewModel } from '../view-model';
 
 // export しない。畳み込み前の loader を外から選べると、取り違えても型で気づけない
 async function loadReview(now?: number): Promise&lt;ReviewViewModel&gt; {
-  // Cache Components 下ではリクエスト時実行を宣言してからでないと、Cloudflare context の
-  // 解決も現在時刻の読み取りもできない。Date.now() を既定引数で先に評価しないこと。
-  await connection();
-
   const dto = await fetchReviewQueue(await createServerApiClient());
   return reviewQueueToViewModel(dto, getBundledQuestions(), now ?? Date.now()); // join はサーバー側のみ
 }
 
-// この feature の唯一の loader 入口。due バッジと本文が別々の &lt;Suspense&gt; 境界から
+// この feature の唯一の loader 入口。due バッジと本文が
 // 同じ queue を読むため、リクエスト内で1回に畳む（畳まないと件数と中身が食い違いうる）。
 // React の cache() はリクエストスコープであり、user_id を含められない共有キャッシュではない。
 export const loadReviewOnce = cache((): Promise&lt;ReviewViewModel&gt; =&gt; loadReview());</code></pre>
 
         <pre
           data-code-title="apps/web/src/app/review/page.tsx"
-        ><code class="language-tsx">// apps/web/src/app/review/page.tsx — 静的シェルと動的領域の分離
-import { Suspense } from 'react';
+        ><code class="language-tsx">// apps/web/src/app/review/page.tsx — 通常 SSR
 import { ReviewDueBadge } from '@/features/review/server/components/review-due-badge';
 import { ReviewPageShell } from '@/features/review/server/components/review-page-shell';
-import {
-  ReviewDueBadgeFallback,
-  ReviewQueueFallback,
-} from '@/features/review/server/components/review-queue-fallback';
 import { ReviewUserContent } from '@/features/review/server/components/review-user-content';
+import { AppShell } from '../_components/app-shell';
 
-// route segment config（dynamic / dynamicParams）は Cache Components と併用不可。
-// ReviewUserContent と ReviewDueBadge は loadReviewOnce() 経由でユーザー固有 queue を読む
-// （React の cache() によるリクエストスコープの畳み込み。'use cache' は使わない）。
-export default function ReviewPage() {
+// ユーザー固有 queue をリクエストごとに取得し、共有キャッシュへ載せない（design.md §8.3）。
+export const dynamic = 'force-dynamic';
+
+export default async function ReviewPage() {
+  // どちらも loadReviewOnce() を呼ぶ。React の cache() で queue の API 読み取りを
+  // リクエスト内1回に畳み、通常 SSR は両方の完了を待ってページ全体を返す。
+  const [dueBadge, userContent] = await Promise.all([ReviewDueBadge(), ReviewUserContent()]);
+
   return (
-    &lt;ReviewPageShell
-      dueBadge={
-        &lt;Suspense fallback={&lt;ReviewDueBadgeFallback /&gt;}&gt;
-          &lt;ReviewDueBadge /&gt;
-        &lt;/Suspense&gt;
-      }
-    &gt;
-      &lt;Suspense fallback={&lt;ReviewQueueFallback /&gt;}&gt;
-        &lt;ReviewUserContent /&gt;
-      &lt;/Suspense&gt;
-    &lt;/ReviewPageShell&gt;
+    &lt;AppShell currentNavigation="review"&gt;
+      &lt;ReviewPageShell dueBadge={dueBadge}&gt;{userContent}&lt;/ReviewPageShell&gt;
+    &lt;/AppShell&gt;
   );
 }</code></pre>
 
@@ -1337,7 +1321,7 @@ export default async function ReviewPage() {
 
         <h3>Worker 構成と接続（design.md §3.1・§8.4）</h3>
         <p>
-          <code>apps/web</code>（OpenNext）と <code>apps/api</code>（Hono）は
+          <code>apps/web</code>（Vinext）と <code>apps/api</code>（Hono）は
           <strong>別 Worker</strong> としてデプロイします。Next.js の Route
           Handler 上に Hono を載せる同居構成は採用しません（wrangler
           設定の所有権・デプロイ独立性・§8.3
@@ -1362,7 +1346,7 @@ flowchart LR
   classDef client fill:#fff7ed,stroke:#fdba74,color:#1f2328;
   classDef api fill:#ecfdf5,stroke:#86efac,color:#1f2328;
 
-  subgraph webWorker["web Worker（OpenNext / Next.js）"]
+  subgraph webWorker["web Worker（Vinext / Next.js 互換）"]
     loader["Server loader\ncreateServerApiClient"]:::server
   end
 
@@ -1379,31 +1363,25 @@ flowchart LR
   routes --> d1</pre>
         </div>
         <pre
-          data-code-title="apps/web/src/lib/api.ts"
-        ><code class="language-ts">// apps/web/src/lib/api.ts
-import { createClient } from '@tsl/api/client';
+          data-code-title="apps/web/src/lib/api-server.ts / api.ts"
+        ><code class="language-ts">// apps/web/src/lib/api-server.ts（Client bundle へ入れない Server 専用）
+import 'server-only';
+import { env } from 'cloudflare:workers';
 
-// Server loader 用: 本番は Service Binding 必須、ローカルのみ URL へフォールバック
+// Server loader 用: 本番は Service Binding 必須、production 以外で binding がない場合だけ URL へフォールバック
 export async function createServerApiClient(): Promise&lt;ApiClient&gt; {
-  const isLocalRuntime = process.env.NODE_ENV !== 'production';
-
-  try {
-    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
-    const { env } = await getCloudflareContext({ async: true });
-    if (env.API) {
-      // ホスト名はダミー（Service Binding はパスのみ使用）
-      return createClient('https://api.internal', {
-        fetch: env.API.fetch.bind(env.API),
-      });
-    }
-    if (!isLocalRuntime) throw new Error('Cloudflare API service binding (API) is not configured.');
-  } catch (error) {
-    if (!isLocalRuntime) throw error; // 本番は fail-fast
+  const { API: api }: { API?: Fetcher } = env;
+  if (api) {
+    // ホスト名はダミー（Service Binding はパスのみ使用）
+    return createClient('https://api.internal', { fetch: api.fetch.bind(api) });
   }
-
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('Cloudflare API service binding (API) is not configured.'); // 本番は fail-fast
+  }
   return createClient(process.env.API_BASE_URL ?? 'http://localhost:8787');
 }
 
+// apps/web/src/lib/api.ts
 // Client hook 用: env から解決した公開 baseURL。生成は初回送信まで遅らせる
 // （render 時に呼ぶと prerender でも評価され、未設定時に throw する）。
 export function createBrowserApiClient(): ApiClient {

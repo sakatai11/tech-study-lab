@@ -40,7 +40,7 @@ Knowledge Graphの抽出対象・制限・更新方法は [architecture/README.m
 
 | レイヤー | 技術 | 補足 |
 | --- | --- | --- |
-| フロント | Next.js（App Router） | Cloudflare Workers（OpenNext）へデプロイ |
+| フロント | Next.js（App Router）互換 API + Vinext | Vite ベースの Vinext で開発・ビルドし、`@cloudflare/vite-plugin` で Cloudflare Workers へデプロイ（Issue #221） |
 | API | Hono | Cloudflare Workers。**主要APIを一通り担当** |
 | DB | Cloudflare D1（SQLite） | ORM は Drizzle |
 | 型・バリデーション | TypeScript strict / Zod | Honoの `zValidator` とフロントで共有 |
@@ -51,7 +51,8 @@ Knowledge Graphの抽出対象・制限・更新方法は [architecture/README.m
 
 ### 既知のリスク
 
-- Next.js の Cloudflare デプロイ（`@opennextjs/cloudflare`）は Vercel 比でハマりどころが残る。これは「Cloudflareを学ぶ」目的の一部として許容する。
+- Vinext は Next.js 本体ではなく Vite 上の互換実装であり、未対応 API や挙動差が残り得る。`next/*` の型と互換 API は使い続け、移行可否と検証結果は [Vinext 検証記録](./investigations/2026-10-04-vinext-migration.md) を参照する。これは「Cloudflareを学ぶ」目的の一部として許容する。
+- Workers Free の CPU 上限超過（Issue #220）が認証後画面の連続取得で観測されている。本番 Web の Vinext 切替は、その解消と実環境での連続測定の完了を前提とする（§12.4）。
 
 ## 3. リポジトリ構成
 
@@ -66,11 +67,11 @@ pnpm workspaces による monorepo。
 
 ### 3.1 Worker 構成と接続（決定）
 
-`apps/web`（OpenNext）と `apps/api`（Hono）は**別 Worker としてデプロイする**。Next.js の Route Handler 上に Hono を載せる同居構成（`app/api/[[...route]]/route.ts` + `handle()`）は採用しない。
+`apps/web`（Vinext）と `apps/api`（Hono）は**別 Worker としてデプロイする**。Next.js の Route Handler 上に Hono を載せる同居構成（`app/api/[[...route]]/route.ts` + `handle()`）は採用しない。
 
 **別 Worker を採る理由**：
 
-- `apps/api` が自身の wrangler 設定を完全所有できる。D1 マイグレーションや将来の Cron Triggers / Queues 等の Workers プラットフォーム機能を、OpenNext が生成する web 側の wrangler 設定・Next.js ビルドに巻き込まずに使える。デプロイも独立する（API の変更に Next.js ビルドが不要）。
+- `apps/api` が自身の wrangler 設定を完全所有できる。D1 マイグレーションや将来の Cron Triggers / Queues 等の Workers プラットフォーム機能を、web 側の wrangler 設定・Vinext ビルドに巻き込まずに使える。デプロイも独立する（API の変更に web のビルドが不要）。
 - 同居構成ではリクエストが「Next.js ルーター → Route Handler → Hono ルーター」の二段になり、Next middleware と Hono middleware の責務境界が濁る。なお Hono の RPC・`zValidator`・middleware 自体は Route Handler 内でも動くため、失うのは Hono の機能ではなく Workers との直結と独立性である。
 - 既存の設計判断と整合する：§8.3 のキャッシュ方針は「mutation（`POST /answers`）が Next.js のサーバーコンテキストを経由しない」ことを前提とし、§7.2 の採点権威・`user_id` 注入点も API 側にある。API 契約（`AppType`）を `apps/api` に一本化する §5 のガードレールとも噛み合う。
 - Hono + Cloudflare を学ぶドッグフーディング目的（§2）を素通りしない。
@@ -81,11 +82,11 @@ pnpm workspaces による monorepo。
 | --- | --- | --- |
 | Server loader（web Worker 内） | **named Service Binding**（`env.API` → `InternalApi`） | Worker 間の private entrypoint。公衆インターネットを経由せず、CORS・Cloudflare Access JWT 検証を通さない |
 | Client hook（ブラウザ） | API Worker の公開 URL | Cloudflare Access で保護する。Access application cookie を送るため `credentials: 'include'` を指定し、API は `WEB_ORIGIN` だけを CORS 許可する。将来カスタムドメイン導入時は同一ゾーンのルート割当（`example.com/api/*` → API Worker）で同一オリジン化し、CORS 設定を撤去する |
-| ローカル開発 | URL（`http://localhost:8787`） | `next dev` と `wrangler dev` を並走させ、env の URL にフォールバック |
+| ローカル開発 | Service Binding（`wrangler dev` の dev registry 経由）または URL（`http://localhost:8787`） | web の `dev`（Vite + workerd）と API の `wrangler dev` を並走させる。production 以外で `API` binding が未設定の場合だけ env の URL にフォールバック |
 
-- web 側の wrangler 設定に `services: [{ "binding": "API", "service": "<API Worker 名>", "entrypoint": "InternalApi" }]` を宣言し、Server 側の `hc` には `getCloudflareContext().env.API.fetch` をカスタム `fetch` として渡す。
+- web 側の wrangler 設定に `services: [{ "binding": "API", "service": "<API Worker 名>", "entrypoint": "InternalApi" }]` を宣言し、Server 側の `hc` には `cloudflare:workers` の `env.API.fetch` をカスタム `fetch` として渡す。
 - Service Binding 経由でも `hc<AppType>` の型安全 RPC はそのまま維持される（差し替わるのは fetch 実装のみで、パス・メソッド・型は不変。baseURL のホスト名はダミーでよい）。
-- web Worker の認証後画面は、ユーザー固有データを共有キャッシュへ載せない通常のリクエスト時 SSR とする。教材・問題の content route だけは `generateStaticParams` による標準 SSG とし、OpenNext の専用 Incremental Cache、再検証 Queue、Worker 自己参照 binding は使用しない。
+- web Worker の認証後画面は、ユーザー固有データを共有キャッシュへ載せない通常のリクエスト時 SSR とする。教材・問題の content route だけは `generateStaticParams` による標準 SSG とし、ISR 用の Incremental Cache・再検証 Queue（Durable Object / R2 / KV）、Worker 自己参照 binding は使用しない。
 
 #### 本番アクセス境界（Issue #112）
 
@@ -93,7 +94,7 @@ pnpm workspaces による monorepo。
 
 - default/public entrypoint は `CORS → Access boundary → userContext → shared user routes` とする。`/health` は Access と `userContext` の前で公開する。**Worker 内**では、Worker まで到達した CORS preflight（`OPTIONS`）を CORS middleware が 204 で終了させるため、Access boundary・`userContext`・route・D1 へ到達しない。これは Cloudflare Access の edge/proxy 側で preflight を Worker へ転送できること、または同等の正しい preflight 応答を返せることとは別の責務である。
 - Access boundary は `Cf-Access-Jwt-Assertion` を `jose` の JWKS 検証で確認する。JWKS URL は信頼する `ACCESS_ISSUER` から標準の `/cdn-cgi/access/certs` を導出し、設定値または JWT の issuer を任意 URL としては扱わない。設定不足、トークン欠落、署名・issuer・audience の不一致はすべて詳細を出さず、`401 { "error": { "code": "UNAUTHORIZED", "message": "Unauthorized" } }` を返す。
-- `ACCESS_ISSUER` と `ACCESS_AUDIENCE` がともに未設定で、かつ URL が `localhost` または IPv4/IPv6 loopback の場合に限り、ローカル開発として Access を bypass する。Access 設定が一部でも存在する場合は loopback URL でも bypass せず、設定不足または JWT 不備として fail closed する。これは `next dev` とローカル API の HTTP フォールバックだけを対象とする。
+- `ACCESS_ISSUER` と `ACCESS_AUDIENCE` がともに未設定で、かつ URL が `localhost` または IPv4/IPv6 loopback の場合に限り、ローカル開発として Access を bypass する。Access 設定が一部でも存在する場合は loopback URL でも bypass せず、設定不足または JWT 不備として fail closed する。これはローカル開発の web と API の HTTP 接続だけを対象とする。
 - named `InternalApi extends WorkerEntrypoint` は `userContext → shared user routes` だけを実行する private entrypoint とする。Service Binding で `entrypoint: "InternalApi"` を指定した web Server loader のみが使い、公開 HTTP から Access を回避する経路にはしない。
 - この境界は Issue #35 の Cloudflare Access application / policy / `ACCESS_ISSUER` / `ACCESS_AUDIENCE` の本番設定に依存する。値は非秘密 binding として環境に設定し、リポジトリや `.env` へ保存しない。Issue #35 では API Worker に Access を適用する公開 hostname または custom domain を用意し、ブラウザの `POST` を含む CORS preflight が Access edge で遮断されず Worker の CORS 応答へ到達するか、同等の Access 側応答を返すことをデプロイ前に確認する。Access dashboard の具体的な設定値はここで固定せず、この結果を実機で検証する。
 - browser の `credentials: 'include'` は Access application cookie が web と API の両方へ適切に送られる構成を前提とする。cross-site cookie 設定と両立しない組み合わせを避け、可能なら同一 site（例: `web.example.com` と `api.example.com`）または同一 origin の API route を採る。異なる site を使う場合も、実際の Access cookie 属性とブラウザの credentialed CORS 制約を本番 hostname で検証してから公開する。
@@ -286,9 +287,9 @@ HTTP 入出力、リクエスト・レスポンスの実例（JSON）、Zod ス�
 | --- | --- | --- | --- |
 | `app/**/page.tsx`・`layout.tsx` | URL、metadata、layout、route params、`notFound()`、loader 呼び出し、feature component への props 渡し | `features/*/server`、`features/*/client/components`、全画面共通 component、`components/ui` | `lib/content`、feature の `api`・`mapper`・`client/hooks` の直接利用、DTO の join・sort・filter、feature 固有 UI の実装 |
 | `app/_components/**` | `/` を除くすべての認証後ルート（`/home` とユーザー向け学習ルート。§7.2）が共有する shell と、feature の表示部品を props 契約で合成する composition layer。shell の組み立てと、そのために必要な loader 呼び出しに徹する。private folder であり route を持たない | `features/*/server`、`features/*/client/components`、全画面共通 component、`components/ui` | `lib/content`、feature の `api`・`mapper`・`client/hooks` の直接利用、DTO の join・sort・filter、feature 固有 UI の実装、1 ページ専用のデータ合成（→ `features/<page-feature>/server`）。公開トップ `/` はこの層を使わない（§7.1） |
-| `features/*/client/components` | Client Component。ViewModel の表示、画面フェーズ・現在問題・`wrongOnly`・キーボード操作などの表示操作 state | 同 feature の `client/hooks`・`view-model`、`components/ui`、props 契約が公開された再利用 component | `server`、content loader、API client の直接利用、DTO 変換 |
-| `features/*/client/hooks` | Browser API client の生成、mutation と、それに伴う `submitting`・`error`・API 由来の結果 state | 同 feature の `api`、`lib/api`、共有 DTO 型 | Server data の再取得、`server`、content loader、mapper、ViewModel の複製保持、画面レイアウト |
-| `features/*/server` | Server loaderと必要なServer Component。初回データ取得、複数データの join、mapper 呼び出し、ViewModel の返却 | 同 feature の `api`・`mapper`・`view-model`、`lib/api`・`lib/content`、Server専用ライブラリ、**子として描画するための** `client/components`（props 契約経由の合成。ロジックの取り込みではない） | `client/hooks`（mutation・通信 state ロジックの取り込み）、ブラウザ専用 API、Client state の複製 |
+| `features/*/client/components` | Client Component。ViewModel の表示、画面フェーズ・現在問題・`wrongOnly`・キーボード操作などの表示操作 state | 同 feature の `client/hooks`・`view-model`、`components/ui`、props 契約が公開された再利用 component | `server`、`lib/api-server`、content loader、API client の直接利用、DTO 変換 |
+| `features/*/client/hooks` | Browser API client の生成、mutation と、それに伴う `submitting`・`error`・API 由来の結果 state | 同 feature の `api`、`lib/api`、共有 DTO 型 | Server data の再取得、`server`、`lib/api-server`、content loader、mapper、ViewModel の複製保持、画面レイアウト |
+| `features/*/server` | Server loaderと必要なServer Component。初回データ取得、複数データの join、mapper 呼び出し、ViewModel の返却 | 同 feature の `api`・`mapper`・`view-model`、`lib/api`・`lib/api-server`・`lib/content`、Server専用ライブラリ、**子として描画するための** `client/components`（props 契約経由の合成。ロジックの取り込みではない） | `client/hooks`（mutation・通信 state ロジックの取り込み）、ブラウザ専用 API、Client state の複製 |
 | `features/*/mapper` | Content data / DTO から ViewModel への純粋変換 | 共有入力型、同 feature の `view-model`、`features/shared` の小さい純粋変換 | fetch、content loader、API client、React state、副作用 |
 | `features/*/api` | endpoint 固有の `hc` path・method・引数、共有 Zod による入出力検証、機能固有のエラーメッセージ | `ApiClient` 型・`requestJson`（`lib/api`）、共有 DTO / Zod | API client の生成、ViewModel 化、UI state、Server / Browser 固有 API |
 | `components`（root） | 全画面共通のレイアウト shell・テーマ切替 | `components/ui`・`lib/cn`・React | feature 内部層（`server`/`client`/`api`/`mapper`）・content・API への直接アクセス |
@@ -329,20 +330,20 @@ HTTP 入出力、リクエスト・レスポンスの実例（JSON）、Zod ス�
 - due件数・統計・review queue・domains／analytics集計には共有キャッシュを使わない。APIが注入するuser_idをwebの共有キャッシュキーに含められず、ユーザー間の混入が起こり得るためである。
 - Reactの `cache()` によるリクエスト内の取得共有は許可する。ユーザー横断の共有キャッシュとは区別する。復習のdueバッジと本文の取得共有・表示分岐・次バッチへの遷移は §9.2で定義する。
 - 解答後や画面復帰時は `router.refresh()` で Server loader を再実行して鮮度を回復する。復習のバッチ完了時の条件は §9.2。
-- OpenNext は API Service Binding と静的 asset 配信に必要な最小構成だけを使う。PPR 専用の Incremental Cache、R2、Durable Object Queue の有効 binding、Worker 自己参照 binding は持たない。過去に登録した `DOQueueHandler` を廃止するため、`wrangler.jsonc` には `v1` の作成履歴と後続の `v2` `deleted_classes` migration を保持する。
+- web Worker は API Service Binding と静的 asset 配信に必要な最小構成だけを使う。content route のビルド時 HTML / RSC は Vinext の `prerender` と `@vinext/cloudflare` の `staticAssetsAdapter` で `ASSETS` binding から配信し、内部 cache artifact（`/_vinext/static-cache/*`）は `assets.run_worker_first` で Worker へ通して外部からの直接取得を防ぐ。PPR/ISR 専用の Incremental Cache、R2、KV、Durable Object Queue の有効 binding、Worker 自己参照 binding は持たない。OpenNext 時代に本番 Worker へ登録した `DOQueueHandler` を廃止した履歴として、`apps/web/wrangler.jsonc` の top-level には `v1` の作成履歴と後続の `v2` `deleted_classes` migration を保持する。Wrangler は top-level の `migrations` を env へ継承するため、検証用 env は空の `migrations` を明示する。
 
 ### 8.4 `hc` クライアントの取り回し
 
 - `apps/api` が `AppType` をエクスポート → `apps/web` は `hc<AppType>` で型安全クライアントを生成（既存 `apps/api/src/client.ts` のファクトリを利用。Service Binding の fetch を渡せるよう、ファクトリは `hc` の第2引数（`fetch` オプション等）を受け取れる形に拡張する）。
-- `apps/web/src/lib/api.ts` に**API 共通基盤を集約**する。クライアント生成と共通レスポンス処理は同じ小さな責務群であり、現規模ではファイルを分けない。将来、独立した変更理由や十分な規模が生じた場合だけ分割する。baseURL は env（Workers バインディング / 環境変数）から解決し、ハードコードしない。
-  - `createServerApiClient`：Server loader 用。本番は Service Binding（`getCloudflareContext().env.API.fetch` を `hc` のカスタム `fetch` に渡す）を必須とし、binding欠落や取得失敗は fail-fast する。ローカル開発だけ env の URL にフォールバックする。
+- `apps/web/src/lib/api.ts` に**API 共通基盤を集約**する。クライアント生成と共通レスポンス処理は同じ小さな責務群であり、原則ファイルを分けない。例外として、Workers runtime の `cloudflare:workers` を参照する Server 用生成は Client bundle へ入れられないため、`import 'server-only'` を置いた `apps/web/src/lib/api-server.ts` に分ける。baseURL は env（Workers バインディング / 環境変数）から解決し、ハードコードしない。
+  - `createServerApiClient`（`lib/api-server.ts`）：Server loader 用。本番は Service Binding（`cloudflare:workers` の `env.API.fetch` を `hc` のカスタム `fetch` に渡す）を必須とし、binding 欠落は fail-fast する。production 以外で binding がない場合だけ env の URL にフォールバックする。
   - `createBrowserApiClient`：Client hook 用。env から解決した API Worker の公開 baseURL を使い、Cloudflare Access application cookie を API ドメインへ送るため `credentials: 'include'` を常に指定する。
 - feature の `api/` は呼び出し側から `ApiClient` を受け取り、`hc` の path・method・引数、共有 Zod による入出力検証、機能固有のエラーメッセージを薄く閉じ込める。Server loader と Client hook の両方から使うため、client 生成、`server-only`、cookies、headers、秘密情報など環境専用処理を入れない。
 - `res.ok` チェックと `res.json()` 変換は `apps/web/src/lib/api.ts` の `requestJson` に共通化する。
 - `hc` の path 呼び出し自体は文字列パスの汎用 fetch に置き換えない。`client.review.queue.$get()` のような endpoint ごとの wrapper を残すことで、Hono RPC の型推論を維持する。
 - 初回表示に必要な `GET /dashboard/due-count`・`GET /review/queue` は Server loader から呼び、ViewModel に整形して page 経由で feature component へ props として渡す。
 - ユーザー操作後の `POST /answers` は Client hook から呼ぶ。`GET /review/queue` の再取得は Client Component の `router.refresh()` で Server loader に委譲する。初回表示で不要なスピナーを出さない。
-- 通常 SSR の Server loader はリクエストごとに `createServerApiClient` を解決し、`API` Service Binding の fetch を `hc` に渡す。OpenNext の共有 Incremental Cache や再検証 Queue を API client 層へ持ち込まない。
+- 通常 SSR の Server loader はリクエストごとに `createServerApiClient` を解決し、`API` Service Binding の fetch を `hc` に渡す。共有 Incremental Cache や再検証 Queue を API client 層へ持ち込まない。
 
 ### 8.5 演習（Quiz）の状態管理
 
@@ -805,7 +806,13 @@ topic frontmatter の `order` も同様に表示順（0 以上の整数、小さ
 
 **local / production の 2 環境のみ**。preview 環境（PR ごとのデプロイ等）は将来検討とする。
 
-Issue #218 の Vinext 実環境 PoC に限り、手動で管理する隔離された検証用 Worker と D1 を使う。Web は `tech-study-lab-web-vinext`、API は `tech-study-lab-api-vinext`、D1 は `tech-study-lab-vinext` とし、本番の Worker・route・Origin・学習記録は変更しない。D1 へは同じ commit の migration と content から生成した問題キャッシュ・固定ユーザーだけを投入し、解答・閲覧記録は検証用 D1 に保存する。本番データの複製はしない。これは PR ごとの自動 preview 環境や正式移行の導入ではない。
+本番切替前の実環境確認には、手動で管理する隔離された検証環境（Issue #218 で作成）を使う。Web は `tech-study-lab-web-vinext`（`apps/web/wrangler.jsonc` の `env.edge`）、API は `tech-study-lab-api-vinext`（`apps/api/wrangler.vinext.jsonc`）、D1 は `tech-study-lab-vinext` とし、本番の Worker・route・Origin・学習記録は変更しない。D1 へは同じ commit の migration と content から生成した問題キャッシュ・固定ユーザーだけを投入し、解答・閲覧記録は検証用 D1 に保存する。本番データの複製はしない。これは PR ごとの自動 preview 環境ではない。
+
+| 環境 | Web Worker 名 | API Service Binding | build / deploy |
+| --- | --- | --- | --- |
+| local | `tech-study-lab-web`（ローカル実行のみ） | `tech-study-lab-api#InternalApi`（ローカル `wrangler dev`） | `dev` / `build` + `start` |
+| 検証（edge） | `tech-study-lab-web-vinext` | `tech-study-lab-api-vinext#InternalApi` | `deploy:edge`（`CLOUDFLARE_ENV=edge` で build） |
+| production | `tech-study-lab-web` | `tech-study-lab-api#InternalApi` | `deploy`（`CLOUDFLARE_ENV` なしで build） |
 
 ### 12.2 環境変数・バインディング一覧
 
@@ -819,9 +826,9 @@ Issue #218 の Vinext 実環境 PoC に限り、手動で管理する隔離さ�
 | `WEB_ORIGIN` | var（api） | CORS 許可オリジン（§10.5） | `http://localhost:3000` | API deploy 時に `--var WEB_ORIGIN:<web-public-url>` として明示指定 |
 | `ACCESS_ISSUER` | var（api） | Cloudflare Access JWT の issuer 検証（§3.1） | 未設定（両 Access 設定なし＋loopback URL のみ bypass） | API deploy 時に `--var ACCESS_ISSUER:<access-issuer>` として明示指定 |
 | `ACCESS_AUDIENCE` | var（api） | Cloudflare Access JWT の audience 検証（§3.1） | 未設定（両 Access 設定なし＋loopback URL のみ bypass） | API deploy 時に `--var ACCESS_AUDIENCE:<access-audience>` として明示指定 |
-| `API` | Service Binding（web） | Server loader（§3.1・§8.4） | なし（URL フォールバック） | `services: [{ binding: "API", service: "tech-study-lab-api", entrypoint: "InternalApi" }]` |
-| `API_BASE_URL` | env（web / Server 専用） | Server loader のローカルフォールバック（§8.4） | `http://localhost:8787` | 設定しない（Service Binding必須。欠落時はfail-fast） |
-| `NEXT_PUBLIC_API_BASE_URL` | ビルド時 env（web / Client） | Client hook（§8.4） | `http://localhost:8787` | web の build/deploy 時に api Worker の公開 URL を環境変数として明示指定 |
+| `API` | Service Binding（web） | Server loader（§3.1・§8.4） | `apps/web/wrangler.jsonc` と同じ宣言。ローカル `wrangler dev` の API へ接続 | `services: [{ binding: "API", service: "tech-study-lab-api", entrypoint: "InternalApi" }]` |
+| `API_BASE_URL` | env（web / Server 専用） | production 以外で `API` binding が未設定の場合のフォールバック（§8.4） | `http://localhost:8787` | 設定しない（Service Binding必須。欠落時はfail-fast） |
+| `NEXT_PUBLIC_API_BASE_URL` | ビルド時 env（web / Client） | Client hook（§8.4） | `http://localhost:8787` | web の deploy 時に対象 API Worker の公開 URL `https://<API Worker 名>.<account subdomain>.workers.dev` を環境変数として明示指定。deploy は URL を解析し、ホスト名の Worker 名がデプロイ先の API（production は `tech-study-lab-api`、検証は `tech-study-lab-api-vinext`）と一致しない URL、http、path 付き URL を拒否する。custom domain へ移行する場合は、先に本表と deploy の検査を更新する |
 
 ### 12.3 ローカル開発手順
 
@@ -831,18 +838,9 @@ Issue #218 の Vinext 実環境 PoC に限り、手動で管理する隔離さ�
 4. `pnpm --filter @tsl/api db:seed:dev`（任意。固定ユーザーの解答ログ・SRS 状態を開発用データへ再投入。§10.8）
 5. `pnpm --filter @tsl/api dev`（`:8787`）と `pnpm --filter @tsl/web dev`（`:3000`）を並走
 
-Vinext 1.0 の並行 PoC（Issue #199、[検証記録](./investigations/2026-10-04-vinext-migration.md)）は `pnpm --filter @tsl/web dev:vinext`（`:3001`）、`build:vinext`、`start:vinext`（`:3002`）で起動する。PoC は `apps/web/wrangler.vinext.jsonc` のローカル用 Worker 名 `tech-study-lab-web-vinext-local`（migration なし）を使い、`wrangler.jsonc` と OpenNext の手順を置き換えない。既定設定の API binding はローカルの `tech-study-lab-api` に接続し、`workers.dev` と preview URL は無効にする。
+web の `dev` は Vinext（Vite）で起動し、`@cloudflare/vite-plugin` が RSC/SSR を workerd 上で実行する。`apps/web/wrangler.jsonc` の `API` Service Binding は dev registry 経由でローカルの API Worker に接続する。production build をローカルで確認するときは `pnpm --filter @tsl/web build` の後に `start`（生成された `dist/server/wrangler.json` を `wrangler dev` で `:3000` に起動）を使う。`preview` は両者を続けて実行する。いずれもブラウザの Origin は `http://localhost:3000` であり、API の既定 `WEB_ORIGIN` と一致する。2 つの `wrangler dev` を同時に起動して inspector port が衝突する場合は、片方に `--inspector-port` を指定する。
 
-PoC のブラウザから API を呼ぶときは、手順5の API 起動を以下のいずれかに置き換え、Web と別ターミナルで並走する。`WEB_ORIGIN` はブラウザの Origin と一致させる。
-
-| Web の起動方法 | API の起動コマンド |
-| --- | --- |
-| `dev:vinext`（`http://localhost:3001`） | `pnpm --filter @tsl/api run dev --var WEB_ORIGIN:http://localhost:3001` |
-| `start:vinext`（`http://localhost:3002`） | `pnpm --filter @tsl/api run dev --var WEB_ORIGIN:http://localhost:3002` |
-
-API の既定値は Next.js 用の `http://localhost:3000` である。許可 Origin は1つなので、Next.js と Vinext を切り替えるときは対応するコマンドで API を再起動する。
-
-Vinext PoC の SSG 検証では `prerender` と `@vinext/cloudflare` の `staticAssetsAdapter` を使い、content route のビルド時 HTML / RSC を `ASSETS` binding から配信する。認証後 route は通常 SSR と API Service Binding を維持する。内部 cache artifact の URL は `assets.run_worker_first` で Worker へ通し、外部からの直接取得を防ぐ。生成 manifest と全 content params を照合し、配信内容が生成物と一致すること、SSR の取得・ブラウザ操作が維持されることを確認する。これは正式移行の承認や本番経路の変更を意味しない。
+Cloudflare の型は `pnpm --filter @tsl/web cf-typegen` で `apps/web/wrangler.jsonc` から生成する。生成物は Git 管理せず、Server 側で使う binding の型は `lib/api-server.ts` で必要な分だけ宣言する。
 
 ### 12.4 本番デプロイ手順（順序が仕様）
 
@@ -853,15 +851,23 @@ Vinext PoC の SSG 検証では `prerender` と `@vinext/cloudflare` の `static
 1. **マイグレーション適用**：`pnpm --filter @tsl/api exec wrangler d1 migrations apply tech-study-lab --remote`
 2. **content sync**：`pnpm --filter @tsl/api content:sync:remote`（`content/` → D1 upsert。§10.8）
 3. **api デプロイ**：`pnpm --filter @tsl/api run deploy --var WEB_ORIGIN:<web-public-url> --var ACCESS_ISSUER:<access-issuer> --var ACCESS_AUDIENCE:<access-audience>`。3 値は**毎回すべて**この deploy 実行時だけ明示指定し、Git や `.env` には保存しない。値を省いた bare deploy は禁止する。Wrangler がローカルまたは不完全な vars へ置き換えると、Access は fail closed となり、CORS も失敗し得る。`pnpm deploy` は pnpm 自身のコマンドと衝突するため、package script は必ず `run deploy` で起動し、引数前に追加の `--` を置かない。
-4. **web デプロイ**：`NEXT_PUBLIC_API_BASE_URL=<api-public-url> pnpm --filter @tsl/web run deploy` を実行する。`NEXT_PUBLIC_API_BASE_URL` は OpenNext build 時に必要であり、API の公開 URL を使う。OpenNext は API Service Binding と静的 asset を含む通常 SSR / 標準 SSG の Worker を更新する。
+4. **web デプロイ**：`NEXT_PUBLIC_API_BASE_URL=<api-public-url> pnpm --filter @tsl/web run deploy` を実行する。このコマンドは `CLOUDFLARE_ENV` を外して Vinext の production build を行い、生成された `dist/server/wrangler.json` の Worker 名 `tech-study-lab-web`、`API` Service Binding `tech-study-lab-api#InternalApi`、`DOQueueHandler` の `v1`/`v2` migration 履歴を検査してから、その生成 config を明示して `wrangler deploy` する。`NEXT_PUBLIC_API_BASE_URL` は build 時に Client bundle へ埋め込まれるため、本番 API の公開 URL を毎回指定する。ブラウザが別環境の API へ解答を送らないよう、URL の Worker 名がデプロイ先の API と一致することを build 前に検査する（§12.2）。追加引数は `--dry-run` だけを許可し、CLI による Worker 名・config・env の上書きを防ぐ。
 
 順序の根拠：**スキーマ → データ → API → 画面** の順なら、各ステップの完了時点で稼働中の旧バージョンが壊れない（マイグレーションが追加中心の後方互換であることが前提。§12.6）。
 
-`deploy:vinext` は検証用であり、本番デプロイ手順に含めない。
-
-Issue #218 の実環境 PoC は、`CLOUDFLARE_ENV=edge` と検証用 API の `NEXT_PUBLIC_API_BASE_URL` を指定して `build:vinext` を実行する。`wrangler.vinext.jsonc` の `edge` 設定は別名の Worker `tech-study-lab-web-vinext` と `API` Service Binding `tech-study-lab-api-vinext#InternalApi` を使う。生成された `dist/server/wrangler.json` の Worker 名・binding・公開先を確認し、`pnpm --filter @tsl/web run deploy:vinext` で同ファイルを明示指定してデプロイする。このコマンドは生成 config の Worker 名、専用 API binding、`workers_dev: true`、`preview_urls: false` を検査し、ローカル用ビルドや旧構成の本番 API binding を含むビルドを Wrangler 起動前に拒否する。追加引数は `--dry-run` だけを許可し、CLI による接続先の上書きを防ぐ。設定選択はビルド時に行い、deploy 時の環境変数だけで接続先が切り替わると扱わない。
+検証環境への web デプロイは `NEXT_PUBLIC_API_BASE_URL=<verification-api-public-url> pnpm --filter @tsl/web run deploy:edge` で行う。`CLOUDFLARE_ENV=edge` で build し、生成 config が Worker 名 `tech-study-lab-web-vinext`、`API` Service Binding `tech-study-lab-api-vinext#InternalApi`、空の `migrations`、`workers_dev: true`、`preview_urls: false` であることを検査する。production と検証環境のどちらの deploy も、相手の環境向けに生成された config を Wrangler 起動前に拒否する。設定選択は build 時に行い、deploy 時の環境変数だけで接続先が切り替わると扱わない。`deploy:edge` は本番デプロイ手順に含めない。
 
 検証用 hostname でも公開 `/` と Access で保護する `/home`・`/learn`・`/quiz`・`/review`・`/domains`・`/analytics` の境界を適用する。検証用 API は専用 Access application で保護し、`OPTIONS` は API の credentialed CORS 応答へ転送する。API の deploy と検証 D1 の操作には `apps/api/wrangler.vinext.jsonc` を明示指定する。API の `WEB_ORIGIN`・`ACCESS_ISSUER`・`ACCESS_AUDIENCE` はデプロイごとに明示指定し、Git や `.env` に保存しない。外部リソース作成、remote D1 への migration/content SQL 実行、Worker/Access 更新は、対象アカウント・検証用リソース・入力値・SQL を確認した承認を得てから行う。実施結果と再実行手順は [Vinext 検証記録](./investigations/2026-10-04-vinext-migration.md) に記録する。
+
+#### 本番 Web の Vinext 切替（Issue #221）
+
+本番 Web Worker `tech-study-lab-web` は OpenNext 成果物で稼働している。リポジトリの標準 build / deploy は Vinext へ一本化したが、本番への最初の Vinext deploy は次の条件をすべて満たしてから、対象・入力値・反映手順を確認した承認に基づいて行う。
+
+1. Issue #220 の CPU 軽減が完了し、Workers Free の検証環境で `/home`・`/review`・`/domains`・`/analytics` × HTML/RSC の連続測定が CPU 上限超過で中断しないこと。
+2. 同じ commit を `deploy:edge` で検証環境へ反映し、主要導線（公開トップ、home、教材、Quiz の採点、Review、領域一覧、分析）、Access 境界、CORS preflight、Logs/Observability を確認していること。
+3. 切替前に `wrangler deployments list --name tech-study-lab-web` で稼働中の OpenNext の version ID と対象 commit を記録していること。
+
+切替は §12.4 の手順4だけを実行し、API・D1 の migration や content sync、本番データの複製は伴わない（API・D1 の契約は変わらない）。切替後は実際の Worker version・binding・主要画面・mutation・Logs を確認し、version ID と証跡を Issue に記録する。失敗時は記録した OpenNext の version ID を `wrangler rollback <version-id> --name tech-study-lab-web` で既知版へ戻し、原因を解消するまで再切替しない。OpenNext の並行運用は恒久化しない。
 
 - MVP は**手動実行**とする。Walking Skeleton の本番確認後に GitHub Actions による main ブランチ自動デプロイを検討する。将来の CI でも、remote D1 mutation または deploy の前に保護された production 環境の明示的な承認ゲートを置く（PR ゲート CI ＝型・lint・test・buildは §5 のとおり先行整備）。
 - 各ステップの成功を確認するまで後続ステップへ進まない。失敗時はそこで停止し、後続の migration/content sync/API/Web deploy を実行しない。復旧が必要な場合は、稼働中の既知の Worker version を確認してから、対象と影響を明示した承認を得てロールバックする。
@@ -895,6 +901,9 @@ content は「web のビルド時バンドル（§8.2）」と「D1 の `questio
 
 ### 12.8 通常SSR・標準SSGの実行確認
 
-通常 SSR の認証後 route は、ユーザー固有の API データをリクエストごとに取得し、route error boundary が取得失敗を扱うことを確認する。教材・演習 route は `generateStaticParams` が全 content params を返し、`next build` と OpenNext build が標準 SSG を生成することを確認する。Client hook の API client は最初の送信まで遅延生成し、render / SSG 時のブラウザ専用設定への依存を避ける。
+通常 SSR の認証後 route は、ユーザー固有の API データをリクエストごとに取得し、route error boundary が取得失敗を扱うことを確認する。教材・演習 route は `generateStaticParams` が全 content params を返し、Vinext の production build が標準 SSG を生成することを確認する。Client hook の API client は最初の送信まで遅延生成し、render / SSG 時のブラウザ専用設定への依存を避ける。
 
-OpenNext の構成確認では、`API` Service Binding が残り、PPR 専用の `cacheComponents`、Incremental Cache、R2、Durable Object Queue の有効 binding、Worker 自己参照 binding が存在しないことをテストで固定する。登録済み `DOQueueHandler` の `v1` 作成履歴と後続の `v2` 削除 migration も維持する。OpenNext preview を使う場合は、認証環境で `/home`・`/review`・`/domains`・`/analytics` の full GET と `?_rsc=...` navigation が通常 SSR として完了することを確認する。
+- **成果物検証（CI）**：`pnpm build` の後に `pnpm --filter @tsl/web verify:build` を実行する。`dist/server/vinext-prerender.json` の rendered route が `/`・全 content params・`/404` と一致し、`/home`・`/review`・`/domains`・`/analytics` が prerender されていないこと、生成 HTML / RSC と公開 Client JS に `answerIndex` が含まれないこと、SSR の Worker entry と `API`（`InternalApi`）binding が生成 config に存在すること、内部 cache artifact が `run_worker_first` で Worker 経由になることを確認する。
+- **実行時検証（ローカル・検証環境）**：API を起動し、web を `build` + `start` で起動した状態で `pnpm --filter @tsl/web verify:ssg` を実行する（接続先は `WEB_VERIFY_BASE_URL`、既定 `http://localhost:3000`）。content route の HTML / RSC が `x-vinext-cache: HIT` で生成物と一致すること、SSR route が `no-store` で error boundary を返さないこと、別表記 URL と内部 cache artifact の直接取得が 404 になることを確認する。認証後 route は full GET に加えて `?_rsc` navigation も `text/x-component`・`no-store` の通常 SSR として完了することを確認する。
+
+構成確認では、`API` Service Binding が残り、PPR/ISR 専用の `cacheComponents`、Incremental Cache、R2、KV、Durable Object Queue の有効 binding、Worker 自己参照 binding が存在しないこと、登録済み `DOQueueHandler` の `v1` 作成履歴と後続の `v2` 削除 migration を top-level で維持し検証用 env が継承しないこと、標準 script が OpenNext に依存しないことをテストで固定する。

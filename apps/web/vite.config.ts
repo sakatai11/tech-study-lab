@@ -3,17 +3,14 @@ import { staticAssetsAdapter } from '@vinext/cloudflare/cache/static-assets-adap
 import vinext from 'vinext'
 import { defineConfig } from 'vite'
 
-import { openNextCloudflareAlias } from './vinext/opennext-alias-plugin.ts'
-
 export default defineConfig({
   plugins: [
     vinext({
       prerender: { routes: '*', concurrency: 2 },
       cache: { cdn: staticAssetsAdapter() },
     }),
-    openNextCloudflareAlias(),
     cloudflare({
-      configPath: './wrangler.vinext.jsonc',
+      configPath: './wrangler.jsonc',
       viteEnvironment: { name: 'rsc', childEnvironments: ['ssr'] },
     }),
   ],

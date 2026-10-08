@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { createServerApiClient } from '@/lib/api'
+import { createServerApiClient } from '@/lib/api-server'
 
 import {
   fetchAnalyticsMistakes,

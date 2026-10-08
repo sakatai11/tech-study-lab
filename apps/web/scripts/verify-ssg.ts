@@ -5,10 +5,10 @@ import { fileURLToPath } from 'node:url'
 
 import { getLessonRouteParams, getQuizRouteParams, getTopicRouteParams } from '../src/lib/content'
 
-// Run after build:vinext and start:vinext:
-// NODE_OPTIONS=--conditions=react-server pnpm exec tsx scripts/verify-vinext-ssg.ts
+// Run after build and start, with the local API serving SSR routes:
+// pnpm --filter @tsl/web verify:ssg
 const root = new URL('../', import.meta.url)
-const baseUrl = process.env.VINEXT_VERIFY_BASE_URL ?? 'http://localhost:3002'
+const baseUrl = process.env.WEB_VERIFY_BASE_URL ?? 'http://localhost:3000'
 const read = (path: string) => readFileSync(new URL(path, root))
 const digest = (body: Uint8Array) => createHash('sha256').update(body).digest('hex')
 const manifest = JSON.parse(read('dist/server/vinext-prerender.json').toString()) as {
@@ -72,6 +72,20 @@ for (const pathname of ssrPaths) {
     pathname,
     status: response.status,
     cacheControl: response.headers.get('cache-control'),
+  })
+
+  // Client navigation requests the same route as RSC; it must also be rendered per request.
+  const rsc = await fetch(`${baseUrl}${pathname}?_rsc`, { headers: { RSC: '1' } })
+  assert.equal(rsc.status, 200, `${pathname} rsc`)
+  assert(rsc.headers.get('content-type')?.includes('text/x-component'), `${pathname} rsc`)
+  assert(rsc.headers.get('cache-control')?.includes('no-store'), `${pathname} rsc`)
+  assert.notEqual(rsc.headers.get('x-vinext-cache'), 'HIT', `${pathname} rsc`)
+  await rsc.body?.cancel()
+  report.push({
+    pathname,
+    kind: 'rsc',
+    status: rsc.status,
+    cacheControl: rsc.headers.get('cache-control'),
   })
 }
 

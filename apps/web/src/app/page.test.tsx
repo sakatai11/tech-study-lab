@@ -10,6 +10,9 @@ vi.mock('@/features/dashboard/server/load-dashboard', () => {
 vi.mock('@/lib/api', () => {
   throw new Error('The public product top must not create an API client')
 })
+vi.mock('@/lib/api-server', () => {
+  throw new Error('The public product top must not create an API client')
+})
 
 import ProductTopPage from './page'
 
