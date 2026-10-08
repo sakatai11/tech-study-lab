@@ -49,13 +49,14 @@ try {
     throw new Error('NEXT_PUBLIC_API_BASE_URL must be the public https URL of the target API.')
   }
 
-  // The target decides the Wrangler env; a caller's CLOUDFLARE_ENV must not redirect the build
-  // or the deploy of the verified config.
-  const { CLOUDFLARE_ENV: _callerEnv, ...inheritedEnv } = process.env
-  const targetEnv = target.cloudflareEnv
-    ? { ...inheritedEnv, CLOUDFLARE_ENV: target.cloudflareEnv }
-    : inheritedEnv
-  const buildStatus = run('pnpm', ['run', 'build'], targetEnv)
+  // The target selects the Wrangler env only at build time; a caller's CLOUDFLARE_ENV is dropped.
+  // The generated config is already flattened for that env, so deploy runs without any env:
+  // passing one would make Wrangler look up a missing section and rename the Worker.
+  const { CLOUDFLARE_ENV: _callerEnv, ...deployEnv } = process.env
+  const buildEnv = target.cloudflareEnv
+    ? { ...deployEnv, CLOUDFLARE_ENV: target.cloudflareEnv }
+    : deployEnv
+  const buildStatus = run('pnpm', ['run', 'build'], buildEnv)
   if (buildStatus !== 0) {
     process.exitCode = buildStatus
   } else {
@@ -88,7 +89,7 @@ try {
         'dist/server/wrangler.json',
         ...args,
       ],
-      targetEnv,
+      deployEnv,
     )
   }
 } catch (error) {

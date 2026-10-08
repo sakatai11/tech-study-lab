@@ -149,7 +149,7 @@ describe('Web deploy command', () => {
       cloudflareEnv: 'edge',
     },
   ])(
-    'builds and deploys $script for its own environment regardless of the caller CLOUDFLARE_ENV',
+    'builds $script for its own environment and deploys the flattened config without CLOUDFLARE_ENV',
     ({ script, config, cloudflareEnv }) => {
       const result = runDeploy(config, {
         script,
@@ -158,7 +158,7 @@ describe('Web deploy command', () => {
 
       expect(result.status, result.stderr).toBe(0)
       expect(result.build).toEqual({ cloudflareEnv })
-      expect(result.wrangler).toEqual({ cloudflareEnv })
+      expect(result.wrangler).toEqual({ cloudflareEnv: null })
       expect(result.invocation).toEqual(['deploy', '--config', 'dist/server/wrangler.json'])
     },
   )
