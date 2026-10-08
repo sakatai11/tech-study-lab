@@ -828,7 +828,7 @@ topic frontmatter の `order` も同様に表示順（0 以上の整数、小さ
 | `ACCESS_AUDIENCE` | var（api） | Cloudflare Access JWT の audience 検証（§3.1） | 未設定（両 Access 設定なし＋loopback URL のみ bypass） | API deploy 時に `--var ACCESS_AUDIENCE:<access-audience>` として明示指定 |
 | `API` | Service Binding（web） | Server loader（§3.1・§8.4） | `apps/web/wrangler.jsonc` と同じ宣言。ローカル `wrangler dev` の API へ接続 | `services: [{ binding: "API", service: "tech-study-lab-api", entrypoint: "InternalApi" }]` |
 | `API_BASE_URL` | env（web / Server 専用） | production 以外で `API` binding が未設定の場合のフォールバック（§8.4） | `http://localhost:8787` | 設定しない（Service Binding必須。欠落時はfail-fast） |
-| `NEXT_PUBLIC_API_BASE_URL` | ビルド時 env（web / Client） | Client hook（§8.4） | `http://localhost:8787` | web の deploy 時に対象 API Worker の公開 `https://` URL を環境変数として明示指定（未指定・非 https は deploy が拒否） |
+| `NEXT_PUBLIC_API_BASE_URL` | ビルド時 env（web / Client） | Client hook（§8.4） | `http://localhost:8787` | web の deploy 時に対象 API Worker の公開 URL `https://<API Worker 名>.<account subdomain>.workers.dev` を環境変数として明示指定。deploy は URL を解析し、ホスト名の Worker 名がデプロイ先の API（production は `tech-study-lab-api`、検証は `tech-study-lab-api-vinext`）と一致しない URL、http、path 付き URL を拒否する。custom domain へ移行する場合は、先に本表と deploy の検査を更新する |
 
 ### 12.3 ローカル開発手順
 
@@ -851,7 +851,7 @@ Cloudflare の型は `pnpm --filter @tsl/web cf-typegen` で `apps/web/wrangler.
 1. **マイグレーション適用**：`pnpm --filter @tsl/api exec wrangler d1 migrations apply tech-study-lab --remote`
 2. **content sync**：`pnpm --filter @tsl/api content:sync:remote`（`content/` → D1 upsert。§10.8）
 3. **api デプロイ**：`pnpm --filter @tsl/api run deploy --var WEB_ORIGIN:<web-public-url> --var ACCESS_ISSUER:<access-issuer> --var ACCESS_AUDIENCE:<access-audience>`。3 値は**毎回すべて**この deploy 実行時だけ明示指定し、Git や `.env` には保存しない。値を省いた bare deploy は禁止する。Wrangler がローカルまたは不完全な vars へ置き換えると、Access は fail closed となり、CORS も失敗し得る。`pnpm deploy` は pnpm 自身のコマンドと衝突するため、package script は必ず `run deploy` で起動し、引数前に追加の `--` を置かない。
-4. **web デプロイ**：`NEXT_PUBLIC_API_BASE_URL=<api-public-url> pnpm --filter @tsl/web run deploy` を実行する。このコマンドは `CLOUDFLARE_ENV` を外して Vinext の production build を行い、生成された `dist/server/wrangler.json` の Worker 名 `tech-study-lab-web`、`API` Service Binding `tech-study-lab-api#InternalApi`、`DOQueueHandler` の `v1`/`v2` migration 履歴を検査してから、その生成 config を明示して `wrangler deploy` する。`NEXT_PUBLIC_API_BASE_URL` は build 時に Client bundle へ埋め込まれるため、API の公開 `https://` URL を毎回指定する。追加引数は `--dry-run` だけを許可し、CLI による Worker 名・config・env の上書きを防ぐ。
+4. **web デプロイ**：`NEXT_PUBLIC_API_BASE_URL=<api-public-url> pnpm --filter @tsl/web run deploy` を実行する。このコマンドは `CLOUDFLARE_ENV` を外して Vinext の production build を行い、生成された `dist/server/wrangler.json` の Worker 名 `tech-study-lab-web`、`API` Service Binding `tech-study-lab-api#InternalApi`、`DOQueueHandler` の `v1`/`v2` migration 履歴を検査してから、その生成 config を明示して `wrangler deploy` する。`NEXT_PUBLIC_API_BASE_URL` は build 時に Client bundle へ埋め込まれるため、本番 API の公開 URL を毎回指定する。ブラウザが別環境の API へ解答を送らないよう、URL の Worker 名がデプロイ先の API と一致することを build 前に検査する（§12.2）。追加引数は `--dry-run` だけを許可し、CLI による Worker 名・config・env の上書きを防ぐ。
 
 順序の根拠：**スキーマ → データ → API → 画面** の順なら、各ステップの完了時点で稼働中の旧バージョンが壊れない（マイグレーションが追加中心の後方互換であることが前提。§12.6）。
 
@@ -904,6 +904,6 @@ content は「web のビルド時バンドル（§8.2）」と「D1 の `questio
 通常 SSR の認証後 route は、ユーザー固有の API データをリクエストごとに取得し、route error boundary が取得失敗を扱うことを確認する。教材・演習 route は `generateStaticParams` が全 content params を返し、Vinext の production build が標準 SSG を生成することを確認する。Client hook の API client は最初の送信まで遅延生成し、render / SSG 時のブラウザ専用設定への依存を避ける。
 
 - **成果物検証（CI）**：`pnpm build` の後に `pnpm --filter @tsl/web verify:build` を実行する。`dist/server/vinext-prerender.json` の rendered route が `/`・全 content params・`/404` と一致し、`/home`・`/review`・`/domains`・`/analytics` が prerender されていないこと、生成 HTML / RSC と公開 Client JS に `answerIndex` が含まれないこと、SSR の Worker entry と `API`（`InternalApi`）binding が生成 config に存在すること、内部 cache artifact が `run_worker_first` で Worker 経由になることを確認する。
-- **実行時検証（ローカル・検証環境）**：API を起動し、web を `build` + `start` で起動した状態で `pnpm --filter @tsl/web verify:ssg` を実行する（接続先は `WEB_VERIFY_BASE_URL`、既定 `http://localhost:3000`）。content route の HTML / RSC が `x-vinext-cache: HIT` で生成物と一致すること、SSR route が `no-store` で error boundary を返さないこと、別表記 URL と内部 cache artifact の直接取得が 404 になることを確認する。認証後 route の full GET と `?_rsc` navigation が通常 SSR として完了することも確認する。
+- **実行時検証（ローカル・検証環境）**：API を起動し、web を `build` + `start` で起動した状態で `pnpm --filter @tsl/web verify:ssg` を実行する（接続先は `WEB_VERIFY_BASE_URL`、既定 `http://localhost:3000`）。content route の HTML / RSC が `x-vinext-cache: HIT` で生成物と一致すること、SSR route が `no-store` で error boundary を返さないこと、別表記 URL と内部 cache artifact の直接取得が 404 になることを確認する。認証後 route は full GET に加えて `?_rsc` navigation も `text/x-component`・`no-store` の通常 SSR として完了することを確認する。
 
 構成確認では、`API` Service Binding が残り、PPR/ISR 専用の `cacheComponents`、Incremental Cache、R2、KV、Durable Object Queue の有効 binding、Worker 自己参照 binding が存在しないこと、登録済み `DOQueueHandler` の `v1` 作成履歴と後続の `v2` 削除 migration を top-level で維持し検証用 env が継承しないこと、標準 script が OpenNext に依存しないことをテストで固定する。

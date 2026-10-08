@@ -1021,13 +1021,13 @@ flowchart LR
               </td>
             </tr>
             <tr>
-              <td><code>apps/web/src/lib/api.ts</code></td>
+              <td><code>apps/web/src/lib/api.ts</code>・<code>apps/web/src/lib/api-server.ts</code></td>
               <td>
-                <code>createServerApiClient</code>（本番は Service Binding の
-                fetch、dev は URL フォールバック）/
-                <code>createBrowserApiClient</code>（公開 URL）の Hono client
+                <code>api.ts</code>：<code>createBrowserApiClient</code>（公開 URL）の Hono client
                 生成と、<code>requestJson</code> による
                 <code>res.ok</code>・<code>res.json()</code> の共通処理。
+                <code>api-server.ts</code>（<code>server-only</code>）：<code>createServerApiClient</code>（本番は
+                <code>cloudflare:workers</code> の Service Binding の fetch、binding 未設定の非 production は URL フォールバック）。
               </td>
               <td>
                 endpoint 固有の path・method・引数・Zod 検証、ViewModel
@@ -1137,7 +1137,7 @@ import 'server-only';
 import { connection } from 'next/server';
 import { cache } from 'react';
 
-import { createServerApiClient } from '@/lib/api';
+import { createServerApiClient } from '@/lib/api-server';
 import { getBundledQuestions } from '@/lib/content';
 import { fetchReviewQueue } from '../api/review-api';
 import { reviewQueueToViewModel } from '../mapper';

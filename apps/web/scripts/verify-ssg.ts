@@ -73,6 +73,20 @@ for (const pathname of ssrPaths) {
     status: response.status,
     cacheControl: response.headers.get('cache-control'),
   })
+
+  // Client navigation requests the same route as RSC; it must also be rendered per request.
+  const rsc = await fetch(`${baseUrl}${pathname}?_rsc`, { headers: { RSC: '1' } })
+  assert.equal(rsc.status, 200, `${pathname} rsc`)
+  assert(rsc.headers.get('content-type')?.includes('text/x-component'), `${pathname} rsc`)
+  assert(rsc.headers.get('cache-control')?.includes('no-store'), `${pathname} rsc`)
+  assert.notEqual(rsc.headers.get('x-vinext-cache'), 'HIT', `${pathname} rsc`)
+  await rsc.body?.cancel()
+  report.push({
+    pathname,
+    kind: 'rsc',
+    status: rsc.status,
+    cacheControl: rsc.headers.get('cache-control'),
+  })
 }
 
 for (const entry of readdirSync(new URL('dist/client/', root), {

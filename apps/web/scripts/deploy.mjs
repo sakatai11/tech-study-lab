@@ -44,9 +44,29 @@ try {
     throw new Error('deploy only accepts --dry-run; deployment target overrides are forbidden.')
   }
 
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? ''
-  if (!apiBaseUrl.startsWith('https://')) {
-    throw new Error('NEXT_PUBLIC_API_BASE_URL must be the public https URL of the target API.')
+  // The browser calls this URL directly, so it must be the target's own API Worker:
+  // https://<api Worker name>.<account subdomain>.workers.dev with no path.
+  const apiUrlMessage = `NEXT_PUBLIC_API_BASE_URL must be https://${target.apiService}.<subdomain>.workers.dev for the ${targetName} deploy target.`
+  let apiUrl
+  try {
+    apiUrl = new URL(process.env.NEXT_PUBLIC_API_BASE_URL ?? '')
+  } catch {
+    throw new Error(apiUrlMessage)
+  }
+  const [workerName, ...domainLabels] = apiUrl.hostname.split('.')
+  if (
+    apiUrl.protocol !== 'https:' ||
+    apiUrl.port !== '' ||
+    apiUrl.username !== '' ||
+    apiUrl.password !== '' ||
+    apiUrl.pathname !== '/' ||
+    apiUrl.search !== '' ||
+    apiUrl.hash !== '' ||
+    workerName !== target.apiService ||
+    domainLabels.length !== 3 ||
+    domainLabels.slice(1).join('.') !== 'workers.dev'
+  ) {
+    throw new Error(apiUrlMessage)
   }
 
   // The target selects the Wrangler env only at build time; a caller's CLOUDFLARE_ENV is dropped.

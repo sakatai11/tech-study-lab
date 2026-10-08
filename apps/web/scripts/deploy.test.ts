@@ -45,7 +45,10 @@ const edgeConfig = {
   workers_dev: true,
   preview_urls: false,
 }
-const apiBaseUrl = 'https://api.example.com'
+const apiUrls = {
+  production: 'https://tech-study-lab-api.example.workers.dev',
+  edge: 'https://tech-study-lab-api-vinext.example.workers.dev',
+}
 
 type DeployOptions = {
   script?: 'deploy' | 'deploy:edge'
@@ -62,7 +65,9 @@ function runDeploy(config: unknown, options: DeployOptions = {}) {
     args = [],
     buildStatus = 0,
     wranglerStatus = 0,
-    env = { NEXT_PUBLIC_API_BASE_URL: apiBaseUrl },
+    env = {
+      NEXT_PUBLIC_API_BASE_URL: script === 'deploy:edge' ? apiUrls.edge : apiUrls.production,
+    },
   } = options
   const directory = mkdtempSync(join(tmpdir(), 'tsl-web-deploy-'))
   try {
@@ -142,18 +147,20 @@ describe('Web deploy command', () => {
       script: 'deploy' as const,
       config: productionConfig,
       cloudflareEnv: null,
+      apiUrl: apiUrls.production,
     },
     {
       script: 'deploy:edge' as const,
       config: edgeConfig,
       cloudflareEnv: 'edge',
+      apiUrl: apiUrls.edge,
     },
   ])(
     'builds $script for its own environment and deploys the flattened config without CLOUDFLARE_ENV',
-    ({ script, config, cloudflareEnv }) => {
+    ({ script, config, cloudflareEnv, apiUrl }) => {
       const result = runDeploy(config, {
         script,
-        env: { NEXT_PUBLIC_API_BASE_URL: apiBaseUrl, CLOUDFLARE_ENV: 'other' },
+        env: { NEXT_PUBLIC_API_BASE_URL: apiUrl, CLOUDFLARE_ENV: 'other' },
       })
 
       expect(result.status, result.stderr).toBe(0)
@@ -228,18 +235,53 @@ describe('Web deploy command', () => {
   })
 
   it.each([
-    { env: {}, reason: 'missing' },
+    { script: 'deploy' as const, apiUrl: undefined, reason: 'missing' },
+    { script: 'deploy' as const, apiUrl: 'not a url', reason: 'malformed' },
+    { script: 'deploy' as const, apiUrl: 'http://localhost:8787', reason: 'local http' },
     {
-      env: { NEXT_PUBLIC_API_BASE_URL: 'http://localhost:8787' },
+      script: 'deploy' as const,
+      apiUrl: 'http://tech-study-lab-api.example.workers.dev',
       reason: 'non-https',
     },
-  ])('rejects a $reason public API URL before building', ({ env }) => {
-    const result = runDeploy(productionConfig, { env })
+    { script: 'deploy' as const, apiUrl: apiUrls.edge, reason: 'verification API for production' },
+    {
+      script: 'deploy:edge' as const,
+      apiUrl: apiUrls.production,
+      reason: 'production API for edge',
+    },
+    {
+      script: 'deploy' as const,
+      apiUrl: 'https://tech-study-lab-api.example.com',
+      reason: 'non-workers.dev host',
+    },
+    {
+      script: 'deploy' as const,
+      apiUrl: 'https://tech-study-lab-api.evil.example.workers.dev',
+      reason: 'nested subdomain',
+    },
+    {
+      script: 'deploy' as const,
+      apiUrl: `${apiUrls.production}/api`,
+      reason: 'URL with a path',
+    },
+  ])('rejects a $reason public API URL before building', ({ script, apiUrl }) => {
+    const result = runDeploy(script === 'deploy:edge' ? edgeConfig : productionConfig, {
+      script,
+      env: apiUrl === undefined ? {} : { NEXT_PUBLIC_API_BASE_URL: apiUrl },
+    })
 
     expect(result.status).toBe(1)
     expect(result.build).toBeUndefined()
     expect(result.invocation).toBeUndefined()
     expect(result.stderr).toContain('NEXT_PUBLIC_API_BASE_URL')
+  })
+
+  it('accepts a trailing slash on the target API URL', () => {
+    const result = runDeploy(productionConfig, {
+      env: { NEXT_PUBLIC_API_BASE_URL: `${apiUrls.production}/` },
+    })
+
+    expect(result.status, result.stderr).toBe(0)
   })
 
   it('preserves a build failure without invoking Wrangler', () => {

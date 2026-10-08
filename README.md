@@ -13,7 +13,7 @@
 - **機械で守るガードレール**：TypeScript strict、Zod、Biome、dependency-cruiser による依存境界の検証、エージェント契約の検査をすべて CI の PR ゲートに入れています。
 - **Knowledge Graph による影響範囲の特定**：コードと設定から構造グラフを抽出します。エージェントは全文検索の前にグラフで影響範囲を絞り込みます。
 - **Claude Code と Codex の両対応**：スキル・エージェント定義・hooks を `.ai/` に一元化し、どちらのランタイムからも同じワークフローを使えます。
-- **Cloudflare 構成**：Next.js 互換の Vinext と Hono を別々の Worker としてデプロイし、Service Binding と型安全 RPC（`hc`）でつないでいます。
+- **Cloudflare 構成**：Web と Hono API を別々の Worker としてデプロイし、Service Binding と型安全 RPC（`hc`）でつないでいます。Web の開発・ビルド・デプロイ手順は Next.js 互換の Vinext に移行済みです。本番 Web Worker は、切替条件（[design.md §12.4](./docs/design.md#124-本番デプロイ手順順序が仕様)）を満たすまで従来の OpenNext 版で稼働しています。
 
 ## 主な機能
 
