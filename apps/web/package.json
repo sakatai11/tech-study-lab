@@ -4,15 +4,17 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev",
+    "dev": "vite dev --port 3000",
     "content:generate": "tsx scripts/generate-content.ts",
     "content:check": "tsx scripts/generate-content.ts --check",
-    "prebuild": "pnpm content:generate",
-    "build": "next build",
-    "start": "next start",
-    "preview": "pnpm content:generate && opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy": "pnpm content:generate && opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
+    "build": "pnpm content:generate && node scripts/build.mjs",
+    "verify:build": "NODE_OPTIONS=--conditions=react-server tsx scripts/verify-build.ts",
+    "start": "wrangler dev --config dist/server/wrangler.json --port 3000",
+    "preview": "pnpm build && pnpm start",
+    "verify:ssg": "NODE_OPTIONS=--conditions=react-server tsx scripts/verify-ssg.ts",
+    "deploy": "node scripts/deploy.mjs production",
+    "deploy:edge": "node scripts/deploy.mjs edge",
+    "cf-typegen": "wrangler types --config wrangler.jsonc --include-runtime=false",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
@@ -24,16 +26,21 @@
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "react-markdown": "10.1.0",
+    "react-server-dom-webpack": "19.2.7",
     "server-only": "0.0.1",
-    "tailwind-merge": "2.6.0"
+    "tailwind-merge": "2.6.0",
+    "vinext": "1.0.1"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "1.62.5",
     "@cloudflare/workers-types": "4.20260621.1",
-    "@opennextjs/cloudflare": "1.19.11",
     "@testing-library/react": "16.3.0",
     "@types/node": "22.10.5",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
+    "@vinext/cloudflare": "1.0.1",
+    "@vitejs/plugin-react": "6.1.1",
+    "@vitejs/plugin-rsc": "0.5.35",
     "autoprefixer": "10.4.20",
     "gray-matter": "4.0.3",
     "jsdom": "26.1.0",
@@ -41,7 +48,8 @@
     "tailwindcss": "3.4.17",
     "tsx": "4.19.2",
     "typescript": "5.7.3",
+    "vite": "8.3.2",
     "vitest": "2.1.8",
-    "wrangler": "4.103.0"
+    "wrangler": "4.147.0"
   }
 }

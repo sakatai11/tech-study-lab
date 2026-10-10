@@ -5,12 +5,13 @@
     "jsx": "preserve",
     "types": ["@cloudflare/workers-types"],
     "allowJs": true,
+    "allowImportingTsExtensions": true,
     "incremental": true,
     "noEmit": true,
     "declaration": false,
     "plugins": [{ "name": "next" }],
     "paths": { "@/*": ["./src/*"] }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", ".next", ".open-next"]
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules", ".next", ".open-next", "dist"]
 }

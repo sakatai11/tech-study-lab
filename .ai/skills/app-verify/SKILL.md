@@ -28,10 +28,10 @@ lsof -ti:8787,3000                            # ポート占有確認（既存�
 
 ```bash
 pnpm --filter @tsl/api dev    # Hono / wrangler dev → http://localhost:8787
-pnpm --filter @tsl/web dev    # Next.js → http://localhost:3000
+pnpm --filter @tsl/web dev    # Vinext（Vite + workerd）→ http://localhost:3000
 ```
 
-起動ログで listen 開始を確認してから次へ進む（api は D1 バインディング、web は環境変数 `API_BASE_URL=http://localhost:8787` の解決を確認）。
+起動ログで listen 開始を確認してから次へ進む（api は D1 バインディング、web は `API` Service Binding がローカル API へ接続できることを確認）。production build で確認する場合は web を `pnpm --filter @tsl/web build` → `start`（同じく :3000）で起動し、`pnpm --filter @tsl/web verify:ssg` で SSG/SSR の配信を確認する。2 つの `wrangler dev` の inspector port が衝突したら、片方に `--inspector-port` を指定する。
 
 ### 3. API 単体の確認
 

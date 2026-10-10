@@ -77,3 +77,6 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      - name: Verify web build artifacts (SSG / SSR / asset boundaries)
+        run: pnpm --filter @tsl/web verify:build

@@ -2,7 +2,7 @@ import 'server-only'
 
 import { domainKeySchema } from '@tsl/shared'
 
-import { createServerApiClient } from '@/lib/api'
+import { createServerApiClient } from '@/lib/api-server'
 import { getLessonContent, getLessonRouteParams, getOrderedTopicRoutes } from '@/lib/content'
 
 import {

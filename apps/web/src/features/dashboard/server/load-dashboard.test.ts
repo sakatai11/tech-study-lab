@@ -18,7 +18,7 @@ const fetchDashboardHeatmap = vi.hoisted(() => vi.fn())
 const fetchDashboardDomains = vi.hoisted(() => vi.fn())
 const fetchRecentActivity = vi.hoisted(() => vi.fn())
 
-vi.mock('@/lib/api', () => ({ createServerApiClient }))
+vi.mock('@/lib/api-server', () => ({ createServerApiClient }))
 vi.mock('@/lib/content', () => ({
   getLessonContent,
   getLessonRouteParams,
