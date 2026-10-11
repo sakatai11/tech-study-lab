@@ -808,7 +808,7 @@ topic frontmatter の `order` も同様に表示順（0 以上の整数、小さ
 
 本番切替前の実環境確認には、手動で管理する隔離された検証環境（Issue #218 で作成）を使う。Web は `tech-study-lab-web-test`（`apps/web/wrangler.jsonc` の `env.edge`）、API は `tech-study-lab-api-test`（`apps/api/wrangler.test.jsonc`）、D1 は `tech-study-lab-test` とし、本番の Worker・route・Origin・学習記録は変更しない。D1 へは同じ commit の migration と content から生成した問題キャッシュ・固定ユーザーだけを投入し、解答・閲覧記録は検証用 D1 に保存する。本番データの複製はしない。これは PR ごとの自動 preview 環境ではない。
 
-検証用 Worker と D1 の名称はフレームワークに依存しない `-test` に統一し、D1 の ID は既存の検証用 DB のものを維持する。設定変更だけでは既存の Cloudflare リソースは改名されないため、新名称への反映時は D1 の名称と ID の一致、公開 URL・Service Binding・Access application の対象 hostname・API の `WEB_ORIGIN` を確認して移行する。
+検証用 Worker と D1 の名称はフレームワークに依存しない `-test` に統一する。D1 は既存 DB の改名をサポートしないため、`tech-study-lab-test` を新規作成し、既存の検証用 D1 `tech-study-lab-vinext` のスキーマ・データ・migration 履歴を export/import して移行する。移行先の ID を検証用 API config へ設定し、テーブルごとの件数と migration 履歴の一致を確認してから接続先を切り替える。旧検証用 D1 は復旧用に保持し、本番 D1 からの複製は行わない。Worker 名はダッシュボードで改名し、公開 URL・Service Binding・Access application の対象 hostname・API の `WEB_ORIGIN`・Client bundle の API URL を新名称に揃える。設定変更だけでは既存の Cloudflare リソースは変更されない。
 
 | 環境 | Web Worker 名 | API Service Binding | build / deploy |
 | --- | --- | --- | --- |

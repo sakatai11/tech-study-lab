@@ -12,7 +12,7 @@
     {
       "binding": "DB",
       "database_name": "tech-study-lab-test",
-      "database_id": "db179ef0-7349-407b-8323-71ff91889a82",
+      "database_id": "1a97bb77-f40d-40e1-b59d-162fb80c7324",
       "migrations_dir": "drizzle/migrations"
     }
   ],
