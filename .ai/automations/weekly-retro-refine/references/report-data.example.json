@@ -1,9 +1,9 @@
 {
   "meta": {
     "title": "Weekly Retro & Refinement",
-    "periodStart": "2026-07-06 09:00 JST",
-    "periodEnd": "2026-07-13 09:00 JST",
-    "generatedAt": "2026-07-13 09:05 JST",
+    "periodStart": "2026-07-06T09:00:00+09:00",
+    "periodEnd": "2026-07-13T09:00:00+09:00",
+    "generatedAt": "2026-07-13T09:05:00+09:00",
     "repository": "tech-study-lab",
     "evidence": ["Git", "GitHub Issues", "Pull Requests", "CI", "Skill usage log"],
     "limitations": ["CIの一部は権限制約により未確認です。"]
@@ -105,7 +105,7 @@
           "childClassification": "close候補"
         }
       ],
-      "humanNextAction": "根拠を確認し、人間がcloseを判断する。"
+      "humanNextAction": "次回リリースでrelease-main-prに従って再照合し、承認済みmain向けPRを人間がマージしたときのclose候補とする。"
     },
     {
       "issue": {
@@ -139,7 +139,7 @@
       "remainingConditions": ["新手順のCI検証"],
       "transfer": null,
       "parentTrackers": [],
-      "humanNextAction": "未検証の完了条件を確認してからcloseを判断する。"
+      "humanNextAction": "未検証の完了条件を確認し、充足後に次回リリースでrelease-main-prに従ってclose候補を再照合する。"
     },
     {
       "issue": {
