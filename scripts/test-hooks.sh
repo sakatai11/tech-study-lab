@@ -51,6 +51,9 @@ expect_blocked sh -c './.codex/hooks/pre-tool-use.sh < .ai/hooks/fixtures/codex-
 
 log_dir=$(mktemp -d)
 trap 'rm -rf "$log_dir"' EXIT
+AI_HARNESS_LOG_DIR="$log_dir" ./.codex/hooks/user-prompt-submit.sh < .ai/hooks/fixtures/codex-user-prompt-env.json
+AI_HARNESS_LOG_DIR="$log_dir" ./.codex/hooks/user-prompt-submit.sh < .ai/hooks/fixtures/codex-user-prompt-unknown-skill.json
+[ ! -e "$log_dir/skill-usage.jsonl" ] || fail "non-skill prompt references must not be logged"
 AI_HARNESS_LOG_DIR="$log_dir" ./.codex/hooks/user-prompt-submit.sh < .ai/hooks/fixtures/codex-user-prompt.json
 AI_HARNESS_LOG_DIR="$log_dir" ./.ai/hooks/log-skill-usage.sh --runtime codex --skill skill-audit --status started
 AI_HARNESS_LOG_DIR="$log_dir" ./.ai/hooks/log-skill-usage.sh --runtime codex --skill skill-audit --status completed
@@ -61,7 +64,9 @@ AI_HARNESS_LOG_DIR="$log_dir" ./.claude/hooks/post-skill.sh < .ai/hooks/fixtures
 jq -e -s '
   length == 5
   and .[0].runtime == "codex"
+  and .[0].skill == "skill-audit"
   and .[0].status == "requested"
+  and .[0].source == "hook"
   and .[1].status == "started"
   and .[2].status == "completed"
   and .[3].runtime == "claude"
