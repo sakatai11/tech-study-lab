@@ -15,8 +15,8 @@ const targets = {
   },
   edge: {
     cloudflareEnv: 'edge',
-    name: 'tech-study-lab-web-vinext',
-    apiService: 'tech-study-lab-api-vinext',
+    name: 'tech-study-lab-web-test',
+    apiService: 'tech-study-lab-api-test',
     migrations: [],
     workersDev: true,
     previewUrls: false,
