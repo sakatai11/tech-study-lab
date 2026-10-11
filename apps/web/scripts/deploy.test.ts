@@ -33,11 +33,11 @@ const productionConfig = {
   ],
 }
 const edgeConfig = {
-  name: 'tech-study-lab-web-vinext',
+  name: 'tech-study-lab-web-test',
   services: [
     {
       binding: 'API',
-      service: 'tech-study-lab-api-vinext',
+      service: 'tech-study-lab-api-test',
       entrypoint: 'InternalApi',
     },
   ],
@@ -47,7 +47,7 @@ const edgeConfig = {
 }
 const apiUrls = {
   production: 'https://tech-study-lab-api.example.workers.dev',
-  edge: 'https://tech-study-lab-api-vinext.example.workers.dev',
+  edge: 'https://tech-study-lab-api-test.example.workers.dev',
 }
 
 type DeployOptions = {

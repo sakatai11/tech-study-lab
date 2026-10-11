@@ -806,12 +806,14 @@ topic frontmatter の `order` も同様に表示順（0 以上の整数、小さ
 
 **local / production の 2 環境のみ**。preview 環境（PR ごとのデプロイ等）は将来検討とする。
 
-本番切替前の実環境確認には、手動で管理する隔離された検証環境（Issue #218 で作成）を使う。Web は `tech-study-lab-web-vinext`（`apps/web/wrangler.jsonc` の `env.edge`）、API は `tech-study-lab-api-vinext`（`apps/api/wrangler.vinext.jsonc`）、D1 は `tech-study-lab-vinext` とし、本番の Worker・route・Origin・学習記録は変更しない。D1 へは同じ commit の migration と content から生成した問題キャッシュ・固定ユーザーだけを投入し、解答・閲覧記録は検証用 D1 に保存する。本番データの複製はしない。これは PR ごとの自動 preview 環境ではない。
+本番切替前の実環境確認には、手動で管理する隔離された検証環境（Issue #218 で作成）を使う。Web は `tech-study-lab-web-test`（`apps/web/wrangler.jsonc` の `env.edge`）、API は `tech-study-lab-api-test`（`apps/api/wrangler.test.jsonc`）、D1 は `tech-study-lab-test` とし、本番の Worker・route・Origin・学習記録は変更しない。D1 へは同じ commit の migration と content から生成した問題キャッシュ・固定ユーザーだけを投入し、解答・閲覧記録は検証用 D1 に保存する。本番データの複製はしない。これは PR ごとの自動 preview 環境ではない。
+
+検証用 Worker と D1 の名称はフレームワークに依存しない `-test` に統一し、D1 の ID は既存の検証用 DB のものを維持する。設定変更だけでは既存の Cloudflare リソースは改名されないため、新名称への反映時は D1 の名称と ID の一致、公開 URL・Service Binding・Access application の対象 hostname・API の `WEB_ORIGIN` を確認して移行する。
 
 | 環境 | Web Worker 名 | API Service Binding | build / deploy |
 | --- | --- | --- | --- |
 | local | `tech-study-lab-web`（ローカル実行のみ） | `tech-study-lab-api#InternalApi`（ローカル `wrangler dev`） | `dev` / `build` + `start` |
-| 検証（edge） | `tech-study-lab-web-vinext` | `tech-study-lab-api-vinext#InternalApi` | `deploy:edge`（`CLOUDFLARE_ENV=edge` で build） |
+| 検証（edge） | `tech-study-lab-web-test` | `tech-study-lab-api-test#InternalApi` | `deploy:edge`（`CLOUDFLARE_ENV=edge` で build） |
 | production | `tech-study-lab-web` | `tech-study-lab-api#InternalApi` | `deploy`（`CLOUDFLARE_ENV` なしで build） |
 
 ### 12.2 環境変数・バインディング一覧
@@ -828,7 +830,7 @@ topic frontmatter の `order` も同様に表示順（0 以上の整数、小さ
 | `ACCESS_AUDIENCE` | var（api） | Cloudflare Access JWT の audience 検証（§3.1） | 未設定（両 Access 設定なし＋loopback URL のみ bypass） | API deploy 時に `--var ACCESS_AUDIENCE:<access-audience>` として明示指定 |
 | `API` | Service Binding（web） | Server loader（§3.1・§8.4） | `apps/web/wrangler.jsonc` と同じ宣言。ローカル `wrangler dev` の API へ接続 | `services: [{ binding: "API", service: "tech-study-lab-api", entrypoint: "InternalApi" }]` |
 | `API_BASE_URL` | env（web / Server 専用） | production 以外で `API` binding が未設定の場合のフォールバック（§8.4） | `http://localhost:8787` | 設定しない（Service Binding必須。欠落時はfail-fast） |
-| `NEXT_PUBLIC_API_BASE_URL` | ビルド時 env（web / Client） | Client hook（§8.4） | `http://localhost:8787` | web の deploy 時に対象 API Worker の公開 URL `https://<API Worker 名>.<account subdomain>.workers.dev` を環境変数として明示指定。deploy は URL を解析し、ホスト名の Worker 名がデプロイ先の API（production は `tech-study-lab-api`、検証は `tech-study-lab-api-vinext`）と一致しない URL、http、path 付き URL を拒否する。custom domain へ移行する場合は、先に本表と deploy の検査を更新する |
+| `NEXT_PUBLIC_API_BASE_URL` | ビルド時 env（web / Client） | Client hook（§8.4） | `http://localhost:8787` | web の deploy 時に対象 API Worker の公開 URL `https://<API Worker 名>.<account subdomain>.workers.dev` を環境変数として明示指定。deploy は URL を解析し、ホスト名の Worker 名がデプロイ先の API（production は `tech-study-lab-api`、検証は `tech-study-lab-api-test`）と一致しない URL、http、path 付き URL を拒否する。custom domain へ移行する場合は、先に本表と deploy の検査を更新する |
 
 ### 12.3 ローカル開発手順
 
@@ -855,9 +857,9 @@ Cloudflare の型は `pnpm --filter @tsl/web cf-typegen` で `apps/web/wrangler.
 
 順序の根拠：**スキーマ → データ → API → 画面** の順なら、各ステップの完了時点で稼働中の旧バージョンが壊れない（マイグレーションが追加中心の後方互換であることが前提。§12.6）。
 
-検証環境への web デプロイは `NEXT_PUBLIC_API_BASE_URL=<verification-api-public-url> pnpm --filter @tsl/web run deploy:edge` で行う。`CLOUDFLARE_ENV=edge` で build し、生成 config が Worker 名 `tech-study-lab-web-vinext`、`API` Service Binding `tech-study-lab-api-vinext#InternalApi`、空の `migrations`、`workers_dev: true`、`preview_urls: false` であることを検査する。production と検証環境のどちらの deploy も、相手の環境向けに生成された config を Wrangler 起動前に拒否する。設定選択は build 時に行い、deploy 時の環境変数だけで接続先が切り替わると扱わない。`deploy:edge` は本番デプロイ手順に含めない。
+検証環境への web デプロイは `NEXT_PUBLIC_API_BASE_URL=<verification-api-public-url> pnpm --filter @tsl/web run deploy:edge` で行う。`CLOUDFLARE_ENV=edge` で build し、生成 config が Worker 名 `tech-study-lab-web-test`、`API` Service Binding `tech-study-lab-api-test#InternalApi`、空の `migrations`、`workers_dev: true`、`preview_urls: false` であることを検査する。production と検証環境のどちらの deploy も、相手の環境向けに生成された config を Wrangler 起動前に拒否する。設定選択は build 時に行い、deploy 時の環境変数だけで接続先が切り替わると扱わない。`deploy:edge` は本番デプロイ手順に含めない。
 
-検証用 hostname でも公開 `/` と Access で保護する `/home`・`/learn`・`/quiz`・`/review`・`/domains`・`/analytics` の境界を適用する。検証用 API は専用 Access application で保護し、`OPTIONS` は API の credentialed CORS 応答へ転送する。API の deploy と検証 D1 の操作には `apps/api/wrangler.vinext.jsonc` を明示指定する。API の `WEB_ORIGIN`・`ACCESS_ISSUER`・`ACCESS_AUDIENCE` はデプロイごとに明示指定し、Git や `.env` に保存しない。外部リソース作成、remote D1 への migration/content SQL 実行、Worker/Access 更新は、対象アカウント・検証用リソース・入力値・SQL を確認した承認を得てから行う。実施結果と再実行手順は [Vinext 検証記録](./investigations/2026-10-04-vinext-migration.md) に記録する。
+検証用 hostname でも公開 `/` と Access で保護する `/home`・`/learn`・`/quiz`・`/review`・`/domains`・`/analytics` の境界を適用する。検証用 API は専用 Access application で保護し、`OPTIONS` は API の credentialed CORS 応答へ転送する。API の deploy と検証 D1 の操作には `apps/api/wrangler.test.jsonc` を明示指定する。API の `WEB_ORIGIN`・`ACCESS_ISSUER`・`ACCESS_AUDIENCE` はデプロイごとに明示指定し、Git や `.env` に保存しない。外部リソース作成、remote D1 への migration/content SQL 実行、Worker/Access 更新は、対象アカウント・検証用リソース・入力値・SQL を確認した承認を得てから行う。実施結果と再実行手順は [Vinext 検証記録](./investigations/2026-10-04-vinext-migration.md) に記録する。
 
 #### 本番 Web の Vinext 切替（Issue #221）
 

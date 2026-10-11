@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "account_id": "4459a4d59a634a07eac0400d39b84f20",
-  "name": "tech-study-lab-api-vinext",
+  "name": "tech-study-lab-api-test",
   "main": "src/index.ts",
   "compatibility_date": "2025-01-09",
   "compatibility_flags": ["nodejs_compat"],
@@ -11,7 +11,7 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "tech-study-lab-vinext",
+      "database_name": "tech-study-lab-test",
       "database_id": "db179ef0-7349-407b-8323-71ff91889a82",
       "migrations_dir": "drizzle/migrations"
     }
