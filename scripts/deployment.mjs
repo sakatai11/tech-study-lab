@@ -149,7 +149,7 @@ async function prepare(environment) {
   })
   writeJson(resolve(release, 'manifest.json'), manifest)
   summary(
-    `## Release plan: ${environment}\n\nCommit: \`${sha}\`\n\nSource tree: \`${tree}\`\n\nWorkers: \`${target.api}\` → \`${target.web}\`\n\nD1: \`${target.database}\` (${target.databaseId})\n\nQuestions: ${manifest.questionCount}; content changed since last success: ${manifest.contentChanged}\n\nSQL SHA-256: \`${manifest.files['content/sync.sql']}\`\n\nMigration files (Wrangler applies only pending files):\n${manifest.migrations.map((name) => `- \`${name}\``).join('\n')}\n\nFull hashes are in manifest.json. Apply automatically uses these exact artifacts after preflight checks. No remote writes have run.`,
+    `## Release plan: ${environment}\n\nCommit: \`${sha}\`\n\nSource tree: \`${tree}\`\n\nWorkers: \`${target.api}\` → \`${target.web}\`\n\nD1: \`${target.database}\` (${target.databaseId})\n\nQuestions: ${manifest.questionCount}; content changed since last success: ${manifest.contentChanged} (D1 sync runs on every release)\n\nSQL SHA-256: \`${manifest.files['content/sync.sql']}\`\n\nMigration files (Wrangler applies only pending files):\n${manifest.migrations.map((name) => `- \`${name}\``).join('\n')}\n\nFull hashes are in manifest.json. Apply automatically uses these exact artifacts after preflight checks. No remote writes have run.`,
   )
 }
 
@@ -225,7 +225,6 @@ async function apply(environment) {
   const { target, sha, apiUrl } = ctx
   const manifest = readJson(resolve(release, 'manifest.json'))
   const result = { environment, sha, stage: 'preflight', completed: [], before: {}, after: {} }
-  let contentChanged = true
   const apiConfig = resolve(release, 'api/wrangler.json')
   const wrangler = (...args) => run(['--filter', '@tsl/api', 'exec', 'wrangler', ...args])
   const stage = (name, fn) => async () => {
@@ -279,9 +278,9 @@ async function apply(environment) {
         assert.equal(database.name, target.database, 'remote D1 name mismatch')
         await fresh(ctx)
         await checkAuthenticatedApi(apiUrl)
-        const previous = await lastRelease(environment)
-        contentChanged = previous?.contentTree !== ctx.contentTree
-        result.contentSync = contentChanged
+        // A failed run may have synced D1 without recording success, so the last
+        // success record cannot prove D1 matches this content. Always re-sync.
+        result.contentSync = true
         result.before.api = await currentVersion(target, target.api)
         result.before.web = await currentVersion(target, target.web)
         rmSync(resolve(root, 'apps/web/dist'), { recursive: true, force: true })
@@ -291,18 +290,17 @@ async function apply(environment) {
         wrangler('d1', 'migrations', 'apply', target.database, '--remote', '--config', apiConfig),
       ),
       sync: stage('sync', async () => {
-        if (contentChanged)
-          wrangler(
-            'd1',
-            'execute',
-            target.database,
-            '--remote',
-            '--config',
-            apiConfig,
-            '--file',
-            resolve(release, 'content/sync.sql'),
-            '--yes',
-          )
+        wrangler(
+          'd1',
+          'execute',
+          target.database,
+          '--remote',
+          '--config',
+          apiConfig,
+          '--file',
+          resolve(release, 'content/sync.sql'),
+          '--yes',
+        )
       }),
       api: stage('api', async () => {
         wrangler(
