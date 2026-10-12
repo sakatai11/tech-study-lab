@@ -26,11 +26,13 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
       environment: 'verification',
       failure,
     })),
+    // Last success has the same content tree as this release: sync must still run.
+    { environment: 'verification', previousContent: true },
     ...[undefined, 'unverified', 'vinext-not-ready', 'branch-policy', 'verification-changed'].map(
       (failure) => ({ environment: 'production', failure }),
     ),
   ]
-  for (const { environment, failure } of scenarios) {
+  for (const { environment, failure, previousContent } of scenarios) {
     const target = getTarget(environment)
     const root = realpathSync(mkdtempSync(join(tmpdir(), 'tsl-apply-test-')))
     const json = (path, value) => writeFileSync(join(root, path), JSON.stringify(value))
@@ -127,7 +129,9 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
             if (path.endsWith('/git/ref/heads/' + target.branch)) return Response.json({object:{sha:process.env.FAILURE === 'stale' ? 'f'.repeat(40) : process.env.GITHUB_SHA}});
             if (path.endsWith('/deployments') && options.method === 'POST') return Response.json({id:1});
             if (path.endsWith('/deployments') && target.environment === 'production' && new URL(url).searchParams.get('environment') === 'verification') return Response.json(process.env.FAILURE === 'unverified' ? [] : [{id:2,sha:process.env.GITHUB_SHA,payload:{kind:'tsl-release',tree:${JSON.stringify(tree)},apiVersion:'11111111-1111-1111-1111-111111111111',webVersion:'11111111-1111-1111-1111-111111111111'}}]);
+            if (path.endsWith('/deployments') && process.env.PREVIOUS_CONTENT) return Response.json([{id:3,sha:'e'.repeat(40),payload:{kind:'tsl-release',contentTree:${JSON.stringify(git('rev-parse', 'HEAD:content'))}}}]);
             if (path.endsWith('/deployments')) return Response.json([]);
+            if (path.endsWith('/deployments/3/statuses')) return Response.json([{state:'success'}]);
             if (path.endsWith('/deployments/1/statuses')) return Response.json({});
             if (path.endsWith('/deployments/2/statuses')) return Response.json([{state:'success'}]);
           }
@@ -166,6 +170,7 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
           env: {
             PATH: `${join(root, 'bin')}:${process.env.PATH}`,
             FAILURE: failure ?? '',
+            PREVIOUS_CONTENT: previousContent ? '1' : '',
             GITHUB_REF: `refs/heads/${target.branch}`,
             GITHUB_EVENT_NAME: 'push',
             GITHUB_SHA: sha,

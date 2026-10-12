@@ -83,7 +83,7 @@ token の値はチャット・Issue・PR・端末履歴へ貼らず、Cloudflare
 
 prepare は Cloudflare の変更権限を持たず、locked dependencies、品質検査、SQL 生成、環境別 Web build / 成果物検査、API dry-run bundle を実行する。SHA・tree・全ファイルの SHA-256 を manifest に含める。API config / bundle / migration、Web `dist`、生成 SQL は同じ run / attempt の artifact に保存する。
 
-apply は対象環境の Secrets を使用し、manifest・設定・最新 branch SHA・検証ソース、実アカウントの workers.dev subdomain、現在の API に対する Service Token 認証を変更前に検査する。次に **migration → 必要時 content sync → API deploy → API health → Web upload → smoke test → 成功記録**を行う。Web upload は再ビルドせず prepare の receipt・全ファイル hash を照合する。content 差分は最後の成功記録の content tree と比較し、初回・復旧後は必ず同期する。問題が空のリリースは拒否する。
+apply は対象環境の Secrets を使用し、manifest・設定・最新 branch SHA・検証ソース、実アカウントの workers.dev subdomain、現在の API に対する Service Token 認証を変更前に検査する。次に **migration → content sync → API deploy → API health → Web upload → smoke test → 成功記録**を行う。Web upload は再ビルドせず prepare の receipt・全ファイル hash を照合する。content sync は冪等なため毎回実行する（失敗 run が D1 だけを更新した後に content が戻っても取りこぼさない）。content 差分は計画に情報として表示する。問題が空のリリースは拒否する。
 
 同一環境の deploy / rollback は `deploy-verification` / `deploy-production` concurrency group を共有する。変更開始済みの run は新しい push でキャンセルしない。変更開始前に branch が進んでいた場合は古い run を拒否する。
 
@@ -98,7 +98,7 @@ apply は対象環境の Secrets を使用し、manifest・設定・最新 branc
 
 どの段階でも失敗したら後続を停止する。API 更新後に Web が失敗するなど、部分反映は起こり得る。まず Job Summary / result.json と Cloudflare の実際の version・D1 migration 履歴を確認する。レスポンス切断を理由に、その場で同じ変更を無条件に再試行しない。
 
-原因解消後は **Re-run all jobs** または対象ブランチから Deploy を手動起動し、prepare からやり直す。失敗 job のみの再実行は artifact の run attempt が一致せず拒否される。古い SHA・期限切れ artifact は再利用しない。migration の適用済み履歴と content upsert の冪等性を使い、未反映 content を最後の成功記録から判定する。
+原因解消後は **Re-run all jobs** または対象ブランチから Deploy を手動起動し、prepare からやり直す。失敗 job のみの再実行は artifact の run attempt が一致せず拒否される。古い SHA・期限切れ artifact は再利用しない。migration の適用済み履歴と content upsert の冪等性を使い、content sync は毎回再実行される。
 
 認証情報不足・保護設定不足・本番切替条件未達は、成功やスキップ済みリリースとして記録しない。
 
