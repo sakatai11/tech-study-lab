@@ -397,6 +397,7 @@ HTTP 入出力、リクエスト・レスポンスの実例（JSON）、Zod ス�
 **コンポーネント文法**（`globals.css` の `@layer components` ＋ `components/ui` に集約）：
 
 - `card`：`surface` ＋ 2px `border` ＋ 16px radius のフラットカード。
+- `/learn` のアイコン：Google Material Symbols Rounded（24px、既定の非塗りつぶし）を使う。領域は `security` / `code` / `dns` / `account_tree`、教材は `menu_book`、導線は `chevron_right`、準備中は `schedule` で補助する。公式SVGを `apps/web/public/icons/material-symbols/` に必要な分だけ同梱し、出典・ライセンスも保持する。共通表示部品のCSS maskで既存の文字色を継承し、ダーク／ライト両テーマに対応する。表示名は文字でも残し、装飾アイコンは `aria-hidden` にして読み上げを重複させない。
 - チャンキーボタン（`btn-green` / `btn-blue` / `btn-ghost`）：ベタ塗り＋下エッジ（`box-shadow: 0 4px 0 <shade>`）、`:active` で 4px 沈む。green＝主アクション、ghost＝副アクション。
 - `term-win`：ターミナルウィンドウ。ヘッダーは **`>_` プロンプトバッジ＋mono タイトル＋右端メタ情報**（例 `80×24`・`exit 0`・`utf-8 · tsx`）。教材のコードブロック、演習結果のテストレポート、スキルツリーで使用。
 - `keycap`：問題 ID・選択肢番号のキーキャップ表現。
