@@ -214,6 +214,7 @@ SM-2 の計算式は [sm2.ts](../packages/shared/src/srs/sm2.ts)、その周辺�
 | `/` 公開トップ | 個人開発者向けの AI 駆動ソフトウェア学習ラボを説明し、「教材を読む → 4択で確かめる → SRSで復習する」学習ループを示す。明確なログイン CTA から `/home` へ進む | なし。プロダクト説明だけを静的に表示する | 静的 RSC。`AppShell`・dashboard loader・API client・Service Binding・due-count Client hook/provider を import せず、ユーザー固有データを読まない | 「ログインして学習を始める」→ `/home` |
 | `/home` ダッシュボード | **今日の復習（due）が主役**。学習統計（正答率・学習時間・連続学習日数）・学習コントリビューション（草＝日次解答数ヒートマップ）・領域別習得状況・最近のアクティビティ・次のレッスン導線を併せ持つ | due 件数は独立した API（Server loader → `hc`）。summary・heatmap・domains・recent activity は同一の非キャッシュ loader が同じ API client から並列取得し、`/home` で実データを表示する | 通常 SSR。各リクエストで Server loader を実行し、ユーザー固有データを共有キャッシュしない | 「復習を始める」→ `/review`、「続きから」→ `/learn/...` |
 | `/domains` スキルツリー | 現行は `GET /domains` の実データを使い、4つの学習領域をカードで俯瞰する。各カードに習得率・習得済み/全問題数・トピック数・レッスン数と、コンテンツ上の先頭トピックへの導線（該当しない場合は「準備中」）を表示する。詳細な done ✓ / current ▶ / locked 🔒 のディレクトリツリーは後続スコープとする（§8.7）。 | 領域別集計は API（`GET /domains`）。領域カードは `/domains` と `/home` が共通の props 境界を介して表示する | 通常 SSR。Server loader が各リクエストのユーザー固有集計を取得する | 先頭トピックあり → `/learn/[domain]/[topic]`、なし → 「準備中」 |
+| `/learn` 教材一覧 | 4領域ごとのトピック一覧。領域・トピックの表示名と順序は §11.3 に従い、各トピックにレッスン数を表示する。教材のない領域・レッスン0件のトピックは「準備中」とし、リンクを表示しない | ビルド時バンドル済み content（Server loader → mapper → ViewModel → RSC）。一覧の初期取得・描画にAPI不要 | ユーザー固有データを読まない静的 RSC。ビルド時にプリレンダリングし、PPR streaming 対象外 | トピック選択 → `/learn/[domain]/[topic]` |
 | `/learn/[domain]/[topic]` レッスン一覧 | トピック内のレッスン一覧（初期は XSS 1本） | ビルド時バンドル済み content（RSC） | `generateStaticParams` による標準 SSG。PPR streaming 対象外 | 各レッスンへ |
 | `/learn/[domain]/[topic]/[lesson]` 教材本文 | Markdown 本文表示 | ビルド時バンドル済み content（RSC。本文の初期取得・描画にはAPI不要）・閲覧記録のみAPI（最小Client recorder） | `generateStaticParams` による標準 SSG。PPR streaming 対象外 | 「問題を解く →」`/quiz/[lesson]` |
 | `/quiz/[lesson]` 演習 | イントロ（レッスン概要の確認）→ 全問を 1 問ずつ即時採点 → 結果サマリ、を 1 画面内のクライアント状態遷移（`intro → exercise → result`）で完結。演習ナビ・教材本文の両方から入れる | 問題＝content（RSC で初期化）/ 解答記録＝API | `generateStaticParams` による標準 SSG。PPR streaming 対象外 | 完了 → 「次のレッスンへ」／「再挑戦」 |
@@ -222,6 +223,7 @@ SM-2 の計算式は [sm2.ts](../packages/shared/src/srs/sm2.ts)、その周辺�
 
 ### 7.2 横断する設計判断
 
+- **教材の入口**：PC のサイドバー・SP の下部タブの「教材」は、教材の有無にかかわらず `/learn` に遷移する。`/learn` と配下のトピック一覧・教材本文では「教材」を選択状態にする。ダッシュボードの「続きから」は既存の教材本文への導線を維持する。教材一覧はトピックの `index.md` と各トピックのレッスンを content loader 経由で取得する。トピックの `order` が同じ場合は識別子の昇順で安定させる。新規トピック・レッスンを規約に沿って `content/` に追加して再ビルドすると、一覧のコード変更なしで反映される（公開環境には成果物の再デプロイも必要）。
 - **データ取得（ハイブリッド）**：教材・問題はビルド時バンドル済み content を RSC / Server loader から読む。解答記録・SRS・due など動的データのみ Hono API を `hc` で呼ぶ。D1 への seed は配信・集計用キャッシュとして維持し、表示の主経路は content。
 - **演習フロー**：1 問ずつ表示 → 即時に正誤＋解説 → 確定で選択肢をロック → 末尾に結果サマリ。**1 問解答＝1 `answer_log` POST**（SRS は問題粒度で更新）。
 - **正誤判定の権威はAPI（サーバー）**：Quiz/Review の `QuizViewModel` は選択肢と解説のみを持ち、正解（`answerIndex`）を含めない。クライアントは選んだ `selectedIndex` を `POST /answers` に送り、API が D1 の `questions`（4.4）と照合して `is_correct` を判定・記録し、結果（`isCorrect` / `correctIndex`）を返す。将来公開後もクライアントバンドルに正解を露出しない。
@@ -312,6 +314,7 @@ HTTP 入出力、リクエスト・レスポンスの実例（JSON）、Zod ス�
 - `getBundledQuestions()` は `/review` の `question_id` 解決用に `questionId` index を返せる形にする。各 feature で frontmatter 配列を直接走査しない。
 - **同じパース経路を `content/` → D1 seed/upsert スクリプトでも再利用**し、フロント表示と D1 配信を単一ソースから導く（4.2 の責務分離を維持）。
 - `/learn/...` と `/quiz/...` は content 由来の標準 SSG を維持し、PPR streaming の対象にしない。`generateStaticParams` で全 params を返し、route params は `lib/content` の `getLessonRouteParams()` / `getTopicRouteParams()` / `getQuizRouteParams()` を feature loader 経由で読み、page から `lib/content` を直接 import しない。
+- `/learn` は固定URLの静的 RSC としてプリレンダリングする。`features/lesson/server` の一覧 loader が共通 content loader から全トピックとレッスン数を取得し、mapper で領域別に整形する。領域・トピックの一覧やリンクを画面コードへ固定しない。
 
 ### 8.3 Server / Client コンポーネント境界
 
@@ -326,6 +329,7 @@ HTTP 入出力、リクエスト・レスポンスの実例（JSON）、Zod ス�
 
 - `/` はユーザー固有データを読まない静的 RSC、`/home`・`/review`・`/domains`・`/analytics` は `dynamic = 'force-dynamic'` を指定した通常のリクエスト時 SSR とする。各 Server loader はリクエストごとに実行し、ユーザー固有データを共有キャッシュしない。
 - 教材・演習の content route は `generateStaticParams` で全 params を列挙する標準 SSG とする（content 取得の契約は §8.2）。`cacheComponents`、`'use cache'`、PPR streaming、専用 fallback composition は採用しない。
+- `/learn` はAPIを呼ばず、ビルド時の content だけで一覧本文を生成する静的 RSC とする。共通シェルのユーザー固有 due バッジは既存の Client leaf が表示後に取得し、静的成果物へ含めない。
 - `/home` は due 件数カードと本体を同一 SSR の中で取得し、due 件数と summary・heatmap・domains・recent activity はそれぞれの loader 契約を保つ。loader 内の API 呼び出しは可能な範囲で並列化する。`/domains` は4領域の集計、`/analytics` は summary・weekly・mistakesを読む。忘却曲線・復習タイミングは対象外。
 - due件数・統計・review queue・domains／analytics集計には共有キャッシュを使わない。APIが注入するuser_idをwebの共有キャッシュキーに含められず、ユーザー間の混入が起こり得るためである。
 - Reactの `cache()` によるリクエスト内の取得共有は許可する。ユーザー横断の共有キャッシュとは区別する。復習のdueバッジと本文の取得共有・表示分岐・次バッチへの遷移は §9.2で定義する。

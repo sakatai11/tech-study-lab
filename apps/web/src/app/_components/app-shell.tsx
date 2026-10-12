@@ -17,7 +17,7 @@ type AppShellProps = {
  * 復習バッジを props 契約で合成し、root components の feature 依存を防ぐ。
  */
 export function AppShell({ children, currentNavigation }: AppShellProps) {
-  const { learnHref, quizHref } = loadDashboardStatic()
+  const { quizHref } = loadDashboardStatic()
 
   return (
     <DueCountProvider>
@@ -31,7 +31,7 @@ export function AppShell({ children, currentNavigation }: AppShellProps) {
         }
         navigationHrefs={{
           dashboard: '/home',
-          learn: learnHref,
+          learn: '/learn',
           quiz: quizHref,
           review: '/review',
           analytics: '/analytics',

@@ -173,6 +173,10 @@
       "sha256": "559ff7f01dd1a48916142b10579aa78b5df4d322bfb647e11ab447093f9a7d15",
       "lines": 21
     },
+    "apps/web/src/features/lesson/server/load-catalog.ts": {
+      "sha256": "a5add3f5ad49436f022dddbd8257060bd1a57d0c66368bbdf7fdaa69c3a287b4",
+      "lines": 28
+    },
     "apps/web/src/features/lesson/server/load-lesson.ts": {
       "sha256": "afeeacc1703912e8a84b34a977783f98161278c474c270cdcb1454b7fc33b625",
       "lines": 26
@@ -685,6 +689,16 @@
         "line": 1
       },
       "layer": "web-api",
+      "symbols": []
+    },
+    {
+      "id": "apps/web/src/features/lesson/server/load-catalog.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/web/src/features/lesson/server/load-catalog.ts",
+        "line": 1
+      },
+      "layer": "web-loader",
       "symbols": []
     },
     {
@@ -4357,6 +4371,26 @@
       "source": {
         "file": "apps/web/src/features/lesson/api/lesson-api.ts",
         "line": 1
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/lesson/server/load-catalog.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#domainKeySchema",
+      "source": {
+        "file": "apps/web/src/features/lesson/server/load-catalog.ts",
+        "line": 3
+      }
+    },
+    {
+      "from": "apps/web/src/features/lesson/server/load-catalog.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/web/src/features/lesson/server/load-catalog.ts",
+        "line": 3
       },
       "specifier": "@tsl/shared",
       "typeOnly": false
