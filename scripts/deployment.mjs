@@ -7,7 +7,7 @@ import { parse as parseJsonc } from 'jsonc-parser'
 import { parse as parseToml } from 'smol-toml'
 
 import {
-  assertApprovalProtection,
+  assertDeploymentProtection,
   assertFreshSource,
   assertTargetConfig,
   assertWorkflowContext,
@@ -149,7 +149,7 @@ async function prepare(environment) {
   })
   writeJson(resolve(release, 'manifest.json'), manifest)
   summary(
-    `## Release plan: ${environment}\n\nCommit: \`${sha}\`\n\nSource tree: \`${tree}\`\n\nWorkers: \`${target.api}\` → \`${target.web}\`\n\nD1: \`${target.database}\` (${target.databaseId})\n\nQuestions: ${manifest.questionCount}; content changed since last success: ${manifest.contentChanged}\n\nSQL SHA-256: \`${manifest.files['content/sync.sql']}\`\n\nMigration files (Wrangler applies only pending files):\n${manifest.migrations.map((name) => `- \`${name}\``).join('\n')}\n\nFull hashes are in manifest.json. Production approval covers these exact artifacts. No remote writes have run.`,
+    `## Release plan: ${environment}\n\nCommit: \`${sha}\`\n\nSource tree: \`${tree}\`\n\nWorkers: \`${target.api}\` → \`${target.web}\`\n\nD1: \`${target.database}\` (${target.databaseId})\n\nQuestions: ${manifest.questionCount}; content changed since last success: ${manifest.contentChanged}\n\nSQL SHA-256: \`${manifest.files['content/sync.sql']}\`\n\nMigration files (Wrangler applies only pending files):\n${manifest.migrations.map((name) => `- \`${name}\``).join('\n')}\n\nFull hashes are in manifest.json. Apply automatically uses these exact artifacts after preflight checks. No remote writes have run.`,
   )
 }
 
@@ -178,7 +178,7 @@ async function currentVersion(target, name) {
 async function protection(environment) {
   const config = await github(`environments/${environment}`)
   const policies = await github(`environments/${environment}/deployment-branch-policies`)
-  assertApprovalProtection(environment, config, policies.branch_policies)
+  assertDeploymentProtection(environment, config, policies.branch_policies)
 }
 
 function credentials(ctx) {
@@ -374,7 +374,7 @@ async function rollback(environment, worker, version, expected) {
   assert.equal(
     await currentVersion(target, target[worker]),
     expected,
-    'live version changed since rollback approval',
+    'live version changed since rollback request',
   )
   await cloudflare(target, `workers/scripts/${target[worker]}/versions/${version}`)
   run([

@@ -36,7 +36,7 @@ export function assertWorkflowContext(environment, env) {
   assert(['push', 'workflow_dispatch'].includes(env.GITHUB_EVENT_NAME), 'unsupported deploy event')
 }
 
-export function assertApprovalProtection(environment, config, policies) {
+export function assertDeploymentProtection(environment, config, policies) {
   const target = getTarget(environment)
   assert.equal(
     config.deployment_branch_policy?.custom_branch_policies,
@@ -48,14 +48,6 @@ export function assertApprovalProtection(environment, config, policies) {
     [{ name: target.branch, type: 'branch' }],
     'only the exact deployment branch is allowed',
   )
-  if (environment === 'production') {
-    assert(
-      config.protection_rules.some(
-        (rule) => rule.type === 'required_reviewers' && rule.reviewers?.length > 0,
-      ),
-      'production requires reviewer protection',
-    )
-  }
 }
 
 export function assertFreshSource(environment, sha, latestSha, tree, verification) {
@@ -63,7 +55,7 @@ export function assertFreshSource(environment, sha, latestSha, tree, verificatio
   assert.equal(
     sha,
     latestSha,
-    'branch advanced; start a new run instead of deploying stale approval',
+    'branch advanced; start a new run instead of deploying stale artifacts',
   )
   if (environment === 'production') {
     assert.equal(

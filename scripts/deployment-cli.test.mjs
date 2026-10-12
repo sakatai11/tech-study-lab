@@ -18,10 +18,20 @@ import { fileURLToPath } from 'node:url'
 import { createManifest, getTarget } from './deployment-lib.mjs'
 
 const source = fileURLToPath(new URL('../', import.meta.url))
-const target = getTarget('verification')
+const verification = getTarget('verification')
 
 test('actual apply CLI uploads prepared files in order and refuses invalid releases before any mutation', () => {
-  for (const failure of [undefined, 'auth', 'stale', 'tamper', 'database', 'disabled']) {
+  const scenarios = [
+    ...[undefined, 'auth', 'stale', 'tamper', 'database', 'disabled'].map((failure) => ({
+      environment: 'verification',
+      failure,
+    })),
+    ...[undefined, 'unverified', 'vinext-not-ready', 'branch-policy', 'verification-changed'].map(
+      (failure) => ({ environment: 'production', failure }),
+    ),
+  ]
+  for (const { environment, failure } of scenarios) {
+    const target = getTarget(environment)
     const root = realpathSync(mkdtempSync(join(tmpdir(), 'tsl-apply-test-')))
     const json = (path, value) => writeFileSync(join(root, path), JSON.stringify(value))
     const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim()
@@ -32,7 +42,7 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
       symlinkSync(join(source, 'node_modules'), join(root, 'node_modules'), 'dir')
       mkdirSync(join(root, 'content'))
       writeFileSync(join(root, 'content/test.md'), 'test content')
-      git('init', '-b', 'develop')
+      git('init', '-b', target.branch)
       git('add', 'content')
       git(
         '-c',
@@ -44,6 +54,7 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
         'fixture',
       )
       const sha = git('rev-parse', 'HEAD')
+      const tree = git('rev-parse', 'HEAD^{tree}')
       const release = join(root, '.deploy/release')
       for (const directory of ['api', 'web/server', 'web/client', 'content'])
         mkdirSync(join(release, directory), { recursive: true })
@@ -66,7 +77,13 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
         main: 'index.js',
         services: [{ binding: 'API', service: target.api, entrypoint: 'InternalApi' }],
         assets: { directory: '../client' },
-        migrations: [],
+        migrations:
+          environment === 'production'
+            ? [
+                { tag: 'v1', new_sqlite_classes: ['DOQueueHandler'] },
+                { tag: 'v2', deleted_classes: ['DOQueueHandler'] },
+              ]
+            : [],
         workers_dev: true,
         preview_urls: false,
       })
@@ -78,9 +95,9 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
       json(
         '.deploy/release/manifest.json',
         createManifest(release, {
-          environment: 'verification',
+          environment,
           sha,
-          tree: git('rev-parse', 'HEAD^{tree}'),
+          tree,
           contentTree: git('rev-parse', 'HEAD:content'),
           questionCount: 1,
           runId: 'fixture',
@@ -100,21 +117,24 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
         join(root, 'network.mjs'),
         `
         const target = ${JSON.stringify(target)};
+        const verification = ${JSON.stringify(verification)};
         globalThis.fetch = async (url, options = {}) => {
           url = String(url);
           const path = new URL(url).pathname;
           if (url.startsWith('https://api.github.com/repos/test/fixture/')) {
-            if (path.endsWith('/deployment-branch-policies')) return Response.json({branch_policies:[{name:'develop',type:'branch'}]});
-            if (path.endsWith('/environments/verification')) return Response.json({deployment_branch_policy:{custom_branch_policies:true}, protection_rules:[]});
-            if (path.endsWith('/git/ref/heads/develop')) return Response.json({object:{sha:process.env.FAILURE === 'stale' ? 'f'.repeat(40) : process.env.GITHUB_SHA}});
+            if (path.endsWith('/deployment-branch-policies')) return Response.json({branch_policies:[{name:process.env.FAILURE === 'branch-policy' ? '*' : target.branch,type:'branch'}]});
+            if (path.endsWith('/environments/' + target.environment)) return Response.json({deployment_branch_policy:{custom_branch_policies:true}, protection_rules:[]});
+            if (path.endsWith('/git/ref/heads/' + target.branch)) return Response.json({object:{sha:process.env.FAILURE === 'stale' ? 'f'.repeat(40) : process.env.GITHUB_SHA}});
             if (path.endsWith('/deployments') && options.method === 'POST') return Response.json({id:1});
+            if (path.endsWith('/deployments') && target.environment === 'production' && new URL(url).searchParams.get('environment') === 'verification') return Response.json(process.env.FAILURE === 'unverified' ? [] : [{id:2,sha:process.env.GITHUB_SHA,payload:{kind:'tsl-release',tree:${JSON.stringify(tree)},apiVersion:'11111111-1111-1111-1111-111111111111',webVersion:'11111111-1111-1111-1111-111111111111'}}]);
             if (path.endsWith('/deployments')) return Response.json([]);
             if (path.endsWith('/deployments/1/statuses')) return Response.json({});
+            if (path.endsWith('/deployments/2/statuses')) return Response.json([{state:'success'}]);
           }
           if (url.startsWith('https://api.cloudflare.com/client/v4/accounts/' + target.account + '/')) {
             if (path.endsWith('/workers/subdomain')) return Response.json({success:true,result:{subdomain:'fixture'}});
             if (path.endsWith('/d1/database/' + target.databaseId)) return Response.json({success:true,result:{name:target.database}});
-            if (path.endsWith('/deployments')) return Response.json({success:true,result:{deployments:[{versions:[{version_id:'11111111-1111-1111-1111-111111111111',percentage:100}]}]}});
+            if (path.endsWith('/deployments')) return Response.json({success:true,result:{deployments:[{versions:[{version_id:process.env.FAILURE === 'verification-changed' && path.includes(verification.api) ? '22222222-2222-2222-2222-222222222222' : '11111111-1111-1111-1111-111111111111',percentage:100}]}]}});
           }
           if (new URL(url).hostname === target.api + '.fixture.workers.dev' || new URL(url).hostname === target.web + '.fixture.workers.dev') {
             if (path === '/health') return Response.json({status:'ok'});
@@ -138,7 +158,7 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
           join(root, 'network.mjs'),
           join(root, 'scripts/deployment.mjs'),
           'apply',
-          'verification',
+          environment,
         ],
         {
           cwd: root,
@@ -146,7 +166,7 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
           env: {
             PATH: `${join(root, 'bin')}:${process.env.PATH}`,
             FAILURE: failure ?? '',
-            GITHUB_REF: 'refs/heads/develop',
+            GITHUB_REF: `refs/heads/${target.branch}`,
             GITHUB_EVENT_NAME: 'push',
             GITHUB_SHA: sha,
             GITHUB_RUN_ID: 'fixture',
@@ -154,6 +174,7 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
             GITHUB_TOKEN: 'fixture-token',
             DEPLOY_ACCOUNT_SUBDOMAIN: 'fixture',
             DEPLOY_ENABLED: failure === 'disabled' ? 'false' : 'true',
+            PRODUCTION_VINEXT_READY: failure === 'vinext-not-ready' ? 'false' : 'true',
             CLOUDFLARE_ACCOUNT_ID: target.account,
             CLOUDFLARE_API_TOKEN: 'fixture-token',
             WEB_ORIGIN: `https://${target.web}.fixture.workers.dev`,
@@ -164,7 +185,11 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
           },
         },
       )
-      assert.equal(result.status, failure ? 1 : 0, `${failure}: ${result.stdout}\n${result.stderr}`)
+      assert.equal(
+        result.status,
+        failure ? 1 : 0,
+        `${environment}/${failure}: ${result.stdout}\n${result.stderr}`,
+      )
       const operation = JSON.parse(readFileSync(join(root, '.deploy/result.json'), 'utf8'))
       if (failure) {
         assert.equal(result.status, 1, `${failure}: ${result.stderr}`)

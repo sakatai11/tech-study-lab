@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { test } from 'node:test'
 
 import {
-  assertApprovalProtection,
+  assertDeploymentProtection,
   assertFreshSource,
   assertTargetConfig,
   assertWorkflowContext,
@@ -60,28 +60,32 @@ test('release baseline survives failed runs and is invalidated by rollback', asy
   assert.equal(await lastRelease('verification', api), null)
 })
 
-test('production requires a real reviewer and an exact branch policy', () => {
+test('production proceeds without reviewer approval but requires an exact branch policy', () => {
   const protection = {
-    protection_rules: [
-      { type: 'required_reviewers', reviewers: [{ type: 'User', reviewer: { id: 1 } }] },
-    ],
+    protection_rules: [],
     deployment_branch_policy: { custom_branch_policies: true },
   }
-  assertApprovalProtection('production', protection, [{ name: 'main', type: 'branch' }])
+  assertDeploymentProtection('production', protection, [{ name: 'main', type: 'branch' }])
   assert.throws(() =>
-    assertApprovalProtection('production', { ...protection, protection_rules: [] }, [
+    assertDeploymentProtection('production', { ...protection, deployment_branch_policy: null }, [
       { name: 'main', type: 'branch' },
     ]),
   )
   assert.throws(() =>
-    assertApprovalProtection('production', protection, [{ name: '*', type: 'branch' }]),
+    assertDeploymentProtection('production', protection, [{ name: '*', type: 'branch' }]),
   )
   assert.throws(() =>
-    assertApprovalProtection('production', protection, [{ name: 'main', type: 'tag' }]),
+    assertDeploymentProtection('production', protection, [{ name: 'main', type: 'tag' }]),
+  )
+  assert.throws(() =>
+    assertDeploymentProtection('production', protection, [
+      { name: 'main', type: 'branch' },
+      { name: 'develop', type: 'branch' },
+    ]),
   )
 })
 
-test('stale approval and unverified production source fail before mutations', () => {
+test('stale run and unverified production source fail before mutations', () => {
   assertFreshSource('verification', 'a'.repeat(40), 'a'.repeat(40), 'b'.repeat(40), null)
   assert.throws(() =>
     assertFreshSource('verification', 'a'.repeat(40), 'c'.repeat(40), 'b'.repeat(40), null),
