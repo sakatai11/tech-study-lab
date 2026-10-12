@@ -23,7 +23,7 @@ export function LessonCatalog({ viewModel }: { viewModel: LessonCatalogViewModel
       <header className="px-1 pt-1">
         <TermCrumb command="ls content/" />
         <div className="mt-4 flex items-center gap-3">
-          <span className="grid size-12 shrink-0 place-items-center rounded-2xl border-2 border-blue/30 bg-blue-bg text-blue">
+          <span className="grid size-12 shrink-0 place-items-center rounded-2xl border-2 border-border bg-blue-bg text-blue">
             <MaterialSymbol className="size-7" name="menu_book" />
           </span>
           <h1 className="m-0 text-balance text-3xl font-black text-ink sm:text-4xl">教材一覧</h1>
