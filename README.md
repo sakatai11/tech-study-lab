@@ -9,11 +9,11 @@
 ## ハイライト
 
 - **仕様駆動開発**：[`docs/design.md`](./docs/design.md) を仕様の正本とし、仕様変更は設計文書の更新から始めます。人間と AI が同じ基準で実装とレビューを行えます。
-- **Issue からPRまでのエージェントパイプライン**：GitHub Issue を起点に「調査 → 方針決定 → 実装 → 品質ゲート → レビュー → 修正」を複数のサブエージェントが分担します。マージは必ず人間が判断します。
+- **Issue からPRまでのエージェントパイプライン**：GitHub Issue を起点に、主エージェントが調査・方針決定・実装・品質ゲート・修正を一貫して進め、独立レビューをサブエージェントに委任します。マージは必ず人間が判断します。
 - **機械で守るガードレール**：TypeScript strict、Zod、Biome、dependency-cruiser による依存境界の検証、エージェント契約の検査をすべて CI の PR ゲートに入れています。
 - **Knowledge Graph による影響範囲の特定**：コードと設定から構造グラフを抽出します。エージェントは全文検索の前にグラフで影響範囲を絞り込みます。
 - **Claude Code と Codex の両対応**：スキル・エージェント定義・hooks を `.ai/` に一元化し、どちらのランタイムからも同じワークフローを使えます。
-- **Cloudflare 構成**：Web と Hono API を別々の Worker としてデプロイし、Service Binding と型安全 RPC（`hc`）でつないでいます。Web の開発・ビルド・デプロイ手順は Next.js 互換の Vinext に移行済みです。本番 Web Worker は、切替条件（[design.md §12.4](./docs/design.md#124-本番デプロイ手順順序が仕様)）を満たすまで従来の OpenNext 版で稼働しています。
+- **Cloudflare 構成**：Web と Hono API を別々の Worker としてデプロイし、Service Binding と型安全 RPC（`hc`）でつないでいます。Web の開発・ビルド・デプロイ手順は Next.js 互換の Vinext に統一し、本番 Web Worker も Vinext へ移行します。初回切替の条件と手順は [design.md §12.4](./docs/design.md#124-本番デプロイ手順順序が仕様) にまとめています。
 
 ## 主な機能
 
@@ -74,14 +74,14 @@ flowchart LR
   A["/issue-new<br/>粗い仕様を Issue に整形"] --> B["/issue-dev-orchestrate"]
   subgraph B2["issue-dev-orchestrate"]
     direction LR
-    I["調査・方針"] --> D["実装"] --> T["品質ゲート"] --> R["独立レビュー<br/>reviewer + 別モデル"] --> F["修正・再レビュー"]
+    I["調査・方針"] --> D["実装"] --> T["品質ゲート"] --> R["独立レビュー<br/>reviewer<br/>必要に応じて別モデルを追加"] --> F["修正・再レビュー"]
   end
   B --> I
   F --> PR["develop 向け PR"]
   PR --> H["人間がレビューしてマージ"]
 ```
 
-- レビューは「正確性重視」と「仕様準拠重視」のプロファイルに分け、Claude と Codex を組み合わせて互いの見落としを補います（[レビュー規約](./.ai/review-guidelines.md)）。
+- `reviewer` は「正確性重視」のプロファイルで独立レビューを行います。別モデル CLI による「仕様準拠重視」のレビューは、既定では変更のリスクに応じて追加し、Claude と Codex を組み合わせて互いの見落としを補います（[レビュー規約](./.ai/review-guidelines.md)）。
 - ブランチ運用は Git Flow 型です。作業ブランチは `develop` から切り、`main` へは直接コミットしません。
 
 ### 2. スキルとサブエージェント
@@ -104,12 +104,16 @@ flowchart LR
 
 | チェック | 目的 |
 | --- | --- |
+| `pnpm migration:test` | migration 履歴の不変性を検査するスクリプトのテスト |
+| `pnpm run migration:check-immutable <base> HEAD` | PR の base commit と比較し、既存の SQL・snapshot・journal entry の変更を拒否 |
 | `pnpm typecheck` | TypeScript strict の型検査 |
 | `pnpm lint` | Biome に加え、dependency-cruiser でレイヤー間の import 方向を検証 |
 | `pnpm test:hooks` | hooks の動作と、Claude Code / Codex から同じスキル・エージェント・ルールに届く構成になっているかを検査 |
-| `pnpm test` | Vitest（SRS ロジックは純粋関数として重点的にテスト） |
-| `pnpm architecture:check` | Knowledge Graph のスナップショットがコードと一致しているか |
+| `pnpm test` | デプロイ用の Node.js テストと各パッケージの Vitest（SRS ロジックは純粋関数として重点的にテスト） |
+| `pnpm architecture:check` | Knowledge Graph のスナップショットがコードと一致しているか（develop 向け PR のみ） |
+| `pnpm architecture:test` | Knowledge Graph の抽出・検証ロジックのテスト（develop 向け PR のみ） |
 | `pnpm build` | web（Vinext production build）/ api のビルド |
+| `pnpm --filter @tsl/web verify:build` | SSG / SSR の生成物、Service Binding、公開成果物への正解データ混入を検査 |
 
 ## リポジトリ構成
 
@@ -160,10 +164,13 @@ API は `http://localhost:8787`、Web は `http://localhost:3000` で起動し�
 | `pnpm architecture:query '<キーワード>'` | Knowledge Graph から関連するノードを検索 |
 | `pnpm test:hooks` | エージェント契約・hooks の検査 |
 
-本番デプロイは手順の順序そのものが仕様になっています。[設計文書 §12](./docs/design.md) を参照してください。
+### デプロイ
+
+GitHub Actions による自動デプロイ。環境設定と有効化を済ませると、`develop` への push で検証環境、`main` への push で本番環境へ反映します。
+
+本番の自動デプロイは、検証環境での確認と初回の Vinext 切替を完了してから有効化します。初回切替は Web のみを対象とし、[設計文書 §12.4](./docs/design.md#124-本番デプロイ手順順序が仕様) の条件と手順に従います。環境設定・有効化・失敗時の再実行・Worker の復旧は [デプロイ運用手順](./docs/deployment.md) を参照してください。
 
 ## 今後の予定
 
 - 教材の追加（現在はセキュリティ領域の XSS から開始）
-- GitHub Actions による `main` への自動デプロイ（承認ゲート付き）
 - マルチユーザー公開に向けた認証の拡張（データ設計は当初からユーザー分離を前提にしています）

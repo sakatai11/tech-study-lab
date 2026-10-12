@@ -84,11 +84,11 @@ describe('Web Worker configuration', () => {
   it('isolates edge verification from the production API and migration history', () => {
     const edge = config.env?.edge
 
-    expect(edge?.name).toBe('tech-study-lab-web-vinext')
+    expect(edge?.name).toBe('tech-study-lab-web-test')
     expect(edge?.services).toEqual([
       {
         binding: 'API',
-        service: 'tech-study-lab-api-vinext',
+        service: 'tech-study-lab-api-test',
         entrypoint: 'InternalApi',
       },
     ])
@@ -103,15 +103,15 @@ describe('Web Worker configuration', () => {
   })
 
   it('keeps edge writes in a dedicated D1 and rate limit namespace', () => {
-    const api = readJsonc(new URL('../../api/wrangler.vinext.jsonc', import.meta.url))
+    const api = readJsonc(new URL('../../api/wrangler.test.jsonc', import.meta.url))
     const production = readFileSync(new URL('../../api/wrangler.toml', import.meta.url), 'utf8')
 
-    expect(api.name).toBe('tech-study-lab-api-vinext')
+    expect(api.name).toBe('tech-study-lab-api-test')
     expect(api.account_id).toBe('4459a4d59a634a07eac0400d39b84f20')
     expect(api.d1_databases).toHaveLength(1)
     expect(api.d1_databases?.[0]).toMatchObject({
       binding: 'DB',
-      database_name: 'tech-study-lab-vinext',
+      database_name: 'tech-study-lab-test',
     })
     const databaseId = api.d1_databases?.[0]?.database_id
     expect(databaseId).toMatch(/^[0-9a-f-]{36}$/)

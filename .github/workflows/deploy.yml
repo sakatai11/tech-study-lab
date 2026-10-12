@@ -1,0 +1,121 @@
+name: Deploy
+
+on:
+  push:
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    name: Validate and prepare immutable release
+    if: >-
+      (github.ref == 'refs/heads/develop' && vars.VERIFICATION_DEPLOY_ENABLED == 'true') ||
+      (github.ref == 'refs/heads/main' && vars.PRODUCTION_DEPLOY_ENABLED == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      deployments: read
+    env:
+      DEPLOY_ENVIRONMENT: ${{ github.ref_name == 'main' && 'production' || 'verification' }}
+      DEPLOY_ACCOUNT_SUBDOMAIN: ${{ vars.DEPLOY_ACCOUNT_SUBDOMAIN }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - name: Install locked dependencies
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+      - name: Quality gates for this exact commit
+        run: |
+          pnpm migration:test
+          pnpm typecheck
+          pnpm lint
+          pnpm test:hooks
+          pnpm test
+          pnpm architecture:check
+          pnpm architecture:test
+      - name: Build and present release plan (no Cloudflare credentials)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          node scripts/deployment.mjs prepare "$DEPLOY_ENVIRONMENT"
+          tar -C .deploy/release -cf .deploy/release.tar .
+      - name: Store this run's release
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .deploy/release.tar
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 3
+
+  apply:
+    name: Apply prepared release automatically
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: ${{ github.ref_name == 'main' && 'production' || 'verification' }}
+    concurrency:
+      group: deploy-${{ github.ref_name == 'main' && 'production' || 'verification' }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      actions: read
+      deployments: write
+    env:
+      DEPLOY_ENVIRONMENT: ${{ github.ref_name == 'main' && 'production' || 'verification' }}
+      DEPLOY_ACCOUNT_SUBDOMAIN: ${{ vars.DEPLOY_ACCOUNT_SUBDOMAIN }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - name: Install locked tooling (no deployment secrets)
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .deploy
+      - name: Restore prepared release
+        run: |
+          mkdir -p .deploy/release
+          tar -C .deploy/release -xf .deploy/release.tar
+      - name: Validate and apply prepared release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          DEPLOY_ENABLED: ${{ (github.ref_name == 'main' && vars.PRODUCTION_DEPLOY_ENABLED == 'true') || (github.ref_name == 'develop' && vars.VERIFICATION_DEPLOY_ENABLED == 'true') }}
+          PRODUCTION_VINEXT_READY: ${{ vars.PRODUCTION_VINEXT_READY }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          WEB_ORIGIN: ${{ vars.WEB_ORIGIN }}
+          ACCESS_ISSUER: ${{ vars.ACCESS_ISSUER }}
+          ACCESS_AUDIENCE: ${{ vars.ACCESS_AUDIENCE }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        run: node scripts/deployment.mjs apply "$DEPLOY_ENVIRONMENT"
+      - name: Store sanitized operation result
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: deployment-result-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .deploy/result.json
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 30

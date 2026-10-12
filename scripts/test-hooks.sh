@@ -51,6 +51,9 @@ expect_blocked sh -c './.codex/hooks/pre-tool-use.sh < .ai/hooks/fixtures/codex-
 
 log_dir=$(mktemp -d)
 trap 'rm -rf "$log_dir"' EXIT
+AI_HARNESS_LOG_DIR="$log_dir" ./.codex/hooks/user-prompt-submit.sh < .ai/hooks/fixtures/codex-user-prompt-env.json
+AI_HARNESS_LOG_DIR="$log_dir" ./.codex/hooks/user-prompt-submit.sh < .ai/hooks/fixtures/codex-user-prompt-unknown-skill.json
+[ ! -e "$log_dir/skill-usage.jsonl" ] || fail "non-skill prompt references must not be logged"
 AI_HARNESS_LOG_DIR="$log_dir" ./.codex/hooks/user-prompt-submit.sh < .ai/hooks/fixtures/codex-user-prompt.json
 AI_HARNESS_LOG_DIR="$log_dir" ./.ai/hooks/log-skill-usage.sh --runtime codex --skill skill-audit --status started
 AI_HARNESS_LOG_DIR="$log_dir" ./.ai/hooks/log-skill-usage.sh --runtime codex --skill skill-audit --status completed
@@ -61,7 +64,9 @@ AI_HARNESS_LOG_DIR="$log_dir" ./.claude/hooks/post-skill.sh < .ai/hooks/fixtures
 jq -e -s '
   length == 5
   and .[0].runtime == "codex"
+  and .[0].skill == "skill-audit"
   and .[0].status == "requested"
+  and .[0].source == "hook"
   and .[1].status == "started"
   and .[2].status == "completed"
   and .[3].runtime == "claude"
@@ -149,7 +154,7 @@ expect_contains "weekly retro renders remaining conditions status badge" '<span 
 expect_contains "weekly retro renders transferred status badge" '<span class="status info">別Issueへ移管済み</span>' "$WEEKLY_RETRO_OUTPUT"
 expect_contains "weekly retro renders transfer issue reference" '<dt>移管先</dt><dd>#118 <a href="https://github.com/example/tech-study-lab/issues/118">運用手順の自動化を実装する</a> — 運用手順を自動化する</dd>' "$WEEKLY_RETRO_OUTPUT"
 expect_contains "weekly retro renders parent tracker issue reference" '<li>#115 <a href="https://github.com/example/tech-study-lab/issues/115">削除操作の品質tracker</a> (GitHub sub-issue) — 子Issue: close候補</li>' "$WEEKLY_RETRO_OUTPUT"
-expect_contains "weekly retro renders human next action" '人間がcloseを判断' "$WEEKLY_RETRO_OUTPUT"
+expect_contains "weekly retro renders release reconciliation next action" '承認済みmain向けPRを人間がマージしたときのclose候補' "$WEEKLY_RETRO_OUTPUT"
 
 jq '
   .normalIssueReconciliation[2].transfer |= {

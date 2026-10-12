@@ -4,16 +4,18 @@
 
 推奨設定:
 
-- 専用worktreeで実行する
 - workspace-write。ネットワークまたはGitHub情報が利用できない場合は権限を広げず、レポートに制約として記録する
 
 ## 実行手順
 
 ### 1. 対象期間を決める
 
-- 前回実行日時を確認できる場合は、その直後から今回実行時刻までを対象にする。
-- 初回または前回日時が不明な場合は、今回実行時刻から直近7日間を対象にする。
-- 日時は `Asia/Tokyo` でレポートに記載する。
+- `reports/weekly-retro/` の保存済みレポートから、前回成功分の `meta.periodEnd` を確認する。同じ実行IDの `.report-data.json` と `.html` が両方存在するものを成功分とし、`periodEnd` が最も新しいものを選ぶ。ファイルの更新日時や `generatedAt` を期間の境界に使わない。
+- 従来の `<YYYY-MM-DD>.html` しかないレポートは、表示された対象期間の終了時刻を候補に含める。JSONとHTMLで終了時刻が異なる場合や終了時刻を確認できない場合は、そのレポートを使わず制約として記録する。
+- 前回成功分の終了時刻を開始境界とし、今回実行開始時刻を終了境界にする。集計範囲は `periodStart < 対象日時 <= periodEnd` とする。参照した前回レポートのパスを `meta.evidence` に記録する。
+- 初回または前回終了時刻が不明な場合は、今回実行開始時刻から直近7日間を対象にし、その理由を `meta.limitations` に記録する。
+- 決定した期間は実行中に変更せず、失敗後の再試行でも同じ期間を使う。失敗分は次回の開始境界に使わない。成功後に同日再実行する場合は、その成功分の終了時刻から新しい期間を開始する。
+- 日時は `Asia/Tokyo` で記載し、JSONの日時は秒とオフセットを含むISO 8601形式（例: `2026-10-11T10:05:53+09:00`）にする。
 
 ### 2. 事実を収集する
 
@@ -61,15 +63,15 @@
 
 スパイクまたはフェーズ分割の状態照合で扱うIssueは通常Issueから除外する。現在Issue本文、GitHub sub-issue関係、実装方針コメントで親／子／phase／spike／implementation Issueとして明示された関係だけをその状態照合の対象とし、通常Issueの3分類と重複させない。通常Issueか判定できない場合は `meta.limitations` に記録し、`normalIssueReconciliation` へ入れず推測で分類しない。
 
-対象ごとに、PR・merge先・Issue固有の完了条件の明示的証拠を照合し、次のいずれか1つに分類する。
+対象ごとに、PR・merge先・Issue固有の完了条件の明示的証拠を照合し、次の順で判定していずれか1つに分類する。
 
-- `close候補`: 全完了条件を根拠付きで充足し、未達・未検証・未移管条件がない。
-- `残条件あり`: 未達または未検証の完了条件がある。
-- `別Issueへ移管済み`: 未達条件と移管先Issueを対応付けられる。
+- `残条件あり`: 未達または未検証の完了条件のうち、明示的な移管先と対応付けられない条件が1つでもある。一部だけ移管済みの場合もこの分類にし、移管済み条件と現在Issueに残る条件を区別して記録する。
+- `別Issueへ移管済み`: 未達または未検証の完了条件があり、そのすべてを明示的な移管先Issueと対応付けられる。
+- `close候補`: 全完了条件を根拠付きで充足し、未達・未検証条件がない。develop反映済みでmain未反映なら「次回リリースでのclose候補」として扱い、即時closeを提案しない。
 
 親trackerはGitHub sub-issue関係など明示された関係だけを表示し、子Issueの現在分類を記録する。任意のIssue番号言及、参考リンク、推測から対象や親子関係を作らない。収集不能な情報は `meta.limitations` へ記録し、推測で分類しない。
 
-Issueは自動closeせず、人間が最終判断する。各対象には関連PR、merge先、完了条件の根拠、残条件または移管先、人間の次アクションを必ず記録する。
+close候補の次アクションは、`.ai/skills/release-main-pr/SKILL.md` に従うリリース時の再照合とする。承認済みmain向けPRを人間がマージしたときにIssueを閉じる運用に合わせ、週次レビューからIssueの直接closeを提案・実行しない。main反映済みでopenのIssueは、リリースPRでのclose対象指定と状態の不一致を確認事項として記録する。各対象には関連PR、merge先、完了条件の根拠、残条件または移管先、人間の次アクションを必ず記録する。
 
 ### 5. 次週フォーカスを決める
 
@@ -80,20 +82,23 @@ Issueは自動closeせず、人間が最終判断する。各対象には関連P
 
 ### 6. 固定HTMLレポートを生成する
 
-1. `references/report-data.example.json` と同じ構造でJSONを一時領域に作る。通常Issueのマージ後照合は `normalIssueReconciliation` 配列に入れ、各要素に `issue`、`classification`、`pullRequests`、`completionCriteria`、`remainingConditions`、`transfer`、`parentTrackers`、`humanNextAction` を記録する。欠けた情報は、配列項目では空配列、文字列項目では空文字、`transfer` では `null` にし、推測で埋めない。
+1. `.ai/automations/weekly-retro-refine/references/report-data.example.json` と同じ構造でJSONを一時領域に作る。通常Issueのマージ後照合は `normalIssueReconciliation` 配列に入れ、各要素に `issue`、`classification`、`pullRequests`、`completionCriteria`、`remainingConditions`、`transfer`、`parentTrackers`、`humanNextAction` を記録する。欠けた情報は、配列項目では空配列、文字列項目では空文字、`transfer` では `null` にし、推測で埋めない。
+   実行IDは `Asia/Tokyo` の実行開始日時による `<YYYY-MM-DD-HHmmss>` とする。同名の出力があれば連番を付け、既存レポートを上書きしない。
 2. 次を実行する。
 
 ```bash
 node .ai/automations/weekly-retro-refine/scripts/render-report.mjs \
   --input <report-data.json> \
-  --output reports/weekly-retro/<YYYY-MM-DD>.html
+  --output reports/weekly-retro/<実行ID>.html
 ```
+
+3. レンダラーが正常終了し、生成HTMLの対象期間がJSONの `meta.periodStart` / `meta.periodEnd` と一致することを確認してから、入力JSONを `reports/weekly-retro/<実行ID>.report-data.json` に保存する。この組を次回の成功履歴として使う。生成や確認に失敗した場合は成功履歴用JSONを保存せず、失敗を報告する。
 
 `assets/report-template.html` の構造やスタイルを実行ごとに変更しない。レンダラー以外でHTMLを手編集しない。
 
 ### 7. 報告する
 
-- 生成したHTMLのパス
+- 生成したHTMLと保存したJSONのパス
 - 対象期間と利用できた情報源
 - 5行以内のエグゼクティブサマリー
 - 承認が必要な提案を番号付きで列挙する

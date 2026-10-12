@@ -202,7 +202,7 @@
       "lines": 34
     },
     "apps/web/wrangler.jsonc": {
-      "sha256": "0af442f4ca5b01149d151c213db54ef2acbff9ff6fb03070b10d0bb39090852a",
+      "sha256": "f3c8614b961f48da4e5a4014a05737b5f5d71a5126a1e1a8860be24f5b646152",
       "lines": 35
     },
     "packages/shared/src/content-parser.ts": {

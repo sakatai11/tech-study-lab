@@ -33,11 +33,11 @@ const productionConfig = {
   ],
 }
 const edgeConfig = {
-  name: 'tech-study-lab-web-vinext',
+  name: 'tech-study-lab-web-test',
   services: [
     {
       binding: 'API',
-      service: 'tech-study-lab-api-vinext',
+      service: 'tech-study-lab-api-test',
       entrypoint: 'InternalApi',
     },
   ],
@@ -47,7 +47,7 @@ const edgeConfig = {
 }
 const apiUrls = {
   production: 'https://tech-study-lab-api.example.workers.dev',
-  edge: 'https://tech-study-lab-api-vinext.example.workers.dev',
+  edge: 'https://tech-study-lab-api-test.example.workers.dev',
 }
 
 type DeployOptions = {
@@ -55,6 +55,8 @@ type DeployOptions = {
   args?: string[]
   buildStatus?: number
   wranglerStatus?: number
+  prepareFirst?: boolean
+  tamperAfterPrepare?: boolean
   env?: Record<string, string | undefined>
 }
 
@@ -119,6 +121,16 @@ function runDeploy(config: unknown, options: DeployOptions = {}) {
     for (const key of Object.keys(childEnv)) {
       if (childEnv[key] === undefined) delete childEnv[key]
     }
+    if (options.prepareFirst) {
+      const prepared = spawnSync('pnpm', ['run', script, '--prepare-only'], {
+        cwd: directory,
+        encoding: 'utf8',
+        env: childEnv as NodeJS.ProcessEnv,
+      })
+      expect(prepared.status, prepared.stderr).toBe(0)
+      rmSync(join(directory, 'build-env.json'))
+      if (options.tamperAfterPrepare) writeFileSync(join(directory, 'dist/tampered.js'), 'changed')
+    }
     const result = spawnSync('pnpm', ['run', script, ...args], {
       cwd: directory,
       encoding: 'utf8',
@@ -142,6 +154,39 @@ function runDeploy(config: unknown, options: DeployOptions = {}) {
 }
 
 describe('Web deploy command', () => {
+  it('prepares artifacts without uploading', () => {
+    const result = runDeploy(productionConfig, { args: ['--prepare-only'] })
+    expect(result.status, result.stderr).toBe(0)
+    expect(result.build).toBeDefined()
+    expect(result.invocation).toBeUndefined()
+  })
+
+  it.each(['deploy', 'deploy:edge'] as const)(
+    'uploads prepared %s artifacts without rebuilding',
+    (script) => {
+      const result = runDeploy(script === 'deploy' ? productionConfig : edgeConfig, {
+        script,
+        prepareFirst: true,
+        args: ['--upload-only'],
+      })
+      expect(result.status, result.stderr).toBe(0)
+      expect(result.build).toBeUndefined()
+      expect(result.invocation).toEqual(['deploy', '--config', 'dist/server/wrangler.json'])
+    },
+  )
+
+  it('rejects a modified prepared artifact without uploading', () => {
+    const result = runDeploy(productionConfig, {
+      prepareFirst: true,
+      tamperAfterPrepare: true,
+      args: ['--upload-only'],
+    })
+    expect(result.status).toBe(1)
+    expect(result.build).toBeUndefined()
+    expect(result.invocation).toBeUndefined()
+    expect(result.stderr).toContain('prepared Web artifact does not match')
+  })
+
   it.each([
     {
       script: 'deploy' as const,
