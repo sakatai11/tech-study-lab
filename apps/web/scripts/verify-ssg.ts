@@ -21,7 +21,7 @@ const contentPaths = [
   ),
   ...getQuizRouteParams().map(({ lesson }) => `/quiz/${lesson}`),
 ]
-const staticPaths = ['/', ...contentPaths]
+const staticPaths = ['/', '/learn', ...contentPaths]
 const ssrPaths = ['/home', '/review', '/domains', '/analytics']
 const renderedPaths = manifest.routes
   .filter(({ status }) => status === 'rendered')

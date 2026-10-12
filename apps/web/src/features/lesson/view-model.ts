@@ -1,5 +1,20 @@
 import type { DomainKey } from '@tsl/shared'
 
+export type CatalogTopicViewModel = {
+  topic: string
+  title: string
+  lessonCount: number
+  href?: string
+}
+
+export type LessonCatalogViewModel = {
+  domains: {
+    domain: DomainKey
+    label: string
+    topics: CatalogTopicViewModel[]
+  }[]
+}
+
 export type LessonSummaryViewModel = {
   id: string
   title: string
