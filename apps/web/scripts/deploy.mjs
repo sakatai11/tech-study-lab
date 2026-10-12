@@ -1,5 +1,7 @@
 import { spawnSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
+import { lstatSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 // Deploy targets are fixed here so that a build for one environment cannot be uploaded to another.
@@ -25,7 +27,24 @@ const targets = {
 
 const rootUrl = new URL('../', import.meta.url)
 const root = fileURLToPath(rootUrl)
-const [targetName, ...args] = process.argv.slice(2)
+const [targetName, ...options] = process.argv.slice(2)
+const prepareOnly = options.includes('--prepare-only')
+const uploadOnly = options.includes('--upload-only')
+const args = options.filter((option) => option === '--dry-run')
+
+function buildDigest(directory, prefix = '') {
+  const hash = createHash('sha256')
+  for (const name of readdirSync(join(directory, prefix)).sort()) {
+    const relative = join(prefix, name)
+    if (relative === 'deploy-target.json') continue
+    const path = join(directory, relative)
+    const stat = lstatSync(path)
+    if (stat.isSymbolicLink()) throw new Error('symlinks are forbidden in deploy artifacts')
+    hash.update(relative)
+    hash.update(stat.isDirectory() ? buildDigest(directory, relative) : readFileSync(path))
+  }
+  return hash.digest('hex')
+}
 
 function run(command, commandArgs, env = process.env) {
   const result = spawnSync(command, commandArgs, { cwd: root, env, stdio: 'inherit' })
@@ -40,8 +59,14 @@ function sameJson(actual, expected) {
 try {
   const target = Object.hasOwn(targets, targetName ?? '') ? targets[targetName] : undefined
   if (!target) throw new Error('deploy target must be production or edge.')
-  if (args.length > 1 || (args.length === 1 && args[0] !== '--dry-run')) {
-    throw new Error('deploy only accepts --dry-run; deployment target overrides are forbidden.')
+  if (
+    options.some((option) => !['--dry-run', '--prepare-only', '--upload-only'].includes(option)) ||
+    new Set(options).size !== options.length ||
+    (prepareOnly && uploadOnly)
+  ) {
+    throw new Error(
+      'deploy accepts --dry-run and one of --prepare-only / --upload-only; target overrides are forbidden.',
+    )
   }
 
   // The browser calls this URL directly, so it must be the target's own API Worker:
@@ -76,7 +101,7 @@ try {
   const buildEnv = target.cloudflareEnv
     ? { ...deployEnv, CLOUDFLARE_ENV: target.cloudflareEnv }
     : deployEnv
-  const buildStatus = run('pnpm', ['run', 'build'], buildEnv)
+  const buildStatus = uploadOnly ? 0 : run('pnpm', ['run', 'build'], buildEnv)
   if (buildStatus !== 0) {
     process.exitCode = buildStatus
   } else {
@@ -100,17 +125,32 @@ try {
       throw new Error(rebuildMessage)
     }
 
-    process.exitCode = run(
-      process.execPath,
-      [
-        fileURLToPath(new URL('node_modules/wrangler/bin/wrangler.js', rootUrl)),
-        'deploy',
-        '--config',
-        'dist/server/wrangler.json',
-        ...args,
-      ],
-      deployEnv,
-    )
+    const receiptPath = new URL('dist/deploy-target.json', rootUrl)
+    const receipt = {
+      targetName,
+      apiUrl: apiUrl.origin,
+      digest: buildDigest(fileURLToPath(new URL('dist/', rootUrl))),
+    }
+    if (uploadOnly) {
+      if (!sameJson(JSON.parse(readFileSync(receiptPath, 'utf8')), receipt)) {
+        throw new Error('prepared Web artifact does not match target, URL, or hash')
+      }
+    } else {
+      writeFileSync(receiptPath, JSON.stringify(receipt))
+    }
+
+    if (!prepareOnly)
+      process.exitCode = run(
+        process.execPath,
+        [
+          fileURLToPath(new URL('node_modules/wrangler/bin/wrangler.js', rootUrl)),
+          'deploy',
+          '--config',
+          'dist/server/wrangler.json',
+          ...args,
+        ],
+        deployEnv,
+      )
   }
 } catch (error) {
   console.error(error instanceof Error ? error.message : 'Web deployment failed.')

@@ -1,0 +1,66 @@
+name: Roll back Worker
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        options: [verification, production]
+        required: true
+      worker:
+        type: choice
+        options: [web, api]
+        required: true
+      version:
+        description: Previously recorded target version UUID
+        type: string
+        required: true
+      expected_current_version:
+        description: Current version UUID checked before requesting rollback
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: ${{ inputs.environment }}
+    concurrency:
+      group: deploy-${{ inputs.environment }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      actions: read
+      deployments: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - name: Install locked tooling
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+      - name: Verify current version and roll back one Worker
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          DEPLOY_ACCOUNT_SUBDOMAIN: ${{ vars.DEPLOY_ACCOUNT_SUBDOMAIN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          WEB_ORIGIN: ${{ vars.WEB_ORIGIN }}
+          ACCESS_ISSUER: ${{ vars.ACCESS_ISSUER }}
+          ACCESS_AUDIENCE: ${{ vars.ACCESS_AUDIENCE }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          ENVIRONMENT: ${{ inputs.environment }}
+          WORKER: ${{ inputs.worker }}
+          TARGET_VERSION: ${{ inputs.version }}
+          EXPECTED_VERSION: ${{ inputs.expected_current_version }}
+        run: node scripts/deployment.mjs rollback "$ENVIRONMENT" "$WORKER" "$TARGET_VERSION" "$EXPECTED_VERSION"

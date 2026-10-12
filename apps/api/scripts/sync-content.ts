@@ -1,14 +1,13 @@
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join, relative, sep } from 'node:path'
+import { join } from 'node:path'
 import { createInterface } from 'node:readline/promises'
 import { fileURLToPath } from 'node:url'
 
 import {
   CONTENT_SYNC_D1_DATABASE_NAME,
   CONTENT_SYNC_REMOTE_CONFIRMATION_PHRASE,
-  type ContentSourceFile,
   type ContentSyncPayload,
   createContentSyncPayload,
   createContentSyncSql,
@@ -19,28 +18,7 @@ import {
   parseContentSyncExecutionMode,
 } from '../src/content-sync'
 import { FIXED_USER_ID } from '../src/fixed-user'
-
-function collectContentFiles(contentRoot: string, directory = contentRoot): ContentSourceFile[] {
-  return readdirSync(directory, { withFileTypes: true })
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .flatMap((entry) => {
-      const entryPath = join(directory, entry.name)
-
-      if (entry.isDirectory()) {
-        return collectContentFiles(contentRoot, entryPath)
-      }
-      if (!entry.isFile() || !entry.name.endsWith('.md')) {
-        return []
-      }
-
-      return [
-        {
-          relativePath: relative(contentRoot, entryPath).split(sep).join('/'),
-          source: readFileSync(entryPath, 'utf8'),
-        },
-      ]
-    })
-}
+import { collectContentFiles } from './content-files'
 
 async function requireRemoteConfirmation(
   sqlPath: string,
