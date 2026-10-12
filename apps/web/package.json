@@ -16,7 +16,11 @@
     "deploy:edge": "node scripts/deploy.mjs edge",
     "cf-typegen": "wrangler types --config wrangler.jsonc --include-runtime=false",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "deploy:prepare": "node scripts/deploy.mjs production --prepare-only",
+    "deploy:prepare:edge": "node scripts/deploy.mjs edge --prepare-only",
+    "deploy:upload": "node scripts/deploy.mjs production --upload-only",
+    "deploy:upload:edge": "node scripts/deploy.mjs edge --upload-only"
   },
   "dependencies": {
     "@tsl/api": "workspace:^",

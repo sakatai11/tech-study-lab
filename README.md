@@ -165,5 +165,5 @@ API は `http://localhost:8787`、Web は `http://localhost:3000` で起動し�
 ## 今後の予定
 
 - 教材の追加（現在はセキュリティ領域の XSS から開始）
-- GitHub Actions による `main` への自動デプロイ（承認ゲート付き）
+- GitHub Actions の検証・承認付き本番デプロイは [運用手順](./docs/deployment.md) に従って有効化します。
 - マルチユーザー公開に向けた認証の拡張（データ設計は当初からユーザー分離を前提にしています）

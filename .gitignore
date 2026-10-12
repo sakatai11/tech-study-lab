@@ -3,6 +3,7 @@ node_modules/
 .pnpm-store/
 
 # builds
+.deploy/
 dist/
 .next/
 .open-next/
