@@ -60,7 +60,7 @@ jobs:
           retention-days: 3
 
   apply:
-    name: Apply release (production requires approval)
+    name: Apply prepared release automatically
     needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 30

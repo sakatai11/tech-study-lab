@@ -702,7 +702,7 @@ zValidator（shared の answerRequestSchema で入力検証）
 - 検証済みデータから upsert SQL（`INSERT ... ON CONFLICT(question_id) DO UPDATE`）を生成し、`wrangler d1 execute tech-study-lab --local|--remote --file <generated-sql>` の固定引数で流す。`content:sync` は `--local` 固定、`content:sync:remote` は `--remote` 固定とし、CLI はこのいずれかの完全一致モード以外（任意引数・追加引数を含む）を SQL 生成・Wrangler 実行の前に拒否する。**冪等**（何度実行しても同じ結果）にする。
 - 固定ユーザー行（`users`）の seed も同スクリプトで行う（共通の `FIXED_USER_ID` と同じ値）。
 - content から削除された問題は**物理削除しない**（`answer_logs`・`srs_states` が参照するため）。同期の最後に `is_active = 0` とし、`GET /domains` の集計対象から外す。出題対象からも自然に外れる（フロントのバンドルに含まれず、due queue の join でも解決されない）。
-- 通常リリースの同期は §12.9 の CI 経路で実行する。既存の `content:sync:remote` は手動運用用として維持し、外部 D1 を変更するため、実行ごとに対象データベース・生成 SQL・実行順を確認した明示的な承認と対話 TTY 確認を必須とする。CI の production 同期も、保護された environment の承認前には実行しない。
+- 通常リリースの同期は §12.9 の CI 経路で実行する。既存の `content:sync:remote` は手動運用用として維持し、外部 D1 を変更するため、実行ごとに対象データベース・生成 SQL・実行順を確認した明示的な承認と対話 TTY 確認を必須とする。CI の production 同期は、品質検査・環境別 build と変更前の環境・検証済みソース照合が成功した後に自動実行する。
 
 #### ローカル動的開発 seed
 
@@ -871,7 +871,7 @@ Cloudflare の型は `pnpm --filter @tsl/web cf-typegen` で `apps/web/wrangler.
 
 切替は §12.4 の手順4だけを実行し、API・D1 の migration や content sync、本番データの複製は伴わない（API・D1 の契約は変わらない）。切替後は実際の Worker version・binding・主要画面・mutation・Logs を確認し、version ID と証跡を Issue に記録する。失敗時は記録した OpenNext の version ID を `wrangler rollback <version-id> --name tech-study-lab-web` で既知版へ戻し、原因を解消するまで再切替しない。OpenNext の並行運用は恒久化しない。
 
-- 通常リリースは §12.9 の GitHub Actions で実行する。上記コマンドは手動運用・障害調査用として維持する。production の remote D1 mutation / Worker 更新より前に GitHub Environment の承認を必須とする。初回 Vinext 切替は上記の条件と Web のみの手順を維持する。
+- 通常リリースは §12.9 の GitHub Actions で実行する。上記コマンドは手動運用・障害調査用として維持する。production も品質検査・環境別 build と変更前の照合が成功したら、人間の追加承認を待たず remote D1 mutation / Worker 更新まで自動実行する。初回 Vinext 切替は上記の条件と Web のみの手順を維持する。
 - 各ステップの成功を確認するまで後続ステップへ進まない。失敗時はそこで停止し、後続の migration/content sync/API/Web deploy を実行しない。復旧が必要な場合は、稼働中の既知の Worker version を確認してから、対象と影響を明示した承認を得てロールバックする。
 
 ### 12.5 content 更新の運用ルール
@@ -913,12 +913,12 @@ content は「web のビルド時バンドル（§8.2）」と「D1 の `questio
 ### 12.9 GitHub Actions による環境別リリース（Issue #36）
 
 - PR CI は既存の検査・build のみ。`develop` push は `verification`、`main` push は `production` を対象とし、手動実行もこの対応を固定する。GitHub Environments の許可ブランチはそれぞれ `develop` / `main` に限定する。
-- `prepare` job は Cloudflare token を持たず、対象 commit を固定して検査・環境別 build・SQL 生成・manifest 作成を完了する。manifest は環境、SHA、source tree、問題数、全ファイルの SHA-256、migration 一覧を含む。API は dry-run で生成した bundle、Web は生成 config と `dist` を反映用成果物として保存する。承認後の job では再ビルドせず、同じ run の成果物を照合して利用する。
-- production は environment の required reviewer 承認後にだけ Cloudflare token を取得する。保護設定が不足する場合も preflight で拒否する。検証 / 本番の enable flag は明示設定されるまで無効とし、本番初回切替条件を満たす前に有効化しない。
+- `prepare` job は Cloudflare token を持たず、対象 commit を固定して検査・環境別 build・SQL 生成・manifest 作成を完了する。manifest は環境、SHA、source tree、問題数、全ファイルの SHA-256、migration 一覧を含む。API は dry-run で生成した bundle、Web は生成 config と `dist` を反映用成果物として保存する。後続の `apply` job では再ビルドせず、同じ run の成果物を照合して利用する。
+- production も `prepare` 成功後に `apply` が自動開始し、人間の追加承認を待たず environment Secrets から Cloudflare token を取得する。両 environment の required reviewers・wait timer・custom deployment protection rules は設定せず、正確な許可ブランチを preflight で検査する。検証 / 本番の enable flag は明示設定されるまで無効とし、本番初回切替条件を満たす前に有効化しない。PR のマージは従来どおり人間が行う。
 - apply は **設定・manifest・鮮度・検証済み source の検査 → migration → content sync → API → API 確認 → Web → smoke test → 成功記録** の順。どの段階でも失敗したら後続を停止する。同じ環境の通常リリースと復旧は共通 concurrency group で直列化し、`cancel-in-progress: false` とする。
 - content sync の CI 経路は SQL 生成と remote 実行を分離し、manifest の SQL を固定した D1 / config に非対話で適用する。問題が空の CI リリースは書き込み動作確認ができないため拒否する。既存の手動 remote は対話 TTY 確認を維持する。対象環境の最後の正常リリース以降の content 差分を判定し、初回・履歴不明・復旧後は同期を必須とする。Web は毎回同じ source から反映し、二重反映の片方だけを省略しない。
 - Worker / DB の名前・ID・config、Web origin、公開 API URL、Service Binding、migration 履歴を対象環境と照合し、任意 CLI 引数による上書きを認めない。API の `WEB_ORIGIN` / `ACCESS_ISSUER` / `ACCESS_AUDIENCE` は environment Variables から毎回指定する。認証情報は environment Secrets にのみ保存し、Git・ログ・artifact に含めない。
-- 成功記録は GitHub Deployment に環境・SHA・tree・Worker version・run ID を保存する。本番候補は直近の正常 verification と source tree が一致することを必須とし、merge による SHA の違いを許容する。承認後は最新 branch SHA を再検査し、古い run が新しい反映を巻き戻すことを防ぐ。
+- 成功記録は GitHub Deployment に環境・SHA・tree・Worker version・run ID を保存する。本番候補は直近の正常 verification と source tree が一致することを必須とし、merge による SHA の違いを許容する。変更開始前に最新 branch SHA を再検査し、古い run が新しい反映を巻き戻すことを防ぐ。
 - smoke test は公開 `/` と `/health`、未認証の Access redirect、credentialed CORS preflight、CI 専用の Access Service Token を使う認証済み主要画面を検査する。Service Token の Client ID / Secret は environment Secrets に保存し、Web / API の Access Application でこの token に限定する Service Auth policy を運用者が設定する。token 失効時は検査を失敗させる。専用 verification では採点・閲覧記録の書き込みを確認し、production では GET と OPTIONS だけを実行する。Access policy / API 認証境界を自動で弱めない。
-- deploy 前後の実際の Worker version を記録する。通信エラー後の再実行は実状態・適用済み migration・冪等 upsert を確認して行い、失敗した操作をその場で無条件に再試行しない。本番 Worker rollback は対象 version ID を指定する承認付き手動 workflow とし、復旧後は成功ソースの証明を無効にする。D1 の状態は戻らず、DB 復旧は別手順とする。
+- deploy 前後の実際の Worker version を記録する。通信エラー後の再実行は実状態・適用済み migration・冪等 upsert を確認して行い、失敗した操作をその場で無条件に再試行しない。本番 Worker rollback は対象 version ID と確認した現在の version ID を指定する手動 workflow とし、その実行操作を復旧の承認とする。environment での追加承認は設けず、復旧後は成功ソースの証明を無効にする。D1 の状態は戻らず、DB 復旧は別手順とする。
 - 実行手順、環境設定、artifact のアクセス・保持期間、失敗時の再実行・復旧方法は [デプロイ運用手順](./deployment.md) に定める。初回の環境設定・token 登録・Service Token の登録・更新は運用者が行う。
