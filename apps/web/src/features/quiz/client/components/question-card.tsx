@@ -1,4 +1,5 @@
 import { Card } from '@/components/ui/card'
+import { MaterialSymbol } from '@/components/ui/material-symbol'
 
 import type { QuizQuestionViewModel, SubmittedAnswer } from '../../view-model'
 
@@ -51,9 +52,15 @@ export function QuestionCard({
                 : 'border-border bg-well text-mute'
             : 'border-border bg-well text-ink-2 hover:border-blue hover:bg-blue-bg'
 
+          const resultLabel = result
+            ? [isCorrectChoice ? '正解' : null, isSelectedChoice ? 'あなたの解答' : null]
+                .filter(Boolean)
+                .join('・')
+            : ''
+
           return (
             <button
-              aria-label={`${String(index + 1)}番 ${choice}`}
+              aria-label={`${String(index + 1)}番 ${choice}${resultLabel ? `（${resultLabel}）` : ''}`}
               className={`flex min-h-12 items-start gap-3 rounded-xl border-2 px-4 py-3 text-left font-semibold transition-colors ${className}`}
               key={`${question.id}-${choice}`}
               onClick={() => onAnswer(index)}
@@ -62,7 +69,13 @@ export function QuestionCard({
               <span className="grid size-7 shrink-0 place-items-center rounded-lg border border-border bg-surface font-mono text-xs text-mute">
                 {choiceLabels[index]}
               </span>
-              <span className="pt-0.5">{choice}</span>
+              <span className="min-w-0 flex-1 pt-0.5">{choice}</span>
+              {result && isCorrectChoice ? (
+                <MaterialSymbol className="mt-0.5 size-5 text-green" name="check_circle" />
+              ) : null}
+              {result && isSelectedChoice && !isCorrectChoice ? (
+                <MaterialSymbol className="mt-0.5 size-5 text-red" name="cancel" />
+              ) : null}
             </button>
           )
         })}
@@ -74,7 +87,13 @@ export function QuestionCard({
 
       {result ? (
         <output aria-live="polite" className={resultClassName}>
-          <span className="block font-bold">{result.isCorrect ? '正解です' : '不正解です'}</span>
+          <span className="flex items-center gap-2 font-bold">
+            <MaterialSymbol
+              className="size-5"
+              name={result.isCorrect ? 'check_circle' : 'cancel'}
+            />
+            {result.isCorrect ? '正解です' : '不正解です'}
+          </span>
           <span className="mt-2 block whitespace-pre-wrap text-sm leading-6 text-ink-2">
             {explanation}
           </span>
@@ -83,12 +102,13 @@ export function QuestionCard({
 
       <div className="mt-6 flex justify-end">
         <button
-          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-blue px-4 py-2.5 font-bold text-white shadow-[0_4px_0_var(--blue-shade)] transition-transform hover:brightness-110 active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none"
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-blue px-4 py-2.5 font-bold text-white shadow-[0_4px_0_var(--blue-shade)] transition-transform hover:brightness-110 active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none"
           disabled={!result || submitting}
           onClick={onNext}
           type="button"
         >
-          次へ →
+          次へ
+          <MaterialSymbol className="size-5" name="arrow_forward" />
         </button>
       </div>
     </Card>

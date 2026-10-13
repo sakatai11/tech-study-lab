@@ -2,6 +2,7 @@ import 'server-only'
 
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
+import { MaterialSymbol, type MaterialSymbolName } from '@/components/ui/material-symbol'
 
 import type { AnalyticsViewModel } from '../../view-model'
 
@@ -29,20 +30,35 @@ export function AnalyticsDashboard({ viewModel }: { viewModel: AnalyticsViewMode
   return (
     <div className="flex flex-col gap-5">
       <section aria-label="学習サマリー" className="grid grid-cols-2 gap-3 xl:grid-cols-5">
-        <StatCard label="総解答数" value={String(summary.totalAnswerCount)} unit="問" tone="blue" />
-        <StatCard label="正答率" value={String(summary.correctAnswerRate)} unit="%" tone="green" />
         <StatCard
-          label="平均反応時間"
-          value={formatResponseTime(summary.averageResponseTimeMs)}
-          tone="purple"
+          icon="edit_note"
+          label="総解答数"
+          value={String(summary.totalAnswerCount)}
+          unit="問"
+          tone="blue"
         />
         <StatCard
+          icon="check_circle"
+          label="正答率"
+          value={String(summary.correctAnswerRate)}
+          unit="%"
+          tone="green"
+        />
+        <StatCard
+          icon="speed"
+          label="平均反応時間"
+          value={formatResponseTime(summary.averageResponseTimeMs)}
+          tone="blue"
+        />
+        <StatCard
+          icon="verified"
           label="習得済み問題"
           value={String(summary.masteredQuestionCount)}
           unit="問"
-          tone="orange"
+          tone="purple"
         />
         <StatCard
+          icon="local_fire_department"
           label="連続学習"
           value={String(summary.currentStreakDays)}
           unit="日"
@@ -186,11 +202,13 @@ function RetentionItem({ label, value, color }: { label: string; value: number; 
 }
 
 function StatCard({
+  icon,
   label,
   value,
   unit,
   tone,
 }: {
+  icon: MaterialSymbolName
   label: string
   value: string
   unit?: string
@@ -205,11 +223,8 @@ function StatCard({
 
   return (
     <Card className="p-4">
-      <span
-        aria-hidden="true"
-        className={`grid size-9 place-items-center rounded-xl font-mono font-bold ${toneClasses[tone]}`}
-      >
-        #
+      <span className={`grid size-9 place-items-center rounded-xl ${toneClasses[tone]}`}>
+        <MaterialSymbol className="size-5" name={icon} />
       </span>
       <p className="mb-0 mt-4 truncate font-mono text-2xl font-black tabular-nums text-ink">
         {value}

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import type { CSSProperties } from 'react'
 
 import { Card } from '@/components/ui/card'
+import { MaterialSymbol } from '@/components/ui/material-symbol'
 import { TermCrumb } from '@/components/ui/term-crumb'
 
 import { loadDashboardStatic } from '../load-dashboard'
@@ -56,11 +57,8 @@ export async function DashboardPageContent() {
       {learnHref ? (
         <Card className="reveal border-green p-5 sm:p-6" style={revealStyle(2)}>
           <div className="flex flex-wrap items-center gap-4">
-            <span
-              aria-hidden="true"
-              className="grid size-12 place-items-center rounded-2xl bg-green-bg font-mono text-xl text-green"
-            >
-              ▤
+            <span className="grid size-12 place-items-center rounded-2xl bg-green-bg text-green">
+              <MaterialSymbol className="size-7" name="menu_book" />
             </span>
             <div className="min-w-0 flex-1">
               <p className="m-0 font-mono text-xs font-bold text-green">NEXT LESSON</p>

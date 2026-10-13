@@ -4,14 +4,15 @@ import type { ReactNode } from 'react'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
+import { MaterialSymbol, type MaterialSymbolName } from '@/components/ui/material-symbol'
 import { ProgressBar } from '@/components/ui/progress-bar'
 
 type NavigationItem = {
   desktopLabel: string
   hasDueBadge?: boolean
   mobileLabel?: string
+  icon: MaterialSymbolName
   section: NavigationSection
-  symbol: string
 }
 
 export type NavigationSection = 'dashboard' | 'learn' | 'quiz' | 'review' | 'analytics' | 'tree'
@@ -21,21 +22,21 @@ type NavigationHrefs = Partial<Record<NavigationSection, string>>
 const desktopNavigation: NavigationItem[] = [
   {
     desktopLabel: 'ダッシュボード',
+    icon: 'home',
     mobileLabel: 'ホーム',
     section: 'dashboard',
-    symbol: '▦',
   },
-  { desktopLabel: '教材', mobileLabel: '教材', section: 'learn', symbol: '▤' },
-  { desktopLabel: '演習', mobileLabel: '演習', section: 'quiz', symbol: '✎' },
+  { desktopLabel: '教材', icon: 'menu_book', mobileLabel: '教材', section: 'learn' },
+  { desktopLabel: '演習', icon: 'quiz', mobileLabel: '演習', section: 'quiz' },
   {
     desktopLabel: '復習',
     hasDueBadge: true,
+    icon: 'event_repeat',
     mobileLabel: '復習',
     section: 'review',
-    symbol: '↻',
   },
-  { desktopLabel: 'アナリティクス', section: 'analytics', symbol: '▥' },
-  { desktopLabel: 'スキルツリー', mobileLabel: 'ツリー', section: 'tree', symbol: '⌘' },
+  { desktopLabel: 'アナリティクス', icon: 'bar_chart', section: 'analytics' },
+  { desktopLabel: 'スキルツリー', icon: 'category', mobileLabel: 'ツリー', section: 'tree' },
 ]
 
 const mobileNavigation = desktopNavigation.filter((item) => item.mobileLabel)
@@ -67,9 +68,7 @@ function DesktopNavigationContent({
 }) {
   return (
     <>
-      <span aria-hidden="true" className="grid size-5 place-items-center font-mono">
-        {item.symbol}
-      </span>
+      <MaterialSymbol className="size-5" name={item.icon} />
       {item.desktopLabel}
       {item.hasDueBadge ? reviewBadge : null}
       {!isAvailable ? <span className="ml-auto font-mono text-[10px]">準備中</span> : null}
@@ -86,9 +85,7 @@ function MobileNavigationContent({
 }) {
   return (
     <>
-      <span aria-hidden="true" className="font-mono text-base">
-        {item.symbol}
-      </span>
+      <MaterialSymbol name={item.icon} />
       <span className="text-[11px]">{item.mobileLabel}</span>
       {item.hasDueBadge ? reviewBadge : null}
     </>
@@ -162,8 +159,9 @@ function MobileHeader() {
   return (
     <header className="sticky top-0 z-10 flex items-center justify-between gap-2 bg-bg px-4 py-3 lg:hidden">
       <Brand compact />
-      <Badge className="shrink-0 border-orange bg-orange-bg font-sans text-xs text-orange">
-        🔥 <span className="tabular-nums">12日</span>
+      <Badge className="shrink-0 gap-1 border-orange bg-orange-bg font-sans text-xs text-orange">
+        <MaterialSymbol className="size-4" name="local_fire_department" />
+        <span className="tabular-nums">12日</span>
       </Badge>
       <ThemeToggle />
     </header>

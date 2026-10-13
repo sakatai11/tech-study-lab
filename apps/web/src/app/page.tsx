@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
+import { MaterialSymbol } from '@/components/ui/material-symbol'
 import { TermCrumb } from '@/components/ui/term-crumb'
 
 const learningSteps = [
@@ -57,10 +58,11 @@ export default function ProductTopPage() {
             </p>
             <div className="mt-7 flex flex-wrap items-center gap-4">
               <Link
-                className="inline-flex min-h-11 items-center justify-center rounded-xl bg-green px-5 py-3 font-bold text-white shadow-[0_4px_0_var(--green-shade)] transition-transform hover:brightness-110 active:translate-y-1 active:shadow-none"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-green px-5 py-3 font-bold text-white shadow-[0_4px_0_var(--green-shade)] transition-transform hover:brightness-110 active:translate-y-1 active:shadow-none"
                 href="/home"
               >
-                ログインして学習を始める →
+                ログインして学習を始める
+                <MaterialSymbol className="size-5" name="arrow_forward" />
               </Link>
               <p className="m-0 text-pretty text-sm text-mute">
                 アプリ独自のアカウント登録は不要です

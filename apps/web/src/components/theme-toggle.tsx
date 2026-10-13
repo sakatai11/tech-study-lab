@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 
+import { MaterialSymbol } from '@/components/ui/material-symbol'
 import { cn } from '@/lib/cn'
 
 type Theme = 'dark' | 'light'
@@ -39,7 +40,6 @@ export function ThemeToggle({ className }: { className?: string }) {
   return (
     <button
       aria-label={isLight ? 'ダークテーマに切り替える' : 'ライトテーマに切り替える'}
-      aria-pressed={isLight}
       className={cn(
         'grid size-11 place-items-center rounded-xl border-2 border-border bg-surface text-mute transition-transform duration-150 hover:text-yellow active:translate-y-0.5',
         className,
@@ -47,9 +47,7 @@ export function ThemeToggle({ className }: { className?: string }) {
       onClick={toggleTheme}
       type="button"
     >
-      <span aria-hidden="true" className="text-lg">
-        {isLight ? '☀' : '◐'}
-      </span>
+      <MaterialSymbol className="size-5" name={isLight ? 'dark_mode' : 'light_mode'} />
     </button>
   )
 }

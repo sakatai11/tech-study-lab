@@ -16,7 +16,7 @@ export function ReviewRunner({ viewModel }: { viewModel: ReviewViewModel }) {
       explanations={viewModel.explanations}
       hasMore={viewModel.hasMore}
       introContent={<ReviewIntro dueCount={viewModel.dueCount} previews={viewModel.previews} />}
-      introStartLabel="復習を開始 →"
+      introStartLabel="復習を開始"
       onComplete={() => {
         if (viewModel.hasMore) {
           router.refresh()

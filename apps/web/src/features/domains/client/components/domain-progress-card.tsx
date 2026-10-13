@@ -3,6 +3,7 @@
 import type { DomainKey, DomainsResponse } from '@tsl/shared'
 
 import { ProgressSummaryCard } from '@/components/ui/progress-summary-card'
+import { domainIcons } from '@/features/shared/domain-icon'
 
 const domainColors: Record<DomainKey, 'green' | 'blue' | 'purple' | 'orange'> = {
   security: 'green',
@@ -28,7 +29,7 @@ export function DomainProgressCard({ domain }: DomainProgressCardProps) {
     <ProgressSummaryCard
       action={
         domain.firstTopicHref
-          ? { href: domain.firstTopicHref, label: '最初のトピック →' }
+          ? { href: domain.firstTopicHref, label: '最初のトピック' }
           : { disabledLabel: '準備中' }
       }
       color={domainColors[domain.domain]}
@@ -39,6 +40,7 @@ export function DomainProgressCard({ domain }: DomainProgressCardProps) {
         </>
       }
       eyebrow={domain.domain}
+      icon={domainIcons[domain.domain]}
       progressLabel={`${domain.label} の習得状況`}
       progressValue={domain.masteryRate}
       title={domain.label}

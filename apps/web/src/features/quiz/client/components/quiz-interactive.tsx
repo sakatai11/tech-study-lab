@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { MaterialSymbol } from '@/components/ui/material-symbol'
 
 import type { QuizQuestionViewModel } from '@/features/shared/quiz-question'
 
@@ -32,7 +33,7 @@ export function QuizInteractive({
   explanations,
   hasMore,
   introContent,
-  introStartLabel = '演習を開始 →',
+  introStartLabel = '演習を開始',
   nextLessonId,
   onComplete,
   questions,
@@ -159,6 +160,7 @@ export function QuizInteractive({
           variant="green"
         >
           {introStartLabel}
+          <MaterialSymbol className="size-5" name="arrow_forward" />
         </Button>
       </Card>
     )
@@ -229,15 +231,17 @@ export function QuizInteractive({
               }}
               variant="green"
             >
-              次の復習を取得 →
+              次の復習を取得
+              <MaterialSymbol className="size-5" name="arrow_forward" />
             </Button>
           ) : null}
           {nextLessonId ? (
             <Link
-              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-green px-4 py-2.5 font-bold text-white shadow-[0_4px_0_var(--green-shade)] transition-transform hover:brightness-110 active:translate-y-1 active:shadow-none"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-green px-4 py-2.5 font-bold text-white shadow-[0_4px_0_var(--green-shade)] transition-transform hover:brightness-110 active:translate-y-1 active:shadow-none"
               href={`/quiz/${nextLessonId}`}
             >
-              次のレッスンへ →
+              次のレッスンへ
+              <MaterialSymbol className="size-5" name="arrow_forward" />
             </Link>
           ) : (
             <Link

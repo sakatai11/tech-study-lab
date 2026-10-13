@@ -216,7 +216,7 @@ SM-2 の計算式は [sm2.ts](../packages/shared/src/srs/sm2.ts)、その周辺�
 | `/domains` スキルツリー | 現行は `GET /domains` の実データを使い、4つの学習領域をカードで俯瞰する。各カードに習得率・習得済み/全問題数・トピック数・レッスン数と、コンテンツ上の先頭トピックへの導線（該当しない場合は「準備中」）を表示する。詳細な done ✓ / current ▶ / locked 🔒 のディレクトリツリーは後続スコープとする（§8.7）。 | 領域別集計は API（`GET /domains`）。領域カードは `/domains` と `/home` が共通の props 境界を介して表示する | 通常 SSR。Server loader が各リクエストのユーザー固有集計を取得する | 先頭トピックあり → `/learn/[domain]/[topic]`、なし → 「準備中」 |
 | `/learn` 教材一覧 | 4領域ごとのトピック一覧。領域・トピックの表示名と順序は §11.3 に従い、レッスンが1件以上あるトピックにレッスン数を表示する。教材のない領域・レッスン0件のトピックは「準備中」とし、リンクを表示しない。レッスン0件のトピックでは「0レッスン」の表示を省略する | ビルド時バンドル済み content（Server loader → mapper → ViewModel → RSC）。一覧の初期取得・描画にAPI不要 | ユーザー固有データを読まない静的 RSC。ビルド時にプリレンダリングし、PPR streaming 対象外 | トピック選択 → `/learn/[domain]/[topic]` |
 | `/learn/[domain]/[topic]` レッスン一覧 | トピック内のレッスン一覧（初期は XSS 1本） | ビルド時バンドル済み content（RSC） | `generateStaticParams` による標準 SSG。PPR streaming 対象外 | 各レッスンへ |
-| `/learn/[domain]/[topic]/[lesson]` 教材本文 | Markdown 本文表示 | ビルド時バンドル済み content（RSC。本文の初期取得・描画にはAPI不要）・閲覧記録のみAPI（最小Client recorder） | `generateStaticParams` による標準 SSG。PPR streaming 対象外 | 「問題を解く →」`/quiz/[lesson]` |
+| `/learn/[domain]/[topic]/[lesson]` 教材本文 | Markdown 本文表示 | ビルド時バンドル済み content（RSC。本文の初期取得・描画にはAPI不要）・閲覧記録のみAPI（最小Client recorder） | `generateStaticParams` による標準 SSG。PPR streaming 対象外 | 「問題を解く」→ `/quiz/[lesson]` |
 | `/quiz/[lesson]` 演習 | イントロ（レッスン概要の確認）→ 全問を 1 問ずつ即時採点 → 結果サマリ、を 1 画面内のクライアント状態遷移（`intro → exercise → result`）で完結。演習ナビ・教材本文の両方から入れる | 問題＝content（RSC で初期化）/ 解答記録＝API | `generateStaticParams` による標準 SSG。PPR streaming 対象外 | 完了 → 「次のレッスンへ」／「再挑戦」 |
 | `/review` 復習 | イントロ（本日の due キューを dueAt 昇順・滞留日数付きでプレビュー）→ due 問題をレッスン横断で 1 問ずつ即時採点 → 結果サマリ、を 1 画面内のクライアント状態遷移で完結 | queue＝API（`GET /review/queue`）/ 問題本文＝content / 記録＝API | 通常 SSR。初回 queue は Server loader が取得し、due バッジと本文は React `cache()` の request-local dedupe を共有する | 完了 → 「ホームへ」／「間違えた問題だけ再挑戦」 |
 | `/analytics` アナリティクス | 解答ログ・SRS状態を集計した学習分析ビュー（総解答数・正答率・平均反応時間・習得済み問題数・週次アクティビティ・SRS定着度分布・間違えやすい問題ランキング） | 集計値は API（§7.3） | 通常 SSR。Server loader が各リクエストのユーザー固有集計を取得する。忘却曲線・復習タイミングは対象外 | サイドバーの「アナリティクス」→ `/analytics` |
@@ -233,7 +233,7 @@ SM-2 の計算式は [sm2.ts](../packages/shared/src/srs/sm2.ts)、その周辺�
 - **結果サマリの動線（出し分け）**：`/quiz` は学習の前進が目的 → 「次のレッスンへ」。`/review` は due 消化が目的 → 「ホームへ」（`/home`、残があれば継続）。両者で「間違えた問題だけ復習」を提供。
 - **イントロ・演習・結果の状態遷移（URL は変えない）**：演習・復習とも 1 ルート内で `intro → exercise → result` のクライアント状態遷移を持つ（別 URL に切らない。モックの実装モデルに一致）。`intro` は開始前の確認（対象レッスンの概要／due 件数・滞留日数のプレビュー）に専念し、`exercise` は 1 問ずつ即時採点、`result` はスコア・問題ごとの正誤一覧・出し分けアクションを表示する。初回データ（問題・解説、`/review` は due queue）は Server loader で ViewModel 化して props で渡し、状態遷移そのものは Client Component が持つ（§8.5・§9.4 の `QuizInteractive` と同じ設計）。結果表示は `/quiz` と `/review` で共通コンポーネントとして再利用する。
 - **ID 設計**：`lessonId` / `questionId` は**グローバル一意**。学習導線は階層 URL（`/learn/...`）、演習・復習はフラット URL（`/quiz/[lesson]`・`/review`）。
-- **レイアウト（サイドバー / ボトムタブ）**：`/home` 以下の学習画面では、PC は左サイドバー（ロゴ＋テーマトグル＋ダッシュボード／教材／演習／復習（due件数バッジ）／アナリティクス／スキルツリー）、本文は右側 1 カラム。SP は上部アプリバー（ロゴ＋ストリーク表示＋テーマトグル）＋下部固定タブバー（**ホーム／教材／演習／復習（dueバッジ）／ツリーの5項目**）。ダッシュボード／ホームのナビゲーション先は `/home` とする。「演習」「復習」ナビ項目は直前に扱っていたレッスン（未着手なら先頭レッスン）を対象とする簡易ヒューリスティックで遷移先を決定する（MVP は XSS 1本のため実質固定）。SP のタブバーはスペース都合で 5 項目に絞り、「アナリティクス（`/analytics`）」へはダッシュボードの「すべて表示」リンクから遷移する。「設定」は将来の公開機能（認証等、§1 スコープ外）向けで、MVP ではナビに置かない。
+- **レイアウト（サイドバー / ボトムタブ）**：`/home` 以下の学習画面では、PC は左サイドバー（ロゴ＋テーマトグル＋ダッシュボード／教材／演習／復習（due件数バッジ）／アナリティクス／スキルツリー）、本文は右側 1 カラム。SP は上部アプリバー（ロゴ＋ストリーク表示＋テーマトグル）＋下部固定タブバー（**ホーム／教材／演習／復習（dueバッジ）／ツリーの5項目**）。ダッシュボード／ホームのナビゲーション先は `/home` とする。「演習」「復習」ナビ項目は直前に扱っていたレッスン（未着手なら先頭レッスン）を対象とする簡易ヒューリスティックで遷移先を決定する（MVP は XSS 1本のため実質固定）。SP のタブバーはスペース都合で 5 項目に絞り、「アナリティクス（`/analytics`）」へはダッシュボードの「すべて表示」リンクから遷移する。「設定」は将来の公開機能（認証等、§1 スコープ外）向けで、MVP ではナビに置かない。ナビ項目のアイコンは §8.7 の Material Symbols を使い、ダッシュボード／ホーム `home`・教材 `menu_book`・演習 `quiz`・復習 `event_repeat`・アナリティクス `bar_chart`・スキルツリー／ツリー `category` とする（PC・SP で同じアイコン）。SP のストリーク表示は `local_fire_department` を添える。テーマトグルは切り替え先のテーマのアイコン（ダーク表示中は `light_mode`、ライト表示中は `dark_mode`）を表示し、`aria-label` で切り替え動作を説明する（`aria-pressed` は併用しない）。
 - **公開・認証境界**：`/` は公開の静的プロダクト入口である。`/home` とユーザー向け学習ルート（`/learn/...`・`/quiz/...`・`/review`・`/domains`・`/analytics`）は本番で Cloudflare Access により保護する。アプリ内のログイン・セッションは持たず、公開トップの「ログインして学習を始める」は `/home` へリンクするだけとする。Cloudflare Access Application/Policy と route pattern（`/` は公開、`/home` とユーザー向け route は保護）の設定・デプロイ後検証は Issue #35 の責務である。
 - **ユーザー**：アプリ管理のログイン UI・セッションは持たない。API（Hono）側が固定 `user_id` を権威的に注入する。将来公開時は「固定値を返す関数」を「認証から `user_id` を引く関数」に差し替えるだけで、画面・API 契約は不変。
 - **SSR / SSG**：認証後画面は通常 SSR、教材・演習の content route は `generateStaticParams` による標準 SSG とする。復習の request-local dedupe とバッチ表示契約は §8.3・§9.2に従う。
@@ -397,7 +397,11 @@ HTTP 入出力、リクエスト・レスポンスの実例（JSON）、Zod ス�
 **コンポーネント文法**（`globals.css` の `@layer components` ＋ `components/ui` に集約）：
 
 - `card`：`surface` ＋ 2px `border` ＋ 16px radius のフラットカード。
-- `/learn` のアイコン：Google Material Symbols Rounded（24px、既定の非塗りつぶし）を使う。領域は `security` / `code` / `dns` / `account_tree`、教材は `menu_book`、導線は `chevron_right`、準備中は `schedule` で補助する。公式SVGを `apps/web/public/icons/material-symbols/` に必要な分だけ同梱し、出典・ライセンスも保持する。共通表示部品のCSS maskで既存の文字色を継承し、ダーク／ライト両テーマに対応する。表示名は文字でも残し、装飾アイコンは `aria-hidden` にして読み上げを重複させない。
+- アイコン：UI のアイコンは Google Material Symbols Rounded（optical size 24px、既定の非塗りつぶし）に統一し、ナビ・導線・状態表示に Unicode 記号や絵文字を使わない。公式SVGを `apps/web/public/icons/material-symbols/` に必要な分だけ同梱し、出典・ライセンスも保持する（実行時の外部フォント通信なし）。共通表示部品 `MaterialSymbol` の CSS mask で既存の文字色を継承し、ダーク／ライト両テーマに対応する。アイコンは常に文字ラベルと併記し、`aria-hidden` にして読み上げを重複させない。アイコンだけで意味を伝える操作要素は置かない。
+  - サイズ：画面見出しの装飾 28px、領域チップ・SP 下部タブ 24px、PC サイドバー・ボタン内・行内導線・統計カード 20px。
+  - 配置：前進の導線はラベルの後ろに `arrow_forward`、戻る導線はラベルの前に `arrow_back`、一覧・詳細へのドリルダウンはラベルの後ろに `chevron_right`。
+  - 意味の対応（同じ意味には同じアイコン）：教材・レッスン `menu_book`、演習 `quiz`、復習（SRS） `event_repeat`、分析 `bar_chart`、学習領域の一覧 `category`、領域 `security`（security）/ `code`（frontend）/ `dns`（backend）/ `account_tree`（architecture）、正解 `check_circle`、誤答 `cancel`、準備中 `schedule`、ストリーク `local_fire_department`、学習時間 `timer`、習得済み `verified`、解答数・解答の記録 `edit_note`、反応時間 `speed`。`account_tree` はアーキテクチャ領域専用とする。
+  - ターミナル表現（ロゴの `>_`、ターミナルパンくず、`>_ grading...`、テストランナーの `PASS` / `FAIL`、`keycap`）は文字のまま残し、アイコンに置き換えない。
 - チャンキーボタン（`btn-green` / `btn-blue` / `btn-ghost`）：ベタ塗り＋下エッジ（`box-shadow: 0 4px 0 <shade>`）、`:active` で 4px 沈む。green＝主アクション、ghost＝副アクション。
 - `term-win`：ターミナルウィンドウ。ヘッダーは **`>_` プロンプトバッジ＋mono タイトル＋右端メタ情報**（例 `80×24`・`exit 0`・`utf-8 · tsx`）。教材のコードブロック、演習結果のテストレポート、スキルツリーで使用。
 - `keycap`：問題 ID・選択肢番号のキーキャップ表現。
@@ -409,7 +413,7 @@ HTTP 入出力、リクエスト・レスポンスの実例（JSON）、Zod ス�
 
 **モーション**：stagger エントランス（reveal）、数値カウントアップ、バー伸長、正解バウンス／誤答シェイク、コンボポップ、全問正解時の confetti。すべて `prefers-reduced-motion` で無効化する。
 
-**アクセシビリティ**：全操作要素に `:focus-visible` リング、演習はキーボード操作（1–4 で選択 / Enter で次へ）対応、タッチターゲット 44px 以上。
+**アクセシビリティ**：全操作要素に `:focus-visible` リング、演習はキーボード操作（1–4 で選択 / Enter で次へ）対応、タッチターゲット 44px 以上。状態は色だけで示さない（WCAG 1.4.1）。演習・復習の解答後は、正解の選択肢に `check_circle`、誤答した選択肢に `cancel` を表示し、選択肢のアクセシブルネームにも「正解」「あなたの解答」を含める。
 
 **ゲーミフィケーション表現の実装区分**：
 

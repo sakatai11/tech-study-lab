@@ -5,17 +5,18 @@ import Link from 'next/link'
 
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
-import { MaterialSymbol, type MaterialSymbolName } from '@/components/ui/material-symbol'
+import { MaterialSymbol } from '@/components/ui/material-symbol'
 import { TermCrumb } from '@/components/ui/term-crumb'
+import { domainIcons } from '@/features/shared/domain-icon'
 
 import type { LessonCatalogViewModel } from '../../view-model'
 
-const domainPresentation = {
-  security: { icon: 'security', className: 'bg-green-bg text-green' },
-  frontend: { icon: 'code', className: 'bg-blue-bg text-blue' },
-  backend: { icon: 'dns', className: 'bg-purple-bg text-purple' },
-  architecture: { icon: 'account_tree', className: 'bg-orange-bg text-orange' },
-} satisfies Record<DomainKey, { icon: MaterialSymbolName; className: string }>
+const domainClassNames = {
+  security: 'bg-green-bg text-green',
+  frontend: 'bg-blue-bg text-blue',
+  backend: 'bg-purple-bg text-purple',
+  architecture: 'bg-orange-bg text-orange',
+} satisfies Record<DomainKey, string>
 
 export function LessonCatalog({ viewModel }: { viewModel: LessonCatalogViewModel }) {
   return (
@@ -38,9 +39,9 @@ export function LessonCatalog({ viewModel }: { viewModel: LessonCatalogViewModel
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
             <div className="flex min-w-0 items-center gap-3">
               <span
-                className={`grid size-10 shrink-0 place-items-center rounded-xl ${domainPresentation[domain.domain].className}`}
+                className={`grid size-10 shrink-0 place-items-center rounded-xl ${domainClassNames[domain.domain]}`}
               >
-                <MaterialSymbol name={domainPresentation[domain.domain].icon} />
+                <MaterialSymbol name={domainIcons[domain.domain]} />
               </span>
               <h2 className="m-0 text-xl font-black text-ink" id={`catalog-${domain.domain}`}>
                 {domain.label}

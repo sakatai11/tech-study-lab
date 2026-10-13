@@ -5,6 +5,7 @@ import type { CSSProperties } from 'react'
 
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
+import { MaterialSymbol, type MaterialSymbolName } from '@/components/ui/material-symbol'
 
 import type { DashboardActivityViewModel, DashboardViewModel } from '../../view-model'
 import { DashboardDomainProgress } from './dashboard-domain-progress'
@@ -54,14 +55,16 @@ function ActivityItem({ activity }: { activity: DashboardActivityViewModel }) {
   return (
     <li className="flex items-start gap-3 border-b border-border py-3 first:pt-0 last:border-0 last:pb-0">
       <span
-        aria-hidden="true"
         className={
           activity.type === 'answer_recorded'
-            ? 'grid size-8 shrink-0 place-items-center rounded-lg bg-blue-bg font-mono text-blue'
-            : 'grid size-8 shrink-0 place-items-center rounded-lg bg-green-bg font-mono text-green'
+            ? 'grid size-8 shrink-0 place-items-center rounded-lg bg-blue-bg text-blue'
+            : 'grid size-8 shrink-0 place-items-center rounded-lg bg-green-bg text-green'
         }
       >
-        {activity.type === 'answer_recorded' ? '>' : '▤'}
+        <MaterialSymbol
+          className="size-5"
+          name={activity.type === 'answer_recorded' ? 'edit_note' : 'menu_book'}
+        />
       </span>
       <div className="min-w-0 flex-1">
         <p className="mb-0 text-sm font-semibold text-ink-2">{activityDescription(activity)}</p>
@@ -84,19 +87,28 @@ export function DashboardDataContent({ viewModel }: { viewModel: DashboardViewMo
   return (
     <div className="flex flex-col gap-5">
       <section aria-label="学習サマリー" className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <StatCard label="正答率" value={String(summary.correctAnswerRate)} unit="%" tone="green" />
         <StatCard
+          icon="check_circle"
+          label="正答率"
+          value={String(summary.correctAnswerRate)}
+          unit="%"
+          tone="green"
+        />
+        <StatCard
+          icon="timer"
           label="今週の学習時間"
           value={formatStudyTime(summary.thisWeekStudyTimeMs)}
           tone="blue"
         />
         <StatCard
+          icon="local_fire_department"
           label="連続学習ストリーク"
           value={String(summary.currentStreakDays)}
           unit="日"
           tone="orange"
         />
         <StatCard
+          icon="verified"
           label="習得済み問題"
           value={String(summary.masteredQuestionCount)}
           unit="問"
@@ -181,11 +193,13 @@ export function DashboardDataContent({ viewModel }: { viewModel: DashboardViewMo
 }
 
 function StatCard({
+  icon,
   label,
   value,
   unit,
   tone,
 }: {
+  icon: MaterialSymbolName
   label: string
   value: string
   unit?: string
@@ -193,11 +207,8 @@ function StatCard({
 }) {
   return (
     <Card className="reveal p-4">
-      <span
-        aria-hidden="true"
-        className={`grid size-10 place-items-center rounded-xl font-mono text-lg ${statToneClasses[tone]}`}
-      >
-        #
+      <span className={`grid size-10 place-items-center rounded-xl ${statToneClasses[tone]}`}>
+        <MaterialSymbol className="size-5" name={icon} />
       </span>
       <p className="mb-0 mt-4 font-mono text-2xl font-black tabular-nums text-ink">
         {value}

@@ -1,6 +1,8 @@
 # Material Symbols アイコン利用の棚卸し
 
-実施日：2026-10-13。Issue #233。#230 / PR #231 で `/learn` に導入した Material Symbols Rounded を、プロダクト全体のどこへ広げるべきかを調査した。本文書は調査と方針整理の記録であり、アイコンの実装は含まない。判断基準は [design.md §7.1](../design.md#71-ルート構成)・[§7.2](../design.md#72-横断する設計判断)・[§8.7](../design.md#87-スタイリングtailwind--dev-native-neo-flat--terminal-デザインシステム) とする。
+実施日：2026-10-13。Issue #233。#230 / PR #231 で `/learn` に導入した Material Symbols Rounded を、プロダクト全体のどこへ広げるべきかを調査した。本文書は調査と方針整理の記録である。
+
+> **2026-10-13 追記**：同じ Issue #233 の範囲を広げ、P1・P2 を実装した。結果は末尾の「実装結果（P1・P2）」を参照する。P3 は未実装。以下の調査本文は実装前の状態の記録として残す。判断基準は [design.md §7.1](../design.md#71-ルート構成)・[§7.2](../design.md#72-横断する設計判断)・[§8.7](../design.md#87-スタイリングtailwind--dev-native-neo-flat--terminal-デザインシステム) とする。
 
 ## 結論
 
@@ -207,3 +209,33 @@ P1・P2 の必須分は16種、P3 を含めると18種（任意を除く）。
 - SPアプリバーのストリーク表示が `12日` で固定されている（`dashboard-shell.tsx:166`）。§7.2 は「ストリーク表示」を求めており、`GET /analytics/summary` の `currentStreakDays` を表示するべきか判断が必要。
 - PCサイドバー下部の「学習データ sample / foundation: 35%」が固定値のまま表示されている（`dashboard-shell.tsx:146-154`）。
 - ローカル dev で API プロセスを停止しても、Web が Service Binding 経由でデータを取得し続け、エラー境界を再現できなかった。エラー表示の手動確認手順（API を失敗させる方法）が `app-verify` スキルにない。
+
+## 実装結果（P1・P2）
+
+実装前に [design.md §7.2・§8.7](../design.md#87-スタイリングtailwind--dev-native-neo-flat--terminal-デザインシステム) を更新し、アイコン方針をアプリ全体に広げた。そのうえで P1・P2 の候補を実装した。新規SVGは「新規に必要なSVG」の P1・P2 の16種で、同梱は合計23種になった。
+
+| 実装単位 | 内容 |
+| --- | --- |
+| 共通シェル | ナビ6項目を `home` / `menu_book` / `quiz` / `event_repeat` / `bar_chart` / `category` にした（PC 20px・SP 24px）。テーマ切替は切り替え先のアイコン（`light_mode` / `dark_mode`）を表示し、`aria-pressed` を外した。SPのストリークは `local_fire_department` にした |
+| 解答状態 | 選択肢の右端に、正解は `check_circle`、誤答した選択肢は `cancel` を表示する。アクセシブルネームに「（正解）」「（あなたの解答）」を付ける。結果欄にも同じアイコンを付けた |
+| 導線矢印 | `→` / `←` を `arrow_forward` / `arrow_back` に、領域カードの導線を `chevron_right` に置き換えた。ボタン名から矢印の文字が外れるため、関連テストを更新した |
+| 統計・アクティビティ・領域カード | ダッシュボード・分析の `#` を指標別のアイコンに、NEXT LESSON とアクティビティの記号を `menu_book` / `edit_note` に置き換えた。領域カードには `/learn` と同じ領域アイコンを付けた（対応表は `features/shared/domain-icon.ts` で共有）。分析の「習得済み」はダッシュボードと同じ purple、「平均反応時間」は時間の指標として blue にした |
+
+追加したテスト：
+
+- 同梱SVGと `materialSymbolNames` の一致
+- 選択肢のアクセシブルネーム（採点前・誤答・正解）
+- テーマ切替の名前・永続化と、`aria-pressed` がないこと
+
+実装後の画面：
+
+| 画面 | 画像 |
+| --- | --- |
+| ダッシュボード（PC dark） | [after-home-data-pc-dark](./images/2026-10-13-material-symbols-icon-audit/after-home-data-pc-dark.jpg) |
+| 演習・不正解後（SP light） | [after-quiz-answered-1-sp-light](./images/2026-10-13-material-symbols-icon-audit/after-quiz-answered-1-sp-light.jpg) |
+| 演習・正解後（PC dark） | [after-quiz-answered-0-pc-dark](./images/2026-10-13-material-symbols-icon-audit/after-quiz-answered-0-pc-dark.jpg) |
+| 分析（SP dark） | [after-analytics-data-sp-dark](./images/2026-10-13-material-symbols-icon-audit/after-analytics-data-sp-dark.jpg) |
+| 教材本文（SP dark） | [after-lesson-empty-sp-dark](./images/2026-10-13-material-symbols-icon-audit/after-lesson-empty-sp-dark.jpg) |
+| スキルツリー（PC light） | [after-domains-data-pc-light](./images/2026-10-13-material-symbols-icon-audit/after-domains-data-pc-light.jpg) |
+
+未実装：P3（公開トップの領域カード、再挑戦の `restart_alt`、空キューの `task_alt`、「すべて表示」・準備中の補強）。別Issue候補は上記のとおり。

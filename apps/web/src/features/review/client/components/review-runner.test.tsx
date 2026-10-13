@@ -37,13 +37,11 @@ function batch(ids: string[], hasMore: boolean): ReviewViewModel {
 async function answerCurrentQuestion() {
   fireEvent.click(screen.getByRole('button', { name: '1番 正しい選択' }))
   await waitFor(() => {
-    expect((screen.getByRole('button', { name: '次へ →' }) as HTMLButtonElement).disabled).toBe(
-      false,
-    )
+    expect((screen.getByRole('button', { name: '次へ' }) as HTMLButtonElement).disabled).toBe(false)
   })
   // A disabled fieldset disables its buttons without setting button.disabled.
   expect(screen.getByRole('button', { name: '2番 誤った選択' }).matches(':disabled')).toBe(true)
-  fireEvent.click(screen.getByRole('button', { name: '次へ →' }))
+  fireEvent.click(screen.getByRole('button', { name: '次へ' }))
 }
 
 describe('ReviewRunner batch completion', () => {
@@ -57,7 +55,7 @@ describe('ReviewRunner batch completion', () => {
   it('fetches the next batch after 20 answers and starts it without previous results', async () => {
     const ids = Array.from({ length: 20 }, (_, index) => `question-${index + 1}`)
     const { rerender } = render(<ReviewRunner viewModel={batch(ids, true)} />)
-    fireEvent.click(screen.getByRole('button', { name: '復習を開始 →' }))
+    fireEvent.click(screen.getByRole('button', { name: '復習を開始' }))
 
     for (const id of ids) {
       expect(screen.getByRole('heading', { name: `${id}の問題` })).toBeTruthy()
@@ -68,12 +66,12 @@ describe('ReviewRunner batch completion', () => {
     expect(submitAnswer).toHaveBeenCalledTimes(20)
     expect(createBrowserApiClient).toHaveBeenCalledTimes(1)
     expect(refresh).not.toHaveBeenCalled()
-    fireEvent.click(screen.getByRole('button', { name: '次の復習を取得 →' }))
+    fireEvent.click(screen.getByRole('button', { name: '次の復習を取得' }))
     expect(refresh).toHaveBeenCalledTimes(1)
 
     rerender(<ReviewRunner viewModel={batch(['question-21'], false)} />)
     expect(screen.queryByRole('heading', { name: '演習完了' })).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: '復習を開始 →' }))
+    fireEvent.click(screen.getByRole('button', { name: '復習を開始' }))
     expect(screen.getByRole('heading', { name: 'question-21の問題' })).toBeTruthy()
     expect(
       (screen.getByRole('button', { name: '1番 正しい選択' }) as HTMLButtonElement).disabled,
@@ -81,16 +79,16 @@ describe('ReviewRunner batch completion', () => {
     expect(screen.queryByText('正解です')).toBeNull()
     await answerCurrentQuestion()
     expect(submitAnswer).toHaveBeenCalledTimes(21)
-    expect(screen.queryByRole('button', { name: '次の復習を取得 →' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '次の復習を取得' })).toBeNull()
     expect(refresh).toHaveBeenCalledTimes(1)
   })
 
   it('completes the last batch without offering another fetch', async () => {
     render(<ReviewRunner viewModel={batch(['question-last'], false)} />)
-    fireEvent.click(screen.getByRole('button', { name: '復習を開始 →' }))
+    fireEvent.click(screen.getByRole('button', { name: '復習を開始' }))
     await answerCurrentQuestion()
     expect(screen.getByRole('heading', { name: '演習完了' })).toBeTruthy()
-    expect(screen.queryByRole('button', { name: '次の復習を取得 →' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '次の復習を取得' })).toBeNull()
     expect(refresh).not.toHaveBeenCalled()
     expect(screen.getByRole('link', { name: 'ホームへ' }).getAttribute('href')).toBe('/home')
   })
