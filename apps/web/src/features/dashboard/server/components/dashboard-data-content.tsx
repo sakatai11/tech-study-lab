@@ -6,18 +6,12 @@ import type { CSSProperties } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { MaterialSymbol, type MaterialSymbolName } from '@/components/ui/material-symbol'
+import { type Tone, toneChipClasses } from '@/components/ui/tone'
 
 import type { DashboardActivityViewModel, DashboardViewModel } from '../../view-model'
 import { DashboardDomainProgress } from './dashboard-domain-progress'
 
 const heatmapClasses = ['bg-heat-0', 'bg-heat-1', 'bg-heat-2', 'bg-heat-3', 'bg-heat-4'] as const
-
-const statToneClasses = {
-  blue: 'bg-blue-bg text-blue',
-  green: 'bg-green-bg text-green',
-  orange: 'bg-orange-bg text-orange',
-  purple: 'bg-purple-bg text-purple',
-} as const
 
 function formatStudyTime(milliseconds: number): string {
   const minutes = Math.floor(milliseconds / 60_000)
@@ -126,10 +120,11 @@ export function DashboardDataContent({ viewModel }: { viewModel: DashboardViewMo
           </div>
           <div className="flex items-center gap-2">
             <Link
-              className="inline-flex min-h-11 items-center rounded-lg px-2 font-semibold text-blue hover:underline lg:hidden"
+              className="inline-flex min-h-11 items-center gap-1 rounded-lg px-2 font-semibold text-blue hover:underline lg:hidden"
               href="/analytics"
             >
               すべて表示
+              <MaterialSymbol className="size-5" name="chevron_right" />
             </Link>
             <Badge className="tabular-nums">{summary.currentStreakDays} day streak</Badge>
           </div>
@@ -203,11 +198,11 @@ function StatCard({
   label: string
   value: string
   unit?: string
-  tone: keyof typeof statToneClasses
+  tone: Tone
 }) {
   return (
     <Card className="reveal p-4">
-      <span className={`grid size-10 place-items-center rounded-xl ${statToneClasses[tone]}`}>
+      <span className={`grid size-10 place-items-center rounded-xl ${toneChipClasses[tone]}`}>
         <MaterialSymbol className="size-5" name={icon} />
       </span>
       <p className="mb-0 mt-4 font-mono text-2xl font-black tabular-nums text-ink">

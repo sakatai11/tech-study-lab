@@ -121,9 +121,10 @@ export function QuizInteractive({
         <h1 className="mb-0 mt-3 text-2xl font-black text-ink sm:text-3xl">{title}</h1>
         <p className="mb-0 mt-5 leading-7 text-ink-2">出題できる問題がありません</p>
         <Link
-          className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl border-2 border-border bg-surface px-4 py-2.5 font-bold text-ink-2 shadow-[0_4px_0_var(--border)] transition-transform hover:border-border-hi hover:text-ink active:translate-y-1 active:shadow-none"
+          className="mt-6 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border-2 border-border bg-surface px-4 py-2.5 font-bold text-ink-2 shadow-[0_4px_0_var(--border)] transition-transform hover:border-border-hi hover:text-ink active:translate-y-1 active:shadow-none"
           href={resultHomeHref}
         >
+          <MaterialSymbol className="size-5" name="arrow_back" />
           {resultHomeLabel}
         </Link>
       </Card>
@@ -245,9 +246,10 @@ export function QuizInteractive({
             </Link>
           ) : (
             <Link
-              className="inline-flex min-h-11 items-center justify-center rounded-xl border-2 border-border bg-surface px-4 py-2.5 font-bold text-ink-2 shadow-[0_4px_0_var(--border)] transition-transform hover:border-border-hi hover:text-ink active:translate-y-1 active:shadow-none"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border-2 border-border bg-surface px-4 py-2.5 font-bold text-ink-2 shadow-[0_4px_0_var(--border)] transition-transform hover:border-border-hi hover:text-ink active:translate-y-1 active:shadow-none"
               href={resultHomeHref}
             >
+              <MaterialSymbol className="size-5" name="arrow_back" />
               {resultHomeLabel}
             </Link>
           )}

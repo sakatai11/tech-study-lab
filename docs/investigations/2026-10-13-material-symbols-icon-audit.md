@@ -232,10 +232,21 @@ P1・P2 の必須分は16種、P3 を含めると18種（任意を除く）。
 | 画面 | 画像 |
 | --- | --- |
 | ダッシュボード（PC dark） | [after-home-data-pc-dark](./images/2026-10-13-material-symbols-icon-audit/after-home-data-pc-dark.jpg) |
+| ダッシュボード（PC light・追補後） | [after-home-data-pc-light](./images/2026-10-13-material-symbols-icon-audit/after-home-data-pc-light.jpg) |
 | 演習・不正解後（SP light） | [after-quiz-answered-1-sp-light](./images/2026-10-13-material-symbols-icon-audit/after-quiz-answered-1-sp-light.jpg) |
 | 演習・正解後（PC dark） | [after-quiz-answered-0-pc-dark](./images/2026-10-13-material-symbols-icon-audit/after-quiz-answered-0-pc-dark.jpg) |
 | 分析（SP dark） | [after-analytics-data-sp-dark](./images/2026-10-13-material-symbols-icon-audit/after-analytics-data-sp-dark.jpg) |
 | 教材本文（SP dark） | [after-lesson-empty-sp-dark](./images/2026-10-13-material-symbols-icon-audit/after-lesson-empty-sp-dark.jpg) |
 | スキルツリー（PC light） | [after-domains-data-pc-light](./images/2026-10-13-material-symbols-icon-audit/after-domains-data-pc-light.jpg) |
 
-未実装：P3（公開トップの領域カード、再挑戦の `restart_alt`、空キューの `task_alt`、「すべて表示」・準備中の補強）。別Issue候補は上記のとおり。
+コードレビューで、§8.7 の配置規則と実装の食い違いを指摘されたため、次の対応を追加した（調査時に P3・現状維持とした項目を含む）。
+
+- **規則の明確化**：§8.7 の配置規則の対象範囲を明確にした。同じ画面内で状態を切り替えるボタン（再挑戦など）と、エラー画面の復旧操作は文字だけとする例外を明記した。
+- **前進の導線**：「続きから」「復習を始める」に `arrow_forward` を付けた。
+- **戻る導線**：演習結果・空状態の戻り先と、復習の空キューの「ホームへ」に `arrow_back` を付けた。
+- **ドリルダウン**：「すべて表示」に `chevron_right` を付けた。
+- **準備中**：学習領域カードの「準備中」に `schedule` を付けた。
+- **共通化**：トーンのクラス表（`components/ui/tone.ts`）と、領域と色の対応（`domainTones`）を1か所にまとめた。
+- **テーマ切替**：アイコンと読み上げ名は、描画前に確定する `html[data-theme]` に応じて CSS で出し分けるようにした。ライトテーマでも初回描画から正しく表示される。
+
+未実装：P3 のうち、公開トップの領域カードと、空キューの `task_alt`。別Issue候補は上記のとおり。

@@ -4,13 +4,7 @@ import type { ReactNode } from 'react'
 import { Card } from './card'
 import { MaterialSymbol, type MaterialSymbolName } from './material-symbol'
 import { ProgressBar } from './progress-bar'
-
-const iconClassNames = {
-  green: 'bg-green-bg text-green',
-  blue: 'bg-blue-bg text-blue',
-  purple: 'bg-purple-bg text-purple',
-  orange: 'bg-orange-bg text-orange',
-} as const
+import { type Tone, toneChipClasses } from './tone'
 
 export function ProgressSummaryCard({
   eyebrow,
@@ -28,7 +22,7 @@ export function ProgressSummaryCard({
   title: string
   value: string
   progressValue: number
-  color: 'green' | 'blue' | 'purple' | 'orange'
+  color: Tone
   progressLabel: string
   detail: ReactNode
   action: { href: string; label: string } | { disabledLabel: string }
@@ -39,7 +33,7 @@ export function ProgressSummaryCard({
         <div className="flex min-w-0 items-center gap-3">
           {icon ? (
             <span
-              className={`grid size-10 shrink-0 place-items-center rounded-xl ${iconClassNames[color]}`}
+              className={`grid size-10 shrink-0 place-items-center rounded-xl ${toneChipClasses[color]}`}
             >
               <MaterialSymbol name={icon} />
             </span>
@@ -67,8 +61,9 @@ export function ProgressSummaryCard({
         ) : (
           <span
             aria-disabled="true"
-            className="inline-flex min-h-11 items-center font-semibold text-faint"
+            className="inline-flex min-h-11 items-center gap-1 font-semibold text-faint"
           >
+            <MaterialSymbol className="size-5" name="schedule" />
             {action.disabledLabel}
           </span>
         )}

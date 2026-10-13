@@ -3,6 +3,7 @@ import 'server-only'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { MaterialSymbol, type MaterialSymbolName } from '@/components/ui/material-symbol'
+import { type Tone, toneChipClasses } from '@/components/ui/tone'
 
 import type { AnalyticsViewModel } from '../../view-model'
 
@@ -212,18 +213,11 @@ function StatCard({
   label: string
   value: string
   unit?: string
-  tone: 'blue' | 'green' | 'orange' | 'purple'
+  tone: Tone
 }) {
-  const toneClasses = {
-    blue: 'bg-blue-bg text-blue',
-    green: 'bg-green-bg text-green',
-    orange: 'bg-orange-bg text-orange',
-    purple: 'bg-purple-bg text-purple',
-  } as const
-
   return (
     <Card className="p-4">
-      <span className={`grid size-9 place-items-center rounded-xl ${toneClasses[tone]}`}>
+      <span className={`grid size-9 place-items-center rounded-xl ${toneChipClasses[tone]}`}>
         <MaterialSymbol className="size-5" name={icon} />
       </span>
       <p className="mb-0 mt-4 truncate font-mono text-2xl font-black tabular-nums text-ink">

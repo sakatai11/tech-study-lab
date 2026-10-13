@@ -41,10 +41,11 @@ export async function DashboardPageContent() {
           </p>
         </div>
         <Link
-          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-green px-4 py-2.5 font-bold text-white shadow-[0_4px_0_var(--green-shade)] transition-transform hover:brightness-110 active:translate-y-1 active:shadow-none"
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-green px-4 py-2.5 font-bold text-white shadow-[0_4px_0_var(--green-shade)] transition-transform hover:brightness-110 active:translate-y-1 active:shadow-none"
           href="/review"
         >
           復習を始める
+          <MaterialSymbol className="size-5" name="arrow_forward" />
         </Link>
       </section>
 
@@ -72,10 +73,11 @@ export async function DashboardPageContent() {
               </p>
             </div>
             <Link
-              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-green px-4 py-2.5 font-bold text-white shadow-[0_4px_0_var(--green-shade)] transition-transform hover:brightness-110 active:translate-y-1 active:shadow-none"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-green px-4 py-2.5 font-bold text-white shadow-[0_4px_0_var(--green-shade)] transition-transform hover:brightness-110 active:translate-y-1 active:shadow-none"
               href={continueHref}
             >
               続きから
+              <MaterialSymbol className="size-5" name="arrow_forward" />
             </Link>
           </div>
         </Card>

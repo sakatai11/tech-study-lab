@@ -1,16 +1,9 @@
 'use client'
 
-import type { DomainKey, DomainsResponse } from '@tsl/shared'
+import type { DomainsResponse } from '@tsl/shared'
 
 import { ProgressSummaryCard } from '@/components/ui/progress-summary-card'
-import { domainIcons } from '@/features/shared/domain-icon'
-
-const domainColors: Record<DomainKey, 'green' | 'blue' | 'purple' | 'orange'> = {
-  security: 'green',
-  frontend: 'blue',
-  backend: 'purple',
-  architecture: 'orange',
-}
+import { domainIcons, domainTones } from '@/features/shared/domain-icon'
 
 type DomainSummary = DomainsResponse['domains'][number]
 
@@ -32,7 +25,7 @@ export function DomainProgressCard({ domain }: DomainProgressCardProps) {
           ? { href: domain.firstTopicHref, label: '最初のトピック' }
           : { disabledLabel: '準備中' }
       }
-      color={domainColors[domain.domain]}
+      color={domainTones[domain.domain]}
       detail={
         <>
           {domain.masteredQuestionCount} / {domain.totalQuestionCount} 問習得 · {domain.topicCount}{' '}

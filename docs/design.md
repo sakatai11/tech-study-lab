@@ -399,7 +399,8 @@ HTTP 入出力、リクエスト・レスポンスの実例（JSON）、Zod ス�
 - `card`：`surface` ＋ 2px `border` ＋ 16px radius のフラットカード。
 - アイコン：UI のアイコンは Google Material Symbols Rounded（optical size 24px、既定の非塗りつぶし）に統一し、ナビ・導線・状態表示に Unicode 記号や絵文字を使わない。公式SVGを `apps/web/public/icons/material-symbols/` に必要な分だけ同梱し、出典・ライセンスも保持する（実行時の外部フォント通信なし）。共通表示部品 `MaterialSymbol` の CSS mask で既存の文字色を継承し、ダーク／ライト両テーマに対応する。アイコンは常に文字ラベルと併記し、`aria-hidden` にして読み上げを重複させない。アイコンだけで意味を伝える操作要素は置かない。例外はテーマトグルだけで、見える文字ラベルを持たず、`aria-label`（切り替え動作の説明）をアクセシブルネームにする。
   - サイズ：画面見出し・強調カード（NEXT LESSON など）の装飾 28px、領域チップ・SP 下部タブ 24px、PC サイドバー・ボタン内・行内導線・統計カード・テーマトグル 20px、SP アプリバーのバッジ（ストリーク）16px。
-  - 配置：前進の導線はラベルの後ろに `arrow_forward`、戻る導線はラベルの前に `arrow_back`、一覧・詳細へのドリルダウンはラベルの後ろに `chevron_right`。
+  - 配置：画面内の導線ボタン・リンクは、前進（次の学習ステップへ進む。例：問題を解く・続きから・復習を始める）ならラベルの後ろに `arrow_forward`、戻る（元の画面へ戻る。例：レッスン一覧・演習結果や空状態からの戻り先）ならラベルの前に `arrow_back`、一覧・詳細へのドリルダウン（例：一覧へ・最初のトピック・すべて表示）ならラベルの後ろに `chevron_right` を置く。同じ画面内の状態を切り替えるボタン（再挑戦・間違えた問題だけ復習）と、`error.tsx` の復旧操作（再読み込み・ホームへ等）は文字のみとする。
+  - 準備中の表示（`/learn` の領域、学習領域カードの無効な導線）は `schedule` を添える。`/learn` のレッスン0件トピックの `準備中` バッジとナビの無効項目は文字のみとする。
   - 意味の対応（同じ意味には同じアイコン）：教材・レッスン `menu_book`、演習 `quiz`、復習（SRS） `event_repeat`、分析 `bar_chart`、学習領域の一覧 `category`、領域 `security`（security）/ `code`（frontend）/ `dns`（backend）/ `account_tree`（architecture）、正解 `check_circle`、誤答 `cancel`、準備中 `schedule`、ストリーク `local_fire_department`、学習時間 `timer`、習得済み `verified`、解答数・解答の記録 `edit_note`、反応時間 `speed`。`account_tree` はアーキテクチャ領域専用とする。
   - ターミナル表現（ロゴの `>_`、ターミナルパンくず、`>_ grading...`、テストランナーの `PASS` / `FAIL`、`keycap`）は文字のまま残し、アイコンに置き換えない。
 - チャンキーボタン（`btn-green` / `btn-blue` / `btn-ghost`）：ベタ塗り＋下エッジ（`box-shadow: 0 4px 0 <shade>`）、`:active` で 4px 沈む。green＝主アクション、ghost＝副アクション。

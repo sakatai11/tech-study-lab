@@ -52,15 +52,18 @@ export function QuestionCard({
                 : 'border-border bg-well text-mute'
             : 'border-border bg-well text-ink-2 hover:border-blue hover:bg-blue-bg'
 
-          const resultLabel = result
-            ? [isCorrectChoice ? '正解' : null, isSelectedChoice ? 'あなたの解答' : null]
-                .filter(Boolean)
-                .join('・')
-            : ''
+          const resultLabel =
+            isCorrectChoice && isSelectedChoice
+              ? '（正解・あなたの解答）'
+              : isCorrectChoice
+                ? '（正解）'
+                : isSelectedChoice
+                  ? '（あなたの解答）'
+                  : ''
 
           return (
             <button
-              aria-label={`${String(index + 1)}番 ${choice}${resultLabel ? `（${resultLabel}）` : ''}`}
+              aria-label={`${String(index + 1)}番 ${choice}${resultLabel}`}
               className={`flex min-h-12 items-start gap-3 rounded-xl border-2 px-4 py-3 text-left font-semibold transition-colors ${className}`}
               key={`${question.id}-${choice}`}
               onClick={() => onAnswer(index)}
@@ -70,10 +73,9 @@ export function QuestionCard({
                 {choiceLabels[index]}
               </span>
               <span className="min-w-0 flex-1 pt-0.5">{choice}</span>
-              {result && isCorrectChoice ? (
+              {isCorrectChoice ? (
                 <MaterialSymbol className="mt-0.5 size-5 text-green" name="check_circle" />
-              ) : null}
-              {result && isSelectedChoice && !isCorrectChoice ? (
+              ) : isSelectedChoice ? (
                 <MaterialSymbol className="mt-0.5 size-5 text-red" name="cancel" />
               ) : null}
             </button>

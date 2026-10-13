@@ -1,22 +1,15 @@
 import 'server-only'
 
-import type { DomainKey } from '@tsl/shared'
 import Link from 'next/link'
 
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { MaterialSymbol } from '@/components/ui/material-symbol'
 import { TermCrumb } from '@/components/ui/term-crumb'
-import { domainIcons } from '@/features/shared/domain-icon'
+import { toneChipClasses } from '@/components/ui/tone'
+import { domainIcons, domainTones } from '@/features/shared/domain-icon'
 
 import type { LessonCatalogViewModel } from '../../view-model'
-
-const domainClassNames = {
-  security: 'bg-green-bg text-green',
-  frontend: 'bg-blue-bg text-blue',
-  backend: 'bg-purple-bg text-purple',
-  architecture: 'bg-orange-bg text-orange',
-} satisfies Record<DomainKey, string>
 
 export function LessonCatalog({ viewModel }: { viewModel: LessonCatalogViewModel }) {
   return (
@@ -39,7 +32,7 @@ export function LessonCatalog({ viewModel }: { viewModel: LessonCatalogViewModel
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
             <div className="flex min-w-0 items-center gap-3">
               <span
-                className={`grid size-10 shrink-0 place-items-center rounded-xl ${domainClassNames[domain.domain]}`}
+                className={`grid size-10 shrink-0 place-items-center rounded-xl ${toneChipClasses[domainTones[domain.domain]]}`}
               >
                 <MaterialSymbol name={domainIcons[domain.domain]} />
               </span>
