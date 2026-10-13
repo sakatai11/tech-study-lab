@@ -34,7 +34,7 @@ const queue: ReviewQueueResponse = {
   ],
 }
 
-describe('reviewQueueToViewModel', () => {
+describe('reviewQueueToViewModel [ADR-0002]', () => {
   it('joins API queue metadata with bundled question content on the server boundary', () => {
     const viewModel = reviewQueueToViewModel(queue, questions, 2 * 24 * 60 * 60 * 1000)
 

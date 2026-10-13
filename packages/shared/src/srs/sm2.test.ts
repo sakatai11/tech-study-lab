@@ -57,7 +57,7 @@ describe('reviewSrs - 不正解', () => {
   })
 })
 
-describe('isDue', () => {
+describe('isDue [ADR-0005]', () => {
   it('dueAt が現在以前なら true', () => {
     expect(isDue(NOW - 1, NOW)).toBe(true)
     expect(isDue(NOW, NOW)).toBe(true)

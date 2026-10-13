@@ -22,7 +22,7 @@ function createApp(limiter: PlatformRateLimiter) {
     })
 }
 
-describe('guardPersistentWriteRateLimit', () => {
+describe('guardPersistentWriteRateLimit [ADR-0004]', () => {
   it('returns the shared 429 contract with Retry-After when the limiter denies a write', async () => {
     const response = await createApp({
       async limit() {

@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { logPersistentWriteEvent } from './persistent-write-observability'
 import { persistentWriteRateLimits } from './persistent-write-rate-limit'
 
-describe('logPersistentWriteEvent', () => {
+describe('logPersistentWriteEvent [ADR-0004]', () => {
   afterEach(() => {
     vi.restoreAllMocks()
   })

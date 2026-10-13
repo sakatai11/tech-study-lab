@@ -110,7 +110,7 @@ describe('core API endpoints', () => {
     ])
   })
 
-  it('ミドルウェアで確定したユーザーの教材閲覧を記録する', async () => {
+  it('ミドルウェアで確定したユーザーの教材閲覧を記録する [ADR-0003]', async () => {
     const response = await fetchInternal('/lesson-views', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -132,7 +132,7 @@ describe('core API endpoints', () => {
     })
   })
 
-  it('クライアント指定の userId を拒否し教材閲覧を記録しない', async () => {
+  it('クライアント指定の userId を拒否し教材閲覧を記録しない [ADR-0003]', async () => {
     const response = await fetchInternal('/lesson-views', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -148,7 +148,7 @@ describe('core API endpoints', () => {
     })
   })
 
-  it('grades an answer and atomically records its log and next SRS state for the fixed user', async () => {
+  it('grades an answer and atomically records its log and next SRS state for the fixed user [ADR-0002] [ADR-0005]', async () => {
     await seedQuestion('question-1', 2)
 
     const response = await fetchInternal('/answers', {
@@ -191,7 +191,7 @@ describe('core API endpoints', () => {
     })
   })
 
-  it('maps a missing authoritative question to the public 404 error contract', async () => {
+  it('maps a missing authoritative question to the public 404 error contract [ADR-0002]', async () => {
     const response = await fetchInternal('/answers', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -207,7 +207,7 @@ describe('core API endpoints', () => {
     })
   })
 
-  it('rejects a client-provided userId before it can affect the fixed user context', async () => {
+  it('rejects a client-provided userId before it can affect the fixed user context [ADR-0003]', async () => {
     const response = await fetchInternal('/answers', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -238,7 +238,7 @@ describe('core API endpoints', () => {
     },
     { entrypoint: 'public', endpoint: '/lesson-views', body: { lessonId: 'security-xss-01' } },
   ])(
-    'returns the shared 429 contract before a $entrypoint $endpoint D1 write',
+    'returns the shared 429 contract before a $entrypoint $endpoint D1 write [ADR-0004]',
     async ({ entrypoint, endpoint, body }) => {
       const deniedLimiter: PlatformRateLimiter = {
         async limit() {
@@ -287,7 +287,7 @@ describe('core API endpoints', () => {
     { endpoint: '/answers', body: { questionId: 'question-1', selectedIndex: 0 } },
     { endpoint: '/lesson-views', body: { lessonId: 'security-xss-01' } },
   ])(
-    'fails closed without D1 changes when the limiter is unavailable for $endpoint',
+    'fails closed without D1 changes when the limiter is unavailable for $endpoint [ADR-0004]',
     async ({ endpoint, body }) => {
       const unavailableLimiter: PlatformRateLimiter = {
         async limit() {
@@ -317,7 +317,7 @@ describe('core API endpoints', () => {
     },
   )
 
-  it('returns due items at the due boundary in order with a maximum of twenty items', async () => {
+  it('returns due items at the due boundary in order with a maximum of twenty items [ADR-0005]', async () => {
     const now = Date.now()
     await Promise.all(
       Array.from({ length: 21 }, (_, index) =>
@@ -344,7 +344,7 @@ describe('core API endpoints', () => {
     await expect(countResponse.json()).resolves.toEqual({ dueCount: 21 })
   })
 
-  it('includes a state due exactly at the supplied time in the queue and count', async () => {
+  it('includes a state due exactly at the supplied time in the queue and count [ADR-0005]', async () => {
     const now = 1_700_000_000_000
     await seedSrsState('before', now - 1)
     await seedSrsState('at-boundary', now)
@@ -362,7 +362,7 @@ describe('core API endpoints', () => {
     await expect(reviewDeps.countDueQuestions(FIXED_USER_ID, now)).resolves.toBe(2)
   })
 
-  it('returns ordered four-domain summaries with active questions, mastery boundary, and user isolation', async () => {
+  it('returns ordered four-domain summaries with active questions, mastery boundary, and user isolation [ADR-0003]', async () => {
     await seedQuestion('security-1', 0, {
       domain: 'security',
       topic: 'xss',

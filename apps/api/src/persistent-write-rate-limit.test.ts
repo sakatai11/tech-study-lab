@@ -59,7 +59,7 @@ const rateLimitBoundaryFixtures = [
   },
 ] as const
 
-describe('persistent write rate limits', () => {
+describe('persistent write rate limits [ADR-0004]', () => {
   it.each(rateLimitBoundaryFixtures)(
     '$rateLimit.endpoint allows N-1 and N requests, rejects N+1, then resets in the next window',
     async ({ rateLimit, boundary }) => {

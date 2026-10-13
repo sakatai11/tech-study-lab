@@ -18,7 +18,7 @@ function createDeps(overrides: Partial<AnswerDeps> = {}) {
   return { deps, recorded }
 }
 
-describe('submitAnswer', () => {
+describe('submitAnswer [ADR-0002] [ADR-0005]', () => {
   it('grades against the stored answer and records the initial SRS transition', async () => {
     const { deps, recorded } = createDeps()
 
@@ -79,6 +79,38 @@ describe('submitAnswer', () => {
     })
     expect(recorded[0]?.expectedVersion).toBe(0)
     expect(recorded[0]?.responseTimeMs).toBeUndefined()
+  })
+
+  it('records every repeated answer and lets the latest one decide the next due date', async () => {
+    let stored: (SrsInput & { version: number }) | null = null
+    const { deps, recorded } = createDeps({
+      findSrsState: async () => stored,
+      recordAnswer: async (params) => {
+        recorded.push(params)
+        stored = { ...params.nextSrs, version: params.expectedVersion + 1 }
+      },
+    })
+
+    await submitAnswer(deps, {
+      userId: 'user-1',
+      questionId: 'question-1',
+      selectedIndex: 2,
+      now: 0,
+    })
+    await submitAnswer(deps, {
+      userId: 'user-1',
+      questionId: 'question-1',
+      selectedIndex: 0,
+      now: 10,
+    })
+
+    expect(
+      recorded.map(({ isCorrect, expectedVersion }) => ({ isCorrect, expectedVersion })),
+    ).toEqual([
+      { isCorrect: true, expectedVersion: 0 },
+      { isCorrect: false, expectedVersion: 1 },
+    ])
+    expect(recorded[1]?.nextSrs).toMatchObject({ reps: 0, lapses: 1, dueAt: 10 + DAY_MS })
   })
 
   it('rejects a question absent from the authoritative question cache', async () => {
