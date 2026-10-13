@@ -28,7 +28,10 @@ SM-2 の計算式は [sm2.ts](../../packages/shared/src/srs/sm2.ts) を一次ソ
 
 ## 検証
 
-- [sm2.test.ts](../../packages/shared/src/srs/sm2.test.ts): SM-2 の遷移と `isDue` の境界
+- [sm2.test.ts](../../packages/shared/src/srs/sm2.test.ts): `isDue` の境界（`dueAt <= now`）
 - [answer-service.test.ts](../../apps/api/src/services/answer-service.test.ts): 1解答ごとに記録と SRS 更新を行い、既存の状態から遷移する。同時更新時は最新の状態から再試行する
-- [review-service.test.ts](../../apps/api/src/services/review-service.test.ts): キューと due 件数に同じ due 境界を使う
+- [review-service.test.ts](../../apps/api/src/services/review-service.test.ts): 注入された時刻を、キューと due 件数の取得へ同じ値で渡す
 - [core-endpoints.integration.test.ts](../../apps/api/src/core-endpoints.integration.test.ts): `dueAt` の昇順、最大20件と `hasMore`、上限で減らない due 件数、境界時刻を含めること、ユーザー間の分離
+- [review/mapper.test.ts](../../apps/web/src/features/review/mapper.test.ts): フロントが API の `dueAt` 順を並べ替えない
+
+テストで直接検証しない決定: 決定 6（`/review` は解答済みの問題だけを扱う）は、キューが `srs_states` だけから作られる構造で守られている。レビューで確認する。

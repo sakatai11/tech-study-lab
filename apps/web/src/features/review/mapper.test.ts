@@ -50,7 +50,7 @@ describe('reviewQueueToViewModel [ADR-0002]', () => {
     expect(viewModel.resultHomeHref).toBe('/home')
   })
 
-  it('preserves the API dueAt order for questions and previews', () => {
+  it('preserves the API dueAt order for questions and previews [ADR-0005]', () => {
     const unorderedQueue: ReviewQueueResponse = {
       hasMore: false,
       items: [

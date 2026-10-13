@@ -33,7 +33,7 @@
 
 ## 検証
 
-- [persistent-write-rate-limit.test.ts](../../apps/api/src/persistent-write-rate-limit.test.ts): endpoint ごとの窓と上限、`userId` と endpoint だけで作る key、limiter が使えない場合の fail closed
-- [persistent-write-rate-limit-guard.test.ts](../../apps/api/src/persistent-write-rate-limit-guard.test.ts): 429 と `Retry-After`、503 の共通エラー形式
-- [core-endpoints.integration.test.ts](../../apps/api/src/core-endpoints.integration.test.ts): public と internal の両方の entrypoint で、429・503 のときに D1 を変更しない
-- [persistent-write-observability.test.ts](../../apps/api/src/persistent-write-observability.test.ts): PII を含まない構造化ログ
+- [persistent-write-rate-limit.test.ts](../../apps/api/src/persistent-write-rate-limit.test.ts): `wrangler.toml` の binding 名・窓・上限が決定 1 の表と一致する、`userId:POST /answers` 形式の key、limiter が使えない場合の fail closed
+- [persistent-write-rate-limit-guard.test.ts](../../apps/api/src/persistent-write-rate-limit-guard.test.ts): 429 と `Retry-After`、503 の共通エラー形式と、それぞれの構造化ログ
+- [core-endpoints.integration.test.ts](../../apps/api/src/core-endpoints.integration.test.ts): public と internal の両方の entrypoint で、429・503 のときに D1 を変更しない。成功した永続書き込みごとに PII を含まない成功ログを出す
+- [persistent-write-observability.test.ts](../../apps/api/src/persistent-write-observability.test.ts): 構造化ログが `event`・`endpoint`・`writeUnit` だけを含む

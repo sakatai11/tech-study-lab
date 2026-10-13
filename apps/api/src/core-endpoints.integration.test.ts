@@ -1,6 +1,6 @@
 import { SELF, applyD1Migrations, env } from 'cloudflare:test'
 import { drizzle } from 'drizzle-orm/d1'
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { DomainKey } from '@tsl/shared'
 
@@ -316,6 +316,47 @@ describe('core API endpoints', () => {
       ).resolves.toEqual({ answer_logs: 0, lesson_views: 0, srs_states: 0 })
     },
   )
+
+  describe('persistent write success logs', () => {
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    it('emits a PII-free success event after each persistent write [ADR-0004]', async () => {
+      const info = vi.spyOn(console, 'info').mockImplementation(() => undefined)
+      await seedQuestion('question-1', 2)
+
+      const answerResponse = await fetchInternal('/answers', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ questionId: 'question-1', selectedIndex: 2 }),
+      })
+      const lessonViewResponse = await fetchInternal('/lesson-views', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ lessonId: 'security-xss-01' }),
+      })
+
+      expect(answerResponse.status).toBe(200)
+      expect(lessonViewResponse.status).toBe(201)
+      expect(info.mock.calls).toEqual([
+        [
+          JSON.stringify({
+            event: 'persistent_write_succeeded',
+            endpoint: 'POST /answers',
+            writeUnit: 'answer_log_and_srs_state',
+          }),
+        ],
+        [
+          JSON.stringify({
+            event: 'persistent_write_succeeded',
+            endpoint: 'POST /lesson-views',
+            writeUnit: 'lesson_view',
+          }),
+        ],
+      ])
+    })
+  })
 
   it('returns due items at the due boundary in order with a maximum of twenty items [ADR-0005]', async () => {
     const now = Date.now()

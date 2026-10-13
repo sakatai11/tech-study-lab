@@ -26,3 +26,5 @@
 
 - [api.test.ts](../../packages/shared/src/schema/api.test.ts): 解答と閲覧記録のリクエストスキーマが、クライアント送信の `userId` を拒否する
 - [core-endpoints.integration.test.ts](../../apps/api/src/core-endpoints.integration.test.ts): クライアント指定の `userId` を 400 で拒否して D1 を変更しない。記録は middleware が確定したユーザーで行い、ユーザー間で集計を分離する
+
+テストで直接検証しない決定: 決定 2（route・service・DAL が自分でユーザーを解決しない）は構造上の規約であり、レビューで確認する。

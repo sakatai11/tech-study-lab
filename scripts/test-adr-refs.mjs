@@ -5,17 +5,20 @@
 //
 // 検査項目:
 //   1. ADR ファイル（docs/adr/NNNN-<slug>.md）の見出し番号・状態・必須節、連番に欠番がないこと
-//   2. 「検証」節に相対リンクが1つ以上あり、リンク先が実在し、そのファイルが自分の ADR 番号を含むこと
+//   2. 「検証」節に相対リンクが1つ以上あり、リンク先がファイルとして実在し、そのファイルが自分の ADR 番号を含むこと
+//      （テストファイルは `describe` / `it` 名に付ける `[ADR-NNNN]` タグ、それ以外は `ADR-NNNN`）。
+//      `Superseded by` のリンク先が実在すること
 //   3. docs/adr/README.md の索引がすべての ADR を載せていること
 //   4. リポジトリ中の `ADR-NNNN` と `adr/NNNN-<slug>.md` への参照が、実在する ADR を指すこと
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join, normalize } from 'node:path'
 
 const adrDir = 'docs/adr'
 const adrFilePattern = /^docs\/adr\/([0-9]{4})-[a-z0-9-]+\.md$/
 const requiredSections = ['背景', '決定', '境界', '検証']
+const testFilePattern = /\.test\.[cm]?[jt]sx?$/
 const statusPattern =
   /^- 状態: (Proposed|Accepted|Deprecated|Superseded by \[ADR-[0-9]{4}\]\([^)]+\))\s*$/m
 
@@ -32,7 +35,7 @@ export function sectionBody(markdown, name) {
 /**
  * 1件の ADR の書式違反を返す。
  *
- * `readTarget(path)` は検証リンク先の本文を返し、存在しなければ null を返す。
+ * `readTarget(path)` はリンク先の本文を返し、ファイルとして存在しなければ null を返す。
  */
 export function validateAdr(file, number, markdown, readTarget) {
   const problems = []
@@ -41,6 +44,9 @@ export function validateAdr(file, number, markdown, readTarget) {
 
   if (!markdown.startsWith(`# ${number}: `))
     report(`first line must be a "# ${number}: <title>" heading`)
+  const superseded = markdown.match(/^- 状態: Superseded by \[ADR-[0-9]{4}\]\(([^)]+)\)/m)
+  if (superseded && readTarget(normalize(join(dirname(file), superseded[1]))) === null)
+    report(`superseding ADR link does not exist: ${superseded[1]}`)
   if (!statusPattern.test(markdown))
     report(
       'status line must be "- 状態: Proposed|Accepted|Deprecated|Superseded by [ADR-NNNN](...)"',
@@ -59,9 +65,10 @@ export function validateAdr(file, number, markdown, readTarget) {
     }
     const target = normalize(join(dirname(file), link.split('#')[0]))
     const content = readTarget(target)
+    const expected = testFilePattern.test(target) ? `[${tag}]` : tag
     if (content === null) report(`verification link does not exist: ${link}`)
-    else if (!content.includes(tag))
-      report(`verification target does not mention ${tag}: ${target}`)
+    else if (!content.includes(expected))
+      report(`verification target does not mention ${expected}: ${target}`)
   }
 
   return problems
@@ -120,7 +127,12 @@ function selfTest() {
     '',
     '- [x.test.ts](../../src/x.test.ts): 検証内容',
   ].join('\n')
-  const targets = { 'src/x.test.ts': `describe('x [${tagOf('0001')}]')`, 'src/y.test.ts': 'no tag' }
+  const targets = {
+    'src/x.test.ts': `describe('x [${tagOf('0001')}]')`,
+    'src/y.test.ts': 'no tag',
+    'src/comment.test.ts': `// ${tagOf('0001')} はコメントだけ`,
+    [`docs/${pathOf('0002-next.md')}`]: '# 0002: 次の判断',
+  }
   const readTarget = (path) => targets[path] ?? null
   const file = `docs/${pathOf('0001-sample.md')}`
 
@@ -132,8 +144,18 @@ function selfTest() {
       valid.replace('../../src/x.test.ts', '../../src/y.test.ts'),
       readTarget,
     ).map((item) => item.message),
-    [`verification target does not mention ${tagOf('0001')}: src/y.test.ts`],
+    [`verification target does not mention [${tagOf('0001')}]: src/y.test.ts`],
     'a verification target without the ADR tag must be reported',
+  )
+  assert.deepEqual(
+    validateAdr(
+      file,
+      '0001',
+      valid.replace('../../src/x.test.ts', '../../src/comment.test.ts'),
+      readTarget,
+    ).map((item) => item.message),
+    [`verification target does not mention [${tagOf('0001')}]: src/comment.test.ts`],
+    'a test file must carry the bracketed tag, not only a comment mention',
   )
   assert.deepEqual(
     validateAdr(
@@ -168,6 +190,16 @@ function selfTest() {
     0,
     'a superseded status with a link must pass',
   )
+  assert.deepEqual(
+    validateAdr(
+      file,
+      '0001',
+      valid.replace('- 状態: Accepted', `- 状態: Superseded by [${tagOf('0002')}](./0002-gone.md)`),
+      readTarget,
+    ).map((item) => item.message),
+    ['superseding ADR link does not exist: ./0002-gone.md'],
+    'a superseded status pointing at a missing file must be reported',
+  )
 }
 
 selfTest()
@@ -195,7 +227,8 @@ const adrs = {
 }
 
 const problems = []
-const readTarget = (path) => (existsSync(path) ? readFileSync(path, 'utf8') : null)
+const readTarget = (path) =>
+  existsSync(path) && statSync(path).isFile() ? readFileSync(path, 'utf8') : null
 
 adrFiles.forEach(({ file, number }, index) => {
   const expected = String(index + 1).padStart(4, '0')

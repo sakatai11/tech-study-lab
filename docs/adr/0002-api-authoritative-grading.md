@@ -29,3 +29,5 @@
 - [api.test.ts](../../packages/shared/src/schema/api.test.ts): 解答リクエストがクライアント申告の正誤を受け付けない
 - [quiz/mapper.test.ts](../../apps/web/src/features/quiz/mapper.test.ts): 演習の ViewModel に正解を含めない
 - [review/mapper.test.ts](../../apps/web/src/features/review/mapper.test.ts): 復習の ViewModel に正解を含めない
+
+テストで直接検証しない決定: 決定 5（正解データを修正しても過去の `answer_logs` を再評価しない）は、`answer_logs` を書き換える処理が存在しないことで守られている。content sync やマイグレーションの変更時にレビューで確認する。
