@@ -24,7 +24,7 @@ const lesson: BundledLesson = {
   ],
 }
 
-describe('quizContentToViewModel', () => {
+describe('quizContentToViewModel [ADR-0002]', () => {
   it('keeps the answer key out of the client view model', () => {
     const viewModel = quizContentToViewModel(lesson, 'security-xss-02')
 

@@ -34,7 +34,7 @@ const queue: ReviewQueueResponse = {
   ],
 }
 
-describe('reviewQueueToViewModel', () => {
+describe('reviewQueueToViewModel [ADR-0002]', () => {
   it('joins API queue metadata with bundled question content on the server boundary', () => {
     const viewModel = reviewQueueToViewModel(queue, questions, 2 * 24 * 60 * 60 * 1000)
 
@@ -50,7 +50,7 @@ describe('reviewQueueToViewModel', () => {
     expect(viewModel.resultHomeHref).toBe('/home')
   })
 
-  it('preserves the API dueAt order for questions and previews', () => {
+  it('preserves the API dueAt order for questions and previews [ADR-0005]', () => {
     const unorderedQueue: ReviewQueueResponse = {
       hasMore: false,
       items: [

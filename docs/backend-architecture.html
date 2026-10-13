@@ -430,8 +430,8 @@
             を利用する。
           </li>
           <li>
-            <strong>採点の権威は API</strong>（design.md
-            §7.2）。クライアントは <code>selectedIndex</code>
+            <strong>採点の権威は API</strong>（ADR-0002・
+            ADR-0003）。クライアントは <code>selectedIndex</code>
             を送るだけで、正解も <code>user_id</code> も信用しない。
           </li>
           <li>
@@ -584,7 +584,7 @@
               <td>固定 <code>user_id</code> の値</td>
               <td><code>middleware/user-context.ts</code></td>
               <td>
-                将来の認証差し替えポイントを 1 箇所に閉じるため（§10.4）。
+                将来の認証差し替えポイントを 1 箇所に閉じるため（ADR-0003）。
               </td>
             </tr>
             <tr>
@@ -908,7 +908,7 @@ export async function submitAnswer(deps: AnswerDeps, input: SubmitAnswerInput) {
   const answerIndex = await deps.findAnswerIndex(input.questionId);
   if (answerIndex === null) throw new QuestionNotFoundError(input.questionId);
 
-  const isCorrect = answerIndex === input.selectedIndex; // 採点権威は API（§7.2）
+  const isCorrect = answerIndex === input.selectedIndex; // 採点権威は API（ADR-0002）
   const current =
     (await deps.findSrsState(input.userId, input.questionId)) ?? initialSrs();
   const nextSrs = reviewSrs(current, isCorrect, input.now); // 純粋関数（sm2）
@@ -946,7 +946,7 @@ export const answersRoute = new Hono&lt;AppEnv&gt;().post(
   async (c) =&gt; {
     const { questionId, selectedIndex } = c.req.valid('json');
     const result = await submitAnswer(createAnswerDeps(drizzle(c.env.DB)), {
-      userId: c.get('userId'), // middleware が注入済み（§10.4）
+      userId: c.get('userId'), // middleware が注入済み（ADR-0003）
       questionId,
       selectedIndex,
       now: Date.now(),
@@ -1032,7 +1032,7 @@ import type { AppEnv } from '../env';
 const FIXED_USER_ID = 'user-local-001';
 
 // 将来公開時は「認証情報から userId を解決する実装」に差し替えるだけ。
-// route・service・API 契約は変わらない（design.md §7.2）
+// route・service・API 契約は変わらない（ADR-0003）
 export const userContext = createMiddleware&lt;AppEnv&gt;(async (c, next) =&gt; {
   c.set('userId', FIXED_USER_ID);
   await next();

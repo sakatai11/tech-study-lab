@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -59,7 +61,7 @@ const rateLimitBoundaryFixtures = [
   },
 ] as const
 
-describe('persistent write rate limits', () => {
+describe('persistent write rate limits [ADR-0004]', () => {
   it.each(rateLimitBoundaryFixtures)(
     '$rateLimit.endpoint allows N-1 and N requests, rejects N+1, then resets in the next window',
     async ({ rateLimit, boundary }) => {
@@ -97,12 +99,27 @@ describe('persistent write rate limits', () => {
 
     await checkPersistentWriteRateLimit(answerLimiter, 'user-1', persistentWriteRateLimits.answers)
 
-    expect(answerLimiter.keys).toEqual([
-      createPersistentWriteRateLimitKey('user-1', persistentWriteRateLimits.answers),
-    ])
+    expect(answerLimiter.keys).toEqual(['user-1:POST /answers'])
     expect(createPersistentWriteRateLimitKey('user-1', persistentWriteRateLimits.answers)).not.toBe(
       createPersistentWriteRateLimitKey('user-1', persistentWriteRateLimits.lessonViews),
     )
+  })
+
+  it('declares one binding per endpoint with the fixed window and limits in wrangler.toml', () => {
+    const toml = readFileSync(new URL('../wrangler.toml', import.meta.url), 'utf8')
+    const declared = toml
+      .split('[[ratelimits]]')
+      .slice(1)
+      .map((block) => ({
+        name: block.match(/^name = "([^"]+)"/m)?.[1],
+        limit: Number(block.match(/^\s*limit = (\d+)/m)?.[1]),
+        period: Number(block.match(/^\s*period = (\d+)/m)?.[1]),
+      }))
+
+    expect(declared).toEqual([
+      { name: 'ANSWERS_RATE_LIMITER', limit: 60, period: 60 },
+      { name: 'LESSON_VIEWS_RATE_LIMITER', limit: 30, period: 60 },
+    ])
   })
 
   it('fails closed when the platform limiter is unavailable', async () => {

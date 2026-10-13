@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { AppEnv } from './env'
 import { type PlatformRateLimiter, persistentWriteRateLimits } from './persistent-write-rate-limit'
@@ -22,8 +22,13 @@ function createApp(limiter: PlatformRateLimiter) {
     })
 }
 
-describe('guardPersistentWriteRateLimit', () => {
+describe('guardPersistentWriteRateLimit [ADR-0004]', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   it('returns the shared 429 contract with Retry-After when the limiter denies a write', async () => {
+    const info = vi.spyOn(console, 'info').mockImplementation(() => undefined)
     const response = await createApp({
       async limit() {
         return { success: false }
@@ -32,12 +37,20 @@ describe('guardPersistentWriteRateLimit', () => {
 
     expect(response.status).toBe(429)
     expect(response.headers.get('Retry-After')).toBe('60')
+    expect(info).toHaveBeenCalledWith(
+      JSON.stringify({
+        event: 'persistent_write_rate_limited',
+        endpoint: 'POST /answers',
+        writeUnit: 'answer_log_and_srs_state',
+      }),
+    )
     await expect(response.json()).resolves.toEqual({
       error: { code: 'RATE_LIMITED', message: 'Too Many Requests' },
     })
   })
 
   it('returns the shared fail-closed 503 contract when the limiter is unavailable', async () => {
+    const info = vi.spyOn(console, 'info').mockImplementation(() => undefined)
     const response = await createApp({
       async limit() {
         throw new Error('limiter unavailable')
@@ -45,6 +58,13 @@ describe('guardPersistentWriteRateLimit', () => {
     }).request('https://api.test/', { method: 'POST' })
 
     expect(response.status).toBe(503)
+    expect(info).toHaveBeenCalledWith(
+      JSON.stringify({
+        event: 'persistent_write_rate_limit_unavailable',
+        endpoint: 'POST /answers',
+        writeUnit: 'answer_log_and_srs_state',
+      }),
+    )
     await expect(response.json()).resolves.toEqual({
       error: { code: 'RATE_LIMIT_UNAVAILABLE', message: 'Rate limit unavailable' },
     })

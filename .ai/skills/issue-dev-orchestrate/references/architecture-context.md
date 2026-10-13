@@ -2,7 +2,7 @@
 
 `architecture/graph.json` は、リポジトリの構造（ファイル・endpoint・schema・依存関係）を抽出したスナップショットである。構造調査の入口として使うと、読むべき範囲を素早く絞れる。
 
-Graph は仕様の一次ソースではない。設計意図と振る舞いの一次ソースは `docs/design.md`、現在の構造の一次ソースはコードと設定である。Graph で見つけた候補は、必ずコード・型・テスト・設計文書で確認する。抽出対象と制限は `architecture/README.md` を参照する。
+Graph は設計契約の一次ソースではない。設計契約の一次ソースは ADR（`docs/adr/`）と、未移行の契約を持つ `docs/design.md` である。現在の構造の一次ソースはコードと設定である。Graph で見つけた候補は、必ずコード・型・テスト・ADR で確認する。抽出対象と制限は `architecture/README.md` を参照する。
 
 ## 調査
 
@@ -26,7 +26,7 @@ pnpm architecture:extract
 git diff -- architecture/graph.json
 ```
 
-- **コミットしてよい差分**: 変更内容・受け入れ条件・`docs/design.md` から説明できる差分だけをコミットに含める。
+- **コミットしてよい差分**: 変更内容・受け入れ条件・関連 ADR から説明できる差分だけをコミットに含める。
 - **説明できない差分**: 期待しない node / edge の消失、出典の混線、抽出できない新しい構文が出た場合は、原因を解消するまで品質ゲートを通過扱いにしない。
 - **手編集の禁止**: snapshot を手で編集して、失敗を隠さない。
 - **最後の確認**: `pnpm architecture:check` と `pnpm architecture:test` を通す。

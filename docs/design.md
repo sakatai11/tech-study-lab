@@ -2,14 +2,15 @@
 
 ソフトウェア学習アプリ。個人エンジニアが「セキュリティ / フロントエンド・バックエンドのフレームワーク / アーキテクチャ設計」を、読み物（教材）と4択問題演習で学ぶ。解答ログを分析し、SRS（間隔反復）アルゴリズムで出題を最適化する。開発自体をAI駆動で進めることを主目的とし、その基盤を構築する。
 
-本書は **プロダクト仕様・設計意図・振る舞い・不変条件・許可する依存方向の一次ソース**であり、仕様駆動開発の起点となる。仕様を変更する場合は、先に本書の契約を更新してから実装する。実装が契約に違反しているだけの場合は、契約を実装に合わせて緩めず、不具合として修正する。
+本書は **プロダクト方針・許可する依存方向と、まだ ADR へ移していない設計契約**を持ち、[ADR 索引](./adr/README.md)への入口になる。設計契約は [ADR-0001](./adr/0001-contracts-as-adr-and-tests.md) に従い、段階的に [ADR](./adr/README.md)（理由と境界）とテスト（不変条件の検証）へ移している。ADR へ移した節は本書から削除し、参照箇所は ADR へリンクする。章番号は振り直さない。契約を新設・変更する場合は、実装より先に ADR を作る（未移行の節の変更も同様）。実装が契約に違反しているだけの場合は、契約を実装に合わせて緩めず、不具合として修正する。
 
 | 情報 | 一次ソース・役割 |
 | --- | --- |
-| 何を実現し、なぜその設計を採り、何を守るか | 本書。設計契約は各節の一箇所で定義し、他の節は参照する |
+| 何を守るか・なぜその設計を採ったか・どこまで適用するか | [ADR](./adr/README.md)。未移行の契約は本書の各節の一箇所で定義し、他の節は参照する |
+| プロダクト方針・依存方向 | 本書 |
 | 現在のファイル配置・型・schema・関数シグネチャ・設定 | コードと設定。正確な宣言や現在の構成を本書へ複製しない |
 | 現在構造の探索・変更影響の候補 | [Knowledge Graph](../architecture/README.md)。コード・設定から抽出する参照データであり、仕様や実行時挙動の証明ではない |
-| 契約を満たすことの検証 | 型チェック・テスト・実行確認。テストは根拠であり、仕様変更を単独で承認するものではない |
+| 契約を満たすことの検証 | 型チェック・テスト・実行確認。ADR を検証するテストは `describe` / `it` 名に `[ADR-NNNN]` を付ける。テストは根拠であり、契約の変更を単独で承認するものではない |
 | 実装状況・残タスク・完了記録 | GitHub Issue / PR。完了済みタスク一覧は本書に残さない |
 | 過去の調査・比較・検証結果 | 日付と対象を明記した独立した検証記録またはADR。現在も有効な制約は本書から参照できるようにする |
 
@@ -73,7 +74,7 @@ pnpm workspaces による monorepo。
 
 - `apps/api` が自身の wrangler 設定を完全所有できる。D1 マイグレーションや将来の Cron Triggers / Queues 等の Workers プラットフォーム機能を、web 側の wrangler 設定・Vinext ビルドに巻き込まずに使える。デプロイも独立する（API の変更に web のビルドが不要）。
 - 同居構成ではリクエストが「Next.js ルーター → Route Handler → Hono ルーター」の二段になり、Next middleware と Hono middleware の責務境界が濁る。なお Hono の RPC・`zValidator`・middleware 自体は Route Handler 内でも動くため、失うのは Hono の機能ではなく Workers との直結と独立性である。
-- 既存の設計判断と整合する：§8.3 のキャッシュ方針は「mutation（`POST /answers`）が Next.js のサーバーコンテキストを経由しない」ことを前提とし、§7.2 の採点権威・`user_id` 注入点も API 側にある。API 契約（`AppType`）を `apps/api` に一本化する §5 のガードレールとも噛み合う。
+- 既存の設計判断と整合する：§8.3 のキャッシュ方針は「mutation（`POST /answers`）が Next.js のサーバーコンテキストを経由しない」ことを前提とし、採点権威（[ADR-0002](./adr/0002-api-authoritative-grading.md)）・`user_id` 注入点（[ADR-0003](./adr/0003-server-injected-user-id.md)）も API 側にある。API 契約（`AppType`）を `apps/api` に一本化する §5 のガードレールとも噛み合う。
 - Hono + Cloudflare を学ぶドッグフーディング目的（§2）を素通りしない。
 
 **接続経路**（`hc` クライアント側の取り回しは §8.4）：
@@ -151,26 +152,14 @@ D1 側（content 同期キャッシュ。4.2 の seed/upsert 対象）:
 
 content sync は、現在の content に含まれる問題の metadata と `answer_index` を先に冪等 upsert し、最後に1回の `UPDATE questions SET is_active = CASE ... END` で現在の問題集合を確定する。同期途中で全件を inactive に倒さないため、upsert 失敗時は直前の active 集合を維持する。現在の問題集合が空の場合も、最終 UPDATE により全行を inactive とする。`GET /domains` は `is_active = 1` の問題だけを対象にし、対象ユーザーの `srs_states.interval_days >= 21` を習得済みとして集計する。
 
-### 4.5 出題ルール（SRS 運用仕様）
-
-SM-2 の計算式は [sm2.ts](../packages/shared/src/srs/sm2.ts)、その周辺の出題・記録ルールは本節を参照する。
-
-**前提**：新規問題は学習フロー（教材 → `/quiz`）で必ず解答する。したがって `/review` は解答済み問題（`srs_states` を持つ問題）のみを扱い、SRS のサイクルは初回解答から始まる。
-
-- **SRS 更新の入口は 1 つ**：`POST /answers` は呼び出し元（`/quiz`・`/review`・`wrongOnly`）を区別せず、1 解答ごとに `answer_log` 記録と SRS 更新を必ず行う。演習と復習で採点・記録の仕様差を作らない（API はリクエストの文脈を持たない）。演習（`/quiz`）で正解した問題が SM-2 に従い翌日 due になるのは意図した挙動である。
-- **due queue の順序と上限**：API が `dueAt` 昇順（滞留が古いものから）で返す。1 回のレスポンスは**最大 20 件**で、`hasMore` で残バッチの有無を返す。フロントは順序を並べ替えず、完了後に `hasMore` が真なら `router.refresh()` で次のバッチを取得する（§9.2 の再取得動線と整合）。
-- **due件数の意味**：`GET /dashboard/due-count` は `due_at <= now` の生のdue-state件数であり、contentとのjoinや20件上限では減らさない。`ReviewViewModel.dueCount` は現在バッチをbundled contentとjoinして表示できる問題数。contentから削除されたIDはmapperで除外する。表示件数と `hasMore` による空キュー・整合性エラーの分岐は §9.2に従う。
-- **同一問題の複数回解答**：制御しない。解答のたびに SRS を更新する（最後の解答が次回出題日を決める）。`answer_logs` には全解答が残るため、事後分析は可能。
-- **正解データの修正**：content の `answerIndex` を修正しても、過去の `answer_logs` は再評価しない（記録時点の判定を保持する）。
-
 ## 5. AI駆動開発の基盤
 
 ### 方針
 
-- **目標**：仕様駆動・スキル化・ガードレールの **統合**。
+- **目標**：契約駆動・スキル化・ガードレールの **統合**。
 - **整備順**：
   1. **ガードレール（C）** — 型安全・テスト・CI。「動くが間違ったコード」を最初に防ぐ土台
-  2. **仕様駆動（A）** — 本書を一次ソースに、機能の意図を文書化。AIのコンテキストと人間のレビュー基準を揃える
+  2. **契約駆動（A）** — 判断の理由と境界を ADR に、不変条件をテストに置き、AIのコンテキストと人間のレビュー基準を揃える（[ADR-0001](./adr/0001-contracts-as-adr-and-tests.md)）
   3. **スキル化（B）** — 反復作業（教材取込・問題追加・マイグレーション等）が見えた段階でスキル/サブエージェント化
 
 ### ガードレールの中身
@@ -181,7 +170,7 @@ SM-2 の計算式は [sm2.ts](../packages/shared/src/srs/sm2.ts)、その周辺�
 - Zod でスキーマ駆動バリデーション（`zValidator` ＋ フロント共有）
 - 依存境界（レイヤー間の import 許可）を dependency-cruiser（`.dependency-cruiser.cjs`）で機械検証
 - GitHub Actions で型チェック・lint（Biome＋依存境界）・test・build を **PR ゲート**化
-- AIハーネスの hook の動作と、Claude Code / Codex の構成整合（発見用リンク、Codex agent TOML、パス別ルールの参照）を `pnpm test:hooks` で機械検証し、同じ **PR ゲート**に含める。契約文書の文言そのものは検査しない
+- AIハーネスの hook の動作と、Claude Code / Codex の構成整合（発見用リンク、Codex agent TOML、パス別ルールの参照）、ADR と検証テストの対応を `pnpm test:hooks` で機械検証し、同じ **PR ゲート**に含める。契約文書の文言そのものは検査しない
 
 ### 依存境界の機械検証（dependency-cruiser）
 
@@ -214,10 +203,10 @@ SM-2 の計算式は [sm2.ts](../packages/shared/src/srs/sm2.ts)、その周辺�
 | `/` 公開トップ | 個人開発者向けの AI 駆動ソフトウェア学習ラボを説明し、「教材を読む → 4択で確かめる → 間隔をあけて復習する」学習ループを示す（公開トップでは「SRS」という語を前提にしない）。明確なログイン CTA から `/home` へ進む | なし。プロダクト説明だけを静的に表示する | 静的 RSC。`AppShell`・dashboard loader・API client・Service Binding・due-count Client hook/provider を import せず、ユーザー固有データを読まない | 「ログインして学習を始める」→ `/home` |
 | `/home` ホーム（ダッシュボード） | **今日の復習（due）が主役**。学習統計（正答率・学習時間・連続学習日数）・学習コントリビューション（草＝日次解答数ヒートマップ）・領域別習得状況・最近のアクティビティ・次のレッスン導線を併せ持つ | due 件数は独立した API（Server loader → `hc`）。summary・heatmap・domains・recent activity は同一の非キャッシュ loader が同じ API client から並列取得し、`/home` で実データを表示する | 通常 SSR。各リクエストで Server loader を実行し、ユーザー固有データを共有キャッシュしない | 「復習を始める」→ `/review`（due が0件の時は出さない）、「教材を読む」→ `/learn/...` |
 | `/domains` 学習領域 | 現行は `GET /domains` の実データを使い、4つの学習領域をカードで俯瞰する。各カードに習得率・習得済み/全問題数・トピック数・レッスン数と、コンテンツ上の先頭トピックへの導線（該当しない場合は「準備中」）を表示する。詳細な done ✓ / current ▶ / locked 🔒 のディレクトリツリー（スキルツリー）は後続スコープとする（§8.7）。ツリーを実装するまで、画面名・ナビ名は「学習領域」とする。 | 領域別集計は API（`GET /domains`）。領域カードは `/domains` と `/home` が共通の props 境界を介して表示する | 通常 SSR。Server loader が各リクエストのユーザー固有集計を取得する | 先頭トピックあり → `/learn/[domain]/[topic]`、なし → 「準備中」 |
-| `/learn` 教材一覧 | 4領域ごとのトピック一覧。領域・トピックの表示名と順序は §11.3 に従い、レッスンが1件以上あるトピックにレッスン数を表示する。教材のない領域・レッスン0件のトピックは「準備中」とし、リンクを表示しない。レッスン0件のトピックでは「0レッスン」の表示を省略する | ビルド時バンドル済み content（Server loader → mapper → ViewModel → RSC）。一覧の初期取得・描画にAPI不要 | ユーザー固有データを読まない静的 RSC。ビルド時にプリレンダリングし、PPR streaming 対象外 | トピック選択 → `/learn/[domain]/[topic]` |
-| `/learn/[domain]/[topic]` レッスン一覧 | トピック内のレッスン一覧（初期は XSS 1本） | ビルド時バンドル済み content（RSC） | `generateStaticParams` による標準 SSG。PPR streaming 対象外 | 各レッスンへ |
-| `/learn/[domain]/[topic]/[lesson]` 教材本文 | Markdown 本文表示 | ビルド時バンドル済み content（RSC。本文の初期取得・描画にはAPI不要）・閲覧記録のみAPI（最小Client recorder） | `generateStaticParams` による標準 SSG。PPR streaming 対象外 | 「問題を解く」→ `/quiz/[lesson]` |
-| `/quiz/[lesson]` 演習 | イントロ（レッスン概要の確認）→ 全問を 1 問ずつ即時採点 → 結果サマリ、を 1 画面内のクライアント状態遷移（`intro → exercise → result`）で完結。演習ナビ・教材本文の両方から入れる | 問題＝content（RSC で初期化）/ 解答記録＝API | `generateStaticParams` による標準 SSG。PPR streaming 対象外 | 完了 → 「次のレッスンへ」／「すべて解き直す」 |
+| `/learn` 教材一覧 | 4領域ごとのトピック一覧。領域・トピックの表示名と順序は §11.3 に従い、レッスンが1件以上あるトピックにレッスン数を表示する。教材のない領域・レッスン0件のトピックは「準備中」とし、リンクを表示しない。レッスン0件のトピックでは「0レッスン」の表示を省略する | ビルド時バンドル済み content（Server loader → mapper → ViewModel → RSC）。一覧の初期取得・描画にAPI不要 | ユーザー固有データを読まない静的 RSC。ビルド時にプリレンダリング | トピック選択 → `/learn/[domain]/[topic]` |
+| `/learn/[domain]/[topic]` レッスン一覧 | トピック内のレッスン一覧（初期は XSS 1本） | ビルド時バンドル済み content（RSC） | `generateStaticParams` による標準 SSG | 各レッスンへ |
+| `/learn/[domain]/[topic]/[lesson]` 教材本文 | Markdown 本文表示 | ビルド時バンドル済み content（RSC。本文の初期取得・描画にはAPI不要）・閲覧記録のみAPI（最小Client recorder） | `generateStaticParams` による標準 SSG | 「問題を解く」→ `/quiz/[lesson]` |
+| `/quiz/[lesson]` 演習 | イントロ（レッスン概要の確認）→ 全問を 1 問ずつ即時採点 → 結果サマリ、を 1 画面内のクライアント状態遷移（`intro → exercise → result`）で完結。演習ナビ・教材本文の両方から入れる | 問題＝content（RSC で初期化）/ 解答記録＝API | `generateStaticParams` による標準 SSG | 完了 → 「次のレッスンへ」／「すべて解き直す」 |
 | `/review` 復習 | イントロ（本日の due キューを dueAt 昇順・滞留日数付きでプレビュー）→ due 問題をレッスン横断で 1 問ずつ即時採点 → 結果サマリ、を 1 画面内のクライアント状態遷移で完結 | queue＝API（`GET /review/queue`）/ 問題本文＝content / 記録＝API | 通常 SSR。初回 queue は Server loader が取得し、due バッジと本文は React `cache()` の request-local dedupe を共有する | 完了 → 「ホームへ」／「間違えた問題を解き直す」 |
 | `/analytics` 学習分析 | 解答ログ・SRS状態を集計した学習分析ビュー（総解答数・正答率・平均反応時間・習得済み問題数・週次アクティビティ・SRS定着度分布・間違えやすい問題ランキング） | 集計値は API（§7.3） | 通常 SSR。Server loader が各リクエストのユーザー固有集計を取得する。忘却曲線・復習タイミングは対象外 | サイドバーの「学習分析」→ `/analytics` |
 
@@ -226,16 +215,14 @@ SM-2 の計算式は [sm2.ts](../packages/shared/src/srs/sm2.ts)、その周辺�
 - **教材の入口**：PC のサイドバー・SP の下部タブの「教材」は、教材の有無にかかわらず `/learn` に遷移する。`/learn` と配下のトピック一覧・教材本文では「教材」を選択状態にする。ホームの「教材を読む」は、bundle 済み content の先頭レッスンの教材本文へ遷移する。学習の続きを記録していないため、「続きから」のように進捗を前提とする名前にしない。教材一覧はトピックの `index.md` と各トピックのレッスンを content loader 経由で取得する。トピックの `order` が同じ場合は識別子の昇順で安定させる。新規トピック・レッスンを規約に沿って `content/` に追加して再ビルドすると、一覧のコード変更なしで反映される（公開環境には成果物の再デプロイも必要）。
 - **データ取得（ハイブリッド）**：教材・問題はビルド時バンドル済み content を RSC / Server loader から読む。解答記録・SRS・due など動的データのみ Hono API を `hc` で呼ぶ。D1 への seed は配信・集計用キャッシュとして維持し、表示の主経路は content。
 - **演習フロー**：1 問ずつ表示 → 即時に正誤＋解説 → 確定で選択肢をロック → 末尾に結果サマリ。**1 問解答＝1 `answer_log` POST**（SRS は問題粒度で更新）。
-- **正誤判定の権威はAPI（サーバー）**：Quiz/Review の `QuizViewModel` は選択肢と解説のみを持ち、正解（`answerIndex`）を含めない。クライアントは選んだ `selectedIndex` を `POST /answers` に送り、API が D1 の `questions`（4.4）と照合して `is_correct` を判定・記録し、結果（`isCorrect` / `correctIndex`）を返す。将来公開後もクライアントバンドルに正解を露出しない。
 - **Quiz 表示コンポーネント**：問題・解説・intro 内容・結果導線を表示 props で受け取り、画面フェーズと問題送りを管理する再利用可能な Client Component として設計する。`/quiz`（レッスン全問）・`/review`（due 問題）・「間違えた問題だけ」（`wrongOnly`）では、Server loader / mapper が組み立てる ViewModel と表示 props の供給元だけを差し替える。解答 mutation と通信 state は共通の Client hook が担当する。
 - **問題なしの扱い**：`QuizInteractive` は `questions` が空の場合に「出題できる問題がありません」を明示表示し、開始 CTA は表示しない。設定済みの戻り先（`resultHomeHref` / `resultHomeLabel`）は維持する。
-- **Review の空キュー判定**：`/review` は mapper 後の joined 表示件数と API の `hasMore` を Server Component で判定する。joined 表示件数 0・`hasMore: false` は通常の空キューカード（「今は復習する問題はありません」）、joined 表示件数 0・`hasMore: true` は bundled content と保存済み review state の不整合として error boundary へ送る。joined 表示件数が 1 以上なら `hasMore` の値を問わず `ReviewRunner` を表示する（§4.5・§9.2）。
+- **Review の空キュー判定**：`/review` は mapper 後の joined 表示件数と API の `hasMore` を Server Component で判定する。joined 表示件数 0・`hasMore: false` は通常の空キューカード（「今は復習する問題はありません」）、joined 表示件数 0・`hasMore: true` は bundled content と保存済み review state の不整合として error boundary へ送る。joined 表示件数が 1 以上なら `hasMore` の値を問わず `ReviewRunner` を表示する（[ADR-0005](./adr/0005-srs-review-rules.md)・§9.2）。
 - **結果サマリの動線（出し分け）**：`/quiz` は学習の前進が目的 → 「次のレッスンへ」。`/review` は due 消化が目的 → 「ホームへ」（`/home`）、残バッチがあれば「続けて復習する」。両者で「すべて解き直す」「間違えた問題を解き直す」を提供する（同じ画面内のやり直しで、SRS の「復習」とは呼ばない）。結果の見出しは `/quiz` が「演習完了」、`/review` が「復習完了」とし、表示 props で受け取る。最終問題の送りボタンは「結果を見る」とする。
 - **イントロ・演習・結果の状態遷移（URL は変えない）**：演習・復習とも 1 ルート内で `intro → exercise → result` のクライアント状態遷移を持つ（別 URL に切らない。モックの実装モデルに一致）。`intro` は開始前の確認（対象レッスンの概要／due 件数・滞留日数のプレビュー）に専念し、`exercise` は 1 問ずつ即時採点、`result` はスコア・問題ごとの正誤一覧・出し分けアクションを表示する。初回データ（問題・解説、`/review` は due queue）は Server loader で ViewModel 化して props で渡し、状態遷移そのものは Client Component が持つ（§8.5・§9.4 の `QuizInteractive` と同じ設計）。結果表示は `/quiz` と `/review` で共通コンポーネントとして再利用する。
 - **ID 設計**：`lessonId` / `questionId` は**グローバル一意**。学習導線は階層 URL（`/learn/...`）、演習・復習はフラット URL（`/quiz/[lesson]`・`/review`）。
 - **レイアウト（サイドバー / ボトムタブ）**：`/home` 以下の学習画面では、PC は左サイドバー（ロゴ＋テーマトグル＋ホーム／教材／演習／復習（due件数バッジ）／学習分析／学習領域）、本文は右側 1 カラム。SP は上部アプリバー（ロゴ＋ストリーク表示＋テーマトグル）＋下部固定タブバー（**ホーム／教材／演習／復習（dueバッジ）／領域の5項目**）。ナビ名は PC・SP で同じ語にし、SP では「学習領域」だけを「領域」と短縮する。ホームのナビゲーション先は `/home` とする。「演習」「復習」ナビ項目は直前に扱っていたレッスン（未着手なら先頭レッスン）を対象とする簡易ヒューリスティックで遷移先を決定する（MVP は XSS 1本のため実質固定）。SP のタブバーはスペース都合で 5 項目に絞り、「学習分析（`/analytics`）」へはホームの「学習分析を見る」リンクから遷移する。「設定」は将来の公開機能（認証等、§1 スコープ外）向けで、MVP ではナビに置かない。ナビ項目のアイコンは §8.7 の Material Symbols を使い、ホーム `home`・教材 `menu_book`・演習 `contract_edit`・復習 `event_repeat`・学習分析 `bar_chart`・学習領域／領域 `category` とする（PC・SP で同じアイコン）。SP のストリーク表示は `local_fire_department` を添える。テーマトグルは切り替え先のテーマのアイコン（ダーク表示中は `light_mode`、ライト表示中は `dark_mode`）を表示し、切り替え動作の説明（「ライトテーマに切り替える」等）を読み上げ名にする（`aria-pressed` は併用しない）。アイコンと読み上げ名は、描画前に確定する `html[data-theme]` に応じて CSS で出し分ける `sr-only` テキストで持ち、React の state から補正しない（ライトテーマでも初回描画から一致させる）。
 - **公開・認証境界**：`/` は公開の静的プロダクト入口である。`/home` とユーザー向け学習ルート（`/learn/...`・`/quiz/...`・`/review`・`/domains`・`/analytics`）は本番で Cloudflare Access により保護する。アプリ内のログイン・セッションは持たず、公開トップの「ログインして学習を始める」は `/home` へリンクするだけとする。Cloudflare Access Application/Policy と route pattern（`/` は公開、`/home` とユーザー向け route は保護）の設定・デプロイ後検証は Issue #35 の責務である。
-- **ユーザー**：アプリ管理のログイン UI・セッションは持たない。API（Hono）側が固定 `user_id` を権威的に注入する。将来公開時は「固定値を返す関数」を「認証から `user_id` を引く関数」に差し替えるだけで、画面・API 契約は不変。
 - **SSR / SSG**：認証後画面は通常 SSR、教材・演習の content route は `generateStaticParams` による標準 SSG とする。復習の request-local dedupe とバッチ表示契約は §8.3・§9.2に従う。
 - **スタイリング**：Tailwind CSS ＋ Dev-Native Neo Flat × Terminal デザインシステム（ダークファースト）。詳細トークン・コンポーネント文法・ゲーミフィケーション表現の実装区分は §8.7。
 
@@ -245,9 +232,9 @@ SM-2 の計算式は [sm2.ts](../packages/shared/src/srs/sm2.ts)、その周辺�
 
 HTTP 入出力、リクエスト・レスポンスの実例（JSON）、Zod スキーマの実装状況、後続エンドポイントの planned 状態は [API 仕様カタログ](./api-spec.html) を参照する。本節は画面から要請される API の高水準な一次仕様として維持する。
 
-- `POST /answers` — 1 問解答の記録 → SRS 更新。リクエスト `{ questionId, selectedIndex, responseTimeMs? }`、レスポンス `{ isCorrect, correctIndex }`。正誤判定は API が D1 の `questions`（4.4）を照合して行う権威側（7.2）。検証済みの middleware 注入 `userId` ごとに、この endpoint 専用の 60 秒固定窓で 60 回までを受理する（§10.3.1）。
-- `POST /lesson-views` — 教材の閲覧を記録。strict なリクエスト `{ lessonId }` を受け、middleware が注入した `userId` のみを使用して `lesson_views` へ記録し、`201 { recorded: true }` を返す。クライアントは `userId` を送らない。重複排除、配送保証、lesson の存在確認はこの最小ログでは行わない。検証済みの middleware 注入 `userId` ごとに、この endpoint 専用の 60 秒固定窓で 30 回までを受理する（§10.3.1）。
-- `GET /review/queue` — due 問題の `question_id` ＋ SRS メタと、次バッチの有無 `hasMore` を返す（本文はフロントがビルド時データから解決）。APIが`dueAt`昇順・最大20件を保証する（§4.5）
+- `POST /answers` — 1 問解答の記録 → SRS 更新。リクエスト `{ questionId, selectedIndex, responseTimeMs? }`、レスポンス `{ isCorrect, correctIndex }`。正誤判定は API が D1 の `questions`（4.4）を照合して行う権威側（[ADR-0002](./adr/0002-api-authoritative-grading.md)）。永続書き込みのレート制限は [ADR-0004](./adr/0004-persistent-write-rate-limit.md)。
+- `POST /lesson-views` — 教材の閲覧を記録。strict なリクエスト `{ lessonId }` を受け、middleware が注入した `userId` のみを使用して `lesson_views` へ記録し、`201 { recorded: true }` を返す。クライアントは `userId` を送らない。重複排除、配送保証、lesson の存在確認はこの最小ログでは行わない。永続書き込みのレート制限は [ADR-0004](./adr/0004-persistent-write-rate-limit.md)。
+- `GET /review/queue` — due 問題の `question_id` ＋ SRS メタと、次バッチの有無 `hasMore` を返す（本文はフロントがビルド時データから解決）。APIが`dueAt`昇順・最大20件を保証する（[ADR-0005](./adr/0005-srs-review-rules.md)）
 - `GET /dashboard/due-count` — ダッシュボードの due 件数
 - `GET /domains` — `/domains` の4領域カード向けに、領域それぞれの習得率（習得済み問題数 / 全問題数）・トピック数・レッスン数を返す
 - `GET /analytics/summary` — 総解答数・正答率・平均反応時間・習得済み問題数（SRS interval ≥ 21日）・連続学習日数・今週の学習時間・SRS定着度分布（§4.4 の `lesson_views`・`answer_logs.response_time_ms`・`srs_states` から集計）
@@ -313,7 +300,7 @@ HTTP 入出力、リクエスト・レスポンスの実例（JSON）、Zod ス�
 - content 参照は `apps/web/src/lib/content.ts` に集約する。`getLessonContent(lessonId)`・`getLessonsByTopic(domain, topic)`・`getBundledQuestions()`・`getQuestionById(questionId)` を共通関数として用意し、初回表示の実行経路では `features/*/server` の Server loader だけが呼び出す。page は loader、mapper は引数で渡された Content data だけを参照し、`lib/content` を直接 import しない。ビルド・同期スクリプトと `lib/content` 自身のテストはこの制約の対象外とする。
 - `getBundledQuestions()` は `/review` の `question_id` 解決用に `questionId` index を返せる形にする。各 feature で frontmatter 配列を直接走査しない。
 - **同じパース経路を `content/` → D1 seed/upsert スクリプトでも再利用**し、フロント表示と D1 配信を単一ソースから導く（4.2 の責務分離を維持）。
-- `/learn/...` と `/quiz/...` は content 由来の標準 SSG を維持し、PPR streaming の対象にしない。`generateStaticParams` で全 params を返し、route params は `lib/content` の `getLessonRouteParams()` / `getTopicRouteParams()` / `getQuizRouteParams()` を feature loader 経由で読み、page から `lib/content` を直接 import しない。
+- `/learn/...` と `/quiz/...` は content 由来の標準 SSG を維持する。`generateStaticParams` で全 params を返し、route params は `lib/content` の `getLessonRouteParams()` / `getTopicRouteParams()` / `getQuizRouteParams()` を feature loader 経由で読み、page から `lib/content` を直接 import しない。
 - `/learn` は固定URLの静的 RSC としてプリレンダリングする。`features/lesson/server` の一覧 loader が共通 content loader から全トピックとレッスン数を取得し、mapper で領域別に整形する。領域・トピックの一覧やリンクを画面コードへ固定しない。
 
 ### 8.3 Server / Client コンポーネント境界
@@ -328,13 +315,13 @@ HTTP 入出力、リクエスト・レスポンスの実例（JSON）、Zod ス�
 #### 通常SSR・標準SSGの規範
 
 - `/` はユーザー固有データを読まない静的 RSC、`/home`・`/review`・`/domains`・`/analytics` は `dynamic = 'force-dynamic'` を指定した通常のリクエスト時 SSR とする。各 Server loader はリクエストごとに実行し、ユーザー固有データを共有キャッシュしない。
-- 教材・演習の content route は `generateStaticParams` で全 params を列挙する標準 SSG とする（content 取得の契約は §8.2）。`cacheComponents`、`'use cache'`、PPR streaming、専用 fallback composition は採用しない。
+- 教材・演習の content route は `generateStaticParams` で全 params を列挙する標準 SSG とする（content 取得の契約は §8.2）。`cacheComponents`、`'use cache'` は採用しない。
 - `/learn` はAPIを呼ばず、ビルド時の content だけで一覧本文を生成する静的 RSC とする。共通シェルのユーザー固有 due バッジは既存の Client leaf が表示後に取得し、静的成果物へ含めない。
 - `/home` は due 件数カードと本体を同一 SSR の中で取得し、due 件数と summary・heatmap・domains・recent activity はそれぞれの loader 契約を保つ。loader 内の API 呼び出しは可能な範囲で並列化する。`/domains` は4領域の集計、`/analytics` は summary・weekly・mistakesを読む。忘却曲線・復習タイミングは対象外。
 - due件数・統計・review queue・domains／analytics集計には共有キャッシュを使わない。APIが注入するuser_idをwebの共有キャッシュキーに含められず、ユーザー間の混入が起こり得るためである。
 - Reactの `cache()` によるリクエスト内の取得共有は許可する。ユーザー横断の共有キャッシュとは区別する。復習のdueバッジと本文の取得共有・表示分岐・次バッチへの遷移は §9.2で定義する。
 - 解答後や画面復帰時は `router.refresh()` で Server loader を再実行して鮮度を回復する。復習のバッチ完了時の条件は §9.2。
-- web Worker は API Service Binding と静的 asset 配信に必要な最小構成だけを使う。content route のビルド時 HTML / RSC は Vinext の `prerender` と `@vinext/cloudflare` の `staticAssetsAdapter` で `ASSETS` binding から配信し、内部 cache artifact（`/_vinext/static-cache/*`）は `assets.run_worker_first` で Worker へ通して外部からの直接取得を防ぐ。PPR/ISR 専用の Incremental Cache、R2、KV、Durable Object Queue の有効 binding、Worker 自己参照 binding は持たない。OpenNext 時代に本番 Worker へ登録した `DOQueueHandler` を廃止した履歴として、`apps/web/wrangler.jsonc` の top-level には `v1` の作成履歴と後続の `v2` `deleted_classes` migration を保持する。Wrangler は top-level の `migrations` を env へ継承するため、検証用 env は空の `migrations` を明示する。
+- web Worker は API Service Binding と静的 asset 配信に必要な最小構成だけを使う。content route のビルド時 HTML / RSC は Vinext の `prerender` と `@vinext/cloudflare` の `staticAssetsAdapter` で `ASSETS` binding から配信し、内部 cache artifact（`/_vinext/static-cache/*`）は `assets.run_worker_first` で Worker へ通して外部からの直接取得を防ぐ。ISR 用の Incremental Cache、R2、KV、Durable Object Queue の有効 binding、Worker 自己参照 binding は持たない。OpenNext 時代に本番 Worker へ登録した `DOQueueHandler` を廃止した履歴として、`apps/web/wrangler.jsonc` の top-level には `v1` の作成履歴と後続の `v2` `deleted_classes` migration を保持する。Wrangler は top-level の `migrations` を env へ継承するため、検証用 env は空の `migrations` を明示する。
 
 ### 8.4 `hc` クライアントの取り回し
 
@@ -481,9 +468,9 @@ Server loader は初回データの fetch と Mapper 呼び出しを統括する
 
 #### 復習の表示契約
 
-- 正解情報の境界は §7.2に従う。content loaderや全教材データをClient bundleへimportしない。
+- 正解情報の境界は [ADR-0002](./adr/0002-api-authoritative-grading.md) に従う。content loaderや全教材データをClient bundleへimportしない。
 - 静的な表示構造はユーザー固有データを共有キャッシュへ載せず、dueバッジと本文を同じ SSR リクエストで取得する。両者は唯一のloader入口 `loadReviewOnce` を通し、Reactの `cache()` によって同一リクエスト内のqueue取得を1回に畳む。未ラップのloaderはexportしない。共有キャッシュとの違いは §8.3。
-- APIの生のdue件数とjoin後の表示件数の意味は §4.5。join後の表示可能な問題が0件で `hasMore=true` ならcontent整合性エラー、0件でfalseなら通常の空キュー、1件以上なら現在バッチを表示する。空キューをQuizの空問題表示へ委ねない。
+- APIの生のdue件数の意味は [ADR-0005](./adr/0005-srs-review-rules.md)。`ReviewViewModel.dueCount` は、現在のバッチをbundled contentとjoinした後に表示できる問題数であり、contentから削除されたIDはmapperで除外する。join後の表示可能な問題が0件で `hasMore=true` ならcontent整合性エラー、0件でfalseなら通常の空キュー、1件以上なら現在バッチを表示する。空キューをQuizの空問題表示へ委ねない。
 - 表示再利用の境界は §9.7。次バッチがある場合の完了操作で再取得し、mapperが導出した `batchKey` をinteractive subtreeのkeyにして、新しいバッチでは解答結果・画面フェーズをintroへリセットする。
 - 取得・整合性エラーと再試行導線は §9.6。
 
@@ -645,12 +632,12 @@ Walking Skeleton の中核となる 1 リクエストの処理フロー：
 
 ```
 zValidator（shared の answerRequestSchema で入力検証）
-  → userId を context から取得（§10.4 の middleware が注入済み）
-  → 永続書き込み用 Rate Limiting binding を確認（§10.3.1）
+  → userId を context から取得（middleware が注入済み。ADR-0003）
+  → 永続書き込み用 Rate Limiting binding を確認（ADR-0004）
   → services/answer-service の submitAnswer(deps, input)
       1. questions（content 同期キャッシュ §4.4）から answerIndex を取得
          → 無ければ QuestionNotFoundError
-      2. isCorrect = answerIndex === selectedIndex（採点権威は API §7.2）
+      2. isCorrect = answerIndex === selectedIndex（採点権威は API。ADR-0002）
       3. 現在の srs_state を取得（無ければ initialSrs()）
       4. reviewSrs(state, isCorrect, now) で次状態を算出（純粋関数 @tsl/shared）
       5. answer_log 挿入 ＋ srs_state upsert を db.batch で原子的に書き込み
@@ -658,28 +645,6 @@ zValidator（shared の answerRequestSchema で入力検証）
 ```
 
 `GET /review/queue`・`GET /dashboard/due-count` も同型（route → `review-service` → `review-repository`）。due 判定は `dueAt <= now` を SQL の where 句で行い、`isDue`（sm2）と意味を一致させる。
-
-### 10.3.1 永続書き込みのレート制限と観測
-
-`POST /answers` と `POST /lesson-views` は、正規の連続解答・教材再表示を禁止せず、認証済みリクエストによる無制限の D1 書き込みだけを抑制する。Wrangler に endpoint ごとに別の Cloudflare Workers Rate Limiting binding を定義し、route は `zValidator` と `userContext` の後、service / repository / D1 書き込みの前に binding を確認する。public entrypoint と Service Binding の named internal entrypoint は同じ route を再利用するため、どちらの経路にもこの確認が適用される。
-
-| endpoint | binding | key | fixed window | 受理上限 | 根拠 |
-| --- | --- | --- | --- | --- | --- |
-| `POST /answers` | `ANSWERS_RATE_LIMITER` | `userId:POST /answers` | 60 秒 | 60 | 通常の Quiz / Review の再試行と複数解答を許容しながら、answer log と SRS 更新の過剰書き込みを抑える |
-| `POST /lesson-views` | `LESSON_VIEWS_RATE_LIMITER` | `userId:POST /lesson-views` | 60 秒 | 30 | 教材画面の通常の再表示を許容しながら、fire-and-forget の閲覧ログ連打を抑える |
-
-- key は検証済みの `userContext.userId` と安定した endpoint 識別子から構成する。IP アドレス、`CF-Connecting-IP`、クライアント指定 header・body の識別子は使用しない。
-- binding が `{ success: false }` を返した場合、共通の `{ error: { code, message } }` envelope で `429 { error: { code: 'RATE_LIMITED', message: 'Too Many Requests' } }` と `Retry-After: 60` を返す。この場合 service を呼ばず、`answer_logs`、`lesson_views`、`srs_states` を変更しない。
-- binding の呼び出しが例外になる、または実行環境で利用できない場合は、保護を可用性より優先して fail closed とする。共通 envelope の `503 { error: { code: 'RATE_LIMIT_UNAVAILABLE', message: 'Rate limit unavailable' } }` を返し、service / D1 path を呼ばない。
-- Workers Rate Limiting は Cloudflare location（PoP）ごとの制限であり、同じ key でも location 間でカウンタを共有しない。カウンタは非同期更新のため eventually consistent な abuse reduction であり、グローバルに厳密な quota や課金用の台帳として扱わない。
-- 429、limiter failure、成功した永続書き込みには、`event`・`endpoint`・`writeUnit` だけを含む PII-free の構造化 Worker log を出す。運用者は Workers Logs の event 別件数（rate-limited / limiter failure / persistent write）と D1 dashboard の `answer_logs` / `lesson_views` / `srs_states` の書き込み・容量メトリクスを同じ時間帯で突合する。Analytics Engine は既存の制約だけではログが不足すると判断されたときに別 issue で追加する。
-
-### 10.4 user_id の権威的注入（middleware）
-
-§7.2 の「API が固定 `user_id` を権威的に注入する」を Hono middleware として実体化する。
-
-- route・service は `userId` を「middleware が保証済みの値」として受け取るだけにし、固定値は共通定数を参照し、ユーザーの解決責務をmiddlewareへ閉じ込める。
-- クライアントから送られた `user_id` は**一切信用しない**（リクエストボディにも含めない。§7.3 の契約に `userId` が無いのはこのため）。
 
 ### 10.5 Hono アプリの合成と `AppType`
 
@@ -700,7 +665,7 @@ zValidator（shared の answerRequestSchema で入力検証）
 - `QuestionNotFoundError` は404と `QUESTION_NOT_FOUND` に写像する。既知のドメインエラーのmessageを返し、未知の例外はWorkers Logsへ記録する。
 - route 層の `app.onError` がドメインエラーを HTTP ステータスへ写像し、レスポンス形を `{ error: { code, message } }` に統一する。未知のエラーは 500（`INTERNAL`）とし、詳細メッセージを外に漏らさない。
 - Hono や middleware が意図して throw した `HTTPException` は、例外が持つステータスとレスポンスを保持する。未知の例外として 500 に上書きしない。
-- レート制限の 429 と limiter failure の 503 も shared の error response schema を使い、route から type-safe に返す。前者には `Retry-After: 60` を必ず付ける（§10.3.1）。
+- レート制限の 429 と limiter failure の 503 も shared の error response schema を使い、route から type-safe に返す。前者には `Retry-After: 60` を必ず付ける（[ADR-0004](./adr/0004-persistent-write-rate-limit.md)）。
 
 - `zValidator` の検証失敗（400）はデフォルト挙動のまま使う（MVP）。フロントは `requestJson`（§8.4）が `res.ok` で弾くため、エラーボディの形に依存しない。
 
@@ -752,7 +717,7 @@ zValidator（shared の answerRequestSchema で入力検証）
 
 ### 10.11 将来拡張ポイント
 
-- **認証**：`user-context.ts` の差し替えのみ（§10.4）。API 契約・層構造は不変
+- **認証**：`user-context.ts` の差し替えのみ（[ADR-0003](./adr/0003-server-injected-user-id.md)）。API 契約・層構造は不変
 - **バッチ処理**（due 通知・統計集計等）：`apps/api` の wrangler 設定に Cron Triggers を追加する。web と Worker を分離した §3.1 の利点がここで効く
 - **記述式・コード問題**（§4.3）：shared の `questionSchema`（discriminated union）に type を追加 → `answer-service` の採点分岐を追加。route の契約は `question.type` に応じたリクエストスキーマ拡張で対応
 
@@ -841,8 +806,8 @@ topic frontmatter の `order` も同様に表示順（0 以上の整数、小さ
 | 名前 | 種別 | 参照箇所 | local | production |
 | --- | --- | --- | --- | --- |
 | `DB` | D1 バインディング（api） | dal（Drizzle） | `wrangler dev` のローカル D1 | `apps/api/wrangler.toml` の `d1_databases`（要実 ID。§12.4） |
-| `ANSWERS_RATE_LIMITER` | Rate Limiting バインディング（api） | `POST /answers` の永続書き込みガード（§10.3.1） | `apps/api/wrangler.toml` の `[[ratelimits]]`（`namespace_id = "11301"`、60 回 / 60 秒） | local と同じ top-level `[[ratelimits]]` を API Worker へデプロイ |
-| `LESSON_VIEWS_RATE_LIMITER` | Rate Limiting バインディング（api） | `POST /lesson-views` の永続書き込みガード（§10.3.1） | `apps/api/wrangler.toml` の `[[ratelimits]]`（`namespace_id = "11302"`、30 回 / 60 秒） | local と同じ top-level `[[ratelimits]]` を API Worker へデプロイ |
+| `ANSWERS_RATE_LIMITER` | Rate Limiting バインディング（api） | `POST /answers` の永続書き込みガード（[ADR-0004](./adr/0004-persistent-write-rate-limit.md)） | `apps/api/wrangler.toml` の `[[ratelimits]]`（`namespace_id = "11301"`、60 回 / 60 秒） | local と同じ top-level `[[ratelimits]]` を API Worker へデプロイ |
+| `LESSON_VIEWS_RATE_LIMITER` | Rate Limiting バインディング（api） | `POST /lesson-views` の永続書き込みガード（[ADR-0004](./adr/0004-persistent-write-rate-limit.md)） | `apps/api/wrangler.toml` の `[[ratelimits]]`（`namespace_id = "11302"`、30 回 / 60 秒） | local と同じ top-level `[[ratelimits]]` を API Worker へデプロイ |
 | `WEB_ORIGIN` | var（api） | CORS 許可オリジン（§10.5） | `http://localhost:3000` | API deploy 時に `--var WEB_ORIGIN:<web-public-url>` として明示指定 |
 | `ACCESS_ISSUER` | var（api） | Cloudflare Access JWT の issuer 検証（§3.1） | 未設定（両 Access 設定なし＋loopback URL のみ bypass） | API deploy 時に `--var ACCESS_ISSUER:<access-issuer>` として明示指定 |
 | `ACCESS_AUDIENCE` | var（api） | Cloudflare Access JWT の audience 検証（§3.1） | 未設定（両 Access 設定なし＋loopback URL のみ bypass） | API deploy 時に `--var ACCESS_AUDIENCE:<access-audience>` として明示指定 |
@@ -917,7 +882,7 @@ content は「web のビルド時バンドル（§8.2）」と「D1 の `questio
 ### 12.7 バックアップ・観測（当面の運用）
 
 - **バックアップ**：教材・問題は Git にあるため、守る対象は D1 の動的データ（`answer_logs` / `srs_states` / `lesson_views`）のみ。当面は必要時に `wrangler d1 export` を手動実行し、マルチユーザー公開時に定期化（Cron 等）を検討する。
-- **観測**：§10.3.1 の rate limit / 永続書き込みでは、429・limiter failure・成功した永続書き込みごとに `event`・`endpoint`・`writeUnit` だけを含む PII-free の構造化 Worker log を出す。運用時は Workers Logs の event 別件数と D1 dashboard の `answer_logs` / `lesson_views` / `srs_states` の書き込み・容量メトリクスを同じ時間帯で突合する。`console.error` は §10.6 の未処理エラー出力に限る。Analytics Engine を含む外部監視は、既存のログと D1 メトリクスでは不足すると判断された場合に別 issue で検討する。
+- **観測**：rate limit / 永続書き込み（[ADR-0004](./adr/0004-persistent-write-rate-limit.md)）では、429・limiter failure・成功した永続書き込みごとに `event`・`endpoint`・`writeUnit` だけを含む PII-free の構造化 Worker log を出す。運用時は Workers Logs の event 別件数と D1 dashboard の `answer_logs` / `lesson_views` / `srs_states` の書き込み・容量メトリクスを同じ時間帯で突合する。`console.error` は §10.6 の未処理エラー出力に限る。Analytics Engine を含む外部監視は、既存のログと D1 メトリクスでは不足すると判断された場合に別 issue で検討する。
 
 ### 12.8 通常SSR・標準SSGの実行確認
 
@@ -926,7 +891,7 @@ content は「web のビルド時バンドル（§8.2）」と「D1 の `questio
 - **成果物検証（CI）**：`pnpm build` の後に `pnpm --filter @tsl/web verify:build` を実行する。`dist/server/vinext-prerender.json` の rendered route が `/`・`/learn`・全 content params・`/404` と一致し、`/home`・`/review`・`/domains`・`/analytics` が prerender されていないこと、生成 HTML / RSC と公開 Client JS に `answerIndex` が含まれないこと、SSR の Worker entry と `API`（`InternalApi`）binding が生成 config に存在すること、内部 cache artifact が `run_worker_first` で Worker 経由になることを確認する。
 - **実行時検証（ローカル・検証環境）**：API を起動し、web を `build` + `start` で起動した状態で `pnpm --filter @tsl/web verify:ssg` を実行する（接続先は `WEB_VERIFY_BASE_URL`、既定 `http://localhost:3000`）。content route の HTML / RSC が `x-vinext-cache: HIT` で生成物と一致すること、SSR route が `no-store` で error boundary を返さないこと、別表記 URL と内部 cache artifact の直接取得が 404 になることを確認する。認証後 route は full GET に加えて `?_rsc` navigation も `text/x-component`・`no-store` の通常 SSR として完了することを確認する。
 
-構成確認では、`API` Service Binding が残り、PPR/ISR 専用の `cacheComponents`、Incremental Cache、R2、KV、Durable Object Queue の有効 binding、Worker 自己参照 binding が存在しないこと、登録済み `DOQueueHandler` の `v1` 作成履歴と後続の `v2` 削除 migration を top-level で維持し検証用 env が継承しないこと、標準 script が OpenNext に依存しないことをテストで固定する。
+構成確認では、`API` Service Binding が残り、`cacheComponents`、ISR 用の Incremental Cache、R2、KV、Durable Object Queue の有効 binding、Worker 自己参照 binding が存在しないこと、登録済み `DOQueueHandler` の `v1` 作成履歴と後続の `v2` 削除 migration を top-level で維持し検証用 env が継承しないこと、標準 script が OpenNext に依存しないことをテストで固定する。
 
 ### 12.9 GitHub Actions による環境別リリース（Issue #36）
 
