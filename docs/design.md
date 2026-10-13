@@ -295,7 +295,7 @@ HTTP 入出力、リクエスト・レスポンスの実例（JSON）、Zod ス�
 | `features/*/mapper` | Content data / DTO から ViewModel への純粋変換 | 共有入力型、同 feature の `view-model`、`features/shared` の小さい純粋変換 | fetch、content loader、API client、React state、副作用 |
 | `features/*/api` | endpoint 固有の `hc` path・method・引数、共有 Zod による入出力検証、機能固有のエラーメッセージ | `ApiClient` 型・`requestJson`（`lib/api`）、共有 DTO / Zod | API client の生成、ViewModel 化、UI state、Server / Browser 固有 API |
 | `components`（root） | 全画面共通のレイアウト shell・テーマ切替 | `components/ui`・`lib/cn`・React | feature 内部層（`server`/`client`/`api`/`mapper`）・content・API への直接アクセス |
-| `features/shared` | feature 横断の小さい純粋変換のみ | 共有 DTO・Content data 型 | 共通 ViewModel・loader・hook の保持、fetch・副作用 |
+| `features/shared` | feature 横断の小さい純粋変換と、表示の一貫性を保つ小さい対応表（例：領域→アイコン名の `domainIcons`）のみ | 共有 DTO・Content data 型、`components/ui` の型（type-only import） | 共通 ViewModel・loader・hook の保持、fetch・副作用、React への依存 |
 | `components/ui` | feature 非依存の汎用表示部品 | `lib/cn`、React、スタイル関連ライブラリ | `app`・`features`・content・API への依存 |
 | `lib` | API client 生成、HTTP response 処理、content index など横断インフラ | `packages/shared`、`@tsl/api`、外部ライブラリ | `app`・`features` への依存、画面都合の変換 |
 
@@ -397,15 +397,15 @@ HTTP 入出力、リクエスト・レスポンスの実例（JSON）、Zod ス�
 **コンポーネント文法**（`globals.css` の `@layer components` ＋ `components/ui` に集約）：
 
 - `card`：`surface` ＋ 2px `border` ＋ 16px radius のフラットカード。
-- アイコン：UI のアイコンは Google Material Symbols Rounded（optical size 24px、既定の非塗りつぶし）に統一し、ナビ・導線・状態表示に Unicode 記号や絵文字を使わない。公式SVGを `apps/web/public/icons/material-symbols/` に必要な分だけ同梱し、出典・ライセンスも保持する（実行時の外部フォント通信なし）。共通表示部品 `MaterialSymbol` の CSS mask で既存の文字色を継承し、ダーク／ライト両テーマに対応する。アイコンは常に文字ラベルと併記し、`aria-hidden` にして読み上げを重複させない。アイコンだけで意味を伝える操作要素は置かない。
-  - サイズ：画面見出しの装飾 28px、領域チップ・SP 下部タブ 24px、PC サイドバー・ボタン内・行内導線・統計カード 20px。
+- アイコン：UI のアイコンは Google Material Symbols Rounded（optical size 24px、既定の非塗りつぶし）に統一し、ナビ・導線・状態表示に Unicode 記号や絵文字を使わない。公式SVGを `apps/web/public/icons/material-symbols/` に必要な分だけ同梱し、出典・ライセンスも保持する（実行時の外部フォント通信なし）。共通表示部品 `MaterialSymbol` の CSS mask で既存の文字色を継承し、ダーク／ライト両テーマに対応する。アイコンは常に文字ラベルと併記し、`aria-hidden` にして読み上げを重複させない。アイコンだけで意味を伝える操作要素は置かない。例外はテーマトグルだけで、見える文字ラベルを持たず、`aria-label`（切り替え動作の説明）をアクセシブルネームにする。
+  - サイズ：画面見出し・強調カード（NEXT LESSON など）の装飾 28px、領域チップ・SP 下部タブ 24px、PC サイドバー・ボタン内・行内導線・統計カード・テーマトグル 20px、SP アプリバーのバッジ（ストリーク）16px。
   - 配置：前進の導線はラベルの後ろに `arrow_forward`、戻る導線はラベルの前に `arrow_back`、一覧・詳細へのドリルダウンはラベルの後ろに `chevron_right`。
   - 意味の対応（同じ意味には同じアイコン）：教材・レッスン `menu_book`、演習 `quiz`、復習（SRS） `event_repeat`、分析 `bar_chart`、学習領域の一覧 `category`、領域 `security`（security）/ `code`（frontend）/ `dns`（backend）/ `account_tree`（architecture）、正解 `check_circle`、誤答 `cancel`、準備中 `schedule`、ストリーク `local_fire_department`、学習時間 `timer`、習得済み `verified`、解答数・解答の記録 `edit_note`、反応時間 `speed`。`account_tree` はアーキテクチャ領域専用とする。
   - ターミナル表現（ロゴの `>_`、ターミナルパンくず、`>_ grading...`、テストランナーの `PASS` / `FAIL`、`keycap`）は文字のまま残し、アイコンに置き換えない。
 - チャンキーボタン（`btn-green` / `btn-blue` / `btn-ghost`）：ベタ塗り＋下エッジ（`box-shadow: 0 4px 0 <shade>`）、`:active` で 4px 沈む。green＝主アクション、ghost＝副アクション。
 - `term-win`：ターミナルウィンドウ。ヘッダーは **`>_` プロンプトバッジ＋mono タイトル＋右端メタ情報**（例 `80×24`・`exit 0`・`utf-8 · tsx`）。教材のコードブロック、演習結果のテストレポート、スキルツリーで使用。
 - `keycap`：問題 ID・選択肢番号のキーキャップ表現。
-- ツリー行：スキルツリーは `devpath tree` コマンド出力風のディレクトリツリー（罫線文字 `├─ └─`）。各行は button（min-height 44px）、done＝緑✓ / current＝青▶＋ブロックバー＋START / locked＝減光🔒。
+- ツリー行：スキルツリーは `devpath tree` コマンド出力風のディレクトリツリー（罫線文字 `├─ └─`）。各行は button（min-height 44px）、done＝緑✓ / current＝青▶＋ブロックバー＋START / locked＝減光🔒。ツリーは未実装のため、上記のアイコン方針の例外として記号のまま残す。状態記号を Material Symbols（候補：`check_circle` / `play_arrow` / `lock`）に置き換えるかはツリー実装時に決める。
 - ターミナルパンくず：各画面の先頭に `~/devpath $ <コマンド>`（緑プロンプト＋点滅カーソル）。
 - Win9x 風の離散ブロックバー・ベベルは**使用しない**（Retro OS 案の残骸を持ち込まない）。
 
@@ -493,7 +493,7 @@ Server loader は初回データの fetch と Mapper 呼び出しを統括する
 - **`apps/web/src/features/*/server` は Server 専用**。page / Server Component から呼ばれる loader が content data や API DTO を mapper に通して ViewModel を返す。feature 固有の Server Component が必要なら `server/components` に置く。配下のファイルには `import 'server-only'` を置く。loader のファイル名は `load-<対象>.ts` とする。
 - **`apps/web/src/features/*/client/hooks` は Client 専用**。Browser API client を生成し、ユーザー操作後の mutation と、それに伴う `submitting`・`error`・API 由来の結果 state を扱う。Server data の再取得は行わない。初期 ViewModel は component が immutable な props として参照し、hook へ複製しない。
 - **`apps/web/src/features/*/client/components` は Client Component**。画面フェーズ・現在問題・`wrongOnly`・キーボード操作を保持し、hook が返す通信状態と結果を表示へ反映する。content loader・API client・DTO には直接触れない。
-- **`apps/web/src/features/shared` は小さい純粋変換だけ**。`contentQuestionToQuizQuestion` のように `/quiz` と `/review` の両方で同じ表示用 question 形へ変換する helper はここへ置く。ViewModel 全体・loader・hook は共有しない。
+- **`apps/web/src/features/shared` は小さい純粋変換と表示の対応表だけ**。`contentQuestionToQuizQuestion` のように `/quiz` と `/review` の両方で同じ表示用 question 形へ変換する helper や、`/learn` と領域カードで同じ領域を同じアイコンで示す `domainIcons` のような定数の対応表はここへ置く。ViewModel 全体・loader・hook は共有しない。
 - **`apps/web/src/lib` は横断インフラだけ**。API client 生成、HTTP response 処理、content index など feature 非依存の関数を置く。画面都合の整形は feature mapper に残す。
 
 #### API 側の DAL 配置
@@ -543,7 +543,7 @@ API DTO が変わった場合（例：review queue に `dueAt` が追加）：
 
 `LessonViewRecorder` は `'use client'` の最小 leaf とし、mount 後に Browser API client を遅延生成して `POST /lesson-views` を送信する。本文データを取得・保持せず、通信失敗は無視するため教材の表示やエラー境界に影響しない。
 
-ViewModel・mapper は feature ごとに独立させ、同じ DTO の使い方が feature ごとに異なることを認める。`apps/web/src/features/shared` は共通 ViewModel を持つ場所ではなく、`contentQuestionToQuizQuestion` のような小さい純粋変換だけを置く場所とする。
+ViewModel・mapper は feature ごとに独立させ、同じ DTO の使い方が feature ごとに異なることを認める。`apps/web/src/features/shared` は共通 ViewModel を持つ場所ではなく、`contentQuestionToQuizQuestion` のような小さい純粋変換と、`domainIcons` のような表示の対応表だけを置く場所とする。
 
 Quiz と Review の表示再利用は、feature VM同士を継承・交差させず、`QuizInteractive` の表示props（問題・解説・intro内容・結果導線）へ各featureのVMを変換して渡す境界で行う。
 

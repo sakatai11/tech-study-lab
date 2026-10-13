@@ -2,7 +2,7 @@
   "version": 2,
   "sources": {
     ".dependency-cruiser.cjs": {
-      "sha256": "d8e47f62e9d80ec154dfa377f51c0ea2795718f3ff9d2c9c09706ac747272827",
+      "sha256": "c8e8ccc93b15fc3054a3d26e764f742794da64a204d836e5e5038d42d421ac13",
       "lines": 281
     },
     "apps/api/src/app.ts": {
