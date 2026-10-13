@@ -64,7 +64,7 @@
       "summary": "初回利用者向けの空状態を整備します。",
       "readiness": "Needs refinement",
       "priority": "P2",
-      "gaps": ["受け入れ条件", "design.md該当節"],
+      "gaps": ["受け入れ条件", "関連ADR"],
       "dependencies": [],
       "nextAction": "Issue本文の更新案を承認依頼"
     }
@@ -211,7 +211,7 @@
     {
       "id": 1,
       "title": "Issue #43の本文更新案を作る",
-      "action": "不足している受け入れ条件とdesign.md参照を補います。",
+      "action": "不足している受け入れ条件と関連ADRを補います。",
       "reason": "現状では実装判断が分岐します。"
     },
     {
