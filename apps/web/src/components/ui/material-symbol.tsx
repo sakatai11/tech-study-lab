@@ -10,7 +10,7 @@ export const materialSymbolNames = [
   'chevron_right',
   'schedule',
   'home',
-  'quiz',
+  'contract_edit',
   'event_repeat',
   'bar_chart',
   'category',

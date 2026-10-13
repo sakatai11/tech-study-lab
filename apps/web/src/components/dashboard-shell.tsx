@@ -27,7 +27,7 @@ const desktopNavigation: NavigationItem[] = [
     section: 'dashboard',
   },
   { desktopLabel: '教材', icon: 'menu_book', mobileLabel: '教材', section: 'learn' },
-  { desktopLabel: '演習', icon: 'quiz', mobileLabel: '演習', section: 'quiz' },
+  { desktopLabel: '演習', icon: 'contract_edit', mobileLabel: '演習', section: 'quiz' },
   {
     desktopLabel: '復習',
     hasDueBadge: true,

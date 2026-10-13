@@ -39,11 +39,11 @@ export function ThemeToggle({ className }: { className?: string }) {
       onClick={toggleTheme}
       type="button"
     >
-      <span className="theme-when-dark">
+      <span className="theme-when-dark grid place-items-center">
         <MaterialSymbol className="size-5" name="light_mode" />
         <span className="sr-only">ライトテーマに切り替える</span>
       </span>
-      <span className="theme-when-light">
+      <span className="theme-when-light grid place-items-center">
         <MaterialSymbol className="size-5" name="dark_mode" />
         <span className="sr-only">ダークテーマに切り替える</span>
       </span>
