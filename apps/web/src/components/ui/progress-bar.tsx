@@ -2,11 +2,13 @@ import type { CSSProperties } from 'react'
 
 import { cn } from '@/lib/cn'
 
+import type { Tone } from './tone'
+
 type ProgressBarProps = {
   className?: string
   label: string
   value: number
-  color?: 'green' | 'blue' | 'purple' | 'orange'
+  color?: Tone
 }
 
 const colorClasses = {

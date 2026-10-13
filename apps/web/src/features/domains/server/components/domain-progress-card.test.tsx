@@ -27,7 +27,7 @@ describe('DomainProgressCard', () => {
     expect(screen.getByRole('heading', { name: 'セキュリティ' })).toBeTruthy()
     expect(screen.getByText('50%')).toBeTruthy()
     expect(screen.getByText('1 / 2 問習得 · 1 topic · 1 lesson')).toBeTruthy()
-    expect(screen.getByRole('link', { name: '最初のトピック →' })).toHaveProperty(
+    expect(screen.getByRole('link', { name: '最初のトピック' })).toHaveProperty(
       'href',
       'http://localhost:3000/learn/security/xss',
     )
@@ -37,6 +37,6 @@ describe('DomainProgressCard', () => {
     render(<DomainProgressCard domain={{ ...security, firstTopicHref: undefined }} />)
 
     expect(screen.getByText('準備中').getAttribute('aria-disabled')).toBe('true')
-    expect(screen.queryByRole('link', { name: '最初のトピック →' })).toBeNull()
+    expect(screen.queryByRole('link', { name: '最初のトピック' })).toBeNull()
   })
 })

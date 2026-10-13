@@ -5,6 +5,7 @@ import ReactMarkdown from 'react-markdown'
 
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
+import { MaterialSymbol } from '@/components/ui/material-symbol'
 import { TermCrumb } from '@/components/ui/term-crumb'
 
 import type { TopicViewModel } from '../../view-model'
@@ -51,10 +52,11 @@ export function TopicDisplay({ viewModel }: { viewModel: TopicViewModel }) {
                   <p className="mb-0 mt-2 text-sm text-mute">{lesson.questionCount}問の演習</p>
                 </div>
                 <Link
-                  className="inline-flex min-h-11 items-center justify-center rounded-xl border-2 border-blue bg-blue px-4 py-2.5 font-bold text-white shadow-[0_4px_0_var(--blue-shade)] transition-transform hover:brightness-110 active:translate-y-1 active:shadow-none"
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border-2 border-blue bg-blue px-4 py-2.5 font-bold text-white shadow-[0_4px_0_var(--blue-shade)] transition-transform hover:brightness-110 active:translate-y-1 active:shadow-none"
                   href={`/learn/${viewModel.domain}/${viewModel.topic}/${lesson.id}`}
                 >
-                  教材を読む →
+                  教材を読む
+                  <MaterialSymbol className="size-5" name="arrow_forward" />
                 </Link>
               </div>
             </Card>

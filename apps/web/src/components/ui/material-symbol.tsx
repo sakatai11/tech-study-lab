@@ -1,13 +1,33 @@
 import { cn } from '@/lib/cn'
 
-export type MaterialSymbolName =
-  | 'security'
-  | 'code'
-  | 'dns'
-  | 'account_tree'
-  | 'menu_book'
-  | 'chevron_right'
-  | 'schedule'
+/** Names of the official SVGs bundled in `public/icons/material-symbols/`. */
+export const materialSymbolNames = [
+  'security',
+  'code',
+  'dns',
+  'account_tree',
+  'menu_book',
+  'chevron_right',
+  'schedule',
+  'home',
+  'contract_edit',
+  'event_repeat',
+  'bar_chart',
+  'category',
+  'light_mode',
+  'dark_mode',
+  'check_circle',
+  'cancel',
+  'arrow_forward',
+  'arrow_back',
+  'local_fire_department',
+  'timer',
+  'verified',
+  'edit_note',
+  'speed',
+] as const
+
+export type MaterialSymbolName = (typeof materialSymbolNames)[number]
 
 type MaterialSymbolProps = {
   name: MaterialSymbolName

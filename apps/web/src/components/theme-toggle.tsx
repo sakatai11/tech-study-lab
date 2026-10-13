@@ -1,7 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-
+import { MaterialSymbol } from '@/components/ui/material-symbol'
 import { cn } from '@/lib/cn'
 
 type Theme = 'dark' | 'light'
@@ -14,18 +13,15 @@ function readTheme(): Theme {
   }
 }
 
+/**
+ * アイコンと読み上げ名は、描画前に確定する `html[data-theme]` に応じて CSS で出し分ける。
+ * React の state を初期値から補正しないため、ライトテーマでも初回描画から正しい表示になる。
+ */
 export function ThemeToggle({ className }: { className?: string }) {
-  const [theme, setTheme] = useState<Theme>('dark')
-
-  useEffect(() => {
-    setTheme(readTheme())
-  }, [])
-
   const toggleTheme = () => {
     const nextTheme: Theme = readTheme() === 'dark' ? 'light' : 'dark'
 
     document.documentElement.dataset.theme = nextTheme
-    setTheme(nextTheme)
 
     try {
       localStorage.setItem('tsl-theme', nextTheme)
@@ -34,12 +30,8 @@ export function ThemeToggle({ className }: { className?: string }) {
     }
   }
 
-  const isLight = theme === 'light'
-
   return (
     <button
-      aria-label={isLight ? 'ダークテーマに切り替える' : 'ライトテーマに切り替える'}
-      aria-pressed={isLight}
       className={cn(
         'grid size-11 place-items-center rounded-xl border-2 border-border bg-surface text-mute transition-transform duration-150 hover:text-yellow active:translate-y-0.5',
         className,
@@ -47,8 +39,13 @@ export function ThemeToggle({ className }: { className?: string }) {
       onClick={toggleTheme}
       type="button"
     >
-      <span aria-hidden="true" className="text-lg">
-        {isLight ? '☀' : '◐'}
+      <span className="theme-when-dark grid place-items-center">
+        <MaterialSymbol className="size-5" name="light_mode" />
+        <span className="sr-only">ライトテーマに切り替える</span>
+      </span>
+      <span className="theme-when-light grid place-items-center">
+        <MaterialSymbol className="size-5" name="dark_mode" />
+        <span className="sr-only">ダークテーマに切り替える</span>
       </span>
     </button>
   )

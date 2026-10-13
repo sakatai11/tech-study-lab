@@ -113,7 +113,7 @@ module.exports = {
       name: 'web-shared-pure-transform-only',
       severity: 'error',
       comment:
-        'features/shared は feature 横断の小さい純粋変換のみを担う。共通 ViewModel・loader・hook の保持や fetch・副作用を持たない（content ローダー・API client・React に依存しない）。docs/design.md §8.1 の依存許可表「features/shared」行を参照。',
+        'features/shared は feature 横断の小さい純粋変換と表示の対応表（例: domainIcons）のみを担う。共通 ViewModel・loader・hook の保持や fetch・副作用を持たない（content ローダー・API client・React に依存しない）。docs/design.md §8.1 の依存許可表「features/shared」行を参照。',
       from: { path: '^apps/web/src/features/shared/' },
       to: {
         path: ['^apps/web/src/lib/content', '^apps/web/src/lib/api', npmPackagePath('react')],
