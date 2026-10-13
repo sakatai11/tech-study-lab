@@ -32,12 +32,8 @@ export function TopicDisplay({ viewModel }: { viewModel: TopicViewModel }) {
             <h2 className="m-0 text-xl font-black text-ink" id="lesson-list-heading">
               レッスン一覧
             </h2>
-            <p className="mb-0 mt-1 text-sm text-mute">
-              {viewModel.lessons.length} lesson
-              {viewModel.lessons.length === 1 ? '' : 's'}
-            </p>
+            <p className="mb-0 mt-1 text-sm text-mute">{viewModel.lessons.length}レッスン</p>
           </div>
-          <Badge className="border-green bg-green-bg text-green">content bundled</Badge>
         </div>
 
         <div className="grid gap-4">

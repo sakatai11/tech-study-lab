@@ -40,6 +40,7 @@ export type LessonViewModel = {
   topic: string
   id: string
   title: string
+  estimatedMinutes: number
   markdownBody: string
   questions: LessonQuestionViewModel[]
 }

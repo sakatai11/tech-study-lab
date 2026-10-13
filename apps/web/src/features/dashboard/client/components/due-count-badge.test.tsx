@@ -33,7 +33,7 @@ describe('DueCountProvider', () => {
 
     expect(useDueCountMock).toHaveBeenCalledTimes(1)
     expect(
-      screen.getAllByText((_content, element) => element?.textContent === '期限の復習が4件'),
+      screen.getAllByText((_content, element) => element?.textContent === '期限を迎えた問題が4問'),
     ).toHaveLength(2)
   })
 })

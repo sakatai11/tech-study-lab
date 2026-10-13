@@ -29,7 +29,7 @@ export function LessonDisplay({ viewModel }: { viewModel: LessonViewModel }) {
             </h1>
           </div>
           <Badge className="border-blue bg-blue-bg text-blue">
-            {viewModel.questions.length}問 · markdown
+            {viewModel.questions.length}問 · 約{viewModel.estimatedMinutes}分
           </Badge>
         </div>
       </header>

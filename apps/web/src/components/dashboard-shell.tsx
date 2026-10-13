@@ -21,7 +21,7 @@ type NavigationHrefs = Partial<Record<NavigationSection, string>>
 
 const desktopNavigation: NavigationItem[] = [
   {
-    desktopLabel: 'ダッシュボード',
+    desktopLabel: 'ホーム',
     icon: 'home',
     mobileLabel: 'ホーム',
     section: 'dashboard',
@@ -35,8 +35,8 @@ const desktopNavigation: NavigationItem[] = [
     mobileLabel: '復習',
     section: 'review',
   },
-  { desktopLabel: 'アナリティクス', icon: 'bar_chart', section: 'analytics' },
-  { desktopLabel: 'スキルツリー', icon: 'category', mobileLabel: 'ツリー', section: 'tree' },
+  { desktopLabel: '学習分析', icon: 'bar_chart', section: 'analytics' },
+  { desktopLabel: '学習領域', icon: 'category', mobileLabel: '領域', section: 'tree' },
 ]
 
 const mobileNavigation = desktopNavigation.filter((item) => item.mobileLabel)

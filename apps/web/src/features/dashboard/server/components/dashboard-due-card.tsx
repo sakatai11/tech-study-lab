@@ -26,12 +26,16 @@ export async function DashboardDueCard() {
         </p>
         <p className="mb-0 mt-5 font-mono text-3xl font-black tabular-nums text-ink">
           {viewModel.dueCount}
-          <span className="ml-1 text-sm text-mute">問 due</span>
+          <span className="ml-1 text-sm text-mute">問</span>
         </p>
-        <Link className={reviewLinkClassName} href="/review">
-          復習を始める
-          <MaterialSymbol className="size-5" name="arrow_forward" />
-        </Link>
+        {viewModel.dueCount > 0 ? (
+          <Link className={reviewLinkClassName} href="/review">
+            復習を始める
+            <MaterialSymbol className="size-5" name="arrow_forward" />
+          </Link>
+        ) : (
+          <p className="mb-0 mt-5 text-sm text-mute">今は復習する問題はありません。</p>
+        )}
       </Card>
     )
   } catch {
