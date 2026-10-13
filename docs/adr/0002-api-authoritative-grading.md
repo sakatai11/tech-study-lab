@@ -30,4 +30,4 @@
 - [quiz/mapper.test.ts](../../apps/web/src/features/quiz/mapper.test.ts): 演習の ViewModel に正解を含めない
 - [review/mapper.test.ts](../../apps/web/src/features/review/mapper.test.ts): 復習の ViewModel に正解を含めない
 
-テストで直接検証しない決定: 決定 5（正解データを修正しても過去の `answer_logs` を再評価しない）は、`answer_logs` を書き換える処理が存在しないことで守られている。content sync やマイグレーションの変更時にレビューで確認する。
+テストで直接検証しない決定: 決定 5（正解データを修正しても過去の `answer_logs` を再評価しない）は、本番経路（API と content sync）に `answer_logs` を書き換える処理が存在しないことで守られている。ローカル開発用 seed（`dev-seed.ts`）が seed 対象ユーザーの行を削除して作り直すのは、この決定の対象外である。content sync やマイグレーションの変更時にレビューで確認する。
