@@ -263,7 +263,7 @@
         <p class="lede">エンドポイントごとに「何を送ると、どんなJSONが返るか」を実例で示します。フィールド定義・成功応答・エラー応答・実装状態を、画面実装とAPI実装の両方から同じ形で参照できます。</p>
         <div class="callout">
           <p><strong>この文書の位置づけ</strong></p>
-          <p>画面構成とユースケースの一次ソースは <a href="./design.md#73-画面構成から要請される-api参考">設計文書 §7.3</a>、エラー方針は <a href="./design.md#106-バリデーションdtoエラー処理">§10.6</a>、レート制限は <a href="./design.md#1031-永続書き込みのレート制限と観測">§10.3.1</a> です。このページはHTTP入出力・レスポンス実例・実装状況を参照しやすくするための仕様カタログです。</p>
+          <p>画面構成とユースケースの一次ソースは <a href="./design.md#73-画面構成から要請される-api参考">設計文書 §7.3</a>、エラー方針は <a href="./design.md#106-バリデーションdtoエラー処理">§10.6</a>、レート制限は <a href="./adr/0004-persistent-write-rate-limit.md">ADR-0004</a> です。このページはHTTP入出力・レスポンス実例・実装状況を参照しやすくするための仕様カタログです。</p>
           <p>掲載しているJSONは、共有Zodスキーマと route 実装から起こした<strong>代表例</strong>です。値そのものは固定ではありません（形と型が契約です）。</p>
         </div>
 
@@ -309,7 +309,7 @@
             <article class="rule"><h3>2つのentrypoint</h3><p>公開HTTPは <code>CORS → Access検証 → userContext → routes</code>。web Server loader が使う Service Binding の <code>InternalApi</code> は <code>userContext → routes</code> のみで、同じrouteを共有します。</p></article>
             <article class="rule"><h3>認証（公開entrypoint）</h3><p>Cloudflare Access の <code>Cf-Access-Jwt-Assertion</code> を Worker 側で検証します。未設定・欠落・不一致はすべて <a href="#errors">401 <code>UNAUTHORIZED</code></a>。loopback URL かつ Access 未設定のローカル開発のみ bypass します。</p></article>
             <article class="rule"><h3>エラー形式</h3><p>routeのエラーは原則 <code>{ error: { code, message } }</code>。ただし入力検証の400は現時点で <code>zValidator</code> の既定形式（<code>{ success: false, error: { issues, name } }</code>）です。</p></article>
-            <article class="rule"><h3>永続書き込みのレート制限</h3><p>設定上限は <code>POST /answers</code> が60秒あたり60回、<code>POST /lesson-views</code> が60秒あたり30回。超過時は <span class="http">429</span> ＋ <code>Retry-After: 60</code>、limiter 自体が使えない場合は fail closed で <span class="http">503</span> です。Cloudflare location（PoP）ごとのカウンタで eventually consistent な abuse reduction であり、<strong>厳密なグローバルquotaではありません</strong>（§10.3.1）。</p></article>
+            <article class="rule"><h3>永続書き込みのレート制限</h3><p>設定上限は <code>POST /answers</code> が60秒あたり60回、<code>POST /lesson-views</code> が60秒あたり30回。超過時は <span class="http">429</span> ＋ <code>Retry-After: 60</code>、limiter 自体が使えない場合は fail closed で <span class="http">503</span> です。Cloudflare location（PoP）ごとのカウンタで eventually consistent な abuse reduction であり、<strong>厳密なグローバルquotaではありません</strong>（ADR-0004）。</p></article>
           </div>
         </section>
 

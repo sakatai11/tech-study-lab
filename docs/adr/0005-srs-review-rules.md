@@ -2,7 +2,7 @@
 
 - 状態: Accepted
 - 日付: 2026-10-13
-- 関連: Issue #240（`docs/design.md` §4.5 から移行）
+- 関連: Issue #240（`docs/design.md` の旧 4.5 節から移行）
 
 ## 背景
 
