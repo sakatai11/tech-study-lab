@@ -32,15 +32,13 @@ describe('DashboardPageContent', () => {
 
     render(await DashboardPageContent())
 
-    expect(screen.getByRole('heading', { name: '開発者のための学習ワークベンチ' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: '今日の学習' })).toBeTruthy()
     expect(screen.getByText('due-card')).toBeTruthy()
     expect(screen.getByText('dashboard-user-content')).toBeTruthy()
     expect(screen.queryByText('表示用サンプル')).toBeNull()
-    expect(screen.getByRole('link', { name: '復習を始める' })).toHaveProperty(
-      'href',
-      'http://localhost:3000/review',
-    )
-    expect(screen.getByRole('link', { name: '続きから' })).toHaveProperty(
+    // 復習への導線は due 件数を知る DashboardDueCard だけが持つ。
+    expect(screen.queryByRole('link', { name: '復習を始める' })).toBeNull()
+    expect(screen.getByRole('link', { name: '教材を読む' })).toHaveProperty(
       'href',
       'http://localhost:3000/learn/security/xss/preventing-xss',
     )
@@ -55,7 +53,7 @@ describe('DashboardPageContent', () => {
 
     render(await DashboardPageContent())
 
-    expect(screen.queryByText('NEXT LESSON')).toBeNull()
-    expect(screen.queryByRole('link', { name: '続きから' })).toBeNull()
+    expect(screen.queryByText('LESSON')).toBeNull()
+    expect(screen.queryByRole('link', { name: '教材を読む' })).toBeNull()
   })
 })

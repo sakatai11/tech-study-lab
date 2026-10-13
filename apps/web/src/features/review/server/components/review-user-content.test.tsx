@@ -41,7 +41,7 @@ describe('ReviewUserContent', () => {
 
     render(await ReviewUserContent())
 
-    expect(screen.getByText('今日は復習済みです')).toBeTruthy()
+    expect(screen.getByText('今は復習する問題はありません')).toBeTruthy()
     expect(screen.getByRole('link', { name: 'ホームへ' })).toHaveProperty(
       'href',
       'http://localhost:3000/home',

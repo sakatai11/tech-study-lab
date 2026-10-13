@@ -33,8 +33,8 @@ function activityDescription(activity: DashboardActivityViewModel): string {
   }
 
   return activity.lessonTitle
-    ? `問題に回答して復習予定を更新しました（${activity.lessonTitle}）`
-    : '問題に回答して復習予定を更新しました'
+    ? `問題に解答し、復習の予定を更新しました（${activity.lessonTitle}）`
+    : '問題に解答し、復習の予定を更新しました'
 }
 
 function activityDate(occurredAt: number): string {
@@ -64,11 +64,7 @@ function ActivityItem({ activity }: { activity: DashboardActivityViewModel }) {
         <p className="mb-0 text-sm font-semibold text-ink-2">{activityDescription(activity)}</p>
         <p className="mb-0 mt-1 font-mono text-xs text-faint">
           {activityDate(activity.occurredAt)} ·{' '}
-          {activity.type === 'answer_recorded'
-            ? activity.isCorrect
-              ? '正解'
-              : '不正解'
-            : 'lesson_viewed'}
+          {activity.type === 'answer_recorded' ? (activity.isCorrect ? '正解' : '不正解') : '閲覧'}
         </p>
       </div>
     </li>
@@ -96,7 +92,7 @@ export function DashboardDataContent({ viewModel }: { viewModel: DashboardViewMo
         />
         <StatCard
           icon="local_fire_department"
-          label="連続学習ストリーク"
+          label="連続学習日数"
           value={String(summary.currentStreakDays)}
           unit="日"
           tone="orange"
@@ -123,10 +119,10 @@ export function DashboardDataContent({ viewModel }: { viewModel: DashboardViewMo
               className="inline-flex min-h-11 items-center gap-1 rounded-lg px-2 font-semibold text-blue hover:underline lg:hidden"
               href="/analytics"
             >
-              すべて表示
+              学習分析を見る
               <MaterialSymbol className="size-5" name="chevron_right" />
             </Link>
-            <Badge className="tabular-nums">{summary.currentStreakDays} day streak</Badge>
+            <Badge className="tabular-nums">{summary.currentStreakDays}日連続</Badge>
           </div>
         </div>
         <div aria-hidden="true" className="heatmap-grid mt-5 grid grid-flow-col grid-rows-7 gap-1">

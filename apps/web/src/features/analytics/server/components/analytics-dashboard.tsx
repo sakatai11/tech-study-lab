@@ -60,7 +60,7 @@ export function AnalyticsDashboard({ viewModel }: { viewModel: AnalyticsViewMode
         />
         <StatCard
           icon="local_fire_department"
-          label="連続学習"
+          label="連続学習日数"
           value={String(summary.currentStreakDays)}
           unit="日"
           tone="orange"
@@ -80,7 +80,7 @@ export function AnalyticsDashboard({ viewModel }: { viewModel: AnalyticsViewMode
               <p className="mb-0 mt-1 text-sm text-mute">直近7日 · UTC</p>
             </div>
             <Badge className="border-green bg-green-bg text-green">
-              学習時間 {formatStudyTime(summary.thisWeekStudyTimeMs)}
+              今週の学習時間 {formatStudyTime(summary.thisWeekStudyTimeMs)}
             </Badge>
           </div>
           <ul aria-label="直近7日の解答数" className="mt-6 grid grid-cols-7 items-end gap-2">
@@ -114,7 +114,11 @@ export function AnalyticsDashboard({ viewModel }: { viewModel: AnalyticsViewMode
           <h2 className="mb-0 mt-2 text-xl font-black text-ink" id="retention-heading">
             SRS定着度分布
           </h2>
-          <p className="mb-0 mt-1 text-sm text-mute">現在の復習状態を3区分で表示</p>
+          <ul className="m-0 mt-1 list-none p-0 text-sm text-mute">
+            <li>復習待ち：期限を迎えた問題</li>
+            <li>習得済み：期限前で復習間隔21日以上</li>
+            <li>学習中：期限前で復習間隔21日未満</li>
+          </ul>
           <div className="mt-6 flex h-4 overflow-hidden rounded-full bg-well" aria-hidden="true">
             <span
               className="bg-green"
@@ -147,7 +151,7 @@ export function AnalyticsDashboard({ viewModel }: { viewModel: AnalyticsViewMode
               color="text-purple"
             />
             <RetentionItem
-              label="復習期限"
+              label="復習待ち"
               value={summary.retentionDistribution.dueCount}
               color="text-red"
             />
@@ -161,7 +165,7 @@ export function AnalyticsDashboard({ viewModel }: { viewModel: AnalyticsViewMode
           <h2 className="mb-0 mt-2 text-xl font-black text-ink" id="mistakes-heading">
             間違えやすい問題
           </h2>
-          <p className="mb-0 mt-1 text-sm text-mute">2回答以上 · 誤答率の高い順</p>
+          <p className="mb-0 mt-1 text-sm text-mute">2回以上解答した問題 · 誤答率の高い順</p>
           {mistakes.length === 0 ? (
             <p className="mb-0 mt-6 rounded-xl bg-well p-4 text-sm font-semibold text-mute">
               まだ十分な解答データがありません。

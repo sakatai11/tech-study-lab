@@ -31,10 +31,7 @@ describe('AppShell', () => {
 
     const desktop = screen.getByRole('navigation', { name: 'メインナビゲーション' })
     const desktopDashboard = desktop.querySelector('a[href="/home"]')
-    expect(desktopDashboard).toHaveProperty(
-      'textContent',
-      expect.stringContaining('ダッシュボード'),
-    )
+    expect(desktopDashboard).toHaveProperty('textContent', expect.stringContaining('ホーム'))
     expect(desktopDashboard?.getAttribute('aria-current')).toBe('page')
 
     const mobile = screen.getByRole('navigation', { name: 'モバイルナビゲーション' })
@@ -51,7 +48,7 @@ describe('AppShell', () => {
     )
     expect(desktop.querySelector('a[href="/analytics"]')).toHaveProperty(
       'textContent',
-      expect.stringContaining('アナリティクス'),
+      expect.stringContaining('学習分析'),
     )
   })
 

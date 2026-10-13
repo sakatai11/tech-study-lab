@@ -27,10 +27,15 @@ export function DomainProgressCard({ domain }: DomainProgressCardProps) {
       }
       color={domainTones[domain.domain]}
       detail={
-        <>
-          {domain.masteredQuestionCount} / {domain.totalQuestionCount} 問習得 · {domain.topicCount}{' '}
-          topic · {domain.lessonCount} lesson
-        </>
+        domain.totalQuestionCount > 0 ? (
+          <>
+            {domain.totalQuestionCount}問中{domain.masteredQuestionCount}問習得 ·{' '}
+            {domain.topicCount}
+            トピック · {domain.lessonCount}レッスン
+          </>
+        ) : (
+          '教材を準備しています'
+        )
       }
       eyebrow={domain.domain}
       icon={domainIcons[domain.domain]}

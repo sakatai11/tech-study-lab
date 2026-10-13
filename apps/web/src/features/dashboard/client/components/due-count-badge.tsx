@@ -42,9 +42,9 @@ export function DueCountBadge({ className }: DueCountBadgeProps) {
 
   return (
     <span className={className}>
-      <span className="sr-only">期限の復習が</span>
+      <span className="sr-only">期限を迎えた問題が</span>
       {viewModel.dueCount}
-      <span className="sr-only">件</span>
+      <span className="sr-only">問</span>
     </span>
   )
 }

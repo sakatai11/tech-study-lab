@@ -5,6 +5,7 @@ import type { QuizQuestionViewModel, SubmittedAnswer } from '../../view-model'
 
 type QuestionCardProps = {
   explanation: string
+  nextLabel: string
   onAnswer: (selectedIndex: number) => void
   onNext: () => void
   question: QuizQuestionViewModel
@@ -12,10 +13,9 @@ type QuestionCardProps = {
   submitting: boolean
 }
 
-const choiceLabels = ['A', 'B', 'C', 'D', 'E', 'F']
-
 export function QuestionCard({
   explanation,
+  nextLabel,
   onAnswer,
   onNext,
   question,
@@ -70,7 +70,7 @@ export function QuestionCard({
               type="button"
             >
               <span className="grid size-7 shrink-0 place-items-center rounded-lg border border-border bg-surface font-mono text-xs text-mute">
-                {choiceLabels[index]}
+                {index + 1}
               </span>
               <span className="min-w-0 flex-1 pt-0.5">{choice}</span>
               {isCorrectChoice ? (
@@ -109,7 +109,7 @@ export function QuestionCard({
           onClick={onNext}
           type="button"
         >
-          次へ
+          {nextLabel}
           <MaterialSymbol className="size-5" name="arrow_forward" />
         </button>
       </div>

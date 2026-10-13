@@ -11,5 +11,5 @@ import { loadReviewOnce } from '../load-review'
 export async function ReviewDueBadge() {
   const { dueCount } = await loadReviewOnce()
 
-  return <Badge className="border-red bg-red-bg text-red">{dueCount} due</Badge>
+  return <Badge className="border-red bg-red-bg text-red">{dueCount}問</Badge>
 }

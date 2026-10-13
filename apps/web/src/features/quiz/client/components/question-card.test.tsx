@@ -15,6 +15,7 @@ function renderCard(result?: { correctIndex: number; isCorrect: boolean; selecte
   render(
     <QuestionCard
       explanation="解説"
+      nextLabel="次へ"
       onAnswer={() => {}}
       onNext={() => {}}
       question={question}

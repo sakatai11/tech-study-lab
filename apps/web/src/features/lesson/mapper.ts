@@ -53,6 +53,7 @@ export function lessonContentToViewModel(content: BundledLesson): LessonViewMode
     topic: content.topic,
     id: content.lessonId,
     title: content.title,
+    estimatedMinutes: content.estimatedMinutes,
     markdownBody: content.body,
     questions: content.questions.map(({ id, prompt, choices }) => ({
       id,
