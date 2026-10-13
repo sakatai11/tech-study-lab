@@ -115,9 +115,9 @@ export function AnalyticsDashboard({ viewModel }: { viewModel: AnalyticsViewMode
             SRS定着度分布
           </h2>
           <ul className="m-0 mt-1 list-none p-0 text-sm text-mute">
-            <li>習得済み：復習間隔21日以上</li>
-            <li>学習中：復習間隔21日未満</li>
             <li>復習待ち：期限を迎えた問題</li>
+            <li>習得済み：期限前で復習間隔21日以上</li>
+            <li>学習中：期限前で復習間隔21日未満</li>
           </ul>
           <div className="mt-6 flex h-4 overflow-hidden rounded-full bg-well" aria-hidden="true">
             <span
