@@ -4,19 +4,21 @@
 // 検査するのは構造と参照の解決可能性だけであり、ADR の内容の妥当性はレビューで確認する。
 //
 // 検査項目:
-//   1. ADR ファイル（docs/adr/NNNN-<slug>.md）の見出し番号・状態・必須節、連番に欠番がないこと
-//   2. 「検証」節に相対リンクが1つ以上あり、リンク先がファイルとして実在し、そのファイルが自分の ADR 番号を含むこと
-//      （テストファイルは `describe` / `it` 名に付ける `[ADR-NNNN]` タグ、それ以外は `ADR-NNNN`）。
-//      `Superseded by` のリンク先が実在すること
-//   3. docs/adr/README.md の索引がすべての ADR を載せていること
-//   4. リポジトリ中の `ADR-NNNN` と `adr/NNNN-<slug>.md` への参照が、実在する ADR を指すこと
+//   1. docs/adr/ の Markdown（README.md・template.md を除く）がすべて NNNN-<slug>.md の名前を持つこと。
+//      各 ADR の見出し番号・状態・必須節、連番に欠番がないこと
+//   2. 「検証」節に相対リンクが1つ以上あり、リンク先がファイルとして実在すること。
+//      テストファイルは `describe` / `it` / `test` の名前に `[ADR-NNNN]` タグを持ち、それ以外は `ADR-NNNN` を含むこと
+//   3. `Superseded by [ADR-NNNN](...)` の表示番号とリンク先のファイルの番号が一致し、リンク先が実在すること
+//   4. docs/adr/README.md の「索引」の表に、各 ADR へのリンクの行があり、状態が ADR と一致すること
+//   5. リポジトリ中の `ADR-NNNN` と `adr/NNNN-<slug>.md` への参照が、実在する ADR を指すこと
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, statSync } from 'node:fs'
-import { dirname, join, normalize } from 'node:path'
+import { basename, dirname, join, normalize } from 'node:path'
 
 const adrDir = 'docs/adr'
 const adrFilePattern = /^docs\/adr\/([0-9]{4})-[a-z0-9-]+\.md$/
+const adrSupportFiles = new Set([`${adrDir}/README.md`, `${adrDir}/template.md`])
 const requiredSections = ['背景', '決定', '境界', '検証']
 const testFilePattern = /\.test\.[cm]?[jt]sx?$/
 const statusPattern =
@@ -32,6 +34,24 @@ export function sectionBody(markdown, name) {
   return (end === -1 ? rest : rest.slice(0, end)).join('\n')
 }
 
+/** 状態行の値から状態の種類（Proposed / Accepted / Deprecated / Superseded）を返す。 */
+function statusKind(status) {
+  return status?.match(/^(Proposed|Accepted|Deprecated|Superseded)\b/)?.[1] ?? null
+}
+
+/**
+ * テストファイルの `describe` / `it` / `test` に渡した名前（第1引数の文字列リテラル）を集める。
+ *
+ * コメントは除いてから探すため、コメントアウトした宣言やコメント中のタグは名前として数えない。
+ * `it.each(...)('名前', ...)` のように表を受け取る形も、表の後に続く名前を拾う。
+ */
+export function testNames(source) {
+  const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+  const pattern =
+    /\b(?:describe|it|test)(?:\.(?:only|skip|concurrent|sequential|todo|fails))*(?:\.each\s*\([\s\S]*?\)\s*)?\(\s*(['"`])((?:\\.|(?!\1)[^\\])*)\1/g
+  return [...code.matchAll(pattern)].map((match) => match[2])
+}
+
 /**
  * 1件の ADR の書式違反を返す。
  *
@@ -44,13 +64,18 @@ export function validateAdr(file, number, markdown, readTarget) {
 
   if (!markdown.startsWith(`# ${number}: `))
     report(`first line must be a "# ${number}: <title>" heading`)
-  const superseded = markdown.match(/^- 状態: Superseded by \[ADR-[0-9]{4}\]\(([^)]+)\)/m)
-  if (superseded && readTarget(normalize(join(dirname(file), superseded[1]))) === null)
-    report(`superseding ADR link does not exist: ${superseded[1]}`)
   if (!statusPattern.test(markdown))
     report(
       'status line must be "- 状態: Proposed|Accepted|Deprecated|Superseded by [ADR-NNNN](...)"',
     )
+  const superseded = markdown.match(/^- 状態: Superseded by \[ADR-([0-9]{4})\]\(([^)]+)\)/m)
+  if (superseded) {
+    const [, shown, link] = superseded
+    const linked = basename(link.split('#')[0]).match(/^([0-9]{4})-/)?.[1]
+    if (linked !== shown) report(`superseding ADR link must point at the ${shown} file: ${link}`)
+    else if (readTarget(normalize(join(dirname(file), link.split('#')[0]))) === null)
+      report(`superseding ADR link does not exist: ${link}`)
+  }
   for (const name of requiredSections)
     if (sectionBody(markdown, name) === null) report(`missing "## ${name}" section`)
 
@@ -65,12 +90,44 @@ export function validateAdr(file, number, markdown, readTarget) {
     }
     const target = normalize(join(dirname(file), link.split('#')[0]))
     const content = readTarget(target)
-    const expected = testFilePattern.test(target) ? `[${tag}]` : tag
     if (content === null) report(`verification link does not exist: ${link}`)
-    else if (!content.includes(expected))
-      report(`verification target does not mention ${expected}: ${target}`)
+    else if (testFilePattern.test(target)) {
+      if (!testNames(content).some((name) => name.includes(`[${tag}]`)))
+        report(`verification test has no describe / it name tagged [${tag}]: ${target}`)
+    } else if (!content.includes(tag))
+      report(`verification target does not mention ${tag}: ${target}`)
   }
 
+  return problems
+}
+
+/**
+ * 索引の表に、各 ADR へのリンクの行があり、状態が ADR の状態と一致するかを検査する。
+ *
+ * `adrs` は `{ number, basename, status }` の配列。説明文中の言及は行として数えない。
+ */
+export function findIndexProblems(indexText, adrs) {
+  const section = sectionBody(indexText, '索引')
+  if (section === null) return ['missing "## 索引" section']
+
+  const rows = section
+    .split('\n')
+    .filter((line) => line.trim().startsWith('|'))
+    .map((line) =>
+      line
+        .trim()
+        .replace(/^\||\|$/g, '')
+        .split('|')
+        .map((cell) => cell.trim()),
+    )
+
+  const problems = []
+  for (const { number, basename: name, status } of adrs) {
+    const row = rows.find((cells) => cells[0] === `[ADR-${number}](./${name})`)
+    if (!row) problems.push(`index has no row linking ADR-${number} to ./${name}`)
+    else if (statusKind(row.at(-1)) !== statusKind(status))
+      problems.push(`index status of ADR-${number} must be ${statusKind(status)}`)
+  }
   return problems
 }
 
@@ -94,7 +151,7 @@ export function findUnresolvedAdrRefs(file, text, adrs) {
 function selfTest() {
   // この検査自身も走査対象に含まれるため、未解決の参照を fixture としてソース上へ literal で残さない。
   const tagOf = (number) => ['ADR', number].join('-')
-  const pathOf = (basename) => ['adr', basename].join('/')
+  const pathOf = (name) => ['adr', name].join('/')
   const adrs = { numbers: new Set(['0001']), basenames: new Set(['0001-sample.md']) }
 
   assert.deepEqual(
@@ -115,6 +172,25 @@ function selfTest() {
     'placeholders must not be treated as references',
   )
 
+  const tagged = `[${tagOf('0001')}]`
+  assert.deepEqual(
+    testNames(
+      [
+        `describe('suite ${tagged}', () => {`,
+        '  it.each([{ a: 1 }, { a: 2 }])(',
+        `    'case $a ${tagged}',`,
+        '    () => {},',
+        '  )',
+        `  // it('commented ${tagged}', () => {})`,
+        `  /* test('blocked ${tagged}') */`,
+        `  test(\`template ${tagged}\`, () => {})`,
+        '})',
+      ].join('\n'),
+    ),
+    [`suite ${tagged}`, `case $a ${tagged}`, `template ${tagged}`],
+    'test names come from describe / it / test calls, including it.each, and never from comments',
+  )
+
   const valid = [
     '# 0001: 判断',
     '',
@@ -128,77 +204,89 @@ function selfTest() {
     '- [x.test.ts](../../src/x.test.ts): 検証内容',
   ].join('\n')
   const targets = {
-    'src/x.test.ts': `describe('x [${tagOf('0001')}]')`,
-    'src/y.test.ts': 'no tag',
-    'src/comment.test.ts': `// ${tagOf('0001')} はコメントだけ`,
+    'src/x.test.ts': `describe('x ${tagged}', () => {})`,
+    'src/y.test.ts': "describe('x', () => {})",
+    'src/comment.test.ts': `// ${tagged} はコメントだけ\ndescribe('x', () => {})`,
+    'scripts/check.mjs': `// ${tagOf('0001')} を検査する`,
     [`docs/${pathOf('0002-next.md')}`]: '# 0002: 次の判断',
+    [`docs/${pathOf('0003-other.md')}`]: '# 0003: 別の判断',
   }
   const readTarget = (path) => targets[path] ?? null
   const file = `docs/${pathOf('0001-sample.md')}`
+  const messagesOf = (markdown) =>
+    validateAdr(file, '0001', markdown, readTarget).map((item) => item.message)
 
-  assert.deepEqual(validateAdr(file, '0001', valid, readTarget), [], 'a valid ADR must pass')
+  assert.deepEqual(messagesOf(valid), [], 'a valid ADR must pass')
   assert.deepEqual(
-    validateAdr(
-      file,
-      '0001',
-      valid.replace('../../src/x.test.ts', '../../src/y.test.ts'),
-      readTarget,
-    ).map((item) => item.message),
-    [`verification target does not mention [${tagOf('0001')}]: src/y.test.ts`],
-    'a verification target without the ADR tag must be reported',
+    messagesOf(valid.replace('../../src/x.test.ts', '../../scripts/check.mjs')),
+    [],
+    'a non-test verification target only needs to mention the ADR number',
   )
   assert.deepEqual(
-    validateAdr(
-      file,
-      '0001',
-      valid.replace('../../src/x.test.ts', '../../src/comment.test.ts'),
-      readTarget,
-    ).map((item) => item.message),
-    [`verification target does not mention [${tagOf('0001')}]: src/comment.test.ts`],
-    'a test file must carry the bracketed tag, not only a comment mention',
+    messagesOf(valid.replace('../../src/x.test.ts', '../../src/y.test.ts')),
+    [`verification test has no describe / it name tagged ${tagged}: src/y.test.ts`],
+    'a verification test without a tagged name must be reported',
   )
   assert.deepEqual(
-    validateAdr(
-      file,
-      '0001',
-      valid.replace('../../src/x.test.ts', '../../src/z.test.ts'),
-      readTarget,
-    ).map((item) => item.message),
+    messagesOf(valid.replace('../../src/x.test.ts', '../../src/comment.test.ts')),
+    [`verification test has no describe / it name tagged ${tagged}: src/comment.test.ts`],
+    'a bracketed tag only in a comment must not count as a tagged test name',
+  )
+  assert.deepEqual(
+    messagesOf(valid.replace('../../src/x.test.ts', '../../src/z.test.ts')),
     ['verification link does not exist: ../../src/z.test.ts'],
     'a missing verification target must be reported',
   )
   assert.deepEqual(
-    validateAdr(
-      file,
-      '0001',
-      valid.replace('- 状態: Accepted', '- 状態: Done').replace('## 境界\n', ''),
-      readTarget,
-    ).map((item) => item.message),
+    messagesOf(valid.replace('- 状態: Accepted', '- 状態: Done').replace('## 境界\n', '')),
     [
       'status line must be "- 状態: Proposed|Accepted|Deprecated|Superseded by [ADR-NNNN](...)"',
       'missing "## 境界" section',
     ],
     'an unknown status and a missing section must be reported',
   )
-  assert.equal(
-    validateAdr(
-      file,
-      '0001',
-      valid.replace('- 状態: Accepted', `- 状態: Superseded by [${tagOf('0002')}](./0002-next.md)`),
-      readTarget,
-    ).length,
-    0,
-    'a superseded status with a link must pass',
+  const supersededBy = (number, link) =>
+    valid.replace('- 状態: Accepted', `- 状態: Superseded by [${tagOf(number)}](${link})`)
+  assert.deepEqual(
+    messagesOf(supersededBy('0002', './0002-next.md')),
+    [],
+    'a superseded status with a matching link must pass',
   )
   assert.deepEqual(
-    validateAdr(
-      file,
-      '0001',
-      valid.replace('- 状態: Accepted', `- 状態: Superseded by [${tagOf('0002')}](./0002-gone.md)`),
-      readTarget,
-    ).map((item) => item.message),
+    messagesOf(supersededBy('0002', './0002-gone.md')),
     ['superseding ADR link does not exist: ./0002-gone.md'],
     'a superseded status pointing at a missing file must be reported',
+  )
+  assert.deepEqual(
+    messagesOf(supersededBy('0002', './0003-other.md')),
+    ['superseding ADR link must point at the 0002 file: ./0003-other.md'],
+    'a superseded status whose link names another ADR must be reported',
+  )
+
+  const index = [
+    '# ADR',
+    '',
+    `運用方針は [${tagOf('0001')}](./0001-sample.md) にある。`,
+    '',
+    '## 索引',
+    '',
+    '| 番号 | タイトル | 状態 |',
+    '| --- | --- | --- |',
+    `| [${tagOf('0001')}](./0001-sample.md) | 判断 | Accepted |`,
+  ].join('\n')
+  const indexed = [{ number: '0001', basename: '0001-sample.md', status: 'Accepted' }]
+  assert.deepEqual(findIndexProblems(index, indexed), [], 'an indexed ADR must pass')
+  assert.deepEqual(
+    findIndexProblems(index.split('\n').slice(0, -1).join('\n'), indexed),
+    [`index has no row linking ${tagOf('0001')} to ./0001-sample.md`],
+    'a mention outside the index table must not count as an index row',
+  )
+  assert.deepEqual(
+    findIndexProblems(index, [
+      { ...indexed[0], status: `Superseded by [${tagOf('0002')}](./0002-next.md)` },
+    ]),
+    [`index status of ${tagOf('0001')} must be Superseded`],
+    'an index status that disagrees with the ADR must be reported',
   )
 }
 
@@ -215,33 +303,49 @@ const files = execFileSync(
   .filter(Boolean)
   .filter((file) => existsSync(file))
 
-const adrFiles = files
-  .map((file) => ({ file, match: file.match(adrFilePattern) }))
-  .filter(({ match }) => match)
-  .map(({ file, match }) => ({ file, number: match[1] }))
-  .sort((a, b) => a.number.localeCompare(b.number))
-
-const adrs = {
-  numbers: new Set(adrFiles.map(({ number }) => number)),
-  basenames: new Set(adrFiles.map(({ file }) => file.slice(adrDir.length + 1))),
-}
-
 const problems = []
 const readTarget = (path) =>
   existsSync(path) && statSync(path).isFile() ? readFileSync(path, 'utf8') : null
 
-adrFiles.forEach(({ file, number }, index) => {
+for (const file of files)
+  if (
+    file.startsWith(`${adrDir}/`) &&
+    file.endsWith('.md') &&
+    !adrSupportFiles.has(file) &&
+    !adrFilePattern.test(file)
+  )
+    problems.push({ file, message: 'ADR file name must be docs/adr/NNNN-<lowercase-slug>.md' })
+
+const adrFiles = files
+  .map((file) => ({ file, match: file.match(adrFilePattern) }))
+  .filter(({ match }) => match)
+  .map(({ file, match }) => {
+    const markdown = readFileSync(file, 'utf8')
+    return {
+      file,
+      number: match[1],
+      basename: file.slice(adrDir.length + 1),
+      markdown,
+      status: markdown.match(/^- 状態: (.+?)\s*$/m)?.[1] ?? null,
+    }
+  })
+  .sort((a, b) => a.number.localeCompare(b.number))
+
+const adrs = {
+  numbers: new Set(adrFiles.map(({ number }) => number)),
+  basenames: new Set(adrFiles.map(({ basename: name }) => name)),
+}
+
+adrFiles.forEach(({ file, number, markdown }, index) => {
   const expected = String(index + 1).padStart(4, '0')
   if (number !== expected)
     problems.push({ file, message: `ADR numbers must be consecutive: expected ${expected}` })
-  problems.push(...validateAdr(file, number, readFileSync(file, 'utf8'), readTarget))
+  problems.push(...validateAdr(file, number, markdown, readTarget))
 })
 
 const indexPath = `${adrDir}/README.md`
-const indexText = readTarget(indexPath) ?? ''
-for (const { number } of adrFiles)
-  if (!indexText.includes(`ADR-${number}`))
-    problems.push({ file: indexPath, message: `index does not list ADR-${number}` })
+for (const message of findIndexProblems(readTarget(indexPath) ?? '', adrFiles))
+  problems.push({ file: indexPath, message })
 
 const unresolved = []
 for (const file of files) {
