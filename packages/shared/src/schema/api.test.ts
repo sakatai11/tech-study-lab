@@ -335,7 +335,7 @@ describe('domainSummarySchema', () => {
   })
 })
 
-describe('analytics response schemas', () => {
+describe('analytics response schemas [ADR-0007]', () => {
   it('accepts the summary contract including retention distribution', () => {
     expect(
       analyticsSummaryResponseSchema.safeParse({

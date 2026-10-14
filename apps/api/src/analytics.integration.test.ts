@@ -40,7 +40,7 @@ async function fetchAnalytics(path: string): Promise<Response> {
   }).fetch(new Request(`https://api.internal${path}`), env)
 }
 
-describe('analytics API', () => {
+describe('analytics API [ADR-0007]', () => {
   const fixedNow = Date.parse('2026-08-31T12:00:00.000Z')
 
   beforeAll(async () => {

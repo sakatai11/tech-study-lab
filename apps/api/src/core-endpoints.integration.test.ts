@@ -456,7 +456,7 @@ describe('core API endpoints', () => {
     await expect(reviewDeps.countDueQuestions(FIXED_USER_ID, now)).resolves.toBe(2)
   })
 
-  it('returns ordered four-domain summaries with active questions, mastery boundary, and user isolation [ADR-0003]', async () => {
+  it('returns ordered four-domain summaries with active questions, mastery boundary, and user isolation [ADR-0003] [ADR-0006]', async () => {
     await seedQuestion('security-1', 0, {
       domain: 'security',
       topic: 'xss',
@@ -524,7 +524,7 @@ describe('core API endpoints', () => {
     })
   })
 
-  it('keeps the domains route behind Access and maps repository failures to 500', async () => {
+  it('keeps the domains route behind Access and maps repository failures to 500 [ADR-0008]', async () => {
     const publicResponse = await createPublicApiApp().fetch(
       new Request('https://api.example.com/domains'),
       {
@@ -551,7 +551,7 @@ describe('core API endpoints', () => {
     })
   })
 
-  it('allows an Access-verified public write and rejects unauthorized writes before D1 changes', async () => {
+  it('allows an Access-verified public write and rejects unauthorized writes before D1 changes [ADR-0008]', async () => {
     const app = createPublicApiApp(async () => undefined, { rateLimiters: allowingRateLimiters })
     const bindings = {
       ...env,
@@ -597,7 +597,7 @@ describe('core API endpoints', () => {
     })
   })
 
-  it('rejects an unauthorized non-loopback write through the default public Worker before D1 changes', async () => {
+  it('rejects an unauthorized non-loopback write through the default public Worker before D1 changes [ADR-0008]', async () => {
     const response = await SELF.fetch('https://api.test/answers', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },

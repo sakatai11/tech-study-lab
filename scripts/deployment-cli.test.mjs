@@ -20,7 +20,7 @@ import { createManifest, getTarget } from './deployment-lib.mjs'
 const source = fileURLToPath(new URL('../', import.meta.url))
 const verification = getTarget('verification')
 
-test('actual apply CLI uploads prepared files in order and refuses invalid releases before any mutation', () => {
+test('actual apply CLI uploads prepared files in order and refuses invalid releases before any mutation [ADR-0006] [ADR-0010]', () => {
   const scenarios = [
     ...[undefined, 'auth', 'stale', 'tamper', 'database', 'disabled'].map((failure) => ({
       environment: 'verification',

@@ -45,7 +45,7 @@ describe('apiErrorHandler', () => {
   })
 })
 
-describe('public API entrypoint', () => {
+describe('public API entrypoint [ADR-0008]', () => {
   it('keeps health public and completes CORS preflight before Access or user context', async () => {
     const verifier = vi.fn<AccessTokenVerifier>()
     const app = createPublicApiApp(verifier)

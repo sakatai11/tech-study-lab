@@ -68,6 +68,8 @@ pnpm workspaces による monorepo。
 
 ### 3.1 Worker 構成と接続（決定）
 
+別 Worker とする判断と書き込みの経路は [ADR-0012](./adr/0012-separate-web-and-api-workers.md) に移した。
+
 `apps/web`（Vinext）と `apps/api`（Hono）は**別 Worker としてデプロイする**。Next.js の Route Handler 上に Hono を載せる同居構成（`app/api/[[...route]]/route.ts` + `handle()`）は採用しない。
 
 **別 Worker を採る理由**：
@@ -90,6 +92,8 @@ pnpm workspaces による monorepo。
 - web Worker の認証後画面は、ユーザー固有データを共有キャッシュへ載せない通常のリクエスト時 SSR とする。教材・問題の content route だけは `generateStaticParams` による標準 SSG とし、ISR 用の Incremental Cache・再検証 Queue（Durable Object / R2 / KV）、Worker 自己参照 binding は使用しない。
 
 #### 本番アクセス境界（Issue #112）
+
+決定と境界は [ADR-0008](./adr/0008-production-access-boundary.md) に移した。
 
 固定ユーザー MVP の公開 API は、アプリケーション内の `userContext` より前で Cloudflare Access JWT を検証する。Cloudflare Access のアプリケーションプロキシだけに依存する案は、Worker の公開 URL への経路、アプリ内での認可前提、テスト可能な失敗契約を一箇所で保証できないため採用しない。Access が発行する JWT を Worker 自身で署名・**完全一致の issuer**・audience まで検証する方式を採用する。
 
@@ -115,6 +119,8 @@ pnpm workspaces による monorepo。
 
 ### 4.2 持ち方（ハイブリッド）
 
+content と D1 の役割分担と同期の規則は [ADR-0006](./adr/0006-content-as-source-of-truth.md) に移した。
+
 | データ | 保存先 | 役割 |
 | --- | --- | --- |
 | 教材・問題 | **Git管理の Markdown + frontmatter**（`content/`） | 一次ソース。AIが執筆・改訂、PRでレビュー |
@@ -129,6 +135,8 @@ pnpm workspaces による monorepo。
 - 記述式・コード問題は `question.type` フィールドで**後から追加できる拡張ポイント**として確保する。
 
 ### 4.4 データの意味と整合性
+
+学習分析の集計境界は [ADR-0007](./adr/0007-analytics-aggregation-boundaries.md)、content 同期と `is_active` は [ADR-0006](./adr/0006-content-as-source-of-truth.md) に移した。
 
 content（frontmatter）側:
 
@@ -313,6 +321,8 @@ HTTP 入出力、リクエスト・レスポンスの実例（JSON）、Zod ス�
 - Server dataの再取得はClient Componentの `router.refresh()` によるRSC再実行に統一する。API adapterへキャッシュ方針を持ち込まない。
 
 #### 通常SSR・標準SSGの規範
+
+ユーザー固有のデータを共有キャッシュに載せない規則は [ADR-0013](./adr/0013-no-shared-cache-for-user-data.md) に移した。
 
 - `/` はユーザー固有データを読まない静的 RSC、`/home`・`/review`・`/domains`・`/analytics` は `dynamic = 'force-dynamic'` を指定した通常のリクエスト時 SSR とする。各 Server loader はリクエストごとに実行し、ユーザー固有データを共有キャッシュしない。
 - 教材・演習の content route は `generateStaticParams` で全 params を列挙する標準 SSG とする（content 取得の契約は §8.2）。`cacheComponents`、`'use cache'` は採用しない。
@@ -671,12 +681,16 @@ zValidator（shared の answerRequestSchema で入力検証）
 
 ### 10.7 D1 の整合性と書き込み
 
+決定と境界は [ADR-0009](./adr/0009-srs-write-integrity.md) に移した。
+
 - **D1 は対話型トランザクション（`BEGIN`〜`COMMIT` を複数往復で跨ぐ形）をサポートしない**。複数文の原子的書き込みは `db.batch([...])` を使う。`POST /answers` の「`answer_log` 挿入＋`srs_state` upsert」は必ず 1 batch にまとめる（片方だけ書けた状態を作らない）。
 - 「読み（現 SRS 状態）→ 計算 → 書き」の間に別リクエストが割り込む競合は、`version` で検出して再読み込み・再計算する。最大試行回数を超えた場合は明示的に失敗させ、解答ログを残さない。
 - `srs_states` は `(user_id, question_id)` の**複合主キー**とし、`version` を使った条件付き upsert で同時解答による更新消失を防ぐ。解答ログ挿入とSRS更新は `db.batch()` にまとめ、競合時はログを挿入せず再試行する。
 - Drizzle インスタンスは route ハンドラ内で `drizzle(c.env.DB)` を生成して dal へ渡す（リクエストスコープ。グローバルに保持しない）。
 
 ### 10.8 content → D1 同期スクリプト
+
+同期の規則は [ADR-0006](./adr/0006-content-as-source-of-truth.md) に移した。
 
 §4.2 の seed/upsert を `apps/api/scripts/sync-content.ts` として実装する。ローカル同期は `pnpm --filter @tsl/api content:sync`、本番 D1 同期は `pnpm --filter @tsl/api content:sync:remote` を使う。パース・ペイロード生成・SQL 生成の純粋ロジックは `apps/api/src/content-sync.ts` に切り出し（§10.2）、`scripts/sync-content.ts` はそれを呼ぶ Node CLI 部（`fs` 読み取り・`wrangler d1 execute` 実行）に徹する。
 
@@ -741,6 +755,8 @@ content/
 - 教材追加・改訂時の読み取り専用preflightには `pnpm content:validate` を使う。このコマンドは共有content Zodと共通パーサーで構造・パス・IDを検証し、生成物の更新やD1同期は行わない。
 
 ### 11.2 ID 命名規則
+
+記録済みの ID を変えない規則は [ADR-0006](./adr/0006-content-as-source-of-truth.md) に移した。
 
 | ID | 形式 | 例 |
 | --- | --- | --- |
@@ -829,6 +845,8 @@ Cloudflare の型は `pnpm --filter @tsl/web cf-typegen` で `apps/web/wrangler.
 
 ### 12.4 本番デプロイ手順（順序が仕様）
 
+適用順序と失敗時の停止は [ADR-0010](./adr/0010-deploy-order.md) に移した。
+
 初回のみ：`wrangler d1 create tech-study-lab` を実行し、発行された非秘密の `database_id` を `apps/api/wrangler.toml` に設定して Git 管理する。外部リソースの作成・更新を伴うため、実行前に対象アカウント・D1・Worker・入力値を確認し、明示的な承認を得る。`WEB_ORIGIN`・`ACCESS_ISSUER`・`ACCESS_AUDIENCE` の production 値はリポジトリや `.env` に保存しない。
 
 デプロイ前に、API/public Web hostname と Cloudflare Access application / policy の対象を確認する。ブラウザと同じ `Origin` を指定した `OPTIONS`（`POST` と必要 header を含む）が、Access edge で遮断されず Worker の credentialed CORS 応答に到達するか、同等の正しい Access 応答を返すことを実機で確認する。Access cookie が Web と API の実際の hostname で送信されることも確認できるまで、以下を開始しない。
@@ -859,6 +877,8 @@ Cloudflare の型は `pnpm --filter @tsl/web cf-typegen` で `apps/web/wrangler.
 
 ### 12.5 content 更新の運用ルール
 
+二重反映の規則は [ADR-0006](./adr/0006-content-as-source-of-truth.md) に移した。
+
 content は「web のビルド時バンドル（§8.2）」と「D1 の `questions` 同期（§10.8）」の**二重反映**である。
 
 - content を変更したら、§12.4 の **② content sync と ④ web 再ビルド・デプロイを必ずセットで実行**する。
@@ -866,6 +886,8 @@ content は「web のビルド時バンドル（§8.2）」と「D1 の `questio
 - CI 化の際は `content/` の差分を検知して両ジョブを必須にする。
 
 ### 12.6 マイグレーション運用
+
+変更しない規則と段階的な破壊的変更は [ADR-0011](./adr/0011-immutable-migrations.md) に移した。
 
 - 生成：`pnpm --filter @tsl/api db:generate`（drizzle-kit）→ ローカル適用（`db:migrate:local`）→ テスト → PR。
 - 本番適用はデプロイ手順の先頭（§12.4 の①）。

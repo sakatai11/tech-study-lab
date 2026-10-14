@@ -14,7 +14,7 @@ const sqlPath = 'apps/api/drizzle/migrations/0001_initial.sql'
 const snapshotPath = 'apps/api/drizzle/migrations/meta/0001_snapshot.json'
 const journalPath = 'apps/api/drizzle/migrations/meta/_journal.json'
 
-test('allows new migrations, new snapshots, and journal appends', () => {
+test('allows new migrations, new snapshots, and journal appends [ADR-0011]', () => {
   const base = new Map([
     [sqlPath, 'sql-v1'],
     [snapshotPath, 'snapshot-v1'],
@@ -31,21 +31,21 @@ test('allows new migrations, new snapshots, and journal appends', () => {
   assert.deepEqual(findImmutableFileChanges(base, head), [])
 })
 
-test('rejects a deleted or renamed migration even if a replacement is added', () => {
+test('rejects a deleted or renamed migration even if a replacement is added [ADR-0011]', () => {
   const base = new Map([[sqlPath, 'sql-v1']])
   const head = new Map([['apps/api/drizzle/migrations/0001_renamed.sql', 'sql-v1']])
 
   assert.deepEqual(findImmutableFileChanges(base, head), [{ path: sqlPath, reason: 'missing' }])
 })
 
-test('rejects changes to an existing migration SQL file', () => {
+test('rejects changes to an existing migration SQL file [ADR-0011]', () => {
   const base = new Map([[sqlPath, 'sql-v1']])
   const head = new Map([[sqlPath, 'sql-v2']])
 
   assert.deepEqual(findImmutableFileChanges(base, head), [{ path: sqlPath, reason: 'modified' }])
 })
 
-test('rejects deletion and content changes of existing snapshots', () => {
+test('rejects deletion and content changes of existing snapshots [ADR-0011]', () => {
   const base = new Map([
     [snapshotPath, 'snapshot-v1'],
     ['apps/api/drizzle/migrations/meta/0002_snapshot.json', 'snapshot-v2'],

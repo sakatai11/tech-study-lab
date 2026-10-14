@@ -42,7 +42,7 @@ const productionMigrations = [
 describe('Web Worker configuration', () => {
   const config = readJsonc(new URL('../wrangler.jsonc', import.meta.url))
 
-  it('deploys the Vinext Worker as the production web Worker', () => {
+  it('deploys the Vinext Worker as the production web Worker [ADR-0012]', () => {
     expect(config.name).toBe('tech-study-lab-web')
     expect(config.main).toBe('vinext/server/fetch-handler')
     expect(config.compatibility_flags).toEqual([
@@ -63,7 +63,7 @@ describe('Web Worker configuration', () => {
     expect(config.migrations).toEqual(productionMigrations)
   })
 
-  it('does not enable Cache Components or bind PPR-only cache infrastructure', () => {
+  it('does not enable Cache Components or bind ISR cache infrastructure [ADR-0013]', () => {
     expect(nextConfig).not.toHaveProperty('cacheComponents')
     expect(config.durable_objects).toBeUndefined()
     expect(config.r2_buckets).toBeUndefined()

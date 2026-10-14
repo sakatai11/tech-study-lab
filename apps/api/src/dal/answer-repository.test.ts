@@ -87,7 +87,7 @@ class CapturingD1Database implements D1Database, D1DatabaseSession {
   }
 }
 
-describe('createAnswerDeps', () => {
+describe('createAnswerDeps [ADR-0009]', () => {
   it('sends both answer-log and SRS writes in one D1 batch and propagates its failure', async () => {
     const client = new CapturingD1Database()
     const deps = createAnswerDeps(drizzle(client))

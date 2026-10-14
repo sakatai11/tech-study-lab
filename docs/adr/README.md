@@ -42,3 +42,11 @@
 | [ADR-0003](./0003-server-injected-user-id.md) | userId はサーバーの middleware だけが決める | Accepted |
 | [ADR-0004](./0004-persistent-write-rate-limit.md) | 永続書き込みを userId 単位でレート制限する | Accepted |
 | [ADR-0005](./0005-srs-review-rules.md) | SRS の更新入口と復習キューの規則 | Accepted |
+| [ADR-0006](./0006-content-as-source-of-truth.md) | 教材・問題は content を一次ソースとし、D1 は配信・集計用のキャッシュにする | Accepted |
+| [ADR-0007](./0007-analytics-aggregation-boundaries.md) | 学習分析の集計境界を UTC で固定する | Accepted |
+| [ADR-0008](./0008-production-access-boundary.md) | 本番の公開 API は Worker 内で Cloudflare Access の JWT を検証する | Accepted |
+| [ADR-0009](./0009-srs-write-integrity.md) | 解答ログと SRS 状態を原子的に書き込み、競合は version で検出する | Accepted |
+| [ADR-0010](./0010-deploy-order.md) | リリースはスキーマ → データ → API → 画面の順に適用する | Accepted |
+| [ADR-0011](./0011-immutable-migrations.md) | 取り込み済みのマイグレーションは変更せず、追加で直す | Accepted |
+| [ADR-0012](./0012-separate-web-and-api-workers.md) | Web と API を別の Worker にし、書き込みは Hono API を通す | Accepted |
+| [ADR-0013](./0013-no-shared-cache-for-user-data.md) | ユーザー固有のデータを Web の共有キャッシュに載せない | Accepted |
