@@ -62,7 +62,7 @@ SRS は問題単位で管理しており、弱点を1問ごとに追跡できま
 
 設計の詳細は次の資料にまとめています。
 
-- [設計文書（一次ソース）](./docs/design.md)
+- [設計文書（方針・依存方向・データフロー）](./docs/design.md)・[ADR 索引（設計契約）](./docs/adr/README.md)
 - [API 仕様](./docs/api-spec.html) / [フロントエンド](./docs/frontend-architecture.html) / [バックエンド](./docs/backend-architecture.html) / [認証](./docs/authentication-architecture.html)
 
 ## AI 駆動開発の仕組み

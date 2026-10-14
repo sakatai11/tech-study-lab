@@ -18,7 +18,7 @@ snapshotは宣言本文を保持しない。宣言の内容は各nodeの出典�
 
 ## オントロジー
 
-Graphの語彙定義。node kind・relation・`layer` は**構文とパス規約から決定的に導出**し、人手の判断を挟まない。抽出器と `validateGraph` はこの定義を実装する。設計意図・振る舞いの契約は `docs/design.md` が所有し、本節は「Graphがどの種類の物をどの関係で表すか」だけを定める。
+Graphの語彙定義。node kind・relation・`layer` は**構文とパス規約から決定的に導出**し、人手の判断を挟まない。抽出器と `validateGraph` はこの定義を実装する。設計契約は ADR（`docs/adr/`）、層と依存方向は `docs/design.md` が所有し、本節は「Graphがどの種類の物をどの関係で表すか」だけを定める。
 
 ### node kind
 

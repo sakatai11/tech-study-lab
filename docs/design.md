@@ -150,7 +150,7 @@ services ──→ @tsl/shared          # 純粋ドメインロジック・型
 dal      ──→ @tsl/shared          # db 名前空間の Drizzle schema（import { db as schema }）
 ```
 
-- HTTP へのエラー写像は `app.ts` の `onError` が §5.7 の方針に従って担う（写像ロジックの所在は `app.ts` に一本化し、route・service には持たせない）。`SrsConflictError` は本書作成時点では `onError` で個別写像されておらず 500 に落ちるが、本節・§5.7 はこの振る舞いを変更する仕様ではない（新しい HTTP ステータスへの写像は別途検討する）。
+- HTTP へのエラー写像は `app.ts` の `onError` が §5.7 の方針に従って担う（写像ロジックの所在は `app.ts` に一本化し、route・service には持たせない）。`SrsConflictError` は現在 `onError` で個別写像されておらず 500 に落ちるが、本節・§5.7 はこの振る舞いを変更する仕様ではない（新しい HTTP ステータスへの写像は別途検討する）。
 
 - service から `routes`・`dal`・Hono・D1・Drizzle を import しない。service は渡された deps だけを呼ぶ。
 - dal から `routes`・Hono を import しない。service への依存は deps 型の `import type` に限定し、値 import は自身が throw するドメインエラー（`services/errors`）に限る。
@@ -350,22 +350,25 @@ Quiz と Review の表示再利用は、feature VM同士を継承・交差させ
 **エラー処理の方針**：
 
 - service は **HTTP を知らないドメインエラー**（`services/errors.ts` の `QuestionNotFoundError` 等）を throw する。
-- `QuestionNotFoundError` は404と `QUESTION_NOT_FOUND` に写像する。既知のドメインエラーのmessageを返し、未知の例外はWorkers Logsへ記録する。
+- 個々のドメインエラーと HTTP ステータスの対応は、関係する ADR（問題未存在の 404 は ADR-0002、レート制限の 429 / 503 は ADR-0004）と [API 仕様カタログ](./api-spec.html) が持つ。
 - route 層の `app.onError` がドメインエラーを HTTP ステータスへ写像し、レスポンス形を `{ error: { code, message } }` に統一する。未知のエラーは 500（`INTERNAL`）とし、詳細メッセージを外に漏らさない。
 - Hono や middleware が意図して throw した `HTTPException` は、例外が持つステータスとレスポンスを保持する。未知の例外として 500 に上書きしない。
-- レート制限の 429 と limiter failure の 503 も shared の error response schema を使い、route から type-safe に返す。前者には `Retry-After: 60` を必ず付ける（[ADR-0004](./adr/0004-persistent-write-rate-limit.md)）。
 
 - `zValidator` の検証失敗（400）はデフォルト挙動のまま使う（MVP）。フロントは `requestJson`（§5.3）が `res.ok` で弾くため、エラーボディの形に依存しない。
 
 ### 5.8 動的データの意味
 
-D1 の動的データの意味を定める。正確なスキーマは [db schema](../packages/shared/src/db/schema.ts) を一次ソースとする。学習分析の集計境界は [ADR-0007](./adr/0007-analytics-aggregation-boundaries.md)、`questions`（content の同期キャッシュ）は [ADR-0006](./adr/0006-content-as-source-of-truth.md) が持つ。
+D1 の動的データの正確なスキーマは [db schema](../packages/shared/src/db/schema.ts) を一次ソースとする。値の意味と規則は次の ADR と節が持つ。
 
-- `users`: 将来公開用。初期は単一ユーザーでも user_id を持つ
-- `answer_logs`: `{ id, user_id, question_id, is_correct, answered_at, response_time_ms? }`（`response_time_ms` は学習分析の「平均反応時間」向け。Quiz クライアントが選択肢表示から解答確定までを計測して送信する任意項目）
-- `srs_states`: `{ user_id, question_id, ease, interval_days, due_at, reps, lapses, version }`（SRSパラメータ。`version` は同時解答による更新消失を防ぐ楽観的ロック用。アルゴリズムは SM-2 ベースとする）
-- `lesson_views`: `{ id, user_id, lesson_id, viewed_at }`（アナリティクス画面の「学習時間」「最近のアクティビティ」向け。教材本文ページ表示時に fire-and-forget で記録する最小ログ。学習時間は「閲覧したレッスンの frontmatter 所要時間（例：約18分）の合計」＋「`answer_logs.response_time_ms` の合計」で近似する簡易集計とし、精緻な計測は行わない）
-- 教材の閲覧記録（`POST /lesson-views`）は最小のログであり、重複の排除、配送の保証、lesson の存在確認は行わない。
+- 解答ログと SRS 状態の書き込み（`version` による楽観的ロック）: [ADR-0009](./adr/0009-srs-write-integrity.md)
+- 学習分析の集計（学習時間の近似、反応時間の合計、UTC の境界）: [ADR-0007](./adr/0007-analytics-aggregation-boundaries.md)
+- `questions`（content の同期キャッシュ）: [ADR-0006](./adr/0006-content-as-source-of-truth.md)
+- 反応時間（`response_time_ms`）の計測方法: §5.5
+
+ADR と節に書かれていない規則は次のとおりとする。
+
+- `users` は将来の公開に備えたテーブルであり、単一ユーザーの間も `user_id` で動的データを分離する。
+- 教材の閲覧記録（`POST /lesson-views`）は最小のログであり、重複の排除、配送の保証、lesson の存在確認は行わない。記録に失敗しても教材の表示に影響させない（§5.6）。
 
 ## 6. 関連文書
 

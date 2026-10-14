@@ -15,7 +15,7 @@ Web（`apps/web`）の見た目・表示文言・画面の振る舞いの規約�
 
 ## スタイリング（Tailwind + Dev-Native Neo Flat × Terminal）
 
-ビジュアルモックアップ 5 案（Neumorphism PC/SP → Soft UI Hybrid → Dev-Native Neo Flat → Retro OS）の比較検討を経て、**「Neo Flat の骨格 × ターミナル表現のコンテンツ」** を正式なスタイル方針とする。一次モックは [`docs/mockups/DevPath Unified.html`](./mockups/DevPath%20Unified.html)（検討経緯と各案の位置づけは [`docs/mockups/README.md`](./mockups/README.md)）。旧 Neumorphism 方針（本節の旧版）は撤回済み。
+ビジュアルモックアップ 5 案（Neumorphism PC/SP → Soft UI Hybrid → Dev-Native Neo Flat → Retro OS）の比較検討を経て、**「Neo Flat の骨格 × ターミナル表現のコンテンツ」** を正式なスタイル方針とする。一次モックは [`docs/mockups/DevPath Unified.html`](./mockups/DevPath%20Unified.html)（検討経緯と各案の位置づけは [`docs/mockups/README.md`](./mockups/README.md)）。旧 Neumorphism 方針は撤回済み。
 
 **設計原則（選定理由）**：
 

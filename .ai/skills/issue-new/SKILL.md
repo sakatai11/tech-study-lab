@@ -19,7 +19,7 @@ Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runt
 
 | 種別 | 使う場面 | タイトル接頭辞 | ラベル |
 |---|---|---|---|
-| `feature` | 新機能・機能拡張（ADR または design.md の契約に紐づく仕様） | `[Feature]` | `spec` |
+| `feature` | 新機能・機能拡張（ADR の契約や design.md の依存方向に関わる仕様） | `[Feature]` | `spec` |
 | `bug` | 既存挙動の不具合 | `[Bug]` | `bug` |
 | `refactor` | 挙動を変えない内部改善 | `[Refactor]` | `refactor` |
 | `docs` | ドキュメントのみ（ADR の追加・置き換え、design.md 更新など） | `[Docs]` | `documentation` |

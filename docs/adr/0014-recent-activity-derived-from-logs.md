@@ -2,7 +2,7 @@
 
 - 状態: Accepted
 - 日付: 2026-10-14
-- 関連: Issue #242（`docs/design.md` の旧 7.3 節 の `GET /activity/recent` から移行）
+- 関連: Issue #242（`docs/design.md` の旧 7.3 節の `GET /activity/recent` から移行）
 
 ## 背景
 
