@@ -128,7 +128,7 @@ describe('submitAnswer [ADR-0002] [ADR-0005]', () => {
     expect(recorded).toEqual([])
   })
 
-  it('retries from the latest SRS version after a concurrent update', async () => {
+  it('retries from the latest SRS version after a concurrent update [ADR-0009]', async () => {
     const states: (SrsInput & { version: number })[] = [
       { ease: 2500, intervalDays: 1, reps: 1, lapses: 0, version: 0 },
       { ease: 2500, intervalDays: 1, reps: 1, lapses: 0, version: 1 },
@@ -155,5 +155,27 @@ describe('submitAnswer [ADR-0002] [ADR-0005]', () => {
     ).resolves.toEqual({ isCorrect: true, correctIndex: 2 })
 
     expect(writes).toBe(2)
+  })
+
+  it('fails explicitly after three conflicting attempts [ADR-0009]', async () => {
+    let writes = 0
+    const { deps } = createDeps({
+      findSrsState: async () => ({ ease: 2500, intervalDays: 1, reps: 1, lapses: 0, version: 0 }),
+      recordAnswer: async (params) => {
+        writes += 1
+        throw new SrsConflictError(params.userId, params.questionId)
+      },
+    })
+
+    await expect(
+      submitAnswer(deps, {
+        userId: 'user-1',
+        questionId: 'question-1',
+        selectedIndex: 2,
+        now: 100,
+      }),
+    ).rejects.toBeInstanceOf(SrsConflictError)
+
+    expect(writes).toBe(3)
   })
 })
