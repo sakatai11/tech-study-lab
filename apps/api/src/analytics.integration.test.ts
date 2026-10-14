@@ -60,7 +60,7 @@ describe('analytics API [ADR-0007]', () => {
     ])
   })
 
-  it('aggregates only the middleware user and returns the weekly, retention, and mistake contracts', async () => {
+  it('aggregates only the middleware user and returns the weekly, retention, mistake, and recent activity contracts [ADR-0014]', async () => {
     const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(fixedNow)
     const now = fixedNow
     const day = 24 * 60 * 60 * 1000

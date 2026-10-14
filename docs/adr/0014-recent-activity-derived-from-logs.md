@@ -23,7 +23,8 @@
 
 ## 検証
 
-- [activity-service.test.ts](../../apps/api/src/services/activity-service.test.ts): 2種類のイベントを統合し、安定した順序で並べて上限で切る。問題のメタデータが欠けた解答も残す
+- [activity-service.test.ts](../../apps/api/src/services/activity-service.test.ts): 2種類のイベントを統合し、安定した順序で並べて上限で切る。メタデータが欠けた解答のイベントを落とさない
 - [api.test.ts](../../packages/shared/src/schema/api.test.ts): 件数の上限、安定した並び、ID の重複の拒否
+- [analytics.integration.test.ts](../../apps/api/src/analytics.integration.test.ts): 実際の D1 で、`questions` にない問題への解答を left join で残し（`lessonId: null`）、種別プレフィックス付きの ID で返す
 
 テストで直接検証しない決定: 決定 5（画面で断定しない文言）は表示文言の規約であり、レビューで確認する。
