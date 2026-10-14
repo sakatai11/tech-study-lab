@@ -1,7 +1,8 @@
 #!/bin/sh
 # AIハーネスの動作と構成の整合を検査するゲート。
 #
-# 1. hook fixture / 共通スキルログ / `sync:agents --check` による hook と生成物の動作検証。
+# 1. hook fixture / 共通スキルログ / `sync:agents --check` による hook と生成物の動作検証と、
+#    別モデル CLI レビューに渡す最新モデルの選択ロジックの検証。
 # 2. Claude Code と Codex の両ランタイムから同じ `.ai/` の一次ソースへ届くことの構成検査
 #    （発見用リンク、Codex agent TOML、パス別ルールの参照、権限迂回フラグの不在）。
 # 3. weekly-retro レンダラーの出力検証。
@@ -77,6 +78,9 @@ jq -e -s '
 ' "$log_dir/skill-usage.jsonl" >/dev/null
 
 node scripts/sync-agent-config.mjs --check
+
+# 別モデル CLI レビューに渡す最新モデルの選択（Issue #247）。CI には codex がないため、選択ロジックだけを検査する。
+node --test .ai/scripts/latest-codex-model.test.mjs >/dev/null
 
 # ---- 2. 両ランタイムの構成整合 ----
 printf '%s\n' "Checking Claude/Codex harness consistency..."

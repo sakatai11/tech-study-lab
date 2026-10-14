@@ -122,7 +122,7 @@ pnpm test:hooks           # hook fixture、共通ログ、同期、両ランタ�
 
 `pnpm test:hooks`（`scripts/test-hooks.sh`）は次を検査する。
 
-1. **hookの動作検証**: Claude/Codexの代表入力fixtureを使い、TODO検出、Codexの明示スキル指定、Claude/Codexのライフサイクルログ、Codexの編集後整形アダプター、`pnpm sync:agents --check` による生成物の同期を確認する。
+1. **hookの動作検証**: Claude/Codexの代表入力fixtureを使い、TODO検出、Codexの明示スキル指定、Claude/Codexのライフサイクルログ、Codexの編集後整形アダプター、`pnpm sync:agents --check` による生成物の同期を確認する。別モデル CLI レビューで最新の Sol を選ぶスクリプト（`.ai/scripts/latest-codex-model.mjs`）の選択ロジックも検証する。
 2. **両ランタイムの構成整合**: `.ai/skills/*`・`.ai/agents/*.md`・`.ai/rules/*.md` ごとに `.claude/` と `.agents/` の発見用リンクがあり `.ai/` を指すこと、取り残しのリンクがないこと、`.ai/agents/<name>.md` と `.codex/agents/<name>.toml` が1対1で `name` が一致すること、パス別ルールが `AGENTS.md` から参照されていること、権限・Sandboxの迂回フラグがハーネスに含まれないことを確認する。
 3. **weekly-retro レンダラーの出力検証**と、**`docs/design.md` の章参照の解決検査**（`scripts/test-design-chapter-refs.mjs`）、**ADR の書式・検証テストとの対応・`ADR-NNNN` 参照の解決検査**（`scripts/test-adr-refs.mjs`）。
 

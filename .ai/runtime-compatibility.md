@@ -53,9 +53,15 @@
 
 ### Codex サブエージェントのモデル
 
-`.codex/agents/*.toml` に登録するエージェント自身のモデル設定は、各 TOML の `model` / `model_reasoning_effort` が一次ソースである。現在は `reviewer` が `gpt-6-sol` / `high`、`content-author` が `gpt-6-sol` / `medium` である。次節の別モデル CLI レビューで呼ぶモデルとは別物である。
+`.codex/agents/*.toml` には `model` を書かず、エージェントは起動した Codex セッションのモデルを引き継ぐ。新しいモデルが出るたびに TOML を書き換えないためである。Codex の既定のモデル（`~/.codex/config.toml` の `model`）は、その時点で最新の Sol にしておく。最新の Sol は `node .ai/scripts/latest-codex-model.mjs sol` で確かめられる。
 
-仕様が曖昧・矛盾している場合、複数領域をまたぐ設計判断が必要な場合、セキュリティレビューの場合は、該当する TOML を `gpt-6-astra` / `high` へ一時的に昇格してよい。昇格は未コミットのローカル上書きで行い、コミットの前に標準設定へ戻す。
+- **reasoning effort**: 各 TOML の `model_reasoning_effort` が一次ソースである（`reviewer` が `high`、`content-author` が `medium`）。
+- **解決の順序**: TOML に `model` がない場合、Codex は spawn 時の明示値、`[agents].default_subagent_model`、親セッションのモデルの順に決める（[Codex のサブエージェント](https://learn.chatgpt.com/docs/agent-configuration/subagents)）。`default_subagent_model` を設定すると親を引き継がなくなるので、設定しない。
+- **注意**: 親セッションで Sol 以外のモデルを選ぶと、エージェントもそのモデルで動く。
+
+このモデル設定は、次節の別モデル CLI レビューで呼ぶモデルとは別物である。
+
+仕様が曖昧・矛盾している場合、複数領域をまたぐ設計判断が必要な場合、セキュリティレビューの場合は、該当する TOML にその時点で最新の Astra（`node .ai/scripts/latest-codex-model.mjs astra` の出力）を `model` として書き、`model_reasoning_effort` を `high` にして一時的に昇格してよい。昇格は未コミットのローカル上書きで行い、コミットの前に標準設定へ戻す。
 
 ## 別モデル CLI レビュー
 
@@ -63,10 +69,13 @@
 
 | ホストランタイム | オーケストレーターが直接実行するコマンド | モデル指定 | 送信先 |
 |---|---|---|---|
-| Claude Code | `codex exec -s read-only - < <brief>` | `-m gpt-6-sol` | OpenAI |
+| Claude Code | `codex exec -s read-only - < <brief>` | `-m <最新の Sol>`（`node .ai/scripts/latest-codex-model.mjs sol` の出力） | OpenAI |
 | Codex（App / CLI） | `git diff <effective-base>...HEAD \| .ai/scripts/run-claude-review.sh -p ...` | `--model opus` | Anthropic |
 
 - **モデル指定**: `-m` / `--model` で必ず明示する。既定のモデルに委ねない。指定したモデルが使えるかは、起動前に契約とクライアントの環境で確認する。
+  - Codex CLI には、起動のたびにその時点で最新の Sol を渡す。`node .ai/scripts/latest-codex-model.mjs sol` が `codex debug models` のカタログから、一覧に出る Sol 系のうち `priority` が最も高いモデルを1つ選んで出力する。
+  - スクリプトが非0で終わった場合（カタログを取得できない、Sol がない、最新が1つに決まらない）は「判定: error」とし、CLI を実行しない。既定のモデルや以前のモデル名で代用しない。
+  - 選んだモデル名は、起動時のヘッダーの `model:` と一致することを確かめ、判定に必要なメタ情報としてレビューの記録（PR 本文など）に残す。
 - **観点の分担**: `reviewer` が正確性優先、別モデル CLI が契約準拠優先（`spec-compliance-first`）である（`.ai/review-guidelines.md`）。CLI の出力はオーケストレーターが直接読み、同規約の分類と重要度で判定する。
 - **起動する主体**: 別モデル CLI はサブエージェントからは起動しない。オーケストレーターが継続セッションで直接起動する。
 - **ブリーフ**: `<scratchpad>` のファイルとして渡し、長文を起動プロンプトへ直接貼らない。ブリーフには、対象 Issue・対象機能・受け入れ条件・範囲外の扱い・差分範囲を含め、同意済みの送信範囲と一致させる。
