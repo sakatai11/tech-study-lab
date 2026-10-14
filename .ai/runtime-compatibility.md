@@ -53,15 +53,14 @@
 
 ### Codex サブエージェントのモデル
 
-`.codex/agents/*.toml` には `model` を書かず、エージェントは起動した Codex セッションのモデルを引き継ぐ。新しいモデルが出るたびに TOML を書き換えないためである。Codex の既定のモデル（`~/.codex/config.toml` の `model`）は、その時点で最新の Sol にしておく。最新の Sol は `node .ai/scripts/latest-codex-model.mjs sol` で確かめられる。
+`.codex/agents/*.toml` に登録するエージェント自身のモデル設定は、各 TOML の `model` / `model_reasoning_effort` が一次ソースである。TOML の値は親セッションのモデルより優先される。現在は `reviewer` が `gpt-6.1-sol` / `high`、`content-author` が `gpt-6.1-sol` / `medium` である。
 
-- **reasoning effort**: 各 TOML の `model_reasoning_effort` が一次ソースである（`reviewer` が `high`、`content-author` が `medium`）。
-- **解決の順序**: TOML に `model` がない場合、Codex は spawn 時の明示値、`[agents].default_subagent_model`、親セッションのモデルの順に決める（[Codex のサブエージェント](https://learn.chatgpt.com/docs/agent-configuration/subagents)）。`default_subagent_model` を設定すると親を引き継がなくなるので、設定しない。
-- **注意**: 親セッションで Sol 以外のモデルを選ぶと、エージェントもそのモデルで動く。
+- **固定する理由**: エージェントのモデルを、起動した Codex セッションで選んだモデルに左右させないためである。
+- **更新**: `node .ai/scripts/latest-codex-model.mjs sol` の出力が TOML の `model` と異なる場合は、新しい Sol が出ている。両方の TOML の `model` をその出力に揃えて更新する（Issue と PR で行い、`pnpm sync:agents --check` と `pnpm test:hooks` を通す）。
 
 このモデル設定は、次節の別モデル CLI レビューで呼ぶモデルとは別物である。
 
-仕様が曖昧・矛盾している場合、複数領域をまたぐ設計判断が必要な場合、セキュリティレビューの場合は、該当する TOML にその時点で最新の Astra（`node .ai/scripts/latest-codex-model.mjs astra` の出力）を `model` として書き、`model_reasoning_effort` を `high` にして一時的に昇格してよい。昇格は未コミットのローカル上書きで行い、コミットの前に標準設定へ戻す。
+仕様が曖昧・矛盾している場合、複数領域をまたぐ設計判断が必要な場合、セキュリティレビューの場合は、該当する TOML の `model` をその時点で最新の Astra（`node .ai/scripts/latest-codex-model.mjs astra` の出力）に、`model_reasoning_effort` を `high` に置き換えて一時的に昇格してよい。昇格は未コミットのローカル上書きで行い、コミットの前に標準設定へ戻す。
 
 ## 別モデル CLI レビュー
 
