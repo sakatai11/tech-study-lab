@@ -13,7 +13,8 @@ const families = new Set(['sol', 'astra'])
 
 /**
  * カタログの `models` から、一覧に出る（`visibility: list`）指定系統のモデルのうち
- * `priority` が最小（最も優先）のものの slug を返す。決められなければ例外を投げる。
+ * `priority` の値が最小（最も優先）のものの slug を返す。決められなければ例外を投げる。
+ * 指定系統なのに `priority` が数値でないモデルがあれば、古いモデルへ黙って倒れないよう例外にする。
  */
 export function selectLatestModel(catalog, family) {
   if (!families.has(family)) throw new Error(`unknown model family: ${family}`)
@@ -23,9 +24,13 @@ export function selectLatestModel(catalog, family) {
     (model) =>
       model?.visibility === 'list' &&
       typeof model.slug === 'string' &&
-      model.slug.endsWith(`-${family}`) &&
-      Number.isFinite(model.priority),
+      model.slug.endsWith(`-${family}`),
   )
+  const unranked = candidates.filter((model) => !Number.isFinite(model.priority))
+  if (unranked.length > 0)
+    throw new Error(
+      `${family} model without a numeric priority: ${unranked.map((model) => model.slug).join(', ')}`,
+    )
   if (candidates.length === 0) throw new Error(`no listed ${family} model in the catalog`)
 
   const best = Math.min(...candidates.map((model) => model.priority))
@@ -49,6 +54,8 @@ function main(args) {
   try {
     const output = execFileSync('codex', ['debug', 'models'], {
       encoding: 'utf8',
+      // カタログは数百 KB あり、モデルが増えると既定の 1 MiB を超えうる。
+      maxBuffer: 64 * 1024 * 1024,
       stdio: ['ignore', 'pipe', 'pipe'],
     })
     process.stdout.write(`${selectLatestModel(JSON.parse(output), family)}\n`)
