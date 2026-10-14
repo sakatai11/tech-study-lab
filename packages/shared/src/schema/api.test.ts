@@ -537,7 +537,7 @@ describe('analytics response schemas [ADR-0007]', () => {
   })
 })
 
-describe('recentActivityResponseSchema', () => {
+describe('recentActivityResponseSchema [ADR-0014]', () => {
   it('accepts mixed activity items with required fields', () => {
     expect(
       recentActivityResponseSchema.safeParse({

@@ -75,6 +75,26 @@ describe('public API entrypoint [ADR-0008]', () => {
     expect(verifier).not.toHaveBeenCalled()
   })
 
+  it('allows credentialed CORS only for WEB_ORIGIN [ADR-0012]', async () => {
+    const app = createPublicApiApp(vi.fn<AccessTokenVerifier>())
+    const bindings = { WEB_ORIGIN: 'https://web.example.com' } as AppEnv['Bindings']
+
+    const preflight = await app.request(
+      'https://api.example.com/answers',
+      {
+        method: 'OPTIONS',
+        headers: {
+          Origin: 'https://other.example.com',
+          'Access-Control-Request-Headers': 'content-type',
+          'Access-Control-Request-Method': 'POST',
+        },
+      },
+      bindings,
+    )
+
+    expect(preflight.headers.get('access-control-allow-origin')).toBeNull()
+  })
+
   it('rejects non-loopback public user routes without a valid Access boundary', async () => {
     const verifier = vi.fn<AccessTokenVerifier>()
     const response = await createPublicApiApp(verifier).request(

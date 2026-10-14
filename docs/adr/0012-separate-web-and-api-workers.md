@@ -25,6 +25,8 @@ Web（Next.js 互換）と API（Hono）は、Next.js の Route Handler に Hono
 
 - [cloudflare-config.test.ts](../../apps/web/scripts/cloudflare-config.test.ts): Web Worker が API Worker の `InternalApi` を Service Binding で参照する
 - [api-server.test.ts](../../apps/web/src/lib/api-server.test.ts): Server loader の API client は binding を使い、本番で binding がなければ失敗し、本番以外でだけ URL に切り替える
+- [api.test.ts](../../apps/web/src/lib/api.test.ts): ブラウザ用の API client が `credentials: 'include'` を付ける
+- [index.test.ts](../../apps/api/src/index.test.ts): CORS は `WEB_ORIGIN` だけに credentialed な許可を返す
 - [rendering-boundaries.test.ts](../../apps/web/src/app/rendering-boundaries.test.ts): Web のソースに Server Actions がない
 
 テストで直接検証しない決定: 決定 1 のうち「Route Handler に Hono を載せない」は構成上の規約であり、レビューで確認する。

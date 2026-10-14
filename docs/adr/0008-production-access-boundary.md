@@ -25,7 +25,7 @@
 
 ## 検証
 
-- [access-boundary.test.ts](../../apps/api/src/middleware/access-boundary.test.ts): 検証器が受け入れた場合だけ通す、トークン欠落・検証失敗・設定不足を固定の 401 にする、loopback での省略は Access 設定がない場合に限る
+- [access-boundary.test.ts](../../apps/api/src/middleware/access-boundary.test.ts): 検証器が受け入れた場合だけ通す、トークン欠落・検証失敗・設定不足を固定の 401 にする、loopback での省略は Access 設定がない場合に限る。実際の検証関数は、`ACCESS_ISSUER` から導いた JWKS で署名を確かめ、別の audience・完全一致しない issuer・JWKS にない鍵の署名を拒否する
 - [index.test.ts](../../apps/api/src/index.test.ts): `/health` と CORS preflight を Access と `userContext` の前で完了し、公開のユーザー向け route は有効な Access なしでは拒否する
 - [core-endpoints.integration.test.ts](../../apps/api/src/core-endpoints.integration.test.ts): 公開 entrypoint で、Access を通らない書き込みを D1 の変更前に拒否する
 

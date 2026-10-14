@@ -1,8 +1,13 @@
 import { Hono } from 'hono'
-import { describe, expect, it, vi } from 'vitest'
+import { SignJWT, exportJWK, generateKeyPair } from 'jose'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { AppEnv } from '../env'
-import { type AccessTokenVerifier, createAccessBoundary } from './access-boundary'
+import {
+  type AccessTokenVerifier,
+  createAccessBoundary,
+  verifyAccessToken,
+} from './access-boundary'
 
 const configuredBindings = {
   ACCESS_AUDIENCE: 'access-audience',
@@ -119,4 +124,73 @@ describe('createAccessBoundary [ADR-0008]', () => {
       expect(verifier).not.toHaveBeenCalled()
     },
   )
+})
+
+describe('verifyAccessToken [ADR-0008]', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  // JWKS は issuer ごとにキャッシュされるため、テストごとに別の issuer を使う。
+  async function setup(name: string) {
+    const issuer = `https://${name}.cloudflareaccess.com`
+    const audience = 'access-audience'
+    const signing = await generateKeyPair('ES256')
+    const other = await generateKeyPair('ES256')
+    const jwk = { ...(await exportJWK(signing.publicKey)), kid: 'access-key', alg: 'ES256' }
+    const fetched: string[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        fetched.push(String(input instanceof Request ? input.url : input))
+        return new Response(JSON.stringify({ keys: [jwk] }), {
+          headers: { 'content-type': 'application/json' },
+        })
+      }),
+    )
+    const sign = (
+      claims: { issuer?: string; audience?: string },
+      key: CryptoKey = signing.privateKey,
+    ) =>
+      new SignJWT({})
+        .setProtectedHeader({ alg: 'ES256', kid: 'access-key' })
+        .setIssuer(claims.issuer ?? issuer)
+        .setAudience(claims.audience ?? audience)
+        .setIssuedAt()
+        .setExpirationTime('5m')
+        .sign(key)
+
+    return { issuer, audience, fetched, sign, otherKey: other.privateKey }
+  }
+
+  it('accepts a token signed by the issuer JWKS derived from ACCESS_ISSUER', async () => {
+    const { issuer, audience, fetched, sign } = await setup('accepts')
+
+    await expect(verifyAccessToken(await sign({}), { issuer, audience })).resolves.toBeUndefined()
+    expect(fetched).toEqual([`${issuer}/cdn-cgi/access/certs`])
+  })
+
+  it('rejects a token for another audience', async () => {
+    const { issuer, audience, sign } = await setup('audience')
+
+    await expect(
+      verifyAccessToken(await sign({ audience: 'other-audience' }), { issuer, audience }),
+    ).rejects.toThrow()
+  })
+
+  it('rejects a token whose issuer does not exactly match ACCESS_ISSUER', async () => {
+    const { issuer, audience, sign } = await setup('issuer')
+
+    await expect(
+      verifyAccessToken(await sign({ issuer: `${issuer}/` }), { issuer, audience }),
+    ).rejects.toThrow()
+  })
+
+  it('rejects a token signed by a key outside the issuer JWKS', async () => {
+    const { issuer, audience, sign, otherKey } = await setup('signature')
+
+    await expect(
+      verifyAccessToken(await sign({}, otherKey), { issuer, audience }),
+    ).rejects.toThrow()
+  })
 })

@@ -31,4 +31,6 @@
 - [core-endpoints.integration.test.ts](../../apps/api/src/core-endpoints.integration.test.ts): 領域別の集計が active な問題だけを数える
 - [deployment-cli.test.mjs](../../scripts/deployment-cli.test.mjs): 前回の成功と content が同じでも、リリースのたびに同期を実行する
 
-テストで直接検証しない決定: 決定 7（記録済みの ID を変えない）は執筆とレビューの規約であり、`content-new` のレビューで確認する。
+テストで直接検証しない決定:
+- 決定 3（Web と同期が同じパース経路を通る）は、両者が共有のパーサーと content Zod を import する構造で守られている。レビューで確認する。
+- 決定 7（記録済みの ID を変えない）は執筆とレビューの規約であり、`content-new` のレビューで確認する。

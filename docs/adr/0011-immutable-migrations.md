@@ -22,4 +22,6 @@ D1 のマイグレーション履歴は、適用済みのファイル名と SQL 
 
 ## 検証
 
-- [check-migration-immutability.test.mjs](../../scripts/check-migration-immutability.test.mjs): 新しいマイグレーション・snapshot・journal の追加を許し、既存のマイグレーションと snapshot の削除・改名・内容の変更を拒否する
+- [check-migration-immutability.test.mjs](../../scripts/check-migration-immutability.test.mjs): 新しいマイグレーション・snapshot の追加と journal の末尾への追記を許し、既存のマイグレーションと snapshot の削除・改名・内容の変更、journal の既存 entry の変更・削除・並べ替えを拒否する
+
+テストで直接検証しない決定: 決定 3（破壊的な変更を段階的に行う）はスキーマ変更の進め方の規約であり、レビューで確認する。

@@ -27,3 +27,5 @@
 - [answer-repository.test.ts](../../apps/api/src/dal/answer-repository.test.ts): 解答ログと SRS の書き込みを1つの batch で送り、失敗をそのまま伝える
 - [core-endpoints.integration.test.ts](../../apps/api/src/core-endpoints.integration.test.ts): 古い version での書き込みが解答ログも SRS 状態も変えない、既存の SRS 行を更新する通常の解答では1件ずつ記録する
 - [answer-service.test.ts](../../apps/api/src/services/answer-service.test.ts): 競合したら最新の状態から再試行し、3回競合したら失敗する
+
+テストで直接検証しない決定: 決定 5（Drizzle をリクエストごとに作る）は route の実装の規約であり、レビューで確認する。

@@ -26,3 +26,5 @@
 - [rendering-boundaries.test.ts](../../apps/web/src/app/rendering-boundaries.test.ts): 認証後の画面が `force-dynamic` を宣言し、Web のソースが共有データキャッシュを使わない
 - [cloudflare-config.test.ts](../../apps/web/scripts/cloudflare-config.test.ts): Cache Components と ISR 用のキャッシュ基盤を有効にしていない
 - [verify-build.ts](../../apps/web/scripts/verify-build.ts): ビルド成果物で、認証後の画面が prerender されていない（CI の `verify:build`）
+
+テストで直接検証しない決定: 決定 4（React の `cache()` をリクエスト内に限って使う）と決定 5（`router.refresh()` で鮮度を回復する）は実装の規約であり、レビューで確認する。

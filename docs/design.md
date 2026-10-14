@@ -230,11 +230,13 @@ content sync は、現在の content に含まれる問題の metadata と `answ
 - **イントロ・演習・結果の状態遷移（URL は変えない）**：演習・復習とも 1 ルート内で `intro → exercise → result` のクライアント状態遷移を持つ（別 URL に切らない。モックの実装モデルに一致）。`intro` は開始前の確認（対象レッスンの概要／due 件数・滞留日数のプレビュー）に専念し、`exercise` は 1 問ずつ即時採点、`result` はスコア・問題ごとの正誤一覧・出し分けアクションを表示する。初回データ（問題・解説、`/review` は due queue）は Server loader で ViewModel 化して props で渡し、状態遷移そのものは Client Component が持つ（§8.5・§9.4 の `QuizInteractive` と同じ設計）。結果表示は `/quiz` と `/review` で共通コンポーネントとして再利用する。
 - **ID 設計**：`lessonId` / `questionId` は**グローバル一意**。学習導線は階層 URL（`/learn/...`）、演習・復習はフラット URL（`/quiz/[lesson]`・`/review`）。
 - **レイアウト（サイドバー / ボトムタブ）**：`/home` 以下の学習画面では、PC は左サイドバー（ロゴ＋テーマトグル＋ホーム／教材／演習／復習（due件数バッジ）／学習分析／学習領域）、本文は右側 1 カラム。SP は上部アプリバー（ロゴ＋ストリーク表示＋テーマトグル）＋下部固定タブバー（**ホーム／教材／演習／復習（dueバッジ）／領域の5項目**）。ナビ名は PC・SP で同じ語にし、SP では「学習領域」だけを「領域」と短縮する。ホームのナビゲーション先は `/home` とする。「演習」「復習」ナビ項目は直前に扱っていたレッスン（未着手なら先頭レッスン）を対象とする簡易ヒューリスティックで遷移先を決定する（MVP は XSS 1本のため実質固定）。SP のタブバーはスペース都合で 5 項目に絞り、「学習分析（`/analytics`）」へはホームの「学習分析を見る」リンクから遷移する。「設定」は将来の公開機能（認証等、§1 スコープ外）向けで、MVP ではナビに置かない。ナビ項目のアイコンは §8.7 の Material Symbols を使い、ホーム `home`・教材 `menu_book`・演習 `contract_edit`・復習 `event_repeat`・学習分析 `bar_chart`・学習領域／領域 `category` とする（PC・SP で同じアイコン）。SP のストリーク表示は `local_fire_department` を添える。テーマトグルは切り替え先のテーマのアイコン（ダーク表示中は `light_mode`、ライト表示中は `dark_mode`）を表示し、切り替え動作の説明（「ライトテーマに切り替える」等）を読み上げ名にする（`aria-pressed` は併用しない）。アイコンと読み上げ名は、描画前に確定する `html[data-theme]` に応じて CSS で出し分ける `sr-only` テキストで持ち、React の state から補正しない（ライトテーマでも初回描画から一致させる）。
-- **公開・認証境界**：`/` は公開の静的プロダクト入口である。`/home` とユーザー向け学習ルート（`/learn/...`・`/quiz/...`・`/review`・`/domains`・`/analytics`）は本番で Cloudflare Access により保護する。アプリ内のログイン・セッションは持たず、公開トップの「ログインして学習を始める」は `/home` へリンクするだけとする。Cloudflare Access Application/Policy と route pattern（`/` は公開、`/home` とユーザー向け route は保護）の設定・デプロイ後検証は Issue #35 の責務である。
-- **SSR / SSG**：認証後画面は通常 SSR、教材・演習の content route は `generateStaticParams` による標準 SSG とする。復習の request-local dedupe とバッチ表示契約は §8.3・§9.2に従う。
+- **公開・認証境界**（決定と境界は [ADR-0008](./adr/0008-production-access-boundary.md)）：`/` は公開の静的プロダクト入口である。`/home` とユーザー向け学習ルート（`/learn/...`・`/quiz/...`・`/review`・`/domains`・`/analytics`）は本番で Cloudflare Access により保護する。アプリ内のログイン・セッションは持たず、公開トップの「ログインして学習を始める」は `/home` へリンクするだけとする。Cloudflare Access Application/Policy と route pattern（`/` は公開、`/home` とユーザー向け route は保護）の設定・デプロイ後検証は Issue #35 の責務である。
+- **SSR / SSG**（共有キャッシュを使わない規則は [ADR-0013](./adr/0013-no-shared-cache-for-user-data.md)）：認証後画面は通常 SSR、教材・演習の content route は `generateStaticParams` による標準 SSG とする。復習の request-local dedupe とバッチ表示契約は §8.3・§9.2に従う。
 - **スタイリング**：Tailwind CSS ＋ Dev-Native Neo Flat × Terminal デザインシステム（ダークファースト）。詳細トークン・コンポーネント文法・ゲーミフィケーション表現の実装区分は §8.7。
 
 ### 7.3 画面構成から要請される API（参考）
+
+学習分析の集計境界は [ADR-0007](./adr/0007-analytics-aggregation-boundaries.md)、最近のアクティビティは [ADR-0014](./adr/0014-recent-activity-derived-from-logs.md) に移した。
 
 `apps/api`（Hono）に以下を想定。本文はファイル一次ソースのため、API は ID・SRS メタ・集計値のみ返す。
 
@@ -317,7 +319,7 @@ HTTP 入出力、リクエスト・レスポンスの実例（JSON）、Zod ス�
 
 - 公開トップ・教材・集計画面はRSCで描画し、演習・復習の操作部分はClient Componentとする。レイアウト／ヘッダーはServerとする。画面の責務・データは §7.1、演習の状態管理は §8.5。
 - Server専用のfeatureには `import 'server-only'`、Client入口には `'use client'` を置き、ディレクトリ名だけに境界の強制を任せない。依存規則は §8.1。
-- Server Actionsは採用しない。初回取得はServer loader、mutationはClient hookからHono APIを呼ぶ。API契約とuser_id注入点を単一に保ち、HonoとCloudflareを学ぶ目的に沿わせる。重いフォームなど別の要求が生じた場合に再検討する。
+- Server Actionsは採用しない（[ADR-0012](./adr/0012-separate-web-and-api-workers.md)）。初回取得はServer loader、mutationはClient hookからHono APIを呼ぶ。API契約とuser_id注入点を単一に保ち、HonoとCloudflareを学ぶ目的に沿わせる。重いフォームなど別の要求が生じた場合に再検討する。
 - Server dataの再取得はClient Componentの `router.refresh()` によるRSC再実行に統一する。API adapterへキャッシュ方針を持ち込まない。
 
 #### 通常SSR・標準SSGの規範
@@ -334,6 +336,8 @@ HTTP 入出力、リクエスト・レスポンスの実例（JSON）、Zod ス�
 - web Worker は API Service Binding と静的 asset 配信に必要な最小構成だけを使う。content route のビルド時 HTML / RSC は Vinext の `prerender` と `@vinext/cloudflare` の `staticAssetsAdapter` で `ASSETS` binding から配信し、内部 cache artifact（`/_vinext/static-cache/*`）は `assets.run_worker_first` で Worker へ通して外部からの直接取得を防ぐ。ISR 用の Incremental Cache、R2、KV、Durable Object Queue の有効 binding、Worker 自己参照 binding は持たない。OpenNext 時代に本番 Worker へ登録した `DOQueueHandler` を廃止した履歴として、`apps/web/wrangler.jsonc` の top-level には `v1` の作成履歴と後続の `v2` `deleted_classes` migration を保持する。Wrangler は top-level の `migrations` を env へ継承するため、検証用 env は空の `migrations` を明示する。
 
 ### 8.4 `hc` クライアントの取り回し
+
+Service Binding と公開 URL の使い分け、`credentials` と CORS の規則は [ADR-0012](./adr/0012-separate-web-and-api-workers.md) に移した。
 
 - `apps/api` が `AppType` をエクスポート → `apps/web` は `hc<AppType>` で型安全クライアントを生成（既存 `apps/api/src/client.ts` のファクトリを利用。Service Binding の fetch を渡せるよう、ファクトリは `hc` の第2引数（`fetch` オプション等）を受け取れる形に拡張する）。
 - `apps/web/src/lib/api.ts` に**API 共通基盤を集約**する。クライアント生成と共通レスポンス処理は同じ小さな責務群であり、原則ファイルを分けない。例外として、Workers runtime の `cloudflare:workers` を参照する Server 用生成は Client bundle へ入れられないため、`import 'server-only'` を置いた `apps/web/src/lib/api-server.ts` に分ける。baseURL は env（Workers バインディング / 環境変数）から解決し、ハードコードしない。
@@ -916,6 +920,8 @@ content は「web のビルド時バンドル（§8.2）」と「D1 の `questio
 構成確認では、`API` Service Binding が残り、`cacheComponents`、ISR 用の Incremental Cache、R2、KV、Durable Object Queue の有効 binding、Worker 自己参照 binding が存在しないこと、登録済み `DOQueueHandler` の `v1` 作成履歴と後続の `v2` 削除 migration を top-level で維持し検証用 env が継承しないこと、標準 script が OpenNext に依存しないことをテストで固定する。
 
 ### 12.9 GitHub Actions による環境別リリース（Issue #36）
+
+適用順序と失敗時の停止は [ADR-0010](./adr/0010-deploy-order.md)、content の同期を毎回実行する規則は [ADR-0006](./adr/0006-content-as-source-of-truth.md) に移した。
 
 - PR CI は既存の検査・build のみ。`develop` push は `verification`、`main` push は `production` を対象とし、手動実行もこの対応を固定する。GitHub Environments の許可ブランチはそれぞれ `develop` / `main` に限定する。
 - `prepare` job は Cloudflare token を持たず、対象 commit を固定して検査・環境別 build・SQL 生成・manifest 作成を完了する。manifest は環境、SHA、source tree、問題数、全ファイルの SHA-256、migration 一覧を含む。API は dry-run で生成した bundle、Web は生成 config と `dist` を反映用成果物として保存する。後続の `apply` job では再ビルドせず、同じ run の成果物を照合して利用する。
