@@ -56,7 +56,10 @@
 `.codex/agents/*.toml` に登録するエージェント自身のモデル設定は、各 TOML の `model` / `model_reasoning_effort` が一次ソースである。TOML の値は親セッションのモデルより優先される。現在は `reviewer` が `gpt-6.1-sol` / `high`、`content-author` が `gpt-6.1-sol` / `medium` である。
 
 - **固定する理由**: エージェントのモデルを、起動した Codex セッションで選んだモデルに左右させないためである。
-- **更新**: `node .ai/scripts/latest-codex-model.mjs sol` の出力が TOML の `model` と異なる場合は、新しい Sol が出ている。両方の TOML の `model` をその出力に揃えて更新する（Issue と PR で行い、`pnpm sync:agents --check` と `pnpm test:hooks` を通す）。
+- **更新**: 新しい Sol が出たら、両方の TOML の `model` を揃えて更新する（Issue と PR で行い、`pnpm sync:agents --check` と `pnpm test:hooks` を通す）。モデルを古い方へ戻さないため、次をすべて確かめてから更新する。
+  - 先に Codex CLI を最新にする（`codex update`）。モデルのカタログは CLI が持つため、古い CLI のカタログには新しいモデルが載らないことがある。
+  - 最新にした CLI で `node .ai/scripts/latest-codex-model.mjs sol` を実行し、その出力が現在の TOML の `model` と異なること。
+  - `codex debug models` のカタログで、出力したモデルの `priority` の値が、現在の TOML の `model` の値より小さい（優先される）こと。現在のモデルがカタログにない場合や、現在のモデルの方が優先される場合は更新せず、CLI の状態を調べる。
 
 このモデル設定は、次節の別モデル CLI レビューで呼ぶモデルとは別物である。
 
