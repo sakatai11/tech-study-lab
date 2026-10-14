@@ -263,7 +263,7 @@
         <p class="lede">エンドポイントごとに「何を送ると、どんなJSONが返るか」を実例で示します。フィールド定義・成功応答・エラー応答・実装状態を、画面実装とAPI実装の両方から同じ形で参照できます。</p>
         <div class="callout">
           <p><strong>この文書の位置づけ</strong></p>
-          <p>画面構成とユースケースの一次ソースは <a href="./design.md#73-画面構成から要請される-api参考">設計文書 §7.3</a>、エラー方針は <a href="./design.md#106-バリデーションdtoエラー処理">§10.6</a>、レート制限は <a href="./adr/0004-persistent-write-rate-limit.md">ADR-0004</a> です。このページはHTTP入出力・レスポンス実例・実装状況を参照しやすくするための仕様カタログです。</p>
+          <p>endpoint の入出力の型は共有 Zod（<code>packages/shared/src/schema/api.ts</code>）、集計の境界は <a href="./adr/0007-analytics-aggregation-boundaries.md">ADR-0007</a>・<a href="./adr/0014-recent-activity-derived-from-logs.md">ADR-0014</a>、エラー方針は <a href="./design.md#57-エラー処理">設計文書 §5.7</a>、レート制限は <a href="./adr/0004-persistent-write-rate-limit.md">ADR-0004</a> です。このページはHTTP入出力・レスポンス実例・実装状況を参照しやすくするための仕様カタログです。</p>
           <p>掲載しているJSONは、共有Zodスキーマと route 実装から起こした<strong>代表例</strong>です。値そのものは固定ではありません（形と型が契約です）。</p>
         </div>
 

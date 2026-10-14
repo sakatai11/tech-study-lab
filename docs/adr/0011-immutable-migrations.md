@@ -2,7 +2,7 @@
 
 - 状態: Accepted
 - 日付: 2026-10-14
-- 関連: Issue #242（`docs/design.md` の §12.6 から移行）。元の判断は Issue #194
+- 関連: Issue #242（`docs/design.md` の旧 12.6 節から移行）。元の判断は Issue #194
 
 ## 背景
 

@@ -6,8 +6,8 @@
 // Knowledge Graph は設計契約への参照を持たない（`architecture/README.md`）。
 //
 // 対象とする3形式:
-//   §8.3                               章番号（`§` はリポジトリ規約として design.md の章を指す）
-//   design.md 8.3                       `§` を伴わない本文中の参照
+//   §5.3                               章番号（`§` はリポジトリ規約として design.md の章を指す）
+//   design.md 5.3                       `§` を伴わない本文中の参照
 //   design.md#<見出しスラッグ>          Markdown リンクの anchor
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'

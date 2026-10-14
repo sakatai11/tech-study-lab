@@ -517,8 +517,7 @@
             に持つ。
           </li>
           <li>
-            web と API は<strong>別 Worker</strong>（design.md
-            §3.1）。Server loader からは Service Binding
+            web と API は<strong>別 Worker</strong>（ADR-0012）。Server loader からは Service Binding
             （<code>env.API</code>）で内部呼び出し、Client hook からは API
             Worker の公開 URL で呼ぶ。どちらの経路でも
             <code>hc&lt;AppType&gt;</code> の型は同一。
@@ -539,7 +538,7 @@
             （<code>answerIndex</code>）を含めない。
           </li>
           <li>
-            <code>cacheComponents</code> は使わない（design.md §8.3）。<code>/</code> は API・Service Binding・
+            <code>cacheComponents</code> は使わない（ADR-0013）。<code>/</code> は API・Service Binding・
             ユーザー固有 hook を読まない静的な公開トップです。<code>/home</code>・<code>/review</code>・<code>/domains</code>・
             <code>/analytics</code> は <code>dynamic = 'force-dynamic'</code> の通常 SSR で、Server loader の取得が
             完了してからページ全体を返します（Suspense による streaming・fallback は使わない）。
@@ -556,12 +555,12 @@
           <code>/home</code> の due 件数・ダッシュボード統計・<code>/review</code> の queue・<code>/domains</code>・
           <code>/analytics</code> の集計は API が <code>user_id</code> を権威的に注入する一方、web の共有キャッシュキーには
           含まれません。したがって <code>cacheComponents</code>・<code>'use cache'</code>・<code>cacheLife</code>・
-          <code>cacheTag</code>・<code>revalidateTag</code>・PPR streaming は使わず、これらの route は
+          <code>cacheTag</code>・<code>revalidateTag</code> は使わず、これらの route は
           リクエストごとの通常 SSR とします（応答は <code>no-store</code>）。リクエスト内の取得共有は React の
           <code>cache()</code> だけを使います。解答後は <code>router.refresh()</code> で Server loader を再実行します。
           <code>/learn/...</code> と <code>/quiz/...</code> は <code>generateStaticParams</code> で全 content params を
           列挙する標準 SSG とし、Vinext の prerender で生成した HTML / RSC を静的 asset として配信します
-          （design.md §8.2・§8.3・§12.8）。
+          （design.md §5.1、ADR-0013、<a href="./deployment.md">環境・デプロイ運用</a>）。
         </div>
         <div class="note">
           <strong>公開・Access 境界</strong><br />
@@ -576,7 +575,7 @@
           content params の一致、正解データの非漏洩、内部 cache artifact の Worker 経由配信を検査します。
           実行時の配信内容・SSR・404 境界は <code>build</code> + <code>start</code> 上の
           <code>verify:ssg</code> で確認します。
-          詳細は design.md §12.8 を参照してください。
+          詳細は <a href="./deployment.md">環境・デプロイ運用</a>の「通常 SSR・標準 SSG の実行確認」を参照してください。
         </div>
         <div class="note">
           ディレクトリ名だけで実行場所は決まりません。<code
@@ -630,7 +629,7 @@
             の名前はドメイン概念名で、両者は一致しなくてよい（<code>/home</code> ↔
             <code>features/dashboard</code>、<code>/learn/...</code> ↔
             <code>features/lesson</code>）。route と feature は 1:1
-            でもない。詳細は design.md §8.1。
+            でもない。詳細は design.md §4.2。
           </li>
         </ul>
       </section>
@@ -875,7 +874,7 @@ flowchart LR
             Component が選択肢の表示開始時刻からの経過時間として計測し、<code
               >submitAnswer</code
             >
-            の引数として Client hook へ渡す（design.md §8.5）。Client hook
+            の引数として Client hook へ渡す（design.md §5.5）。Client hook
             は時刻を計測せず、受け取った値をそのまま API へ転送する。
           </p>
         </div>
@@ -1002,8 +1001,7 @@ flowchart LR
                 Button / Card / Badge / ProgressBar / TermWin / Keycap
                 などの汎用UI。Tailwind ＋ Dev-Native Neo Flat × Terminal
                 デザイントークン（<code>--bg</code> / <code>--surface</code> /
-                <code>--well</code> / <code>--border</code> 等、design.md
-                §8.7）を土台に集約する。
+                <code>--well</code> / <code>--border</code> 等、docs/design-system.md）を土台に集約する。
               </td>
               <td>feature 固有ロジック、データ取得。</td>
             </tr>
@@ -1159,7 +1157,7 @@ import { ReviewPageShell } from '@/features/review/server/components/review-page
 import { ReviewUserContent } from '@/features/review/server/components/review-user-content';
 import { AppShell } from '../_components/app-shell';
 
-// ユーザー固有 queue をリクエストごとに取得し、共有キャッシュへ載せない（design.md §8.3）。
+// ユーザー固有 queue をリクエストごとに取得し、共有キャッシュへ載せない（ADR-0013）。
 export const dynamic = 'force-dynamic';
 
 export default async function ReviewPage() {
@@ -1195,7 +1193,7 @@ export function useAnswerSubmit() {
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
 
-  // responseTimeMs は Client Component が計測して input に含める（§8.5）。hook 側では計測しない
+  // responseTimeMs は Client Component が計測して input に含める（§5.5）。hook 側では計測しない
   const submitAnswer = useCallback(async (input: AnswerRequest) =&gt; {
     if (submittingRef.current) return;
     submittingRef.current = true;
@@ -1319,13 +1317,12 @@ export default async function ReviewPage() {
           を受け取ります。
         </p>
 
-        <h3>Worker 構成と接続（design.md §3.1・§8.4）</h3>
+        <h3>Worker 構成と接続（ADR-0012・design.md §5.3）</h3>
         <p>
           <code>apps/web</code>（Vinext）と <code>apps/api</code>（Hono）は
           <strong>別 Worker</strong> としてデプロイします。Next.js の Route
           Handler 上に Hono を載せる同居構成は採用しません（wrangler
-          設定の所有権・デプロイ独立性・§8.3
-          キャッシュ方針の前提を維持するため）。呼び出し元によって経路が変わりますが、
+          設定の所有権・デプロイ独立性・ADR-0013 のキャッシュ方針の前提を維持するため）。呼び出し元によって経路が変わりますが、
           <code>hc&lt;AppType&gt;</code> の型安全RPCは両経路で同一です。
         </p>
         <div class="diagram">

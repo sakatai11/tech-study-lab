@@ -1,4 +1,4 @@
-/** カード内のアイコンチップなどで使うセマンティックカラー（design.md 8.7）。 */
+/** カード内のアイコンチップなどで使うセマンティックカラー（docs/design-system.md）。 */
 export type Tone = 'green' | 'blue' | 'purple' | 'orange'
 
 /** 淡色の地と同系色の文字を組み合わせたチップのクラス。 */

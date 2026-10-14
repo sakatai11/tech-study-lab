@@ -10,7 +10,8 @@
 | 不変条件の検証 | テスト（`describe` / `it` 名に `[ADR-NNNN]` を付ける） |
 | 入出力の型契約 | `packages/shared` の Zod スキーマ |
 | 現在のファイル配置・依存関係 | コードと設定、[Knowledge Graph](../../architecture/README.md) |
-| プロダクト方針・依存方向・未移行の設計契約 | [`docs/design.md`](../design.md) |
+| プロダクト方針・依存方向・データフローの層 | [`docs/design.md`](../design.md) |
+| 画面・教材・運用の規約 | [デザインシステムと画面の規約](../design-system.md)・[コンテンツ規約](../content-guidelines.md)・[環境・デプロイ運用](../deployment.md) |
 | 実装状況・残タスク | GitHub Issue / PR |
 
 契約の優先順は **ADR → 共有 Zod 契約 → テスト → 実装** とする。テストと ADR が矛盾した場合は、実装に合わせてテストの期待値を弱めない。ADR の決定を確認し、不具合なら実装を直す。判断自体を変えるなら新しい ADR を作る。

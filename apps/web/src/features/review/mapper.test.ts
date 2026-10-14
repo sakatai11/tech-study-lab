@@ -88,7 +88,7 @@ describe('reviewQueueToViewModel [ADR-0002]', () => {
 describe('reviewQueueToViewModel: batchKey', () => {
   // batchKey は ReviewRunner が QuizInteractive に渡す key であり、値が変われば
   // React が interactive subtree を再マウントして解答結果と画面フェーズをリセットする。
-  // router.refresh() 後の状態リセットはこの契約に依存する（design.md 9.2）。
+  // router.refresh() 後の状態リセットはこの契約に依存する（design.md 5.3）。
   const build = (items: ReviewQueueResponse['items']) =>
     reviewQueueToViewModel({ hasMore: false, items }, questions, 0)
 

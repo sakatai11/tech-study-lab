@@ -468,7 +468,7 @@
       </section>
 
       <section>
-        <h2>API 契約（design.md §7.3）</h2>
+        <h2>API 契約（API 仕様カタログ）</h2>
         <p>
           本資料が詳細化するのは Walking Skeleton 中核の
           <strong>3 エンドポイント</strong>（<code>POST /answers</code>・<code>GET
@@ -515,17 +515,17 @@
           <code>packages/shared/src/schema/api.ts</code>
           に置き、「API 入力の <code>zValidator</code>」「route 返り値の
           <code>satisfies</code>」「フロントの型（<code>z.infer</code>）」の 3
-          経路で共有します（§10.6）。
+          経路で共有します（§5.7）。
         </p>
         <div class="note">
           <span class="callout-title">後続エンドポイント（Walking Skeleton 貫通後）</span>
-          §7.3 は上記 3 本に加えて画面駆動の集計 API を挙げます：<code>GET
+          API 仕様カタログは上記 3 本に加えて画面駆動の集計 API を挙げます：<code>GET
           /domains</code>（領域別の習得率・トピック/レッスン数）、<code>GET
           /analytics/summary</code>・<code>GET /analytics/weekly</code>・<code>GET
           /analytics/mistakes</code>（アナリティクス画面の各集計）、<code>GET
           /activity/recent</code>（最近のアクティビティ）。これらは Walking Skeleton
           貫通後に<strong>同じ route → service → deps（dal
-          実装）の処理パターン</strong>で追加します（§10.1）。集計クエリ主体（読み取りのみ）のため
+          実装）の処理パターン</strong>で追加します（§4.3）。集計クエリ主体（読み取りのみ）のため
           service 層は薄くなります。
         </div>
       </section>
@@ -694,7 +694,7 @@ flowchart LR
             がリクエストスコープで両者を接続します。dal は例外として、自身が
             throw するドメインエラー（<code>SrsConflictError</code> 等）に限り
             <code>services/errors</code> から値 import してよいものとします
-            （design.md §10.1）。
+            （design.md §4.3）。
           </p>
           <div class="diagram-toolbar" aria-label="依存方向の図操作">
             <button type="button" data-zoom-action="in">拡大</button>
@@ -746,7 +746,7 @@ flowchart LR
 
   content["content/\nMarkdown + frontmatter\n（一次ソース）"]:::shared
   read["scripts/sync-content.ts\nfs 読み取り（CLI）"]:::shared
-  parse["src/content-sync.ts\ngray-matter + shared の Zod 検証\n（§8.2 のフロント側と同一経路）"]:::shared
+  parse["src/content-sync.ts\ngray-matter + shared の Zod 検証\n（§5.1 のフロント側と同一経路）"]:::shared
   sql["src/content-sync.ts\n冪等な upsert SQL 生成\nquestion_id + answer_index のみ"]:::shared
   wrangler["scripts/sync-content.ts →\nwrangler d1 execute --local / --remote"]:::dal
   d1[("D1 questions\n採点照合用キャッシュ")]:::dal
@@ -998,7 +998,7 @@ export function createAnswerDeps(db: DrizzleD1Database): AnswerDeps {
         reps: nextSrs.reps,
         lapses: nextSrs.lapses,
       };
-      // D1 は対話型トランザクション不可 → db.batch で原子的に書く（§10.7）
+      // D1 は対話型トランザクション不可 → db.batch で原子的に書く（ADR-0009）
       await db.batch([
         db.insert(schema.answerLogs).values({
           id: crypto.randomUUID(),
@@ -1056,7 +1056,7 @@ import { dashboardRoute } from './routes/dashboard';
 
 const app = new Hono&lt;AppEnv&gt;();
 
-// CORS はブラウザ経路（§3.1）用。Service Binding 経由には関与しない
+// CORS はブラウザ経路（ADR-0012）用。Service Binding 経由には関与しない
 app.use('*', async (c, next) =&gt; cors({ origin: c.env.WEB_ORIGIN })(c, next));
 app.use('*', userContext);
 
@@ -1150,7 +1150,7 @@ export const answersRoute = new Hono&lt;AppEnv&gt;().post(
       </section>
 
       <section>
-        <h2>テスト戦略（design.md §10.9）</h2>
+        <h2>テスト戦略（.ai/rules/testing.md）</h2>
         <table>
           <thead>
             <tr>
@@ -1205,7 +1205,7 @@ export const answersRoute = new Hono&lt;AppEnv&gt;().post(
           <code>hc&lt;AppType&gt;</code> です）。
         </p>
         <div class="note">
-          <span class="callout-title">実装の参照先（design.md §10.10）</span>
+          <span class="callout-title">実装の参照先</span>
           本資料の例は設計を説明する補助資料です。現在の型・schema・route合成は
           実コード、構造の探索は <a href="../architecture/README.md">Knowledge Graph</a>、
           設計契約は <a href="design.md">design.md</a> を参照してください。

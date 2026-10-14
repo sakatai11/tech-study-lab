@@ -14,7 +14,7 @@ const REVIEW_CONTENT_INTEGRITY_ERROR =
 /**
  * ユーザー固有の due queue を読む非キャッシュの async Server Component。
  * ReviewDueBadge と同じ React cache() 付き loader を共有する
- * （design.md 9.2）。
+ * （design.md 5.3）。
  */
 export async function ReviewUserContent() {
   const viewModel = await loadReviewOnce()

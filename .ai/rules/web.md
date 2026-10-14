@@ -5,11 +5,11 @@ paths:
 
 # apps/web（Vinext / Next.js 互換）ルール
 
-- Server / Client コンポーネント境界は design.md 8.3 に従う。`'use client'` は必要最小限のリーフに置く。
-- API 呼び出しは `hc` クライアント（`apps/api/src/client.ts` のファクトリ）経由。`fetch` の直書きはしない（design.md 8.4）。
-- Cloudflare binding は `cloudflare:workers` から読み、参照は Server 専用の `src/lib/api-server.ts` に閉じる。Client から import される `src/lib/api.ts` には入れない（design.md 8.4）。
-- Web の dev / build / deploy は Vinext（Vite）。OpenNext や `next dev` / `next build` 前提の手順・依存を戻さない（design.md 12.3・12.4）。
-- データ整形は「Content data / DTO → Mapper → ViewModel → page」の層構造に従う（design.md 9.1）。page に生の DTO を直接渡さない。
-- content の読み取りは `getBundledQuestions()` 等のローダー経由。各 feature で frontmatter 配列を直接走査しない（design.md 8.2）。
+- Server / Client コンポーネント境界は design.md 5.3 に従う。`'use client'` は必要最小限のリーフに置く。
+- API 呼び出しは `hc` クライアント（`apps/api/src/client.ts` のファクトリ）経由。`fetch` の直書きはしない（design.md 5.3、ADR-0012）。
+- Cloudflare binding は `cloudflare:workers` から読み、参照は Server 専用の `src/lib/api-server.ts` に閉じる。Client から import される `src/lib/api.ts` には入れない（design.md 5.3）。
+- Web の dev / build / deploy は Vinext（Vite）。OpenNext や `next dev` / `next build` 前提の手順・依存を戻さない（`docs/deployment.md` の「ローカル開発」「本番への手動デプロイ」）。
+- データ整形は「Content data / DTO → Mapper → ViewModel → page」の層構造に従う（design.md 5.2）。page に生の DTO を直接渡さない。
+- content の読み取りは `getBundledQuestions()` 等のローダー経由。各 feature で frontmatter 配列を直接走査しない（design.md 5.1）。
 - 本文描画は `react-markdown` 系レンダラ。MDX は採用しない。
 - `dangerouslySetInnerHTML` は使用しない。
