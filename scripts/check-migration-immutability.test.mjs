@@ -14,16 +14,14 @@ const sqlPath = 'apps/api/drizzle/migrations/0001_initial.sql'
 const snapshotPath = 'apps/api/drizzle/migrations/meta/0001_snapshot.json'
 const journalPath = 'apps/api/drizzle/migrations/meta/_journal.json'
 
-test('allows new migrations, new snapshots, and journal appends', () => {
+test('allows new migrations and new snapshots [ADR-0011]', () => {
   const base = new Map([
     [sqlPath, 'sql-v1'],
     [snapshotPath, 'snapshot-v1'],
-    [journalPath, 'journal-v1'],
   ])
   const head = new Map([
     [sqlPath, 'sql-v1'],
     [snapshotPath, 'snapshot-v1'],
-    [journalPath, 'journal-with-new-entry'],
     ['apps/api/drizzle/migrations/0002_added.sql', 'new-sql'],
     ['apps/api/drizzle/migrations/meta/0002_snapshot.json', 'new-snapshot'],
   ])
@@ -31,21 +29,21 @@ test('allows new migrations, new snapshots, and journal appends', () => {
   assert.deepEqual(findImmutableFileChanges(base, head), [])
 })
 
-test('rejects a deleted or renamed migration even if a replacement is added', () => {
+test('rejects a deleted or renamed migration even if a replacement is added [ADR-0011]', () => {
   const base = new Map([[sqlPath, 'sql-v1']])
   const head = new Map([['apps/api/drizzle/migrations/0001_renamed.sql', 'sql-v1']])
 
   assert.deepEqual(findImmutableFileChanges(base, head), [{ path: sqlPath, reason: 'missing' }])
 })
 
-test('rejects changes to an existing migration SQL file', () => {
+test('rejects changes to an existing migration SQL file [ADR-0011]', () => {
   const base = new Map([[sqlPath, 'sql-v1']])
   const head = new Map([[sqlPath, 'sql-v2']])
 
   assert.deepEqual(findImmutableFileChanges(base, head), [{ path: sqlPath, reason: 'modified' }])
 })
 
-test('rejects deletion and content changes of existing snapshots', () => {
+test('rejects deletion and content changes of existing snapshots [ADR-0011]', () => {
   const base = new Map([
     [snapshotPath, 'snapshot-v1'],
     ['apps/api/drizzle/migrations/meta/0002_snapshot.json', 'snapshot-v2'],
@@ -144,5 +142,52 @@ test('compares the supplied base and checkout HEAD trees', () => {
   } finally {
     rmSync(repository, { recursive: true, force: true })
     rmSync(symlinkDirectory, { recursive: true, force: true })
+  }
+})
+
+test('allows journal appends and rejects changed, removed, or reordered entries [ADR-0011]', () => {
+  const repository = mkdtempSync(path.join(os.tmpdir(), 'migration-journal-'))
+  const write = (filePath, contents) => {
+    const absolutePath = path.join(repository, filePath)
+    mkdirSync(path.dirname(absolutePath), { recursive: true })
+    writeFileSync(absolutePath, contents)
+  }
+  const git = (...args) =>
+    execFileSync('git', args, {
+      cwd: repository,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+  const commitJournal = (entries, message) => {
+    write(journalPath, JSON.stringify({ entries }))
+    git('add', '.')
+    git('commit', '--quiet', '--allow-empty', '-m', message)
+    return git('rev-parse', 'HEAD').trim()
+  }
+  const first = { idx: 0, tag: '0001_initial' }
+  const second = { idx: 1, tag: '0002_added' }
+  const journalModified = [{ path: journalPath, reason: 'modified' }]
+
+  try {
+    git('init', '--quiet', '--initial-branch=main')
+    git('config', 'user.name', 'Migration immutability test')
+    git('config', 'user.email', 'migration-immutability@example.invalid')
+    write(sqlPath, 'CREATE TABLE initial (id INTEGER PRIMARY KEY);')
+    write(snapshotPath, '{"id":"snapshot-1"}')
+    const base = commitJournal([first, second], 'base')
+
+    const appended = commitJournal([first, second, { idx: 2, tag: '0003_more' }], 'append')
+    assert.deepEqual(checkMigrationImmutability(base, appended, repository), [])
+
+    const changed = commitJournal([first, { ...second, tag: '0002_renamed' }], 'change')
+    assert.deepEqual(checkMigrationImmutability(base, changed, repository), journalModified)
+
+    const removed = commitJournal([first], 'remove')
+    assert.deepEqual(checkMigrationImmutability(base, removed, repository), journalModified)
+
+    const reordered = commitJournal([second, first], 'reorder')
+    assert.deepEqual(checkMigrationImmutability(base, reordered, repository), journalModified)
+  } finally {
+    rmSync(repository, { recursive: true, force: true })
   }
 })

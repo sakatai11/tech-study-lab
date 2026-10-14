@@ -81,6 +81,9 @@ export function createAnswerDeps(db: DrizzleD1Database): AnswerDeps {
                 eq(schema.srsStates.userId, params.userId),
                 eq(schema.srsStates.questionId, params.questionId),
                 eq(schema.srsStates.version, nextVersion),
+                // 直前の upsert が実際に適用された場合だけ記録する。version の一致だけでは、
+                // 競合相手が先に同じ version へ更新した行にも一致してしまう（ADR-0009）。
+                sql`changes() = 1`,
               ),
             ),
         ),

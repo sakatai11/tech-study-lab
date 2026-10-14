@@ -30,8 +30,8 @@
       "lines": 176
     },
     "apps/api/src/dal/answer-repository.ts": {
-      "sha256": "2dedc6e513b1cbdd4f61b82ab9b1de303fa77ce9ac01f4a88d33ad0eec53bee3",
-      "lines": 96
+      "sha256": "19a7624b05a8cc59e8de48f0c7f62db887e163d29fb93c9ef239653c126b8629",
+      "lines": 99
     },
     "apps/api/src/dal/domains-repository.ts": {
       "sha256": "770d12a5d167bb95cf8156d840d30fe99446bbebcdb7fb69cee8925c3e94610b",

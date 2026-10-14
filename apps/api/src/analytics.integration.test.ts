@@ -40,7 +40,7 @@ async function fetchAnalytics(path: string): Promise<Response> {
   }).fetch(new Request(`https://api.internal${path}`), env)
 }
 
-describe('analytics API', () => {
+describe('analytics API [ADR-0007]', () => {
   const fixedNow = Date.parse('2026-08-31T12:00:00.000Z')
 
   beforeAll(async () => {
@@ -60,7 +60,7 @@ describe('analytics API', () => {
     ])
   })
 
-  it('aggregates only the middleware user and returns the weekly, retention, and mistake contracts', async () => {
+  it('aggregates only the middleware user and returns the weekly, retention, mistake, and recent activity contracts [ADR-0014]', async () => {
     const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(fixedNow)
     const now = fixedNow
     const day = 24 * 60 * 60 * 1000

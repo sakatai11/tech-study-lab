@@ -335,7 +335,7 @@ describe('domainSummarySchema', () => {
   })
 })
 
-describe('analytics response schemas', () => {
+describe('analytics response schemas [ADR-0007]', () => {
   it('accepts the summary contract including retention distribution', () => {
     expect(
       analyticsSummaryResponseSchema.safeParse({
@@ -537,7 +537,7 @@ describe('analytics response schemas', () => {
   })
 })
 
-describe('recentActivityResponseSchema', () => {
+describe('recentActivityResponseSchema [ADR-0014]', () => {
   it('accepts mixed activity items with required fields', () => {
     expect(
       recentActivityResponseSchema.safeParse({

@@ -9,7 +9,7 @@ function createDeps(overrides: Partial<ActivityDeps> = {}): ActivityDeps {
   }
 }
 
-describe('activity service', () => {
+describe('activity service [ADR-0014]', () => {
   it('merges, stably sorts, and limits saved activity events', async () => {
     const result = await getRecentActivity(
       createDeps({

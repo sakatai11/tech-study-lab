@@ -19,7 +19,7 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-describe('createServerApiClient', () => {
+describe('createServerApiClient [ADR-0012]', () => {
   it('uses the API service binding when it is available', async () => {
     const fetcher = vi.fn().mockResolvedValue(Response.json({ isCorrect: true, correctIndex: 0 }))
     workerModule.env = { API: { fetch: fetcher } }

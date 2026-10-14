@@ -161,7 +161,7 @@ test('manifest detects tampered SQL, added files, and wrong environment', () => 
   }
 })
 
-test('release applies schema/data/API/Web in order and stops at every failed stage', async () => {
+test('release applies schema/data/API/Web in order and stops at every failed stage [ADR-0010]', async () => {
   const stages = ['preflight', 'migrations', 'sync', 'api', 'apiHealth', 'web', 'smoke', 'record']
   for (const failed of [undefined, ...stages]) {
     const calls = []

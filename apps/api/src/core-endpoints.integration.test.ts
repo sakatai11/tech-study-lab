@@ -8,10 +8,12 @@ import initialMigration from '../drizzle/migrations/0000_flowery_quasar.sql?raw'
 import srsVersionMigration from '../drizzle/migrations/0001_add_srs_version.sql?raw'
 import questionMetadataMigration from '../drizzle/migrations/0002_nasty_guardsmen.sql?raw'
 
+import { createAnswerDeps } from './dal/answer-repository'
 import { createReviewDeps } from './dal/review-repository'
 import { FIXED_USER_ID } from './fixed-user'
 import { createInternalApiApp, createPublicApiApp } from './index'
 import type { PlatformRateLimiter } from './persistent-write-rate-limit'
+import { SrsConflictError } from './services/errors'
 
 declare module 'cloudflare:test' {
   interface ProvidedEnv {
@@ -317,6 +319,57 @@ describe('core API endpoints', () => {
     },
   )
 
+  it('records exactly one answer log per answer when it updates an existing SRS state [ADR-0009]', async () => {
+    await seedQuestion('question-1', 2)
+
+    for (const selectedIndex of [2, 0]) {
+      const response = await fetchInternal('/answers', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ questionId: 'question-1', selectedIndex }),
+      })
+      expect(response.status).toBe(200)
+    }
+
+    await expect(
+      env.DB.prepare(
+        'SELECT is_correct FROM answer_logs ORDER BY answered_at, is_correct DESC',
+      ).all(),
+    ).resolves.toMatchObject({ results: [{ is_correct: 1 }, { is_correct: 0 }] })
+    await expect(
+      env.DB.prepare('SELECT reps, lapses, version FROM srs_states').first(),
+    ).resolves.toEqual({
+      reps: 0,
+      lapses: 1,
+      version: 2,
+    })
+  })
+
+  it('rejects a stale SRS version without writing the answer log or the SRS state [ADR-0009]', async () => {
+    await seedSrsState('question-1', 1_000)
+    await env.DB.prepare('UPDATE srs_states SET version = 1 WHERE question_id = ?')
+      .bind('question-1')
+      .run()
+
+    await expect(
+      createAnswerDeps(drizzle(env.DB)).recordAnswer({
+        userId: FIXED_USER_ID,
+        questionId: 'question-1',
+        isCorrect: true,
+        answeredAt: 2_000,
+        nextSrs: { ease: 2600, intervalDays: 6, reps: 2, lapses: 0, dueAt: 9_000 },
+        expectedVersion: 0,
+      }),
+    ).rejects.toBeInstanceOf(SrsConflictError)
+
+    await expect(env.DB.prepare('SELECT * FROM answer_logs').all()).resolves.toMatchObject({
+      results: [],
+    })
+    await expect(
+      env.DB.prepare('SELECT interval_days, reps, version FROM srs_states').first(),
+    ).resolves.toEqual({ interval_days: 1, reps: 1, version: 1 })
+  })
+
   describe('persistent write success logs', () => {
     afterEach(() => {
       vi.restoreAllMocks()
@@ -403,7 +456,7 @@ describe('core API endpoints', () => {
     await expect(reviewDeps.countDueQuestions(FIXED_USER_ID, now)).resolves.toBe(2)
   })
 
-  it('returns ordered four-domain summaries with active questions, mastery boundary, and user isolation [ADR-0003]', async () => {
+  it('returns ordered four-domain summaries with active questions, mastery boundary, and user isolation [ADR-0003] [ADR-0006]', async () => {
     await seedQuestion('security-1', 0, {
       domain: 'security',
       topic: 'xss',
@@ -471,7 +524,7 @@ describe('core API endpoints', () => {
     })
   })
 
-  it('keeps the domains route behind Access and maps repository failures to 500', async () => {
+  it('keeps the domains route behind Access and maps repository failures to 500 [ADR-0008]', async () => {
     const publicResponse = await createPublicApiApp().fetch(
       new Request('https://api.example.com/domains'),
       {
@@ -498,7 +551,7 @@ describe('core API endpoints', () => {
     })
   })
 
-  it('allows an Access-verified public write and rejects unauthorized writes before D1 changes', async () => {
+  it('allows an Access-verified public write and rejects unauthorized writes before D1 changes [ADR-0008]', async () => {
     const app = createPublicApiApp(async () => undefined, { rateLimiters: allowingRateLimiters })
     const bindings = {
       ...env,
@@ -544,7 +597,7 @@ describe('core API endpoints', () => {
     })
   })
 
-  it('rejects an unauthorized non-loopback write through the default public Worker before D1 changes', async () => {
+  it('rejects an unauthorized non-loopback write through the default public Worker before D1 changes [ADR-0008]', async () => {
     const response = await SELF.fetch('https://api.test/answers', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },

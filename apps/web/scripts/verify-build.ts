@@ -3,7 +3,8 @@ import { readFileSync, readdirSync } from 'node:fs'
 
 import { getLessonRouteParams, getQuizRouteParams, getTopicRouteParams } from '../src/lib/content'
 
-// Run after build without a server (CI):
+// Run after build without a server (CI).
+// 認証後の画面が prerender されていないこと（ADR-0013）と、成果物に正解が含まれないこと（ADR-0002）を確かめる。
 // pnpm --filter @tsl/web verify:build
 const root = new URL('../', import.meta.url)
 const read = (path: string) => readFileSync(new URL(path, root))
