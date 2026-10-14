@@ -351,7 +351,7 @@ Quiz と Review の表示再利用は、feature VM同士を継承・交差させ
 
 - service は **HTTP を知らないドメインエラー**（`services/errors.ts` の `QuestionNotFoundError` 等）を throw する。
 - 個々のドメインエラーと HTTP ステータスの対応は、関係する ADR（問題未存在の 404 は ADR-0002、レート制限の 429 / 503 は ADR-0004）と [API 仕様カタログ](./api-spec.html) が持つ。
-- route 層の `app.onError` がドメインエラーを HTTP ステータスへ写像し、レスポンス形を `{ error: { code, message } }` に統一する。未知のエラーは 500（`INTERNAL`）とし、詳細メッセージを外に漏らさない。
+- route 層の `app.onError` がドメインエラーを HTTP ステータスへ写像し、レスポンス形を `{ error: { code, message } }` に統一する。既知のドメインエラーは message を返す。未知のエラーは 500（`INTERNAL`）とし、詳細メッセージを外に漏らさず Workers Logs へ記録する（`console.error` はこの未処理エラーの出力に限る）。
 - Hono や middleware が意図して throw した `HTTPException` は、例外が持つステータスとレスポンスを保持する。未知の例外として 500 に上書きしない。
 
 - `zValidator` の検証失敗（400）はデフォルト挙動のまま使う（MVP）。フロントは `requestJson`（§5.3）が `res.ok` で弾くため、エラーボディの形に依存しない。
