@@ -63,18 +63,20 @@
 
 | ホストランタイム | オーケストレーターが直接実行するコマンド | モデル指定 | 送信先 |
 |---|---|---|---|
-| Claude Code | `codex exec review --base <effective-base> -c sandbox_mode="read-only"` | `-m gpt-6-sol` | OpenAI |
+| Claude Code | `codex exec -s read-only - < <brief>` | `-m gpt-6-sol` | OpenAI |
 | Codex（App / CLI） | `git diff <effective-base>...HEAD \| .ai/scripts/run-claude-review.sh -p ...` | `--model opus` | Anthropic |
 
 - **モデル指定**: `-m` / `--model` で必ず明示する。既定のモデルに委ねない。指定したモデルが使えるかは、起動前に契約とクライアントの環境で確認する。
 - **観点の分担**: `reviewer` が正確性優先、別モデル CLI が契約準拠優先（`spec-compliance-first`）である（`.ai/review-guidelines.md`）。CLI の出力はオーケストレーターが直接読み、同規約の分類と重要度で判定する。
 - **起動する主体**: 別モデル CLI はサブエージェントからは起動しない。オーケストレーターが継続セッションで直接起動する。
 - **ブリーフ**: `<scratchpad>` のファイルとして渡し、長文を起動プロンプトへ直接貼らない。ブリーフには、対象 Issue・対象機能・受け入れ条件・範囲外の扱い・差分範囲を含め、同意済みの送信範囲と一致させる。
+  - Codex CLI にはブリーフを stdin（`-`）で渡す。差分は CLI 自身に `git diff <effective-base>...HEAD` で読ませるので、ブリーフにはこのコマンドとコミット範囲を書く。
+  - `codex exec review` サブコマンドは使わない。`--base` と PROMPT（stdin の `-` を含む）を併用できず、ブリーフを渡せないためである（codex-cli 0.160.0 で確認）。
 - **起動前の確認**:
   - `git merge-base <base> HEAD` で effective base を1つに定め、`git rev-parse --verify <effective-base>^{commit}` で検証する。終了コードが非0、出力が空または複数行、検証失敗のいずれかなら「判定: error」とし、CLI を実行しない。
   - レビュー対象はコミット済みの差分に限る。`git status --short` が空であることと、`committedRange` が実際の差分と一致することを確かめる。
 - **read-only の徹底**:
-  - `codex exec review` の既定の Sandbox は `workspace-write` なので、`-c sandbox_mode="read-only"` を必ず付ける。`review` サブコマンドでは `-s` / `--sandbox` は使わない。
+  - Codex CLI には `-s read-only` を必ず付け、Sandbox を設定ファイルの値に委ねない。起動時のヘッダーに `sandbox: read-only` と表示されることを確かめる。
   - Claude CLI には `--allowedTools "Read Grep Glob"` と `--disallowedTools "Edit Write NotebookEdit Bash"` を付け、Keychain wrapper 以外には資格情報を渡さない。
 - **出力の扱い**: raw の stdout / stderr はファイル・ブリーフ・scratchpad に残さない。永続化する場合は、機密を除き、判定に必要なメタ情報だけにする。
 - **監視と失敗**:
