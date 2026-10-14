@@ -362,7 +362,8 @@
         <p class="lead">
           このページは
           <a href="design.md">docs/design.md</a>
-          の第10章を、実装時に参照しやすいようにフロー図と層の責務へ再構成した補助資料です。一次ソースは
+          の §4.3（バックエンドの層と import 境界）と §5.7（エラー処理）を、実装時に参照しやすいようにフロー図と層の責務へ再構成した補助資料です。設計契約の一次ソースは
+          <a href="adr/README.md">ADR</a>、層と依存方向の一次ソースは
           <a href="design.md">docs/design.md</a> です。フロントエンド側は
           <a href="frontend-architecture.html">frontend-architecture.html</a>
           を参照してください。
@@ -1208,7 +1209,7 @@ export const answersRoute = new Hono&lt;AppEnv&gt;().post(
           <span class="callout-title">実装の参照先</span>
           本資料の例は設計を説明する補助資料です。現在の型・schema・route合成は
           実コード、構造の探索は <a href="../architecture/README.md">Knowledge Graph</a>、
-          設計契約は <a href="design.md">design.md</a> を参照してください。
+          設計契約は <a href="adr/README.md">ADR</a>、層と依存方向は <a href="design.md">design.md</a> を参照してください。
           実装状況と残タスクはGitHub Issue / PRで管理します。
         </div>
       </section>

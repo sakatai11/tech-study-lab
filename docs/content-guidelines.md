@@ -18,10 +18,16 @@
 
 ## frontmatter の項目
 
+レッスンのファイルは、YAML の frontmatter と Markdown の本文からなる。frontmatter の項目は [content schema](../packages/shared/src/schema/content.ts) の `lessonFrontmatterSchema` に従う。
+
 - `domain`: 領域キー（例 `security`）
 - `topic`: トピックキー（例 `xss`）
-- `lesson`: レッスンID・タイトル・本文（Markdown本体）・`estimatedMinutes`（0より大きい整数。教材閲覧1回あたりの学習時間を分で近似するための値）
-- `questions[]`: `{ id, type: 'mcq', prompt, choices[], answerIndex, explanation }`
+- `lessonId`: レッスン ID（形式は「ID 命名規則」）
+- `title`: レッスンのタイトル
+- `estimatedMinutes`: 0 より大きい整数。教材を1回閲覧したときの学習時間を、分で近似するための値
+- `questions[]`: `{ id, type: 'mcq', prompt, choices[], answerIndex, explanation }`（1件以上）
+
+本文（教材）は frontmatter の外に Markdown で書く。トピックの `index.md` の frontmatter は「表示名（ラベル）の持ち場所」に従う。
 
 ## ID と URL
 
