@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 import { TermCrumb } from '@/components/ui/term-crumb'
 
 /**
- * API に依存しない静的シェル（design.md 7.1・9.2）。
+ * API に依存しない静的シェル（design.md 5.3）。
  * ユーザー固有データを受け取らないこと（共有される静的シェルへの混入を防ぐ）。
  */
 export function ReviewPageShell({

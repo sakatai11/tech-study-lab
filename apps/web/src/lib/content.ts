@@ -40,7 +40,7 @@ export function getTopicContent(domain: string, topic: string): BundledTopic | u
 
 /**
  * `generateStaticParams` に渡す route params。
- * content 由来の route を標準 SSG するため、全件を返す（design.md 8.2）。
+ * content 由来の route を標準 SSG するため、全件を返す（design.md 5.1）。
  */
 export function getLessonRouteParams(): {
   domain: string

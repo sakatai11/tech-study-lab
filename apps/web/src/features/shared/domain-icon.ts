@@ -3,7 +3,7 @@ import type { DomainKey } from '@tsl/shared'
 import type { MaterialSymbolName } from '@/components/ui/material-symbol'
 import type { Tone } from '@/components/ui/tone'
 
-/** 学習領域とアイコンの対応。画面をまたいで同じ領域を同じ形で示す（design.md 8.7）。 */
+/** 学習領域とアイコンの対応。画面をまたいで同じ領域を同じ形で示す（docs/design-system.md）。 */
 export const domainIcons = {
   security: 'security',
   frontend: 'code',

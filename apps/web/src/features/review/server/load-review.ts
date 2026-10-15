@@ -20,6 +20,6 @@ async function loadReview(now?: number): Promise<ReviewViewModel> {
  * API 読み取りを同一リクエスト内で共有する（畳まないと件数と中身が食い違いうる）。
  * 畳み込み前の loadReview は export しない。型が同じで取り違えても気づけないため。
  * React の cache() はリクエストスコープであり、`user_id` を含められない
- * ユーザー横断の共有キャッシュではない（design.md 8.3）。
+ * ユーザー横断の共有キャッシュではない（ADR-0013）。
  */
 export const loadReviewOnce = cache((): Promise<ReviewViewModel> => loadReview())

@@ -27,7 +27,7 @@ Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runt
 
 ### 仕様
 
-- 設計契約は ADR（`docs/adr/`）とテストが持ち、未移行の契約は `docs/design.md` が持つ。Issue が契約を新設・変更する場合は、実装より先に ADR を作る（既存 ADR を変える場合は新しい ADR で置き換える）。UI の文言や表示の細部、リファクタリングでは ADR を作らない。Issueと既存の契約が矛盾する場合は、ユーザーに判断を求める。
+- 設計契約は ADR（`docs/adr/`）とテストが持ち、層と依存方向・データフローは `docs/design.md` が持つ。Issue が契約を新設・変更する場合は、実装より先に ADR を作る（既存 ADR を変える場合は新しい ADR で置き換える）。UI の文言や表示の細部、リファクタリングでは ADR を作らない。Issueと既存の契約が矛盾する場合は、ユーザーに判断を求める。
 - 変更する領域に対応する `.ai/rules/*.md`（AGENTS.md の「パス別ルール」）を読んでから実装する。
 - 受け入れ条件・対象範囲・権限を広げる必要が出たら、止めてユーザーに判断を求める。
 
@@ -46,7 +46,7 @@ Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runt
 ## 進め方の目安
 
 1. **準備**: Issueを読む。ブランチを作成・更新する前に `git fetch origin develop` と `git rev-parse --verify origin/develop^{commit}` で最新のリモート参照を取得・検証し、そこから作業ブランチを用意する。取得や検証に失敗したら停止する。準備後に `git merge-base --is-ancestor origin/develop HEAD` が成り立つことを確かめる。`pnpm architecture:check` が失敗する場合は、Knowledge Graph基盤の不整合として報告し、Issueの修正と混ぜない。
-2. **調査と方針**: 受け入れ条件を分解し、関連する ADR（`docs/adr/README.md` の索引）と、未移行の契約は `docs/design.md` の該当章を確認する。契約を新設・変更する Issue かどうかを判断し、その結果を方針に含める。構造の調査は `references/architecture-context.md` のとおり `pnpm architecture:query` から始めると速い。方針が拮抗する場合、または要確認事項が実装を左右する場合だけユーザーに確認する。方針はIssueにコメントで残す。
+2. **調査と方針**: 受け入れ条件を分解し、関連する ADR（`docs/adr/README.md` の索引）と、`docs/design.md` の依存方向・データフローの該当章を確認する。契約を新設・変更する Issue かどうかを判断し、その結果を方針に含める。構造の調査は `references/architecture-context.md` のとおり `pnpm architecture:query` から始めると速い。方針が拮抗する場合、または要確認事項が実装を左右する場合だけユーザーに確認する。方針はIssueにコメントで残す。
 3. **実装**: 新しいロジック、特にSRSと純粋関数にはテストを書く（`.ai/rules/testing.md`）。`content/` を変更する場合は `content-new` スキルに従う。
 4. **品質ゲート**: 後述のゲートを通してからコミットする。
 5. **独立レビュー**: `reviewer` に、Issue番号と `.ai/review-guidelines.md` の「レビュー範囲」が求める項目（`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `committedRange`）を渡す。`committedRange` は `<effectiveBase>...HEAD` の全累積差分とする（`effectiveBase` = `git merge-base origin/develop HEAD`）。

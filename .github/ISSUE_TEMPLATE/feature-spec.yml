@@ -37,7 +37,7 @@ body:
     id: adr-ref
     attributes:
       label: 関連 ADR / 新規 ADR の要否
-      description: 関連する ADR（例「ADR-0005」）。ADR へ未移行の契約は docs/design.md の節（例「§4.4」）。契約を新設・変更するなら「新規 ADR が必要」、UI の文言や表示の細部だけなら「不要」と記載。
+      description: 関連する ADR（例「ADR-0005」）。層と依存方向・データフローに関わる場合は docs/design.md の節（例「§5.3」）。契約を新設・変更するなら「新規 ADR が必要」、UI の文言や表示の細部だけなら「不要」と記載。
     validations:
       required: true
   - type: textarea

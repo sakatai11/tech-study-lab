@@ -19,7 +19,7 @@ Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runt
 
 | 種別 | 使う場面 | タイトル接頭辞 | ラベル |
 |---|---|---|---|
-| `feature` | 新機能・機能拡張（ADR または design.md の契約に紐づく仕様） | `[Feature]` | `spec` |
+| `feature` | 新機能・機能拡張（ADR の契約や design.md の依存方向に関わる仕様） | `[Feature]` | `spec` |
 | `bug` | 既存挙動の不具合 | `[Bug]` | `bug` |
 | `refactor` | 挙動を変えない内部改善 | `[Refactor]` | `refactor` |
 | `docs` | ドキュメントのみ（ADR の追加・置き換え、design.md 更新など） | `[Docs]` | `documentation` |
@@ -37,7 +37,7 @@ Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runt
 - **目的・背景**: なぜ必要か（ユーザー視点の価値）
 - **受け入れ条件**: 検証可能なチェックリスト形式（`- [ ]`）。これが実装・テストのゴールになるため、具体的に書く
 - **影響範囲**: apps/web / apps/api / packages/shared / content/ / docs/adr・docs/design.md から該当を選ぶ
-- **関連 ADR / 新規 ADR の要否**: `docs/adr/README.md` の索引から関連 ADR を特定する。ADR へまだ移していない契約は `grep -n "キーワード" docs/design.md` で該当節を特定する。契約（権威の所在・信用境界・データ整合性・セキュリティ・運用順序など）を新設・変更するなら「新規 ADR が必要」、置き換えるなら「ADR-NNNN を置き換える新規 ADR が必要」と明記する。UI の文言や表示の細部だけなら「不要」とする
+- **関連 ADR / 新規 ADR の要否**: `docs/adr/README.md` の索引から関連 ADR を特定する。層と依存方向・データフローに関わる場合は `docs/design.md` の該当節も挙げる。契約（権威の所在・信用境界・データ整合性・セキュリティ・運用順序など）を新設・変更するなら「新規 ADR が必要」、置き換えるなら「ADR-NNNN を置き換える新規 ADR が必要」と明記する。UI の文言や表示の細部だけなら「不要」とする
 - **スコープ外**: やらないことを明示（AGENTS.md の「やらないこと」と重複する要求は除外）
 
 **feature 以外の場合**（`.github/ISSUE_TEMPLATE/task.yml` の構成）:
@@ -45,7 +45,7 @@ Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runt
 - **背景・現状**: なぜこのタスクが必要か。bug の場合は「再現手順 / 期待する動作 / 実際の動作」を必ず含める（エラーメッセージ・ログがあれば添付）
 - **完了条件**: 検証可能なチェックリスト形式（`- [ ]`）
 - **影響範囲**: apps/web / apps/api / packages/shared / content/ / docs/adr・docs/design.md / .github/・CI・設定 から該当を選ぶ
-- **関連 ADR / 新規 ADR の要否**: 契約に関わる場合のみ記載（任意）。挙動が ADR（未移行の契約は design.md）から外れていることが bug の原因なら、その ADR を明記する。契約を新設・変更するタスクなら「新規 ADR が必要」と明記する
+- **関連 ADR / 新規 ADR の要否**: 契約に関わる場合のみ記載（任意）。挙動が ADR から外れていることが bug の原因なら、その ADR を明記する。契約を新設・変更するタスクなら「新規 ADR が必要」と明記する
 - **補足・制約**: 関連 issue・PR、参考リンク、スコープ外など
 
 ### 3. issue 草案の提示

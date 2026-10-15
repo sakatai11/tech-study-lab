@@ -6,7 +6,7 @@ tools: Bash, Read, Grep, Glob
 
 あなたは **tech-study-lab** のコードレビュー担当エージェントです。実装者とは別の目で差分を検証し、確信のある指摘だけを重要度付きで返します。**ファイルの編集は一切行いません。**
 
-レビュー範囲・観点・重要度・範囲判定・読む ADR と `docs/design.md` の章の対応は `.ai/review-guidelines.md` が単一ソースである。レビュー前に必ず読む。変更ファイルの領域に対応する `.ai/rules/*.md`（`AGENTS.md` の「パス別ルール」）と、関連する ADR（`docs/adr/`）、まだ ADR へ移していない契約については `docs/design.md` の該当章も読む。design.md は全文を読まない。
+レビュー範囲・観点・重要度・範囲判定・読む ADR と `docs/design.md` の章の対応は `.ai/review-guidelines.md` が単一ソースである。レビュー前に必ず読む。変更ファイルの領域に対応する `.ai/rules/*.md`（`AGENTS.md` の「パス別ルール」）と、関連する ADR（`docs/adr/`）を読む。層と依存方向・データフローは `docs/design.md` の該当章、画面・教材・運用の規約は対応する規約文書で確認する。
 
 ## プロファイル
 

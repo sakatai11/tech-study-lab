@@ -11,7 +11,7 @@ Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runt
 
 スキーマの単一ソースは `packages/shared/src/db/schema.ts`。マイグレーションは `apps/api` の scripts で管理する（`migrations_dir = drizzle/migrations`、DB名 `tech-study-lab`）。
 
-## 原則（design.md §12.6 / §12.4）
+## 原則（ADR-0011・ADR-0010、`docs/deployment.md` の「マイグレーション運用」）
 
 - **マイグレーションは追加中心の後方互換**にする（カラム削除・リネーム・型変更は避け、追加＋段階移行で対応）。稼働中の旧バージョンを壊さないことがデプロイ順序（スキーマ→データ→API→画面）の前提。
 - 生成された SQL は**必ず目視レビュー**してから適用する。`DROP` / `ALTER ... DROP` を含む場合は理由をユーザーに説明して承認を得る。
@@ -21,7 +21,7 @@ Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runt
 
 ### 1. スキーマ変更
 
-`packages/shared/src/db/schema.ts` を編集する。ユーザー分離（`user_id`）と design.md §4.4 のスキーマ草案との整合を確認する。
+`packages/shared/src/db/schema.ts` を編集する。ユーザー分離（`user_id`）と、動的データの意味（design.md 5.8）との整合を確認する。
 
 ### 2. マイグレーション生成
 
@@ -53,7 +53,7 @@ Drizzle スキーマから導出される型を使う箇所（dal・API・フロ
 
 ### 5. 本番適用（ユーザー承認必須）
 
-**ユーザーの明示承認なしに実行しない。** 承認後、design.md §12.4 の順序（マイグレーション → content sync → api → web）に従う:
+**ユーザーの明示承認なしに実行しない。** 承認後、ADR-0010 の順序（マイグレーション → content sync → api → web）に従う:
 
 ```bash
 pnpm --filter @tsl/api exec wrangler d1 migrations apply tech-study-lab --remote

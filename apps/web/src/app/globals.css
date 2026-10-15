@@ -289,7 +289,7 @@
   }
 }
 
-/* ThemeToggle: 現在のテーマに応じてアイコンと読み上げ名を出し分ける（design.md 7.2）。 */
+/* ThemeToggle: 現在のテーマに応じてアイコンと読み上げ名を出し分ける（docs/design-system.md の「画面の規約」）。 */
 :root[data-theme="light"] .theme-when-dark,
 :root:not([data-theme="light"]) .theme-when-light {
   display: none;

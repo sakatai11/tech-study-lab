@@ -2,7 +2,7 @@
   "version": 2,
   "sources": {
     ".dependency-cruiser.cjs": {
-      "sha256": "c8e8ccc93b15fc3054a3d26e764f742794da64a204d836e5e5038d42d421ac13",
+      "sha256": "9463ee8faf4c3047e3dc4dd1aa1b71db912b4d5d3c95d4b6b66816a9886b7236",
       "lines": 281
     },
     "apps/api/src/app.ts": {
@@ -198,7 +198,7 @@
       "lines": 13
     },
     "apps/web/src/features/review/server/load-review.ts": {
-      "sha256": "b3dbcae24f421433608164779bb4bf1ba5b1ea48ed1cb1276373852b915096f8",
+      "sha256": "1dfd093b5358b0ed37982f1843b068d618b564dca64682bca3c0cfc9dcb06e67",
       "lines": 26
     },
     "apps/web/src/lib/api.ts": {
@@ -222,7 +222,7 @@
       "lines": 6
     },
     "packages/shared/src/schema/api.ts": {
-      "sha256": "c14bffa5be6f79ef2e5e9743185e4cce78caf0349086527fcf14aa5a44316de8",
+      "sha256": "c6b3f1d6f306e8866b55878f82abdb2520d9a7d5b92181ff2d29c79465859f7f",
       "lines": 344
     },
     "packages/shared/src/schema/content.ts": {

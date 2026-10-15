@@ -2,7 +2,7 @@
 
 `architecture/graph.json` は、リポジトリの構造（ファイル・endpoint・schema・依存関係）を抽出したスナップショットである。構造調査の入口として使うと、読むべき範囲を素早く絞れる。
 
-Graph は設計契約の一次ソースではない。設計契約の一次ソースは ADR（`docs/adr/`）と、未移行の契約を持つ `docs/design.md` である。現在の構造の一次ソースはコードと設定である。Graph で見つけた候補は、必ずコード・型・テスト・ADR で確認する。抽出対象と制限は `architecture/README.md` を参照する。
+Graph は設計契約の一次ソースではない。設計契約の一次ソースは ADR（`docs/adr/`）、層と依存方向の一次ソースは `docs/design.md` である。現在の構造の一次ソースはコードと設定である。Graph で見つけた候補は、必ずコード・型・テスト・ADR で確認する。抽出対象と制限は `architecture/README.md` を参照する。
 
 ## 調査
 

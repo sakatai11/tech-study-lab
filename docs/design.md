@@ -2,21 +2,22 @@
 
 ソフトウェア学習アプリ。個人エンジニアが「セキュリティ / フロントエンド・バックエンドのフレームワーク / アーキテクチャ設計」を、読み物（教材）と4択問題演習で学ぶ。解答ログを分析し、SRS（間隔反復）アルゴリズムで出題を最適化する。開発自体をAI駆動で進めることを主目的とし、その基盤を構築する。
 
-本書は **プロダクト方針・許可する依存方向と、まだ ADR へ移していない設計契約**を持ち、[ADR 索引](./adr/README.md)への入口になる。設計契約は [ADR-0001](./adr/0001-contracts-as-adr-and-tests.md) に従い、段階的に [ADR](./adr/README.md)（理由と境界）とテスト（不変条件の検証）へ移している。ADR へ移した節は本書から削除し、参照箇所は ADR へリンクする。章番号は振り直さない。契約を新設・変更する場合は、実装より先に ADR を作る（未移行の節の変更も同様）。実装が契約に違反しているだけの場合は、契約を実装に合わせて緩めず、不具合として修正する。
+本書は **プロダクト方針・技術スタック・依存方向・データフローの層** を持ち、[ADR 索引](./adr/README.md)への入口になる。設計契約（何を守るか、なぜ、どこまで適用するか）は [ADR](./adr/README.md) が持ち、不変条件はテストで検証する（[ADR-0001](./adr/0001-contracts-as-adr-and-tests.md)）。契約を新設・変更する場合は、実装より先に ADR を作る。実装が契約に違反しているだけの場合は、契約を実装に合わせて緩めず、不具合として修正する。
 
 | 情報 | 一次ソース・役割 |
 | --- | --- |
-| 何を守るか・なぜその設計を採ったか・どこまで適用するか | [ADR](./adr/README.md)。未移行の契約は本書の各節の一箇所で定義し、他の節は参照する |
-| プロダクト方針・依存方向 | 本書 |
+| 何を守るか・なぜその設計を採ったか・どこまで適用するか | [ADR](./adr/README.md) |
+| プロダクト方針・技術スタック・依存方向・データフローの層 | 本書 |
+| 見た目・表示文言・画面の振る舞いの規約 | [デザインシステムと画面の規約](./design-system.md) |
+| 教材・問題の執筆規約 | [コンテンツ規約](./content-guidelines.md) |
+| 環境・ローカル開発・デプロイの手順 | [環境・デプロイ運用](./deployment.md) |
 | 現在のファイル配置・型・schema・関数シグネチャ・設定 | コードと設定。正確な宣言や現在の構成を本書へ複製しない |
 | 現在構造の探索・変更影響の候補 | [Knowledge Graph](../architecture/README.md)。コード・設定から抽出する参照データであり、仕様や実行時挙動の証明ではない |
 | 契約を満たすことの検証 | 型チェック・テスト・実行確認。ADR を検証するテストは `describe` / `it` 名に `[ADR-NNNN]` を付ける。テストは根拠であり、契約の変更を単独で承認するものではない |
 | 実装状況・残タスク・完了記録 | GitHub Issue / PR。完了済みタスク一覧は本書に残さない |
-| 過去の調査・比較・検証結果 | 日付と対象を明記した独立した検証記録またはADR。現在も有効な制約は本書から参照できるようにする |
+| 過去の調査・比較・検証結果・経緯 | [`docs/investigations/`](./investigations/) の日付付きの記録 |
 
 Knowledge Graphの抽出対象・制限・更新方法は [architecture/README.md](../architecture/README.md)、Issue開発での使い方は[Knowledge Graph の使い方](../.ai/skills/issue-dev-orchestrate/references/architecture-context.md)を参照する。Graphで候補を絞った後、コード・型・テストと本書の契約で再確認する。Graph対象外の文書・UI・教材も、仕様確認や通常の検索の対象から外さない。
-
-設計文書の一次ソースは本ファイル（`docs/design.md`）の Markdown のみとし、全文の HTML ミラーは持たない。HTML は実装時に参照しやすい形へ再構成した補助資料（[`docs/api-spec.html`](./api-spec.html)・[`docs/frontend-architecture.html`](./frontend-architecture.html)・[`docs/backend-architecture.html`](./backend-architecture.html)・[`docs/authentication-architecture.html`](./authentication-architecture.html)）に限る。
 
 ## 1. プロダクト方針
 
@@ -53,114 +54,9 @@ Knowledge Graphの抽出対象・制限・更新方法は [architecture/README.m
 ### 既知のリスク
 
 - Vinext は Next.js 本体ではなく Vite 上の互換実装であり、未対応 API や挙動差が残り得る。`next/*` の型と互換 API は使い続け、移行可否と検証結果は [Vinext 検証記録](./investigations/2026-10-04-vinext-migration.md) を参照する。これは「Cloudflareを学ぶ」目的の一部として許容する。
-- Workers Free の CPU 上限超過（Issue #220）が認証後画面の連続取得で観測されている。本番 Web の Vinext 切替は、その解消と実環境での連続測定の完了を前提とする（§12.4）。
+- Workers Free の CPU 上限超過（Issue #220）が認証後画面の連続取得で観測されている。本番 Web の Vinext 切替は、その解消と実環境での連続測定の完了を前提とする（[環境・デプロイ運用](./deployment.md)の「本番 Web の Vinext 切替」）。
 
-## 3. リポジトリ構成
-
-pnpm workspaces による monorepo。
-
-現在のファイル配置はコードと [Knowledge Graph](../architecture/README.md) を参照する。ここでは配置の責務と命名規則を定義する。
-
-`apps/web/src` 配下のより詳細な構成（`features` / `components/ui` / `lib` 等）は第8.1章で確定する。
-
-- フロント ⇔ API は Hono の `hc`（型安全RPC）で接続。
-- Drizzle スキーマと Zod スキーマを `packages/shared` に集約し、フロント・API・DBで単一ソース化する。
-
-### 3.1 Worker 構成と接続（決定）
-
-別 Worker とする判断と書き込みの経路は [ADR-0012](./adr/0012-separate-web-and-api-workers.md) に移した。
-
-`apps/web`（Vinext）と `apps/api`（Hono）は**別 Worker としてデプロイする**。Next.js の Route Handler 上に Hono を載せる同居構成（`app/api/[[...route]]/route.ts` + `handle()`）は採用しない。
-
-**別 Worker を採る理由**：
-
-- `apps/api` が自身の wrangler 設定を完全所有できる。D1 マイグレーションや将来の Cron Triggers / Queues 等の Workers プラットフォーム機能を、web 側の wrangler 設定・Vinext ビルドに巻き込まずに使える。デプロイも独立する（API の変更に web のビルドが不要）。
-- 同居構成ではリクエストが「Next.js ルーター → Route Handler → Hono ルーター」の二段になり、Next middleware と Hono middleware の責務境界が濁る。なお Hono の RPC・`zValidator`・middleware 自体は Route Handler 内でも動くため、失うのは Hono の機能ではなく Workers との直結と独立性である。
-- 既存の設計判断と整合する：§8.3 のキャッシュ方針は「mutation（`POST /answers`）が Next.js のサーバーコンテキストを経由しない」ことを前提とし、採点権威（[ADR-0002](./adr/0002-api-authoritative-grading.md)）・`user_id` 注入点（[ADR-0003](./adr/0003-server-injected-user-id.md)）も API 側にある。API 契約（`AppType`）を `apps/api` に一本化する §5 のガードレールとも噛み合う。
-- Hono + Cloudflare を学ぶドッグフーディング目的（§2）を素通りしない。
-
-**接続経路**（`hc` クライアント側の取り回しは §8.4）：
-
-| 呼び出し元 | 経路 | 備考 |
-| --- | --- | --- |
-| Server loader（web Worker 内） | **named Service Binding**（`env.API` → `InternalApi`） | Worker 間の private entrypoint。公衆インターネットを経由せず、CORS・Cloudflare Access JWT 検証を通さない |
-| Client hook（ブラウザ） | API Worker の公開 URL | Cloudflare Access で保護する。Access application cookie を送るため `credentials: 'include'` を指定し、API は `WEB_ORIGIN` だけを CORS 許可する。将来カスタムドメイン導入時は同一ゾーンのルート割当（`example.com/api/*` → API Worker）で同一オリジン化し、CORS 設定を撤去する |
-| ローカル開発 | Service Binding（`wrangler dev` の dev registry 経由）または URL（`http://localhost:8787`） | web の `dev`（Vite + workerd）と API の `wrangler dev` を並走させる。production 以外で `API` binding が未設定の場合だけ env の URL にフォールバック |
-
-- web 側の wrangler 設定に `services: [{ "binding": "API", "service": "<API Worker 名>", "entrypoint": "InternalApi" }]` を宣言し、Server 側の `hc` には `cloudflare:workers` の `env.API.fetch` をカスタム `fetch` として渡す。
-- Service Binding 経由でも `hc<AppType>` の型安全 RPC はそのまま維持される（差し替わるのは fetch 実装のみで、パス・メソッド・型は不変。baseURL のホスト名はダミーでよい）。
-- web Worker の認証後画面は、ユーザー固有データを共有キャッシュへ載せない通常のリクエスト時 SSR とする。教材・問題の content route だけは `generateStaticParams` による標準 SSG とし、ISR 用の Incremental Cache・再検証 Queue（Durable Object / R2 / KV）、Worker 自己参照 binding は使用しない。
-
-#### 本番アクセス境界（Issue #112）
-
-決定と境界は [ADR-0008](./adr/0008-production-access-boundary.md) に移した。
-
-固定ユーザー MVP の公開 API は、アプリケーション内の `userContext` より前で Cloudflare Access JWT を検証する。Cloudflare Access のアプリケーションプロキシだけに依存する案は、Worker の公開 URL への経路、アプリ内での認可前提、テスト可能な失敗契約を一箇所で保証できないため採用しない。Access が発行する JWT を Worker 自身で署名・**完全一致の issuer**・audience まで検証する方式を採用する。
-
-- default/public entrypoint は `CORS → Access boundary → userContext → shared user routes` とする。`/health` は Access と `userContext` の前で公開する。**Worker 内**では、Worker まで到達した CORS preflight（`OPTIONS`）を CORS middleware が 204 で終了させるため、Access boundary・`userContext`・route・D1 へ到達しない。これは Cloudflare Access の edge/proxy 側で preflight を Worker へ転送できること、または同等の正しい preflight 応答を返せることとは別の責務である。
-- Access boundary は `Cf-Access-Jwt-Assertion` を `jose` の JWKS 検証で確認する。JWKS URL は信頼する `ACCESS_ISSUER` から標準の `/cdn-cgi/access/certs` を導出し、設定値または JWT の issuer を任意 URL としては扱わない。設定不足、トークン欠落、署名・issuer・audience の不一致はすべて詳細を出さず、`401 { "error": { "code": "UNAUTHORIZED", "message": "Unauthorized" } }` を返す。
-- `ACCESS_ISSUER` と `ACCESS_AUDIENCE` がともに未設定で、かつ URL が `localhost` または IPv4/IPv6 loopback の場合に限り、ローカル開発として Access を bypass する。Access 設定が一部でも存在する場合は loopback URL でも bypass せず、設定不足または JWT 不備として fail closed する。これはローカル開発の web と API の HTTP 接続だけを対象とする。
-- named `InternalApi extends WorkerEntrypoint` は `userContext → shared user routes` だけを実行する private entrypoint とする。Service Binding で `entrypoint: "InternalApi"` を指定した web Server loader のみが使い、公開 HTTP から Access を回避する経路にはしない。
-- この境界は Issue #35 の Cloudflare Access application / policy / `ACCESS_ISSUER` / `ACCESS_AUDIENCE` の本番設定に依存する。値は非秘密 binding として環境に設定し、リポジトリや `.env` へ保存しない。Issue #35 では API Worker に Access を適用する公開 hostname または custom domain を用意し、ブラウザの `POST` を含む CORS preflight が Access edge で遮断されず Worker の CORS 応答へ到達するか、同等の Access 側応答を返すことをデプロイ前に確認する。Access dashboard の具体的な設定値はここで固定せず、この結果を実機で検証する。
-- browser の `credentials: 'include'` は Access application cookie が web と API の両方へ適切に送られる構成を前提とする。cross-site cookie 設定と両立しない組み合わせを避け、可能なら同一 site（例: `web.example.com` と `api.example.com`）または同一 origin の API route を採る。異なる site を使う場合も、実際の Access cookie 属性とブラウザの credentialed CORS 制約を本番 hostname で検証してから公開する。
-
-認証方式の信頼境界、公開トップから `/home` へのログイン導線、ブラウザ API と Service Binding のシークエンス図は、補助資料として [`docs/authentication-architecture.html`](./authentication-architecture.html) に整理する。本節を一次ソースとし、補助資料は実装状況と通信順序を参照しやすい形へ再構成したものとする。
-
-## 4. データモデル
-
-### 4.1 コンテンツ階層
-
-```
-領域（domain）
-└── トピック（topic）       例：XSS, 認証認可, 状態管理
-    └── レッスン（lesson）   教材1本 = Markdown
-        └── 問題（question） 複数。4択
-```
-
-### 4.2 持ち方（ハイブリッド）
-
-content と D1 の役割分担と同期の規則は [ADR-0006](./adr/0006-content-as-source-of-truth.md) に移した。
-
-| データ | 保存先 | 役割 |
-| --- | --- | --- |
-| 教材・問題 | **Git管理の Markdown + frontmatter**（`content/`） | 一次ソース。AIが執筆・改訂、PRでレビュー |
-| 解答ログ・SRS状態 | **D1** | 動的データ。ユーザーごとに分離 |
-
-- デプロイ/ビルド時に `content/` をパースして D1 へ **seed/upsert** する同期スクリプトを設ける（このスクリプト自体も学習材料）。
-- 「ファイルが一次ソース、D1は配信・集計用キャッシュ」と責務を明確にする。
-
-### 4.3 問題形式
-
-- 初期は **4択（多肢選択）に統一**。自動採点でき、解答ログが構造化され、SRSが即動く。
-- 記述式・コード問題は `question.type` フィールドで**後から追加できる拡張ポイント**として確保する。
-
-### 4.4 データの意味と整合性
-
-学習分析の集計境界は [ADR-0007](./adr/0007-analytics-aggregation-boundaries.md)、content 同期と `is_active` は [ADR-0006](./adr/0006-content-as-source-of-truth.md) に移した。
-
-content（frontmatter）側:
-
-- `domain`: 領域キー（例 `security`）
-- `topic`: トピックキー（例 `xss`）
-- `lesson`: レッスンID・タイトル・本文（Markdown本体）・`estimatedMinutes`（0より大きい整数。教材閲覧1回あたりの学習時間を分で近似するための値）
-- `questions[]`: `{ id, type: 'mcq', prompt, choices[], answerIndex, explanation }`
-
-D1 側（動的データ）:
-
-- `users`: 将来公開用。初期は単一ユーザーでも user_id を持つ
-- `answer_logs`: `{ id, user_id, question_id, is_correct, answered_at, response_time_ms? }`（`response_time_ms` は §7 アナリティクス画面の「平均反応時間」向け。Quiz クライアントが選択肢表示から解答確定までを計測して送信する任意項目）
-- `srs_states`: `{ user_id, question_id, ease, interval_days, due_at, reps, lapses, version }`（SRSパラメータ。`version` は同時解答による更新消失を防ぐ楽観的ロック用。アルゴリズムは SM-2 ベースとする）
-- `lesson_views`: `{ id, user_id, lesson_id, viewed_at }`（アナリティクス画面の「学習時間」「最近のアクティビティ」向け。教材本文ページ表示時に fire-and-forget で記録する最小ログ。学習時間は「閲覧したレッスンの frontmatter 所要時間（例：約18分）の合計」＋「`answer_logs.response_time_ms` の合計」で近似する簡易集計とし、精緻な計測は行わない）
-
-アナリティクスの集計境界は UTC とする。`GET /analytics/weekly` は当日を含む直近7日を古い順に返し、`thisWeekStudyTimeMs` の「今週」は UTC の月曜 00:00 から現在までとする。連続学習日は UTC 日付単位で教材閲覧または解答が1件以上ある日とし、当日が未活動の場合は前日から遡って直近の連続日数を返す。SRS 定着度分布は `due_at <= now` を `due` として先に分類し、未 due のうち `interval_days >= 21` を `mastered`、残りを `learning` とする排他的な3区分である。誤答ランキングは2回答以上の問題だけを対象に、誤答率降順・回答数降順・`questionId` 昇順で並べて上位10件を返す。
-
-D1 側（content 同期キャッシュ。4.2 の seed/upsert 対象）:
-
-- `questions`: `{ question_id, answer_index, domain, topic, lesson_id, is_active }`（`content/` の正答と集計用メタデータを同期。本文・選択肢・解説は持たず、正誤判定と `GET /domains` の集計に必要な最小フィールドのみ保持。`is_active` は直近の content sync に含まれる問題だけを `1` とし、過去の解答ログ・SRS状態を壊さないため問題行は物理削除しない）
-
-content sync は、現在の content に含まれる問題の metadata と `answer_index` を先に冪等 upsert し、最後に1回の `UPDATE questions SET is_active = CASE ... END` で現在の問題集合を確定する。同期途中で全件を inactive に倒さないため、upsert 失敗時は直前の active 集合を維持する。現在の問題集合が空の場合も、最終 UPDATE により全行を inactive とする。`GET /domains` は `is_active = 1` の問題だけを対象にし、対象ユーザーの `srs_states.interval_days >= 21` を習得済みとして集計する。
-
-## 5. AI駆動開発の基盤
+## 3. AI駆動開発の基盤
 
 ### 方針
 
@@ -180,98 +76,23 @@ content sync は、現在の content に含まれる問題の metadata と `answ
 - GitHub Actions で型チェック・lint（Biome＋依存境界）・test・build を **PR ゲート**化
 - AIハーネスの hook の動作と、Claude Code / Codex の構成整合（発見用リンク、Codex agent TOML、パス別ルールの参照）、ADR と検証テストの対応を `pnpm test:hooks` で機械検証し、同じ **PR ゲート**に含める。契約文書の文言そのものは検査しない
 
-### 依存境界の機械検証（dependency-cruiser）
+## 4. 依存方向
 
-依存方向の規範は §8.1（フロントエンド）と §10.1（バックエンド）に定義する。dependency-cruiser は [.dependency-cruiser.cjs](../.dependency-cruiser.cjs) により import 境界を検証し、Biome は lint/format を担う。設定のルールには対応する設計節を示す。
+依存の向きと各層の責務を定める。現在のファイル配置はコードと [Knowledge Graph](../architecture/README.md) を参照する。
 
-機械検証の具体的な対象は設定を参照する。import を伴わない ambient 型への依存や、許可された import の呼び出し方は、型・コード・レビューで契約と照合する。Graphの鮮度・抽出器の検証は [architecture/README.md](../architecture/README.md) を参照する。
+### 4.1 リポジトリと Worker の責務
 
-## 6. 最初のマイルストーン（Walking Skeleton）
+pnpm workspaces による monorepo とする。`apps/web` は画面、`apps/api` はAPI、`packages/shared` は共有schema・型・純粋ドメインロジック、`content` は教材、`docs` は設計文書を所有する。現在の詳細なファイル配置はコードと [Knowledge Graph](../architecture/README.md) を参照する。
 
-スタック全体が繋がることを最小構成で実証する「歩ける骨格」。
+- フロント ⇔ API は Hono の `hc`（型安全RPC）で接続。
+- Drizzle スキーマと Zod スキーマを `packages/shared` に集約し、フロント・API・DBで単一ソース化する。
+- `apps/web` と `apps/api` は別の Worker としてデプロイし、Web の Server loader は Service Binding（`InternalApi`）、ブラウザは API Worker の公開 URL で API を呼ぶ。書き込みは Hono API を通す（[ADR-0012](./adr/0012-separate-web-and-api-workers.md)）。公開 entrypoint の検証の順序は [ADR-0008](./adr/0008-production-access-boundary.md)、`user_id` の決定は [ADR-0003](./adr/0003-server-injected-user-id.md) が持つ。
 
-- **対象スライス**：`セキュリティ領域 > XSS トピック > 教材1本 + 4択3問`
-- **貫通する動線**：
-  1. 教材を表示（Next.js が `content/` から読む）
-  2. 4択に回答
-  3. 正誤を D1 に記録（`hc` → Hono → Drizzle → D1）
-  4. SRS が次回出題日を算出し、再訪時に出題
-- **同時に効かせるもの**：CI（型・lint・test・build）、`hc` 型安全RPC、content→D1 同期
-
-このスライスが1本通れば、以降はトピック・機能を**同じパターンの繰り返し**で増やせる。これがAI駆動の反復に最適な土台となる。
-
-## 7. フロントエンド画面構成
-
-`apps/web`（Next.js App Router）の画面・ルーティング設計。ビジュアルモックアップ（正式版：[`docs/mockups/DevPath Unified.html`](./mockups/DevPath%20Unified.html)。検討経緯は [`docs/mockups/README.md`](./mockups/README.md)）で確定した画面セットを正式スコープとする。Walking Skeleton（§6：セキュリティ > XSS > 教材1本 + 4択3問）は本章のうち `/home`・`/learn/...`・`/quiz/...` を貫通させる最小構成であり、本章の画面数と Walking Skeleton の対象範囲は別物である。
-
-### 7.1 ルート構成
-
-| ルート | 役割 | データ経路 | レンダリング／キャッシュ方針 | 主導線 |
-| --- | --- | --- | --- | --- |
-| `/` 公開トップ | 個人開発者向けの AI 駆動ソフトウェア学習ラボを説明し、「教材を読む → 4択で確かめる → 間隔をあけて復習する」学習ループを示す（公開トップでは「SRS」という語を前提にしない）。明確なログイン CTA から `/home` へ進む | なし。プロダクト説明だけを静的に表示する | 静的 RSC。`AppShell`・dashboard loader・API client・Service Binding・due-count Client hook/provider を import せず、ユーザー固有データを読まない | 「ログインして学習を始める」→ `/home` |
-| `/home` ホーム（ダッシュボード） | **今日の復習（due）が主役**。学習統計（正答率・学習時間・連続学習日数）・学習コントリビューション（草＝日次解答数ヒートマップ）・領域別習得状況・最近のアクティビティ・次のレッスン導線を併せ持つ | due 件数は独立した API（Server loader → `hc`）。summary・heatmap・domains・recent activity は同一の非キャッシュ loader が同じ API client から並列取得し、`/home` で実データを表示する | 通常 SSR。各リクエストで Server loader を実行し、ユーザー固有データを共有キャッシュしない | 「復習を始める」→ `/review`（due が0件の時は出さない）、「教材を読む」→ `/learn/...` |
-| `/domains` 学習領域 | 現行は `GET /domains` の実データを使い、4つの学習領域をカードで俯瞰する。各カードに習得率・習得済み/全問題数・トピック数・レッスン数と、コンテンツ上の先頭トピックへの導線（該当しない場合は「準備中」）を表示する。詳細な done ✓ / current ▶ / locked 🔒 のディレクトリツリー（スキルツリー）は後続スコープとする（§8.7）。ツリーを実装するまで、画面名・ナビ名は「学習領域」とする。 | 領域別集計は API（`GET /domains`）。領域カードは `/domains` と `/home` が共通の props 境界を介して表示する | 通常 SSR。Server loader が各リクエストのユーザー固有集計を取得する | 先頭トピックあり → `/learn/[domain]/[topic]`、なし → 「準備中」 |
-| `/learn` 教材一覧 | 4領域ごとのトピック一覧。領域・トピックの表示名と順序は §11.3 に従い、レッスンが1件以上あるトピックにレッスン数を表示する。教材のない領域・レッスン0件のトピックは「準備中」とし、リンクを表示しない。レッスン0件のトピックでは「0レッスン」の表示を省略する | ビルド時バンドル済み content（Server loader → mapper → ViewModel → RSC）。一覧の初期取得・描画にAPI不要 | ユーザー固有データを読まない静的 RSC。ビルド時にプリレンダリング | トピック選択 → `/learn/[domain]/[topic]` |
-| `/learn/[domain]/[topic]` レッスン一覧 | トピック内のレッスン一覧（初期は XSS 1本） | ビルド時バンドル済み content（RSC） | `generateStaticParams` による標準 SSG | 各レッスンへ |
-| `/learn/[domain]/[topic]/[lesson]` 教材本文 | Markdown 本文表示 | ビルド時バンドル済み content（RSC。本文の初期取得・描画にはAPI不要）・閲覧記録のみAPI（最小Client recorder） | `generateStaticParams` による標準 SSG | 「問題を解く」→ `/quiz/[lesson]` |
-| `/quiz/[lesson]` 演習 | イントロ（レッスン概要の確認）→ 全問を 1 問ずつ即時採点 → 結果サマリ、を 1 画面内のクライアント状態遷移（`intro → exercise → result`）で完結。演習ナビ・教材本文の両方から入れる | 問題＝content（RSC で初期化）/ 解答記録＝API | `generateStaticParams` による標準 SSG | 完了 → 「次のレッスンへ」／「すべて解き直す」 |
-| `/review` 復習 | イントロ（本日の due キューを dueAt 昇順・滞留日数付きでプレビュー）→ due 問題をレッスン横断で 1 問ずつ即時採点 → 結果サマリ、を 1 画面内のクライアント状態遷移で完結 | queue＝API（`GET /review/queue`）/ 問題本文＝content / 記録＝API | 通常 SSR。初回 queue は Server loader が取得し、due バッジと本文は React `cache()` の request-local dedupe を共有する | 完了 → 「ホームへ」／「間違えた問題を解き直す」 |
-| `/analytics` 学習分析 | 解答ログ・SRS状態を集計した学習分析ビュー（総解答数・正答率・平均反応時間・習得済み問題数・週次アクティビティ・SRS定着度分布・間違えやすい問題ランキング） | 集計値は API（§7.3） | 通常 SSR。Server loader が各リクエストのユーザー固有集計を取得する。忘却曲線・復習タイミングは対象外 | サイドバーの「学習分析」→ `/analytics` |
-
-### 7.2 横断する設計判断
-
-- **教材の入口**：PC のサイドバー・SP の下部タブの「教材」は、教材の有無にかかわらず `/learn` に遷移する。`/learn` と配下のトピック一覧・教材本文では「教材」を選択状態にする。ホームの「教材を読む」は、bundle 済み content の先頭レッスンの教材本文へ遷移する。学習の続きを記録していないため、「続きから」のように進捗を前提とする名前にしない。教材一覧はトピックの `index.md` と各トピックのレッスンを content loader 経由で取得する。トピックの `order` が同じ場合は識別子の昇順で安定させる。新規トピック・レッスンを規約に沿って `content/` に追加して再ビルドすると、一覧のコード変更なしで反映される（公開環境には成果物の再デプロイも必要）。
-- **データ取得（ハイブリッド）**：教材・問題はビルド時バンドル済み content を RSC / Server loader から読む。解答記録・SRS・due など動的データのみ Hono API を `hc` で呼ぶ。D1 への seed は配信・集計用キャッシュとして維持し、表示の主経路は content。
-- **演習フロー**：1 問ずつ表示 → 即時に正誤＋解説 → 確定で選択肢をロック → 末尾に結果サマリ。**1 問解答＝1 `answer_log` POST**（SRS は問題粒度で更新）。
-- **Quiz 表示コンポーネント**：問題・解説・intro 内容・結果導線を表示 props で受け取り、画面フェーズと問題送りを管理する再利用可能な Client Component として設計する。`/quiz`（レッスン全問）・`/review`（due 問題）・「間違えた問題だけ」（`wrongOnly`）では、Server loader / mapper が組み立てる ViewModel と表示 props の供給元だけを差し替える。解答 mutation と通信 state は共通の Client hook が担当する。
-- **問題なしの扱い**：`QuizInteractive` は `questions` が空の場合に「出題できる問題がありません」を明示表示し、開始 CTA は表示しない。設定済みの戻り先（`resultHomeHref` / `resultHomeLabel`）は維持する。
-- **Review の空キュー判定**：`/review` は mapper 後の joined 表示件数と API の `hasMore` を Server Component で判定する。joined 表示件数 0・`hasMore: false` は通常の空キューカード（「今は復習する問題はありません」）、joined 表示件数 0・`hasMore: true` は bundled content と保存済み review state の不整合として error boundary へ送る。joined 表示件数が 1 以上なら `hasMore` の値を問わず `ReviewRunner` を表示する（[ADR-0005](./adr/0005-srs-review-rules.md)・§9.2）。
-- **結果サマリの動線（出し分け）**：`/quiz` は学習の前進が目的 → 「次のレッスンへ」。`/review` は due 消化が目的 → 「ホームへ」（`/home`）、残バッチがあれば「続けて復習する」。両者で「すべて解き直す」「間違えた問題を解き直す」を提供する（同じ画面内のやり直しで、SRS の「復習」とは呼ばない）。結果の見出しは `/quiz` が「演習完了」、`/review` が「復習完了」とし、表示 props で受け取る。最終問題の送りボタンは「結果を見る」とする。
-- **イントロ・演習・結果の状態遷移（URL は変えない）**：演習・復習とも 1 ルート内で `intro → exercise → result` のクライアント状態遷移を持つ（別 URL に切らない。モックの実装モデルに一致）。`intro` は開始前の確認（対象レッスンの概要／due 件数・滞留日数のプレビュー）に専念し、`exercise` は 1 問ずつ即時採点、`result` はスコア・問題ごとの正誤一覧・出し分けアクションを表示する。初回データ（問題・解説、`/review` は due queue）は Server loader で ViewModel 化して props で渡し、状態遷移そのものは Client Component が持つ（§8.5・§9.4 の `QuizInteractive` と同じ設計）。結果表示は `/quiz` と `/review` で共通コンポーネントとして再利用する。
-- **ID 設計**：`lessonId` / `questionId` は**グローバル一意**。学習導線は階層 URL（`/learn/...`）、演習・復習はフラット URL（`/quiz/[lesson]`・`/review`）。
-- **レイアウト（サイドバー / ボトムタブ）**：`/home` 以下の学習画面では、PC は左サイドバー（ロゴ＋テーマトグル＋ホーム／教材／演習／復習（due件数バッジ）／学習分析／学習領域）、本文は右側 1 カラム。SP は上部アプリバー（ロゴ＋ストリーク表示＋テーマトグル）＋下部固定タブバー（**ホーム／教材／演習／復習（dueバッジ）／領域の5項目**）。ナビ名は PC・SP で同じ語にし、SP では「学習領域」だけを「領域」と短縮する。ホームのナビゲーション先は `/home` とする。「演習」「復習」ナビ項目は直前に扱っていたレッスン（未着手なら先頭レッスン）を対象とする簡易ヒューリスティックで遷移先を決定する（MVP は XSS 1本のため実質固定）。SP のタブバーはスペース都合で 5 項目に絞り、「学習分析（`/analytics`）」へはホームの「学習分析を見る」リンクから遷移する。「設定」は将来の公開機能（認証等、§1 スコープ外）向けで、MVP ではナビに置かない。ナビ項目のアイコンは §8.7 の Material Symbols を使い、ホーム `home`・教材 `menu_book`・演習 `contract_edit`・復習 `event_repeat`・学習分析 `bar_chart`・学習領域／領域 `category` とする（PC・SP で同じアイコン）。SP のストリーク表示は `local_fire_department` を添える。テーマトグルは切り替え先のテーマのアイコン（ダーク表示中は `light_mode`、ライト表示中は `dark_mode`）を表示し、切り替え動作の説明（「ライトテーマに切り替える」等）を読み上げ名にする（`aria-pressed` は併用しない）。アイコンと読み上げ名は、描画前に確定する `html[data-theme]` に応じて CSS で出し分ける `sr-only` テキストで持ち、React の state から補正しない（ライトテーマでも初回描画から一致させる）。
-- **公開・認証境界**（決定と境界は [ADR-0008](./adr/0008-production-access-boundary.md)）：`/` は公開の静的プロダクト入口である。`/home` とユーザー向け学習ルート（`/learn/...`・`/quiz/...`・`/review`・`/domains`・`/analytics`）は本番で Cloudflare Access により保護する。アプリ内のログイン・セッションは持たず、公開トップの「ログインして学習を始める」は `/home` へリンクするだけとする。Cloudflare Access Application/Policy と route pattern（`/` は公開、`/home` とユーザー向け route は保護）の設定・デプロイ後検証は Issue #35 の責務である。
-- **SSR / SSG**（共有キャッシュを使わない規則は [ADR-0013](./adr/0013-no-shared-cache-for-user-data.md)）：認証後画面は通常 SSR、教材・演習の content route は `generateStaticParams` による標準 SSG とする。復習の request-local dedupe とバッチ表示契約は §8.3・§9.2に従う。
-- **スタイリング**：Tailwind CSS ＋ Dev-Native Neo Flat × Terminal デザインシステム（ダークファースト）。詳細トークン・コンポーネント文法・ゲーミフィケーション表現の実装区分は §8.7。
-
-### 7.3 画面構成から要請される API（参考）
-
-学習分析の集計境界は [ADR-0007](./adr/0007-analytics-aggregation-boundaries.md)、最近のアクティビティは [ADR-0014](./adr/0014-recent-activity-derived-from-logs.md) に移した。
-
-`apps/api`（Hono）に以下を想定。本文はファイル一次ソースのため、API は ID・SRS メタ・集計値のみ返す。
-
-HTTP 入出力、リクエスト・レスポンスの実例（JSON）、Zod スキーマの実装状況、後続エンドポイントの planned 状態は [API 仕様カタログ](./api-spec.html) を参照する。本節は画面から要請される API の高水準な一次仕様として維持する。
-
-- `POST /answers` — 1 問解答の記録 → SRS 更新。リクエスト `{ questionId, selectedIndex, responseTimeMs? }`、レスポンス `{ isCorrect, correctIndex }`。正誤判定は API が D1 の `questions`（4.4）を照合して行う権威側（[ADR-0002](./adr/0002-api-authoritative-grading.md)）。永続書き込みのレート制限は [ADR-0004](./adr/0004-persistent-write-rate-limit.md)。
-- `POST /lesson-views` — 教材の閲覧を記録。strict なリクエスト `{ lessonId }` を受け、middleware が注入した `userId` のみを使用して `lesson_views` へ記録し、`201 { recorded: true }` を返す。クライアントは `userId` を送らない。重複排除、配送保証、lesson の存在確認はこの最小ログでは行わない。永続書き込みのレート制限は [ADR-0004](./adr/0004-persistent-write-rate-limit.md)。
-- `GET /review/queue` — due 問題の `question_id` ＋ SRS メタと、次バッチの有無 `hasMore` を返す（本文はフロントがビルド時データから解決）。APIが`dueAt`昇順・最大20件を保証する（[ADR-0005](./adr/0005-srs-review-rules.md)）
-- `GET /dashboard/due-count` — ダッシュボードの due 件数
-- `GET /domains` — `/domains` の4領域カード向けに、領域それぞれの習得率（習得済み問題数 / 全問題数）・トピック数・レッスン数を返す
-- `GET /analytics/summary` — 総解答数・正答率・平均反応時間・習得済み問題数（SRS interval ≥ 21日）・連続学習日数・今週の学習時間・SRS定着度分布（§4.4 の `lesson_views`・`answer_logs.response_time_ms`・`srs_states` から集計）
-- `GET /analytics/weekly` — UTC の直近7日を古い順に並べた解答数推移（曜日ごとの件数。解答がない日も0件で返す）
-- `GET /analytics/heatmap` — 学習コントリビューション（草）用の日次解答数（UTC 当日を終点とする直近182日。`answer_logs` の日次集計。解答なしの日は0件で補完）
-- `GET /analytics/mistakes` — 2回答以上の問題に絞った誤答率上位10件（`questionId`・誤答率・回答数・誤答数）
-- `GET /activity/recent` — ダッシュボードの「最近のアクティビティ」向け直近イベント一覧。新しいイベントテーブルは作らず、保存済みの `lesson_views`（`lesson_viewed`）と `answer_logs`（`answer_recorded`）から最大10件を導出する。統合後の `id` は `answer:` / `lesson-view:` の種別プレフィックスで名前空間化し、テーブル間のID衝突を防ぐ。現行データから quiz / review の発信元や「全問完了」は復元できないため、UI は「演習完了」などと断定せず「問題に解答し、復習の予定を更新しました」と表示する。`answer_logs` と `questions` は left join とし、過去メタデータ欠損時も回答履歴を落とさない。
-
-共有スキーマは weekly の連続する7日・昇順・UTC曜日との一致、mistakes の件数と小数第1位に丸めた誤答率の一致・順位を検証する。heatmap は実在する日付、182日、重複なし、連続昇順を検証する。recent activity は最大10件、種別ごとの必須項目、`occurredAt` 降順（同時刻はID昇順）、ID重複なしを検証する。順位は丸め前の誤答率で比較する。当日を終点とする期間はAPIの集計時刻で決定し、受信側スキーマは現在時刻に依存させない（通信中のUTC日付変更を許容する）。
-
-### 7.4 → 第8章へ
-
-本章は画面・ルーティング（What/Where）を定義した。フロントエンドのアーキテクチャ（How）は **第8章** で確定する。
-
-## 8. フロントエンドアーキテクチャ（How）
-
-第7章の画面・ルーティング（What/Where）を、`apps/web` 上でどう構造化して実装するか（How）を確定する。設計哲学は本書全体と同じ：**ハイブリッド（教材＝ファイル一次ソース／動的データ＝D1）**・**`packages/shared` を単一ソース**・**Workers 制約を前提**。
-
-フロントエンドアーキテクチャのフロー図と各ディレクトリの役割は、補助資料として [`docs/frontend-architecture.html`](./frontend-architecture.html) に整理する。本章と第9章を一次ソースとし、補助資料は実装時に参照しやすい形へ再構成したものとする。
-
-### 8.1 ディレクトリ構成
+### 4.2 フロントエンドの層と import 境界
 
 `features + components/ui` 型を採用。`src/app` は薄く保ち、ロジックは `features` に寄せる。
 
-`apps/web` は画面、`apps/api` はAPI、`packages/shared` は共有schema・型・純粋ドメインロジック、`content` は教材、`docs` は設計文書を所有する。現在の詳細なファイル配置はコードと [Knowledge Graph](../architecture/README.md) を参照する。
-
-- **Quiz 表示コンポーネント**は `apps/web/src/features/quiz/client/components` に置く。問題・解説・intro 内容・結果導線を表示 props で受け取り、画面フェーズと問題送りを管理する再利用可能な Client Component とする。`/quiz`（レッスン全問）・`/review`（due 問題）・`wrongOnly`（間違えた問題だけ）は供給する ViewModel / 表示 props だけを差し替え、解答 mutation は `client/hooks` の共通 hook を通す（7.2 の方針を実体化）。
+- **Quiz 表示コンポーネント**は `apps/web/src/features/quiz/client/components` に置く。問題・解説・intro 内容・結果導線を表示 props で受け取り、画面フェーズと問題送りを管理する再利用可能な Client Component とする。`/quiz`（レッスン全問）・`/review`（due 問題）・`wrongOnly`（間違えた問題だけ）は供給する ViewModel / 表示 props だけを差し替え、解答 mutation は `client/hooks` の共通 hook を通す。
 - feature 内の実行環境固有処理は `client/`・`server/` に分ける。`client/components` は Client Component、`client/hooks` は mutation と通信 state、`server/` は page / Server Component から呼ぶ初回取得・join・ViewModel 化を担当する。両環境から使える `api/`・`mapper.ts`・`view-model.ts` は feature 直下に置き、client/server のどちらかへ重複配置しない。`server/` 配下には `import 'server-only'`、Client Component の入口には `'use client'` を置き、ディレクトリ名だけに境界の強制を任せない。
 - `features/*/server` は「page からしか呼ばれないから app 所有」ではなく、「feature の ViewModel を作るための Server 専用 loader」として feature 所有にする。`src/app` は URL・metadata・layout・route params の受け渡し、loader 呼び出し、feature component への ViewModel の props 渡しだけを担う。feature 固有の表示 UI、content/API DTO の取得、join、sort、filter、ViewModel 化は `features` に閉じ込める。例外として、複数 feature を横断して **1 ページ専用**にデータ取得・join を伴う合成をする処理は `app` 直下ではなく、必要になった時点で `features/<page-feature>/server` のようなページ feature として切り出す。一方、複数ルートが共有する shell と feature の表示部品を props 契約でつなぐ**表示合成**はこの例外の対象外であり、`app/_components/` に置く（`app-shell.tsx`）。この層でも shell の組み立てに必要な loader 呼び出しは行ってよく、禁じるのは join・sort・filter である（`app/**/page.tsx` と同じ粒度）。
 - **`app/` と `features/` は別の軸で命名する。** `app/` の名前は **URL パス**（ユーザーから見た画面の場所）、`features/` の名前は**ドメイン概念名**（扱う対象）である。両者の名前は**一致しなくてよく、一致は要件でもない**。`/home` ↔ `features/dashboard` は、`GET /dashboard/due-count`・`apps/api` の `routes/dashboard.ts`・`NavigationSection` の `'dashboard'`・`components/dashboard-shell.tsx` と語彙を揃えるため feature 側を `home` に改名しない。`/learn/[domain]/[topic]/[lesson]` ↔ `features/lesson` も、URL は学習セクション、feature は扱うリソースを指す。`/quiz`・`/review`・`/domains` のように結果として一致する場合もある。route と feature は 1:1 でもない（`/home` は `features/dashboard` と `features/domains` を使う）。ナビゲーションの `NavigationSection`（`tree` = `/domains` など）は UI ラベル由来の別語彙であり、この 2 軸には含めない。
@@ -285,7 +106,7 @@ HTTP 入出力、リクエスト・レスポンスの実例（JSON）、Zod ス�
 | 層 | 責務 | import してよいもの | 禁止する依存・処理 |
 | --- | --- | --- | --- |
 | `app/**/page.tsx`・`layout.tsx` | URL、metadata、layout、route params、`notFound()`、loader 呼び出し、feature component への props 渡し | `features/*/server`、`features/*/client/components`、全画面共通 component、`components/ui` | `lib/content`、feature の `api`・`mapper`・`client/hooks` の直接利用、DTO の join・sort・filter、feature 固有 UI の実装 |
-| `app/_components/**` | `/` を除くすべての認証後ルート（`/home` とユーザー向け学習ルート。§7.2）が共有する shell と、feature の表示部品を props 契約で合成する composition layer。shell の組み立てと、そのために必要な loader 呼び出しに徹する。private folder であり route を持たない | `features/*/server`、`features/*/client/components`、全画面共通 component、`components/ui` | `lib/content`、feature の `api`・`mapper`・`client/hooks` の直接利用、DTO の join・sort・filter、feature 固有 UI の実装、1 ページ専用のデータ合成（→ `features/<page-feature>/server`）。公開トップ `/` はこの層を使わない（§7.1） |
+| `app/_components/**` | `/` を除くすべての認証後ルート（`/home` とユーザー向け学習ルート。ADR-0008）が共有する shell と、feature の表示部品を props 契約で合成する composition layer。shell の組み立てと、そのために必要な loader 呼び出しに徹する。private folder であり route を持たない | `features/*/server`、`features/*/client/components`、全画面共通 component、`components/ui` | `lib/content`、feature の `api`・`mapper`・`client/hooks` の直接利用、DTO の join・sort・filter、feature 固有 UI の実装、1 ページ専用のデータ合成（→ `features/<page-feature>/server`）。公開トップ `/` はこの層を使わない |
 | `features/*/client/components` | Client Component。ViewModel の表示、画面フェーズ・現在問題・`wrongOnly`・キーボード操作などの表示操作 state | 同 feature の `client/hooks`・`view-model`、`components/ui`、props 契約が公開された再利用 component | `server`、`lib/api-server`、content loader、API client の直接利用、DTO 変換 |
 | `features/*/client/hooks` | Browser API client の生成、mutation と、それに伴う `submitting`・`error`・API 由来の結果 state | 同 feature の `api`、`lib/api`、共有 DTO 型 | Server data の再取得、`server`、`lib/api-server`、content loader、mapper、ViewModel の複製保持、画面レイアウト |
 | `features/*/server` | Server loaderと必要なServer Component。初回データ取得、複数データの join、mapper 呼び出し、ViewModel の返却 | 同 feature の `api`・`mapper`・`view-model`、`lib/api`・`lib/api-server`・`lib/content`、Server専用ライブラリ、**子として描画するための** `client/components`（props 契約経由の合成。ロジックの取り込みではない） | `client/hooks`（mutation・通信 state ロジックの取り込み）、ブラウザ専用 API、Client state の複製 |
@@ -299,295 +120,9 @@ HTTP 入出力、リクエスト・レスポンスの実例（JSON）、Zod ス�
 - feature 間の再利用は、`features/shared` の小さい純粋変換、または公開された表示 component の props 契約を境界にする。他 feature の `client`・`server`・`api`・`mapper` を直接 import しない。
 - `packages/shared` の利用は Content data / API DTO / Zod / 純粋ドメイン型に限り、web 固有の ViewModel や表示状態を置かない。
 
-### 8.2 content ロード方式（ビルド時バンドル）
+### 4.3 バックエンドの層と import 境界
 
-**素 Markdown + frontmatter** を **ビルド時にバンドル**する。
-
-- **Workers 制約**：Cloudflare Workers では `node:fs` のランタイム読みが使えない。教材・問題は**ランタイム fs 読みではなくビルド時インライン化**する。
-- frontmatter に `estimatedMinutes`（0より大きい整数）と問題（`questions[]`。スキーマは4.4節と同一の `{ id, type:'mcq', prompt, choices[], answerIndex, explanation }`）を置き、本文は Markdown 本体とする。
-- ビルド時に `gray-matter` でパースし、`packages/shared` の Zod（`schema/content`）で検証してから**型付きデータとしてインライン化**する。
-- 本文描画は `react-markdown` 等のレンダラを用いる（RSC で完結）。MDX は採用しない（ビルド設定と frontmatter 抽出が複雑化するため）。
-- content 参照は `apps/web/src/lib/content.ts` に集約する。`getLessonContent(lessonId)`・`getLessonsByTopic(domain, topic)`・`getBundledQuestions()`・`getQuestionById(questionId)` を共通関数として用意し、初回表示の実行経路では `features/*/server` の Server loader だけが呼び出す。page は loader、mapper は引数で渡された Content data だけを参照し、`lib/content` を直接 import しない。ビルド・同期スクリプトと `lib/content` 自身のテストはこの制約の対象外とする。
-- `getBundledQuestions()` は `/review` の `question_id` 解決用に `questionId` index を返せる形にする。各 feature で frontmatter 配列を直接走査しない。
-- **同じパース経路を `content/` → D1 seed/upsert スクリプトでも再利用**し、フロント表示と D1 配信を単一ソースから導く（4.2 の責務分離を維持）。
-- `/learn/...` と `/quiz/...` は content 由来の標準 SSG を維持する。`generateStaticParams` で全 params を返し、route params は `lib/content` の `getLessonRouteParams()` / `getTopicRouteParams()` / `getQuizRouteParams()` を feature loader 経由で読み、page から `lib/content` を直接 import しない。
-- `/learn` は固定URLの静的 RSC としてプリレンダリングする。`features/lesson/server` の一覧 loader が共通 content loader から全トピックとレッスン数を取得し、mapper で領域別に整形する。領域・トピックの一覧やリンクを画面コードへ固定しない。
-
-### 8.3 Server / Client コンポーネント境界
-
-#### 実行環境とデータ取得
-
-- 公開トップ・教材・集計画面はRSCで描画し、演習・復習の操作部分はClient Componentとする。レイアウト／ヘッダーはServerとする。画面の責務・データは §7.1、演習の状態管理は §8.5。
-- Server専用のfeatureには `import 'server-only'`、Client入口には `'use client'` を置き、ディレクトリ名だけに境界の強制を任せない。依存規則は §8.1。
-- Server Actionsは採用しない（[ADR-0012](./adr/0012-separate-web-and-api-workers.md)）。初回取得はServer loader、mutationはClient hookからHono APIを呼ぶ。API契約とuser_id注入点を単一に保ち、HonoとCloudflareを学ぶ目的に沿わせる。重いフォームなど別の要求が生じた場合に再検討する。
-- Server dataの再取得はClient Componentの `router.refresh()` によるRSC再実行に統一する。API adapterへキャッシュ方針を持ち込まない。
-
-#### 通常SSR・標準SSGの規範
-
-ユーザー固有のデータを共有キャッシュに載せない規則は [ADR-0013](./adr/0013-no-shared-cache-for-user-data.md) に移した。
-
-- `/` はユーザー固有データを読まない静的 RSC、`/home`・`/review`・`/domains`・`/analytics` は `dynamic = 'force-dynamic'` を指定した通常のリクエスト時 SSR とする。各 Server loader はリクエストごとに実行し、ユーザー固有データを共有キャッシュしない。
-- 教材・演習の content route は `generateStaticParams` で全 params を列挙する標準 SSG とする（content 取得の契約は §8.2）。`cacheComponents`、`'use cache'` は採用しない。
-- `/learn` はAPIを呼ばず、ビルド時の content だけで一覧本文を生成する静的 RSC とする。共通シェルのユーザー固有 due バッジは既存の Client leaf が表示後に取得し、静的成果物へ含めない。
-- `/home` は due 件数カードと本体を同一 SSR の中で取得し、due 件数と summary・heatmap・domains・recent activity はそれぞれの loader 契約を保つ。loader 内の API 呼び出しは可能な範囲で並列化する。`/domains` は4領域の集計、`/analytics` は summary・weekly・mistakesを読む。忘却曲線・復習タイミングは対象外。
-- due件数・統計・review queue・domains／analytics集計には共有キャッシュを使わない。APIが注入するuser_idをwebの共有キャッシュキーに含められず、ユーザー間の混入が起こり得るためである。
-- Reactの `cache()` によるリクエスト内の取得共有は許可する。ユーザー横断の共有キャッシュとは区別する。復習のdueバッジと本文の取得共有・表示分岐・次バッチへの遷移は §9.2で定義する。
-- 解答後や画面復帰時は `router.refresh()` で Server loader を再実行して鮮度を回復する。復習のバッチ完了時の条件は §9.2。
-- web Worker は API Service Binding と静的 asset 配信に必要な最小構成だけを使う。content route のビルド時 HTML / RSC は Vinext の `prerender` と `@vinext/cloudflare` の `staticAssetsAdapter` で `ASSETS` binding から配信し、内部 cache artifact（`/_vinext/static-cache/*`）は `assets.run_worker_first` で Worker へ通して外部からの直接取得を防ぐ。ISR 用の Incremental Cache、R2、KV、Durable Object Queue の有効 binding、Worker 自己参照 binding は持たない。OpenNext 時代に本番 Worker へ登録した `DOQueueHandler` を廃止した履歴として、`apps/web/wrangler.jsonc` の top-level には `v1` の作成履歴と後続の `v2` `deleted_classes` migration を保持する。Wrangler は top-level の `migrations` を env へ継承するため、検証用 env は空の `migrations` を明示する。
-
-### 8.4 `hc` クライアントの取り回し
-
-Service Binding と公開 URL の使い分け、`credentials` と CORS の規則は [ADR-0012](./adr/0012-separate-web-and-api-workers.md) に移した。
-
-- `apps/api` が `AppType` をエクスポート → `apps/web` は `hc<AppType>` で型安全クライアントを生成（既存 `apps/api/src/client.ts` のファクトリを利用。Service Binding の fetch を渡せるよう、ファクトリは `hc` の第2引数（`fetch` オプション等）を受け取れる形に拡張する）。
-- `apps/web/src/lib/api.ts` に**API 共通基盤を集約**する。クライアント生成と共通レスポンス処理は同じ小さな責務群であり、原則ファイルを分けない。例外として、Workers runtime の `cloudflare:workers` を参照する Server 用生成は Client bundle へ入れられないため、`import 'server-only'` を置いた `apps/web/src/lib/api-server.ts` に分ける。baseURL は env（Workers バインディング / 環境変数）から解決し、ハードコードしない。
-  - `createServerApiClient`（`lib/api-server.ts`）：Server loader 用。本番は Service Binding（`cloudflare:workers` の `env.API.fetch` を `hc` のカスタム `fetch` に渡す）を必須とし、binding 欠落は fail-fast する。production 以外で binding がない場合だけ env の URL にフォールバックする。
-  - `createBrowserApiClient`：Client hook 用。env から解決した API Worker の公開 baseURL を使い、Cloudflare Access application cookie を API ドメインへ送るため `credentials: 'include'` を常に指定する。
-- feature の `api/` は呼び出し側から `ApiClient` を受け取り、`hc` の path・method・引数、共有 Zod による入出力検証、機能固有のエラーメッセージを薄く閉じ込める。Server loader と Client hook の両方から使うため、client 生成、`server-only`、cookies、headers、秘密情報など環境専用処理を入れない。
-- `res.ok` チェックと `res.json()` 変換は `apps/web/src/lib/api.ts` の `requestJson` に共通化する。
-- `hc` の path 呼び出し自体は文字列パスの汎用 fetch に置き換えない。`client.review.queue.$get()` のような endpoint ごとの wrapper を残すことで、Hono RPC の型推論を維持する。
-- 初回表示に必要な `GET /dashboard/due-count`・`GET /review/queue` は Server loader から呼び、ViewModel に整形して page 経由で feature component へ props として渡す。
-- ユーザー操作後の `POST /answers` は Client hook から呼ぶ。`GET /review/queue` の再取得は Client Component の `router.refresh()` で Server loader に委譲する。初回表示で不要なスピナーを出さない。
-- 通常 SSR の Server loader はリクエストごとに `createServerApiClient` を解決し、`API` Service Binding の fetch を `hc` に渡す。共有 Incremental Cache や再検証 Queue を API client 層へ持ち込まない。
-
-### 8.5 演習（Quiz）の状態管理
-
-- **クライアント state のみ**（`useState` と専用 hook で feature 内に閉じる）。MVP として最小化する。Client Component は画面フェーズ（`intro → exercise → result`）・現在の問題インデックス・`wrongOnly`・キーボード操作を保持し、`useAnswerSubmit` hook は mutation・`submitting`・送信エラー・API から返った解答結果を保持する（§7.2）。初期 ViewModel は immutable な props として参照し、Client state に複製しない。
-  - MVP フローは「イントロ確認 → 1 問表示 → 選択 → 即時採点 → ロック → 解説表示 → 次問 → 結果」で線形・シンプルなため、`useState` で充分。複雑な状態遷移が出現（例：問題セット内での再検索・フィルタ等）したら、その時点で `useReducer` へ段階的にリファクタリング。
-- 同一tickを含む二重送信を防止する。試行のリセット後に到着した古い非同期応答は、解答結果・エラー・送信状態へ反映しない。API clientは初回送信時に遅延生成する。hookはAPIの採点結果と選択したindexを保持し、選択肢ロックと結果サマリに使う。
-- **リロードで進捗はリセット（許容）**。リロードすると `intro` フェーズに戻る。ただし「1 問解答＝1 `answer_log` POST」（7.2 で定義済みの原則）なので、解答そのものは即サーバーに残る。途中復帰（sessionStorage）やサーバー復元は将来拡張ポイントとして留保。
-- フロー：イントロ（概要／due プレビュー）→ 1 問表示 → 即時採点（正誤＋解説）→ 選択肢ロック → 末尾に結果サマリ → 出し分け動線（`/quiz`=次のレッスンへ／`/review`=ホームへ、両者「すべて解き直す」「間違えた問題を解き直す」を提供）。
-- 復習の空キュー・content整合性分岐は §9.2に従い、Client stateへ重複させない。
-- 解答の反応時間（`responseTimeMs`）は Client Component が選択肢の表示開始時刻からの経過時間として計測し、`submitAnswer` の引数として Client hook へ渡す。Client hook は時刻を計測せず、受け取った値をそのまま API へ転送する。
-
-### 8.6 `packages/shared` の Zod 利用パターン
-
-- スキーマは `packages/shared` に集約し二重定義しない（既存 `schema/content`・`db/schema`・`srs/sm2` を土台に拡張）。
-- 同一スキーマを **3 経路で共有**：①content のビルド時パース検証、②API 入力の `zValidator`、③フロントの型（`z.infer`）。
-- フロントは API レスポンス・content データとも `z.infer` で型を引き、DTO / Content data の独自再定義を持たない。ViewModel は表示都合の web 固有型として `apps/web/src/features` に定義する（§9.3）。
-
-### 8.7 スタイリング（Tailwind + Dev-Native Neo Flat × Terminal デザインシステム）
-
-ビジュアルモックアップ 5 案（Neumorphism PC/SP → Soft UI Hybrid → Dev-Native Neo Flat → Retro OS）の比較検討を経て、**「Neo Flat の骨格 × ターミナル表現のコンテンツ」** を正式なスタイル方針とする。一次モックは [`docs/mockups/DevPath Unified.html`](./mockups/DevPath%20Unified.html)（検討経緯と各案の位置づけは [`docs/mockups/README.md`](./mockups/README.md)）。旧 Neumorphism 方針（本節の旧版）は撤回済み。
-
-**設計原則（選定理由）**：
-
-- **装飾は情報と競合させない**。学習アプリでは認知リソースを教材理解に温存する。装飾は原則フィードバック（正誤・進捗・履歴・記憶状態）に接着させ、意味を運ばない装飾は置かない。
-- **エンジニアの既存メンタルモデルを借りる**。GitHub の草・テストランナー出力・ディレクトリツリー・ターミナルプロンプトなど、対象ユーザーが即読できるフォーマットを UI 語彙として採用する（認知負荷を下げる装飾のみ許可）。
-- **OS 固有の chrome は本体に持ち込まない**。mac のトラフィックライト、Win9x 風ウィンドウ等は使用しない（Retro OS 案は LP・エラーページ等の演出候補として保管）。
-- **モバイルファースト**。ナビは SP＝ボトムタブ / PC＝サイドバー。タッチターゲット 44px 以上。ターミナル表現の中でも空白文字による桁揃えは禁止し、flex レイアウトで組む（SP での折り返し崩れ防止）。
-
-**テーマ**：ダークファースト。ライトテーマへのトグルを備え、`localStorage` に永続化（初期値はダーク）。ターミナルパネル（`term-win`）の本体は両テーマとも常に黒。
-
-**カラートークン**（CSS変数で定義し、Tailwind の `theme.extend.colors` に接続）：
-
-  | トークン | dark | light | 用途 |
-  | --- | --- | --- | --- |
-  | `--bg` / `--surface` / `--well` | `#0d1117` / `#161b22` / `#1c2330` | `#f6f8fa` / `#ffffff` / `#eef1f4` | 背景 / カード / くぼみ地 |
-  | `--border` | `#30363d` | `#d0d7de` | カード境界（2px。影ではなく境界線で区切る） |
-  | 文字階調 `--ink` / `--ink-2` / `--mute` / `--faint` | `#e6edf3` / `#c9d1d9` / `#9198a1` / `#6e7681` | `#1f2328` / `#3d444d` / `#59636e` / `#818b98` | 見出し / 本文 / 補助 / 最弱 |
-  | `--green` | `#3fb950` | `#2da44e` | 正解・done・成長・主 CTA |
-  | `--red` | `#f85149` | `#cf222e` | 誤答・due・失敗 |
-  | `--blue` | `#58a6ff` | `#0969da` | アクセント・進行中・ナビ選択・リンク |
-  | `--purple` | `#bc8cff` | `#8250df` | XP・メタ情報 |
-  | `--yellow` / `--orange` | `#e3b341` / `#f0883e` | `#9a6700` / `#bc4c00` | 実績 / ストリーク・警告 |
-  | heatmap 5段階 | `#1c2330`→`#39d353` | `#ebedf0`→`#216e39` | 学習コントリビューション（草） |
-
-  セマンティックカラーはシンタックスハイライトのパレットに揃える（VS Code / GitHub トークンカラー系）。各色に `-bg` の淡色（例 `--green-bg`）を持ち、正誤状態の塗りに使う。コントラストは WCAG AA を基準とする。
-
-**コンポーネント文法**（`globals.css` の `@layer components` ＋ `components/ui` に集約）：
-
-- `card`：`surface` ＋ 2px `border` ＋ 16px radius のフラットカード。
-- アイコン：UI のアイコンは Google Material Symbols Rounded（optical size 24px、既定の非塗りつぶし）に統一し、ナビ・導線・状態表示に Unicode 記号や絵文字を使わない。公式SVGを `apps/web/public/icons/material-symbols/` に必要な分だけ同梱し、出典・ライセンスも保持する（実行時の外部フォント通信なし）。共通表示部品 `MaterialSymbol` の CSS mask で既存の文字色を継承し、ダーク／ライト両テーマに対応する。アイコンは常に文字ラベルと併記し、`aria-hidden` にして読み上げを重複させない。アイコンだけで意味を伝える操作要素は置かない。例外はテーマトグルだけで、見える文字ラベルを持たず、`html[data-theme]` に応じて CSS で出し分ける `sr-only` テキスト（切り替え動作の説明）をアクセシブルネームにする（§7.2）。
-  - サイズ：画面見出し・強調カード（NEXT LESSON など）の装飾 28px、領域チップ・SP 下部タブ 24px、PC サイドバー・ボタン内・行内導線・統計カード・テーマトグル 20px、SP アプリバーのバッジ（ストリーク）16px。
-  - 配置：画面内の導線ボタン・リンクは、前進（次の学習ステップへ進む。例：問題を解く・教材を読む・復習を始める）ならラベルの後ろに `arrow_forward`、戻る（元の画面へ戻る。例：レッスン一覧・演習結果や空状態からの戻り先）ならラベルの前に `arrow_back`、一覧・詳細へのドリルダウン（例：一覧へ・最初のトピック・学習分析を見る）ならラベルの後ろに `chevron_right` を置く。同じ画面内の状態を切り替えるボタン（すべて解き直す・間違えた問題を解き直す）と、`error.tsx` の復旧操作（再読み込み・ホームへ等）は文字のみとする。
-  - 準備中の表示（`/learn` の領域、学習領域カードの無効な導線）は `schedule` を添える。`/learn` のレッスン0件トピックの `準備中` バッジとナビの無効項目は文字のみとする。
-  - 意味の対応（同じ意味には同じアイコン）：教材・レッスン `menu_book`、演習 `contract_edit`、復習（SRS） `event_repeat`、分析 `bar_chart`、学習領域の一覧 `category`、領域 `security`（security）/ `code`（frontend）/ `dns`（backend）/ `account_tree`（architecture）、正解 `check_circle`、誤答 `cancel`、準備中 `schedule`、ストリーク `local_fire_department`、学習時間 `timer`、習得済み `verified`、解答数・解答の記録 `edit_note`、反応時間 `speed`。`account_tree` はアーキテクチャ領域専用とする。
-  - ターミナル表現（ロゴの `>_`、ターミナルパンくず、`>_ grading...`、テストランナーの `PASS` / `FAIL`、`keycap`）は文字のまま残し、アイコンに置き換えない。
-- チャンキーボタン（`btn-green` / `btn-blue` / `btn-ghost`）：ベタ塗り＋下エッジ（`box-shadow: 0 4px 0 <shade>`）、`:active` で 4px 沈む。green＝主アクション、ghost＝副アクション。
-- `term-win`：ターミナルウィンドウ。ヘッダーは **`>_` プロンプトバッジ＋mono タイトル＋右端メタ情報**（例 `80×24`・`exit 0`・`utf-8 · tsx`）。教材のコードブロック、演習結果のテストレポート、スキルツリーで使用。
-- `keycap`：問題 ID・選択肢番号のキーキャップ表現。選択肢番号はキー操作と同じ `1`〜`4` を表示し、読み上げ名の「N番」と一致させる。キー操作の案内は PC 幅だけに表示する。
-- ツリー行：スキルツリーは `devpath tree` コマンド出力風のディレクトリツリー（罫線文字 `├─ └─`）。各行は button（min-height 44px）、done＝緑✓ / current＝青▶＋ブロックバー＋START / locked＝減光🔒。ツリーは未実装のため、上記のアイコン方針の例外として記号のまま残す。状態記号を Material Symbols（候補：`check_circle` / `play_arrow` / `lock`）に置き換えるかはツリー実装時に決める。
-- ターミナルパンくず：各画面の先頭に `~/devpath $ <コマンド>`（緑プロンプト＋点滅カーソル）。
-- Win9x 風の離散ブロックバー・ベベルは**使用しない**（Retro OS 案の残骸を持ち込まない）。
-
-**タイポグラフィ**：UI・本文は **Inter**（400–900）、データ・ID・ツリー・ターミナル・パンくずは **JetBrains Mono**。数値は `font-variant-numeric: tabular-nums`。
-
-**モーション**：stagger エントランス（reveal）、数値カウントアップ、バー伸長、正解バウンス／誤答シェイク、コンボポップ、全問正解時の confetti。すべて `prefers-reduced-motion` で無効化する。
-
-**アクセシビリティ**：全操作要素に `:focus-visible` リング、演習はキーボード操作（1–4 で選択）対応、タッチターゲット 44px 以上。状態は色だけで示さない（WCAG 1.4.1）。演習・復習の解答後は、正解の選択肢に `check_circle`、誤答した選択肢に `cancel` を表示し、選択肢のアクセシブルネームにも「正解」「あなたの解答」を含める。
-
-**表示文言**（経緯は [日本語文言の棚卸し](./investigations/2026-10-13-japanese-copy-audit.md)）：
-
-- 用語：問題に答える行為は「解答」。「復習」は SRS の復習（`/review`）に限り、同じ画面内のやり直しは「解き直す」。期限を迎えた問題は「復習待ち」、SRS の3区分は「復習待ち（期限を迎えた問題）・習得済み（期限前で復習間隔21日以上）・学習中（期限前で21日未満）」で、復習待ちを先に判定する排他区分として説明する（§4.4）。連続学習は「連続学習日数」。
-- 画面名：ホーム・教材・演習・復習・学習分析・学習領域。PC と SP で同じ語を使い、ボタンの戻り先名とも一致させる。
-- 本文・ラベル・単位は日本語にし、`due`・`topic`・`lesson` などの英語や、`API`・`クライアント`・`bundle`・`dueAt`・`キュー`・イベント種別などの実装の語を出さない。ターミナル表現（パンくず・アイブロウ・`PASS` / `FAIL` 等）は英語のまま残し、アイブロウは画面名と対応させる。
-- 件数の単位は、問題（due を含む）「問」、レッスン「レッスン」、トピック「トピック」、活動履歴「件」。読み上げ用テキストも同じ単位を使う。
-- 説明・空状態・エラーは「です・ます」調、ボタンは句点なし。統計の期間・基準（今週、直近7日、UTC、習得の定義）は値の定義どおりに書く。
-
-**ゲーミフィケーション表現の実装区分**：
-
-- **MVP 実装対象**：学習コントリビューション（草。`answer_logs` の日次集計から導出）、テストランナー風の結果表示、ターミナルパンくず、ディレクトリツリー型スキルツリー、コンボ演出（**クライアント状態のみ・永続化しない**）。
-- **スコープ外（§1 準拠・将来）**：XP / レベル / 実績バッジ / デイリークエスト。モックでは演出として表示しているが、データモデル追加（§4）が必要なため公開機能の検討時に併せて設計する。UI 上は該当要素を出さない（またはプレースホルダ非活性）。
-
-- スタイルはTailwind、共通の表示部品は `components/ui` に集約し、ページ側はユーティリティクラスで組む。
-
-### 8.8 → 第9章へ
-
-本章で How を確定した。content/API データの整形フロー（Content data / API DTO → ViewModel → page）は **第9章** で詳細化する。
-
-## 9. データフェッチング・整形フロー
-
-第8章は app ファイル・コンポーネント構成を決めた。本章は **content / API から feature component へ至るまでのデータの流れ**—Content data / DTO / ViewModel / Mapper / loader・hook—を設計する。原則は **page は App Router と feature を接続する薄いルートアダプター、feature component は表示層**とする。データの形成と変換は層を分けて、content 構造や API 変更の影響を mapper に閉じ込める。
-
-### 9.1 層構造（Content data / DTO → Mapper → ViewModel → page → feature component）
-
-```text
-初回表示（Server）
-
-page
-  → Server loader
-      → content loader または feature API adapter
-          → Content data または serializable DTO（@tsl/shared）
-      → Mapper（純粋関数、web 固有）
-          → ViewModel（web 固有型）
-  → feature component へ ViewModel を props 渡し
-
-ユーザー操作後（Client）
-
-feature component
-  → Client hook
-      → feature API adapter
-          → API（Hono）
-      → submitting / error / API 由来の結果 state
-  → state を受けて再描画
-```
-
-Server loader は初回データの fetch と Mapper 呼び出しを統括する。Client hook はユーザー操作後の通信を統括するが、初期 ViewModel の形成や複製保持は行わない。page は App Router 固有の関心事と loader 呼び出しに限定し、feature component が表示を担当する。
-
-- **Content data**：`content/` の Markdown + frontmatter をビルド時にパース・検証した型付きデータ。教材本文・問題本文・解説の主経路。
-- **DTO**：API レスポンス型。`packages/shared` の Zod スキーマ（§8.6）から型推論、AppType に含まれる。due queue・answer 結果・集計値など動的データの契約。
-- **Mapper**：`content/API data -> ViewModel` 形の純粋関数。content 構造や API 仕様変更の影響は**ここで吸収**。複数ページで同じデータを使う場合、mapper も共有。
-- **ViewModel**：web 固有の表示形態。「page で即座に使える形」に正規化済み（selector・filter・sort 済み）の**純データ**。`loading`・`error` は VM に含めず、Client hook の返り値として別に扱う。
-
-### 9.2 二系統：Server loader と Client hook
-
-初回データは Server loader が形成し、page から表示 component へ ViewModel を渡す。責務・依存境界は §8.1、表示状態と通信状態の所有者は §8.5、SSR / SSG の実行方式は §8.3に従う。
-
-| 画面 | 初回データ | ユーザー操作後 |
-| --- | --- | --- |
-| 教材 | ビルド時contentをmapperに渡して表示。API GET不要 | 閲覧記録のみ最小Client recorderから送信 |
-| 演習 | ビルド時contentから問題・解説をVM化。API GET不要 | Client hookが解答を送信 |
-| 復習 | API queueのIDをサーバーでbundled contentへjoinしてVM化 | 次バッチ取得はClient Componentから `router.refresh()` でServer loaderを再実行 |
-
-#### 復習の表示契約
-
-- 正解情報の境界は [ADR-0002](./adr/0002-api-authoritative-grading.md) に従う。content loaderや全教材データをClient bundleへimportしない。
-- 静的な表示構造はユーザー固有データを共有キャッシュへ載せず、dueバッジと本文を同じ SSR リクエストで取得する。両者は唯一のloader入口 `loadReviewOnce` を通し、Reactの `cache()` によって同一リクエスト内のqueue取得を1回に畳む。未ラップのloaderはexportしない。共有キャッシュとの違いは §8.3。
-- APIの生のdue件数の意味は [ADR-0005](./adr/0005-srs-review-rules.md)。`ReviewViewModel.dueCount` は、現在のバッチをbundled contentとjoinした後に表示できる問題数であり、contentから削除されたIDはmapperで除外する。join後の表示可能な問題が0件で `hasMore=true` ならcontent整合性エラー、0件でfalseなら通常の空キュー、1件以上なら現在バッチを表示する。空キューをQuizの空問題表示へ委ねない。
-- 表示再利用の境界は §9.7。次バッチがある場合の完了操作で再取得し、mapperが導出した `batchKey` をinteractive subtreeのkeyにして、新しいバッチでは解答結果・画面フェーズをintroへリセットする。
-- 取得・整合性エラーと再試行導線は §9.6。
-
-現在のloaderは [load-review.ts](../apps/web/src/features/review/server/load-review.ts)、表示側は [review-runner.tsx](../apps/web/src/features/review/client/components/review-runner.tsx) を参照する。Graphはloader周辺の構造探索に使い、対象外のClient Componentは実コードを確認する。
-
-### 9.3 DTO / ViewModel の分離と配置
-
-#### 型の配置
-
-現在のファイル配置はコードと [Knowledge Graph](../architecture/README.md) を参照する。ここでは配置の責務と命名規則を定義する。
-
-- **Content data / DTO は shared**（複数パッケージで共有、単一ソース）。
-- **ViewModel は `apps/web/src/features` 配下**（表示都合なので web 固有）。
-- **mapper は feature 単位で配置**。同じ DTO / content data を複数 feature で使う場合も、ViewModel 全体の mapper は各 feature に置く。重複した小さい純粋変換だけを `apps/web/src/features/shared` に逃がす。
-- **`apps/web/src/features/*/api` は endpoint アダプター**。呼び出し側から `ApiClient` を受け取り、`hc` の path・method・引数、共有 Zod による入出力検証、機能固有のエラーメッセージを薄く閉じ込める。`res.ok` チェック・`res.json()` は `apps/web/src/lib/api.ts` の共通関数に寄せる。client 生成・ViewModel 化・UI state はここに入れない。ファイル名は `<feature>-api.ts` に統一する。
-- **`apps/web/src/features/*/server` は Server 専用**。page / Server Component から呼ばれる loader が content data や API DTO を mapper に通して ViewModel を返す。feature 固有の Server Component が必要なら `server/components` に置く。配下のファイルには `import 'server-only'` を置く。loader のファイル名は `load-<対象>.ts` とする。
-- **`apps/web/src/features/*/client/hooks` は Client 専用**。Browser API client を生成し、ユーザー操作後の mutation と、それに伴う `submitting`・`error`・API 由来の結果 state を扱う。Server data の再取得は行わない。初期 ViewModel は component が immutable な props として参照し、hook へ複製しない。
-- **`apps/web/src/features/*/client/components` は Client Component**。画面フェーズ・現在問題・`wrongOnly`・キーボード操作を保持し、hook が返す通信状態と結果を表示へ反映する。content loader・API client・DTO には直接触れない。
-- **`apps/web/src/features/shared` は小さい純粋変換と表示の対応表だけ**。`contentQuestionToQuizQuestion` のように `/quiz` と `/review` の両方で同じ表示用 question 形へ変換する helper や、`/learn` と領域カードで同じ領域を同じアイコンで示す `domainIcons` のような定数の対応表はここへ置く。ViewModel 全体・loader・hook は共有しない。
-- **`apps/web/src/lib` は横断インフラだけ**。API client 生成、HTTP response 処理、content index など feature 非依存の関数を置く。画面都合の整形は feature mapper に残す。
-
-#### API 側の DAL 配置
-
-`apps/api` は D1 / Drizzle に直接触るため、`dal/` を置く。Hono route は HTTP 契約、service はユースケース、dal は永続化アクセスに責務を分ける。具体的なディレクトリ構成・各層の責務・コード例は **第10章（バックエンドアーキテクチャ）** で確定する。
-
-### 9.4 共通パターンと例
-
-共通のデータフローは §9.1、画面ごとの取得・復習バッチ契約は §9.2、表示状態は §8.5を参照する。具体的な実装例は現在のコードを読む。
-
-- 教材：[load-lesson.ts](../apps/web/src/features/lesson/server/load-lesson.ts)
-- 演習：[load-quiz.ts](../apps/web/src/features/quiz/server/load-quiz.ts)
-- 解答送信：[use-answer-submit.ts](../apps/web/src/features/quiz/client/hooks/use-answer-submit.ts)
-
-コード例のコピーは維持しない。改修時はGraphで関連するadapter・loader・schemaを絞り、mapper・ViewModel・UIなど抽出対象外の関係はコードとテストで補う。
-
-### 9.5 content / API 変更時の対応フロー
-
-content frontmatter が変わった場合（例：lesson に新フィールド `difficulty: 'easy'|'medium'|'hard'` が追加）：
-
-1. `packages/shared/src/schema/content.ts` の `lessonFrontmatterSchema` を更新。
-2. `apps/web/src/features/lesson/view-model.ts` で ViewModel にフィールド追加（必要に応じて）。
-3. `apps/web/src/features/lesson/mapper.ts` で mapper の変換ロジックを更新。
-4. page コンポーネントはそのまま（ViewModel が contract を満たしていれば）。
-
-API DTO が変わった場合（例：review queue に `dueAt` が追加）：
-
-1. `packages/shared/src/schema/api.ts` の該当 DTO Zod スキーマを更新。
-2. `apps/web/src/features/review/view-model.ts` で ViewModel にフィールド追加（必要に応じて）。
-3. `apps/web/src/features/review/mapper.ts` で API DTO + content data の join / 変換ロジックを更新。
-4. page / Client component はそのまま（ViewModel が contract を満たしていれば）。
-
-**変更の影響が mapper に局所化**され、page は変わらない。複数 feature が同じ DTO を使う場合、各々の mapper を独立更新。
-
-### 9.6 エラー・ローディング処理
-
-- 初回データの取得・検証失敗はServer側でthrowし、routeの `error.tsx` で扱う。復習のcontent整合性分岐は §9.2に従う。
-- mutationの待機・失敗はhookの `submitting`・`error` を表示componentへ渡して扱う。再取得中の表示が必要なら `isRefreshing` またはrouteの `loading.tsx` を用いる。
-- `/review/error.tsx` は本番で秘匿され得るServer Componentの `error.message` から失敗種別を判定しない。API/通信の一時的失敗とcontent不整合の両方を含む案内を表示する。`reset` による再試行と、恒久的な不整合で再試行ループに閉じ込めないためのホームへのLinkを提供する。
-- 教材閲覧のfire-and-forget記録は、失敗しても本文表示やroute error boundaryへ波及させない（§9.7）。
-
-### 9.7 mapper・ViewModel の共有戦略
-
-同じ content data / DTO を複数ページが使う場合（例：復習（`/review`）と演習（`/quiz`）が同じ bundled questions を使用）：
-
-現在のファイル配置はコードと [Knowledge Graph](../architecture/README.md) を参照する。ここでは配置の責務と命名規則を定義する。
-
-`LessonViewRecorder` は `'use client'` の最小 leaf とし、mount 後に Browser API client を遅延生成して `POST /lesson-views` を送信する。本文データを取得・保持せず、通信失敗は無視するため教材の表示やエラー境界に影響しない。
-
-ViewModel・mapper は feature ごとに独立させ、同じ DTO の使い方が feature ごとに異なることを認める。`apps/web/src/features/shared` は共通 ViewModel を持つ場所ではなく、`contentQuestionToQuizQuestion` のような小さい純粋変換と、`domainIcons` のような表示の対応表だけを置く場所とする。
-
-Quiz と Review の表示再利用は、feature VM同士を継承・交差させず、`QuizInteractive` の表示props（問題・解説・intro内容・結果導線）へ各featureのVMを変換して渡す境界で行う。
-
-### 9.8 フロントエンドのテスト戦略
-
-フロントエンドは、見た目を探索する UI 実装と、入出力が明確なロジックでテストファーストの効果が異なるため、**実装先行と TDD を使い分ける**。
-
-| 対象 | 開発・検証方法 |
-| --- | --- |
-| UI・スタイル・単純な presentational component | モックアップと本章の仕様に沿って実装し、ブラウザで表示・レスポンシブ・操作を確認してから、重要な振る舞いだけをテストする |
-| mapper・ViewModel・小さい純粋変換 | テストファースト。content/API DTO の join・sort・filter、欠損値・境界値、クライアントへ渡してよいデータ境界を検証する |
-| Client Component・reducer・表示操作 state | テストファースト。Quiz/Review の `intro → exercise → result`、問題送り、最終問題、選択肢ロック、スコア集計、`wrongOnly`、キーボード操作を検証する |
-| Client hook・通信 state | テストファースト。mutation、`submitting`、API 由来の結果、二重送信防止、エラー・再試行を検証する |
-| Server loader | 単純な委譲は詳細にテストせず、複数データの join・sort・filter・ViewModel 化を担う場合に検証する |
-| API adapter | 薄い RPC 呼び出しを重複してテストせず、独自の呼び出し条件・エラー変換がある場合だけ検証する |
-| ページ統合・Walking Skeleton | ユーザーが観測できる主要フローを少数の統合テストまたはブラウザ確認で貫通させる |
-
-- Tailwind のクラス名や内部 DOM 構造を固定するだけの壊れやすいテストは避け、role・label・表示文言・操作結果など、ユーザーが観測できる振る舞いを検証する。
-- バグ修正は、自動テストで安定して再現できる場合、失敗する回帰テストを先に追加してから修正する。CSS・ブラウザ固有の表示崩れは、ブラウザまたはスクリーンショットで修正前後を確認する。
-- Walking Skeleton では「教材表示 → 問題へ遷移 → 解答 → 即時採点 → 結果表示」を貫通確認する。細かなコンポーネント単体テストを増やすより、この主要フローと mapper・状態遷移のテストを優先する。
-
-### 9.9 → 第10章へ
-
-本章でフロントエンドのデータフロー（Content data / API DTO → Mapper → ViewModel → page → feature component）を確定した。API 側（`apps/api`）の内部構造（How）は **第10章** で確定する。その後の実装フェーズでは、Walking Skeleton（`セキュリティ > XSS > 教材1本 + 4択3問`、第6章）を第8〜10章の設計に沿って縦に 1 本貫通させる。
-
-## 10. バックエンドアーキテクチャ（How）
-
-第7.3章で API の契約（What）を定義した。本章は `apps/api`（Hono / Cloudflare Workers）の内部をどう構造化して実装するか（How）を確定する。設計哲学は本書全体と同じ：**`packages/shared` を単一ソース**・**純粋ロジックと副作用の分離**・**Workers 制約を前提**。
-
-バックエンドアーキテクチャのフロー図と各層の責務は、補助資料として [`docs/backend-architecture.html`](./backend-architecture.html) に整理する。本章を一次ソースとし、補助資料は実装時に参照しやすい形へ再構成したものとする。
-
-### 10.1 全体方針：軽量レイヤードアーキテクチャ
-
-**route・service・dal の 3 層**に分ける（§9.3 で予告した構成の確定）。リクエストの**処理フロー**は `route → service → deps（dal 実装）→ D1` とする。一方、service が deps 型を定義し、dal がその型を実装する関数引数 DI を採用するため、**ソースコードの import 方向は処理フローと同じではない**。
+**route・service・dal の 3 層**に分ける。リクエストの**処理フロー**は `route → service → deps（dal 実装）→ D1` とする。一方、service が deps 型を定義し、dal がその型を実装する関数引数 DI を採用するため、**ソースコードの import 方向は処理フローと同じではない**。
 
 | 層 | 責務 | 依存してよいもの |
 | --- | --- | --- |
@@ -615,7 +150,7 @@ services ──→ @tsl/shared          # 純粋ドメインロジック・型
 dal      ──→ @tsl/shared          # db 名前空間の Drizzle schema（import { db as schema }）
 ```
 
-- HTTP へのエラー写像は `app.ts` の `onError` が下記 §10.6 の方針に従って担う（写像ロジックの所在は `app.ts` に一本化し、route・service には持たせない）。`SrsConflictError` は本書作成時点では `onError` で個別写像されておらず 500 に落ちるが、本節・§10.6 はこの振る舞いを変更する仕様ではない（新しい HTTP ステータスへの写像は別途検討する）。
+- HTTP へのエラー写像は `app.ts` の `onError` が §5.7 の方針に従って担う（写像ロジックの所在は `app.ts` に一本化し、route・service には持たせない）。`SrsConflictError` は現在 `onError` で個別写像されておらず 500 に落ちるが、本節・§5.7 はこの振る舞いを変更する仕様ではない（新しい HTTP ステータスへの写像は別途検討する）。
 
 - service から `routes`・`dal`・Hono・D1・Drizzle を import しない。service は渡された deps だけを呼ぶ。
 - dal から `routes`・Hono を import しない。service への依存は deps 型の `import type` に限定し、値 import は自身が throw するドメインエラー（`services/errors`）に限る。
@@ -626,310 +161,220 @@ dal      ──→ @tsl/shared          # db 名前空間の Drizzle schema（im
 
 - DI コンテナ・デコレータ注入 → **関数引数による明示的な依存渡し**で足りる
 - クリーンアーキテクチャ流の ports/adapters ディレクトリ分離 → 「service が deps 型（interface）を定義し、dal が `import type` して実装する」という最小の依存逆転だけで同じ効果を得る
-- OpenAPI スキーマ生成 → `hc`（`AppType`）が型契約を担うため不要（§8.4）
+- OpenAPI スキーマ生成 → `hc`（`AppType`）が型契約を担うため不要（§5.3）
 
 数エンドポイントの規模では抽象を増やさず、層の責務とimport境界を優先する。
-
-### 10.2 ディレクトリ構成
-
-現在のファイル配置はコードと [Knowledge Graph](../architecture/README.md) を参照する。ここでは配置の責務と命名規則を定義する。
 
 - **dal はテーブル単位ではなくユースケース単位**で置く。「service が要求する deps 型」を 1 ファイルで実装する形にすると、service ⇔ dal の対応が 1:1 で追いやすく、テーブル単位 repository の細切れ合成（と、それを束ねる工数）を避けられる。テーブル単位の共有が必要になった時点で分割する。
 - **`src/content-sync.ts` は `gray-matter` と `packages/shared` のみに依存する純粋ロジック**（frontmatter パース・同期ペイロード生成・upsert SQL 生成）。`scripts/sync-content.ts` は Node の `fs` 読み取りと `wrangler d1 execute` 実行を担う CLI 部で、`content-sync.ts` の純粋関数を呼び出すだけに留める（routes・services・dal・middleware は import しない）。
 - **`src/dev-seed.ts` は content sync で検証済みの question ID を入力として、固定ユーザーの動的開発データを生成する純粋ロジック**にする。`scripts/seed-dev.ts` は content 読み取り・時刻取得・一時 SQL ファイル作成・Wrangler 実行だけを担い、任意の CLI 引数を転送しない。
+- serviceが要求するdepsはフラットな関数の束とし、テストではfakeに差し替える。時刻はservice内で取得せず、呼び出し側から注入する。正確な型と処理は [answer-service.ts](../apps/api/src/services/answer-service.ts) を参照する。
 
-### 10.3 リクエストの流れ（`POST /answers` を例に）
-
-serviceが要求するdepsはフラットな関数の束とし、テストではfakeに差し替える。時刻はservice内で取得せず、呼び出し側から注入する。正確な型と処理は [answer-service.ts](../apps/api/src/services/answer-service.ts) を参照する。
-
-Walking Skeleton の中核となる 1 リクエストの処理フロー：
-
-```
-zValidator（shared の answerRequestSchema で入力検証）
-  → userId を context から取得（middleware が注入済み。ADR-0003）
-  → 永続書き込み用 Rate Limiting binding を確認（ADR-0004）
-  → services/answer-service の submitAnswer(deps, input)
-      1. questions（content 同期キャッシュ §4.4）から answerIndex を取得
-         → 無ければ QuestionNotFoundError
-      2. isCorrect = answerIndex === selectedIndex（採点権威は API。ADR-0002）
-      3. 現在の srs_state を取得（無ければ initialSrs()）
-      4. reviewSrs(state, isCorrect, now) で次状態を算出（純粋関数 @tsl/shared）
-      5. answer_log 挿入 ＋ srs_state upsert を db.batch で原子的に書き込み
-  → { isCorrect, correctIndex } を JSON で返す
-```
-
-`GET /review/queue`・`GET /dashboard/due-count` も同型（route → `review-service` → `review-repository`）。due 判定は `dueAt <= now` を SQL の where 句で行い、`isDue`（sm2）と意味を一致させる。
-
-### 10.5 Hono アプリの合成と `AppType`
+#### Hono アプリの合成
 
 - **`hc` の型推論を保つため、ルート定義はメソッドチェーンで書く**。各サブルーターは `new Hono<AppEnv>().post(...)` のチェーンで定義・export し、`app.ts` では `.route()` のチェーンで合成する。チェーンを分断（`app.post(...)` を文として並べる等）すると `AppType` からエンドポイント型が消える。
-- パス設計は §7.3 の契約（`POST /answers`・`GET /review/queue`・`GET /dashboard/due-count`・`GET /domains`・`GET /analytics/*`・`GET /activity/recent`）をそのまま `.route()` のプレフィックス＋サブルーター内パスで構成する。
+- パス設計は [API 仕様カタログ](./api-spec.html) の endpoint（`POST /answers`・`GET /review/queue`・`GET /dashboard/due-count`・`GET /domains`・`GET /analytics/*`・`GET /activity/recent`）をそのまま `.route()` のプレフィックス＋サブルーター内パスで構成する。
 - Access boundary は public entrypoint だけに置く。route・service・DAL は Access JWT を参照せず、`userContext` が実行済みであるという既存契約を保つ。internal entrypoint は同じ user route sub-app を `userContext` の後に mount することで、DTO・固定ユーザー挙動・Hono RPC 契約を public entrypoint と共有する。
 
-### 10.6 バリデーション・DTO・エラー処理
+### 4.4 依存境界の機械検証
 
-**入出力スキーマは `packages/shared/src/schema/api.ts` に集約**する。同一スキーマを「API 入力の `zValidator`」「route 返り値の契約固定（`satisfies`）」「フロントの型（`z.infer`）」の 3 経路で共有する（§8.6 と同じパターン）。
+依存方向の規範は §4.2（フロントエンド）と §4.3（バックエンド）に定義する。dependency-cruiser は [.dependency-cruiser.cjs](../.dependency-cruiser.cjs) により import 境界を検証し、Biome は lint/format を担う。設定のルールには対応する設計節を示す。
 
-- `POST /answers` の入力は任意の反応時間を含める：`answerRequestSchema` に `responseTimeMs: z.number().int().nonnegative().optional()` を追加する（§7.3・§4.4。アナリティクスの平均反応時間用。未送信でも採点は成立する）。
-- 正確な入出力型・検証定義は [API schema](../packages/shared/src/schema/api.ts) を参照する。endpointごとの意味・集計条件は §7.3に従う。
+機械検証の具体的な対象は設定を参照する。import を伴わない ambient 型への依存や、許可された import の呼び出し方は、型・コード・レビューで契約と照合する。Graphの鮮度・抽出器の検証は [architecture/README.md](../architecture/README.md) を参照する。
+
+## 5. データフロー
+
+content / API から feature component へ至るまでのデータの流れを定める。原則は **page は App Router と feature を接続する薄いルートアダプター、feature component は表示層**とする。データの形成と変換は層を分けて、content 構造や API 変更の影響を mapper に閉じ込める。
+
+### 5.1 教材と動的データの経路
+
+- **データ取得（ハイブリッド）**：教材・問題はビルド時バンドル済み content を RSC / Server loader から読む。解答記録・SRS・due など動的データのみ Hono API を `hc` で呼ぶ。D1 への seed は配信・集計用キャッシュとして維持し、表示の主経路は content。
+
+**素 Markdown + frontmatter** を **ビルド時にバンドル**する。
+
+- **Workers 制約**：Cloudflare Workers では `node:fs` のランタイム読みが使えない。教材・問題は**ランタイム fs 読みではなくビルド時インライン化**する。
+- frontmatter に `estimatedMinutes`（0より大きい整数）と問題（`questions[]`。スキーマは[コンテンツ規約](./content-guidelines.md)と同一の `{ id, type:'mcq', prompt, choices[], answerIndex, explanation }`）を置き、本文は Markdown 本体とする。
+- ビルド時に `gray-matter` でパースし、`packages/shared` の Zod（`schema/content`）で検証してから**型付きデータとしてインライン化**する。
+- 本文描画は `react-markdown` 等のレンダラを用いる（RSC で完結）。MDX は採用しない（ビルド設定と frontmatter 抽出が複雑化するため）。
+- content 参照は `apps/web/src/lib/content.ts` に集約する。`getLessonContent(lessonId)`・`getLessonsByTopic(domain, topic)`・`getBundledQuestions()`・`getQuestionById(questionId)` を共通関数として用意し、初回表示の実行経路では `features/*/server` の Server loader だけが呼び出す。page は loader、mapper は引数で渡された Content data だけを参照し、`lib/content` を直接 import しない。ビルド・同期スクリプトと `lib/content` 自身のテストはこの制約の対象外とする。
+- `getBundledQuestions()` は `/review` の `question_id` 解決用に `questionId` index を返せる形にする。各 feature で frontmatter 配列を直接走査しない。
+- **同じパース経路を `content/` → D1 seed/upsert スクリプトでも再利用**し、フロント表示と D1 配信を単一ソースから導く（[ADR-0006](./adr/0006-content-as-source-of-truth.md) の責務分離を維持）。
+- `/learn/...` と `/quiz/...` は content 由来の標準 SSG を維持する。`generateStaticParams` で全 params を返し、route params は `lib/content` の `getLessonRouteParams()` / `getTopicRouteParams()` / `getQuizRouteParams()` を feature loader 経由で読み、page から `lib/content` を直接 import しない。
+- `/learn` は固定URLの静的 RSC としてプリレンダリングする。`features/lesson/server` の一覧 loader が共通 content loader から全トピックとレッスン数を取得し、mapper で領域別に整形する。領域・トピックの一覧やリンクを画面コードへ固定しない。
+
+- スキーマは `packages/shared` に集約し二重定義しない（既存 `schema/content`・`db/schema`・`srs/sm2` を土台に拡張）。
+- 同一スキーマを **3 経路で共有**：①content のビルド時パース検証、②API 入力の `zValidator`、③フロントの型（`z.infer`）。
+- フロントは API レスポンス・content データとも `z.infer` で型を引き、DTO / Content data の独自再定義を持たない。ViewModel は表示都合の web 固有型として `apps/web/src/features` に定義する（§5.4）。
+
+### 5.2 層構造（Content data / DTO → Mapper → ViewModel → page → feature component）
+
+```text
+初回表示（Server）
+
+page
+  → Server loader
+      → content loader または feature API adapter
+          → Content data または serializable DTO（@tsl/shared）
+      → Mapper（純粋関数、web 固有）
+          → ViewModel（web 固有型）
+  → feature component へ ViewModel を props 渡し
+
+ユーザー操作後（Client）
+
+feature component
+  → Client hook
+      → feature API adapter
+          → API（Hono）
+      → submitting / error / API 由来の結果 state
+  → state を受けて再描画
+```
+
+Server loader は初回データの fetch と Mapper 呼び出しを統括する。Client hook はユーザー操作後の通信を統括するが、初期 ViewModel の形成や複製保持は行わない。page は App Router 固有の関心事と loader 呼び出しに限定し、feature component が表示を担当する。
+
+- **Content data**：`content/` の Markdown + frontmatter をビルド時にパース・検証した型付きデータ。教材本文・問題本文・解説の主経路。
+- **DTO**：API レスポンス型。`packages/shared` の Zod スキーマ（§5.1）から型推論、AppType に含まれる。due queue・answer 結果・集計値など動的データの契約。
+- **Mapper**：`content/API data -> ViewModel` 形の純粋関数。content 構造や API 仕様変更の影響は**ここで吸収**。複数ページで同じデータを使う場合、mapper も共有。
+- **ViewModel**：web 固有の表示形態。「page で即座に使える形」に正規化済み（selector・filter・sort 済み）の**純データ**。`loading`・`error` は VM に含めず、Client hook の返り値として別に扱う。
+
+### 5.3 Server loader と Client hook
+
+初回データは Server loader が形成し、page から表示 component へ ViewModel を渡す。責務・依存境界は §4.2、表示状態と通信状態の所有者は §5.5、SSR / SSG の実行方式は §5.3に従う。
+
+| 画面 | 初回データ | ユーザー操作後 |
+| --- | --- | --- |
+| 教材 | ビルド時contentをmapperに渡して表示。API GET不要 | 閲覧記録のみ最小Client recorderから送信 |
+| 演習 | ビルド時contentから問題・解説をVM化。API GET不要 | Client hookが解答を送信 |
+| 復習 | API queueのIDをサーバーでbundled contentへjoinしてVM化 | 次バッチ取得はClient Componentから `router.refresh()` でServer loaderを再実行 |
+
+#### 復習の表示契約
+
+- 正解情報の境界は [ADR-0002](./adr/0002-api-authoritative-grading.md) に従う。content loaderや全教材データをClient bundleへimportしない。
+- 静的な表示構造はユーザー固有データを共有キャッシュへ載せず、dueバッジと本文を同じ SSR リクエストで取得する。両者は唯一のloader入口 `loadReviewOnce` を通し、Reactの `cache()` によって同一リクエスト内のqueue取得を1回に畳む。未ラップのloaderはexportしない。共有キャッシュとの違いは §5.3。
+- APIの生のdue件数の意味は [ADR-0005](./adr/0005-srs-review-rules.md)。`ReviewViewModel.dueCount` は、現在のバッチをbundled contentとjoinした後に表示できる問題数であり、contentから削除されたIDはmapperで除外する。join後の表示可能な問題が0件で `hasMore=true` ならcontent整合性エラー、0件でfalseなら通常の空キュー、1件以上なら現在バッチを表示する。空キューをQuizの空問題表示へ委ねない。
+- 表示再利用の境界は §5.6。次バッチがある場合の完了操作で再取得し、mapperが導出した `batchKey` をinteractive subtreeのkeyにして、新しいバッチでは解答結果・画面フェーズをintroへリセットする。
+- 取得・整合性エラーと再試行導線は §5.7。
+
+現在のloaderは [load-review.ts](../apps/web/src/features/review/server/load-review.ts)、表示側は [review-runner.tsx](../apps/web/src/features/review/client/components/review-runner.tsx) を参照する。Graphはloader周辺の構造探索に使い、対象外のClient Componentは実コードを確認する。
+
+#### 実行環境とデータ取得
+
+- 公開トップ・教材・集計画面はRSCで描画し、演習・復習の操作部分はClient Componentとする。レイアウト／ヘッダーはServerとする。画面ごとの初回データは本節の表、演習の状態管理は §5.5。
+- Server専用のfeatureには `import 'server-only'`、Client入口には `'use client'` を置き、ディレクトリ名だけに境界の強制を任せない。依存規則は §4.2。
+- Server Actionsは採用しない（[ADR-0012](./adr/0012-separate-web-and-api-workers.md)）。初回取得はServer loader、mutationはClient hookからHono APIを呼ぶ。API契約とuser_id注入点を単一に保ち、HonoとCloudflareを学ぶ目的に沿わせる。重いフォームなど別の要求が生じた場合に再検討する。
+- Server dataの再取得はClient Componentの `router.refresh()` によるRSC再実行に統一する。API adapterへキャッシュ方針を持ち込まない。
+
+#### 通常 SSR・標準 SSG
+
+ユーザー固有のデータを共有キャッシュに載せない規則は [ADR-0013](./adr/0013-no-shared-cache-for-user-data.md) が持つ。
+
+- `/` はユーザー固有データを読まない静的 RSC、`/home`・`/review`・`/domains`・`/analytics` は `dynamic = 'force-dynamic'` を指定した通常のリクエスト時 SSR とする。各 Server loader はリクエストごとに実行し、ユーザー固有データを共有キャッシュしない。
+- 教材・演習の content route は `generateStaticParams` で全 params を列挙する標準 SSG とする（content 取得の契約は §5.1）。`cacheComponents`、`'use cache'` は採用しない。
+- `/learn` はAPIを呼ばず、ビルド時の content だけで一覧本文を生成する静的 RSC とする。共通シェルのユーザー固有 due バッジは既存の Client leaf が表示後に取得し、静的成果物へ含めない。
+- `/home` は due 件数カードと本体を同一 SSR の中で取得し、due 件数と summary・heatmap・domains・recent activity はそれぞれの loader 契約を保つ。loader 内の API 呼び出しは可能な範囲で並列化する。`/domains` は4領域の集計、`/analytics` は summary・weekly・mistakesを読む。忘却曲線・復習タイミングは対象外。
+- due件数・統計・review queue・domains／analytics集計には共有キャッシュを使わない。APIが注入するuser_idをwebの共有キャッシュキーに含められず、ユーザー間の混入が起こり得るためである。
+- Reactの `cache()` によるリクエスト内の取得共有は許可する。ユーザー横断の共有キャッシュとは区別する。復習のdueバッジと本文の取得共有・表示分岐・次バッチへの遷移は §5.3で定義する。
+- 解答後や画面復帰時は `router.refresh()` で Server loader を再実行して鮮度を回復する。復習のバッチ完了時の条件は §5.3。
+- web Worker は API Service Binding と静的 asset 配信に必要な最小構成だけを使う。content route のビルド時 HTML / RSC は Vinext の `prerender` と `@vinext/cloudflare` の `staticAssetsAdapter` で `ASSETS` binding から配信し、内部 cache artifact（`/_vinext/static-cache/*`）は `assets.run_worker_first` で Worker へ通して外部からの直接取得を防ぐ。ISR 用の Incremental Cache、R2、KV、Durable Object Queue の有効 binding、Worker 自己参照 binding は持たない。OpenNext 時代に登録した Durable Object の履歴を設定に残す理由は [記録](./investigations/2026-10-14-opennext-durable-object-history.md) にある。
+
+#### API client
+
+Service Binding と公開 URL の使い分け、`credentials` と CORS の規則は [ADR-0012](./adr/0012-separate-web-and-api-workers.md) が持つ。
+
+- `apps/api` が `AppType` をエクスポート → `apps/web` は `hc<AppType>` で型安全クライアントを生成（既存 `apps/api/src/client.ts` のファクトリを利用。Service Binding の fetch を渡せるよう、ファクトリは `hc` の第2引数（`fetch` オプション等）を受け取れる形に拡張する）。
+- `apps/web/src/lib/api.ts` に**API 共通基盤を集約**する。クライアント生成と共通レスポンス処理は同じ小さな責務群であり、原則ファイルを分けない。例外として、Workers runtime の `cloudflare:workers` を参照する Server 用生成は Client bundle へ入れられないため、`import 'server-only'` を置いた `apps/web/src/lib/api-server.ts` に分ける。baseURL は env（Workers バインディング / 環境変数）から解決し、ハードコードしない。
+  - `createServerApiClient`（`lib/api-server.ts`）：Server loader 用。本番は Service Binding（`cloudflare:workers` の `env.API.fetch` を `hc` のカスタム `fetch` に渡す）を必須とし、binding 欠落は fail-fast する。production 以外で binding がない場合だけ env の URL にフォールバックする。
+  - `createBrowserApiClient`：Client hook 用。env から解決した API Worker の公開 baseURL を使い、Cloudflare Access application cookie を API ドメインへ送るため `credentials: 'include'` を常に指定する。
+- feature の `api/` は呼び出し側から `ApiClient` を受け取り、`hc` の path・method・引数、共有 Zod による入出力検証、機能固有のエラーメッセージを薄く閉じ込める。Server loader と Client hook の両方から使うため、client 生成、`server-only`、cookies、headers、秘密情報など環境専用処理を入れない。
+- `res.ok` チェックと `res.json()` 変換は `apps/web/src/lib/api.ts` の `requestJson` に共通化する。
+- `hc` の path 呼び出し自体は文字列パスの汎用 fetch に置き換えない。`client.review.queue.$get()` のような endpoint ごとの wrapper を残すことで、Hono RPC の型推論を維持する。
+- 初回表示に必要な `GET /dashboard/due-count`・`GET /review/queue` は Server loader から呼び、ViewModel に整形して page 経由で feature component へ props として渡す。
+- ユーザー操作後の `POST /answers` は Client hook から呼ぶ。`GET /review/queue` の再取得は Client Component の `router.refresh()` で Server loader に委譲する。初回表示で不要なスピナーを出さない。
+- 通常 SSR の Server loader はリクエストごとに `createServerApiClient` を解決し、`API` Service Binding の fetch を `hc` に渡す。共有 Incremental Cache や再検証 Queue を API client 層へ持ち込まない。
+
+### 5.4 型とファイルの配置
+
+#### 型の配置
+
+現在のファイル配置はコードと [Knowledge Graph](../architecture/README.md) を参照する。ここでは配置の責務と命名規則を定義する。
+
+- **Content data / DTO は shared**（複数パッケージで共有、単一ソース）。
+- **ViewModel は `apps/web/src/features` 配下**（表示都合なので web 固有）。
+- **mapper は feature 単位で配置**。同じ DTO / content data を複数 feature で使う場合も、ViewModel 全体の mapper は各 feature に置く。重複した小さい純粋変換だけを `apps/web/src/features/shared` に逃がす。
+- **`apps/web/src/features/*/api` は endpoint アダプター**。呼び出し側から `ApiClient` を受け取り、`hc` の path・method・引数、共有 Zod による入出力検証、機能固有のエラーメッセージを薄く閉じ込める。`res.ok` チェック・`res.json()` は `apps/web/src/lib/api.ts` の共通関数に寄せる。client 生成・ViewModel 化・UI state はここに入れない。ファイル名は `<feature>-api.ts` に統一する。
+- **`apps/web/src/features/*/server` は Server 専用**。page / Server Component から呼ばれる loader が content data や API DTO を mapper に通して ViewModel を返す。feature 固有の Server Component が必要なら `server/components` に置く。配下のファイルには `import 'server-only'` を置く。loader のファイル名は `load-<対象>.ts` とする。
+- **`apps/web/src/features/*/client/hooks` は Client 専用**。Browser API client を生成し、ユーザー操作後の mutation と、それに伴う `submitting`・`error`・API 由来の結果 state を扱う。Server data の再取得は行わない。初期 ViewModel は component が immutable な props として参照し、hook へ複製しない。
+- **`apps/web/src/features/*/client/components` は Client Component**。画面フェーズ・現在問題・`wrongOnly`・キーボード操作を保持し、hook が返す通信状態と結果を表示へ反映する。content loader・API client・DTO には直接触れない。
+- **`apps/web/src/features/shared` は小さい純粋変換と表示の対応表だけ**。`contentQuestionToQuizQuestion` のように `/quiz` と `/review` の両方で同じ表示用 question 形へ変換する helper や、`/learn` と領域カードで同じ領域を同じアイコンで示す `domainIcons` のような定数の対応表はここへ置く。ViewModel 全体・loader・hook は共有しない。
+- **`apps/web/src/lib` は横断インフラだけ**。API client 生成、HTTP response 処理、content index など feature 非依存の関数を置く。画面都合の整形は feature mapper に残す。
+
+#### API 側の DAL 配置
+
+`apps/api` は D1 / Drizzle に直接触るため、`dal/` を置く。Hono route は HTTP 契約、service はユースケース、dal は永続化アクセスに責務を分ける。各層の責務と import 境界は §4.3 に定める。
+
+### 5.5 演習の状態
+
+- **クライアント state のみ**（`useState` と専用 hook で feature 内に閉じる）。MVP として最小化する。Client Component は画面フェーズ（`intro → exercise → result`）・現在の問題インデックス・`wrongOnly`・キーボード操作を保持し、`useAnswerSubmit` hook は mutation・`submitting`・送信エラー・API から返った解答結果を保持する（1 問解答＝1 `answer_log` POST）。初期 ViewModel は immutable な props として参照し、Client state に複製しない。
+  - MVP フローは「イントロ確認 → 1 問表示 → 選択 → 即時採点 → ロック → 解説表示 → 次問 → 結果」で線形・シンプルなため、`useState` で充分。複雑な状態遷移が出現（例：問題セット内での再検索・フィルタ等）したら、その時点で `useReducer` へ段階的にリファクタリング。
+- 同一tickを含む二重送信を防止する。試行のリセット後に到着した古い非同期応答は、解答結果・エラー・送信状態へ反映しない。API clientは初回送信時に遅延生成する。hookはAPIの採点結果と選択したindexを保持し、選択肢ロックと結果サマリに使う。
+- **リロードで進捗はリセット（許容）**。リロードすると `intro` フェーズに戻る。ただし「1 問解答＝1 `answer_log` POST」（[デザインシステムと画面の規約](./design-system.md)の演習フロー）なので、解答そのものは即サーバーに残る。途中復帰（sessionStorage）やサーバー復元は将来拡張ポイントとして留保。
+- フロー：イントロ（概要／due プレビュー）→ 1 問表示 → 即時採点（正誤＋解説）→ 選択肢ロック → 末尾に結果サマリ → 出し分け動線（`/quiz`=次のレッスンへ／`/review`=ホームへ、両者「すべて解き直す」「間違えた問題を解き直す」を提供）。
+- 復習の空キュー・content整合性分岐は §5.3に従い、Client stateへ重複させない。
+- 解答の反応時間（`responseTimeMs`）は Client Component が選択肢の表示開始時刻からの経過時間として計測し、`submitAnswer` の引数として Client hook へ渡す。Client hook は時刻を計測せず、受け取った値をそのまま API へ転送する。
+
+### 5.6 表示の再利用
+
+同じ content data / DTO を複数ページが使う場合（例：復習（`/review`）と演習（`/quiz`）が同じ bundled questions を使用）：
+
+現在のファイル配置はコードと [Knowledge Graph](../architecture/README.md) を参照する。ここでは配置の責務と命名規則を定義する。
+
+`LessonViewRecorder` は `'use client'` の最小 leaf とし、mount 後に Browser API client を遅延生成して `POST /lesson-views` を送信する。本文データを取得・保持せず、通信失敗は無視するため教材の表示やエラー境界に影響しない。
+
+ViewModel・mapper は feature ごとに独立させ、同じ DTO の使い方が feature ごとに異なることを認める。`apps/web/src/features/shared` は共通 ViewModel を持つ場所ではなく、`contentQuestionToQuizQuestion` のような小さい純粋変換と、`domainIcons` のような表示の対応表だけを置く場所とする。
+
+Quiz と Review の表示再利用は、feature VM同士を継承・交差させず、`QuizInteractive` の表示props（問題・解説・intro内容・結果導線）へ各featureのVMを変換して渡す境界で行う。
+
+### 5.7 エラー処理
+
+- 初回データの取得・検証失敗はServer側でthrowし、routeの `error.tsx` で扱う。復習のcontent整合性分岐は §5.3に従う。
+- mutationの待機・失敗はhookの `submitting`・`error` を表示componentへ渡して扱う。再取得中の表示が必要なら `isRefreshing` またはrouteの `loading.tsx` を用いる。
+- `/review/error.tsx` は本番で秘匿され得るServer Componentの `error.message` から失敗種別を判定しない。API/通信の一時的失敗とcontent不整合の両方を含む案内を表示する。`reset` による再試行と、恒久的な不整合で再試行ループに閉じ込めないためのホームへのLinkを提供する。
+- 教材閲覧のfire-and-forget記録は、失敗しても本文表示やroute error boundaryへ波及させない（§5.6）。
+
+#### API のエラー
+
+**入出力スキーマは `packages/shared/src/schema/api.ts` に集約**する。同一スキーマを「API 入力の `zValidator`」「route 返り値の契約固定（`satisfies`）」「フロントの型（`z.infer`）」の 3 経路で共有する（§5.1 と同じパターン）。
+
+- `POST /answers` の入力は任意の反応時間を含める：`answerRequestSchema` に `responseTimeMs: z.number().int().nonnegative().optional()` を追加する（§5.8。アナリティクスの平均反応時間用。未送信でも採点は成立する）。
+- 正確な入出力型・検証定義は [API schema](../packages/shared/src/schema/api.ts) を参照する。endpointごとの意味は [API 仕様カタログ](./api-spec.html)、集計条件は [ADR-0007](./adr/0007-analytics-aggregation-boundaries.md) に従う。
 
 **エラー処理の方針**：
 
 - service は **HTTP を知らないドメインエラー**（`services/errors.ts` の `QuestionNotFoundError` 等）を throw する。
-- `QuestionNotFoundError` は404と `QUESTION_NOT_FOUND` に写像する。既知のドメインエラーのmessageを返し、未知の例外はWorkers Logsへ記録する。
-- route 層の `app.onError` がドメインエラーを HTTP ステータスへ写像し、レスポンス形を `{ error: { code, message } }` に統一する。未知のエラーは 500（`INTERNAL`）とし、詳細メッセージを外に漏らさない。
+- 個々のドメインエラーと HTTP ステータスの対応は、関係する ADR（問題未存在の 404 は ADR-0002、レート制限の 429 / 503 は ADR-0004）と [API 仕様カタログ](./api-spec.html) が持つ。
+- route 層の `app.onError` がドメインエラーを HTTP ステータスへ写像し、レスポンス形を `{ error: { code, message } }` に統一する。既知のドメインエラーは message を返す。未知のエラーは 500（`INTERNAL`）とし、詳細メッセージを外に漏らさず Workers Logs へ記録する（`console.error` はこの未処理エラーの出力に限る）。
 - Hono や middleware が意図して throw した `HTTPException` は、例外が持つステータスとレスポンスを保持する。未知の例外として 500 に上書きしない。
-- レート制限の 429 と limiter failure の 503 も shared の error response schema を使い、route から type-safe に返す。前者には `Retry-After: 60` を必ず付ける（[ADR-0004](./adr/0004-persistent-write-rate-limit.md)）。
 
-- `zValidator` の検証失敗（400）はデフォルト挙動のまま使う（MVP）。フロントは `requestJson`（§8.4）が `res.ok` で弾くため、エラーボディの形に依存しない。
+- `zValidator` の検証失敗（400）はデフォルト挙動のまま使う（MVP）。フロントは `requestJson`（§5.3）が `res.ok` で弾くため、エラーボディの形に依存しない。
 
-### 10.7 D1 の整合性と書き込み
+### 5.8 動的データの意味
 
-決定と境界は [ADR-0009](./adr/0009-srs-write-integrity.md) に移した。
+D1 の動的データの正確なスキーマは [db schema](../packages/shared/src/db/schema.ts) を一次ソースとする。値の意味と規則は次の ADR と節が持つ。
 
-- **D1 は対話型トランザクション（`BEGIN`〜`COMMIT` を複数往復で跨ぐ形）をサポートしない**。複数文の原子的書き込みは `db.batch([...])` を使う。`POST /answers` の「`answer_log` 挿入＋`srs_state` upsert」は必ず 1 batch にまとめる（片方だけ書けた状態を作らない）。
-- 「読み（現 SRS 状態）→ 計算 → 書き」の間に別リクエストが割り込む競合は、`version` で検出して再読み込み・再計算する。最大試行回数を超えた場合は明示的に失敗させ、解答ログを残さない。
-- `srs_states` は `(user_id, question_id)` の**複合主キー**とし、`version` を使った条件付き upsert で同時解答による更新消失を防ぐ。解答ログ挿入とSRS更新は `db.batch()` にまとめ、競合時はログを挿入せず再試行する。
-- Drizzle インスタンスは route ハンドラ内で `drizzle(c.env.DB)` を生成して dal へ渡す（リクエストスコープ。グローバルに保持しない）。
+- 解答ログと SRS 状態の書き込み（`version` による楽観的ロック）: [ADR-0009](./adr/0009-srs-write-integrity.md)
+- 学習分析の集計（学習時間の近似、反応時間の合計、UTC の境界）: [ADR-0007](./adr/0007-analytics-aggregation-boundaries.md)
+- `questions`（content の同期キャッシュ）: [ADR-0006](./adr/0006-content-as-source-of-truth.md)
+- 反応時間（`response_time_ms`）の計測方法: §5.5
 
-### 10.8 content → D1 同期スクリプト
+ADR と節に書かれていない規則は次のとおりとする。
 
-同期の規則は [ADR-0006](./adr/0006-content-as-source-of-truth.md) に移した。
+- `users` は将来の公開に備えたテーブルであり、単一ユーザーの間も `user_id` で動的データを分離する。
+- 教材の閲覧記録（`POST /lesson-views`）は最小のログであり、重複の排除、配送の保証、lesson の存在確認は行わない。記録に失敗しても教材の表示に影響させない（§5.6）。
 
-§4.2 の seed/upsert を `apps/api/scripts/sync-content.ts` として実装する。ローカル同期は `pnpm --filter @tsl/api content:sync`、本番 D1 同期は `pnpm --filter @tsl/api content:sync:remote` を使う。パース・ペイロード生成・SQL 生成の純粋ロジックは `apps/api/src/content-sync.ts` に切り出し（§10.2）、`scripts/sync-content.ts` はそれを呼ぶ Node CLI 部（`fs` 読み取り・`wrangler d1 execute` 実行）に徹する。
+## 6. 関連文書
 
-- **パース経路は §8.2 と共有**：`gray-matter` でパースし `packages/shared` の content Zod（`validatedMcqSchema` 含む）で検証する。フロントのビルド時バンドルと同じ検証を通った内容だけが D1 に入る。
-- 同期対象は `questions` テーブルの**最小フィールドのみ**（`question_id`, `answer_index`, `domain`, `topic`, `lesson_id`, `is_active`。§4.4）。本文・選択肢・解説は D1 に入れない。
-- 検証済みデータから upsert SQL（`INSERT ... ON CONFLICT(question_id) DO UPDATE`）を生成し、`wrangler d1 execute tech-study-lab --local|--remote --file <generated-sql>` の固定引数で流す。`content:sync` は `--local` 固定、`content:sync:remote` は `--remote` 固定とし、CLI はこのいずれかの完全一致モード以外（任意引数・追加引数を含む）を SQL 生成・Wrangler 実行の前に拒否する。**冪等**（何度実行しても同じ結果）にする。
-- 固定ユーザー行（`users`）の seed も同スクリプトで行う（共通の `FIXED_USER_ID` と同じ値）。
-- content から削除された問題は**物理削除しない**（`answer_logs`・`srs_states` が参照するため）。同期の最後に `is_active = 0` とし、`GET /domains` の集計対象から外す。出題対象からも自然に外れる（フロントのバンドルに含まれず、due queue の join でも解決されない）。
-- 通常リリースの同期は §12.9 の CI 経路で実行する。既存の `content:sync:remote` は手動運用用として維持し、外部 D1 を変更するため、実行ごとに対象データベース・生成 SQL・実行順を確認した明示的な承認と対話 TTY 確認を必須とする。CI の production 同期は、品質検査・環境別 build と変更前の環境・検証済みソース照合が成功した後に自動実行する。
-
-#### ローカル動的開発 seed
-
-`pnpm --filter @tsl/api db:seed:dev` は、ローカル D1 の開発確認用に固定ユーザー（`FIXED_USER_ID`）だけの動的データを冪等に投入する。content の question ID は、`content-sync` と同じ `gray-matter` + shared content Zod の検証経路から得る。content 同期や本番デプロイの責務を置き換えない。
-
-- 実行 SQL は固定ユーザーの `answer_logs` と `srs_states` だけを削除してから再投入する。他ユーザーの行、`questions`、教材 content は削除・更新しない。
-- 検証済みの各問題に `due_at` が seed 時刻以下の `srs_state` を 1 行作る。各問題には、正解かつ `response_time_ms` あり、不正解かつ `response_time_ms` なしの決定的な answer log を作る。問題が 1 件だけでも両方のケースを含める。
-- SQL の ID・時刻・解答内容は入力（question ID と seed 時刻）から決定的に生成し、再実行しても固定ユーザーのデータ量が増えない。
-- CLI は `wrangler d1 execute tech-study-lab --local --file <generated-sql>` の固定引数だけを使用し、`--remote` や利用者が渡した任意引数を受け付けない。remote D1 には使用しない。
-
-### 10.9 テスト戦略
-
-§5 のガードレール方針を API の各層に割り当てる。
-
-| 対象 | 方法 | ランタイム |
-| --- | --- | --- |
-| SRS（`sm2`） | 純粋関数の単体テスト | Node |
-| service | deps をインメモリ fake に差し替えた単体テスト。採点の正誤・SRS 遷移の呼び出し・エラー系（問題未存在）を重点 | Node |
-| 永続書き込みの rate limit | platform limiter interface を固定時計の fake に差し替えた単体テスト。Wrangler の enforcement 設定（binding 名・受理上限・window）は `wrangler.toml` を一次ソースとし、テストの境界 fixture はその値を明示する。N-1 / N / N+1、次 fixed window の reset、key の endpoint 分離、binding failure を重点 | Node |
-| route + dal | `@cloudflare/vitest-pool-workers`（ローカル D1 に対する実クエリ）で happy path を最低 1 本（`POST /answers` の貫通） | workerd |
-
-- service の deps を「フラットな関数の束」（§10.3）にしているのはこのため。fake は素朴なオブジェクトリテラルで書け、モックライブラリを要しない。
-- rate limiter も Workers binding を小さい interface に隔離し、route integration では deny / throw fake を渡して 429 / 503 時の D1 無変更を確認する。実 platform の PoP-local な eventual consistency 自体をローカル test の正確な quota と取り違えない。
-- 現在の `@cloudflare/vitest-pool-workers@0.8.0` は内部で Wrangler `4.0.0` を使い、`ratelimits` を未知の top-level field として扱うため、workerd integration test で実 Rate Limit binding の happy path を供給できない。この制限下では integration test の fake で route の 429 / 503 契約を検証する。production 用 Wrangler `4.103.0` による `pnpm --filter @tsl/api build` の dry-run を必須とし、その出力で `ANSWERS_RATE_LIMITER`（60 / 60 秒）と `LESSON_VIEWS_RATE_LIMITER`（30 / 60 秒）の両 binding が解決されることを確認する。
-
-### 10.10 実装の参照先
-
-実装状況と残タスクはGitHub Issue / PRで管理する。現在のendpoint・route・service・DAL・schemaの対応は [Knowledge Graph](../architecture/README.md) から探索し、コードと設定を確認する。新しい実装は本章の契約を満たすこと。
-
-### 10.11 将来拡張ポイント
-
-- **認証**：`user-context.ts` の差し替えのみ（[ADR-0003](./adr/0003-server-injected-user-id.md)）。API 契約・層構造は不変
-- **バッチ処理**（due 通知・統計集計等）：`apps/api` の wrangler 設定に Cron Triggers を追加する。web と Worker を分離した §3.1 の利点がここで効く
-- **記述式・コード問題**（§4.3）：shared の `questionSchema`（discriminated union）に type を追加 → `answer-service` の採点分岐を追加。route の契約は `question.type` に応じたリクエストスキーマ拡張で対応
-
-## 11. コンテンツ規約
-
-`content/` 配下の物理的な決め事。第4章のデータモデル（論理）を、ファイルシステム上の規約（物理）に落とす。**教材を 1 本書く前に確定しておくべき事項**をここに集約する。
-
-### 11.1 ファイル配置
-
-```
-content/
-├── security/                   # domain（domainKeySchema のキーと一致）
-│   └── xss/                    # topic（トピックキー）
-│       ├── index.md            # トピックのメタ情報＋概要文
-│       └── security-xss-01.md  # レッスン（ファイル名 = lessonId）
-```
-
-- ディレクトリ階層は §4.1 のコンテンツ階層（domain > topic > lesson）をそのまま写す。
-- **ファイル名 = lessonId**。frontmatter の `domain` / `topic` はディレクトリパスと一致していなければならない。
-- パス⇔frontmatter⇔ID の整合は、ビルド時パース（§8.2）と `content:sync`（§10.8）の**両方で検証し、不一致はビルド失敗**にする。AI が教材を追加・改訂する際のガードレール（§5）として機能させる。
-- 教材追加・改訂時の読み取り専用preflightには `pnpm content:validate` を使う。このコマンドは共有content Zodと共通パーサーで構造・パス・IDを検証し、生成物の更新やD1同期は行わない。
-
-### 11.2 ID 命名規則
-
-記録済みの ID を変えない規則は [ADR-0006](./adr/0006-content-as-source-of-truth.md) に移した。
-
-| ID | 形式 | 例 |
-| --- | --- | --- |
-| lessonId | `<domain>-<topic>-<連番2桁>` | `security-xss-01` |
-| questionId | `<lessonId>-q<連番>` | `security-xss-01-q1` |
-
-- 使用文字は小文字英数とハイフンのみ（`^[a-z0-9-]+$`）。
-- **一度 `answer_logs` / `srs_states` に記録された ID は変更しない（不変）**。ID を変えると学習履歴・SRS 状態が切れる。
-- 誤字修正・解説の改善など**意味が変わらない改訂は同一 ID のまま**行う。問題の意味が変わる改訂は**新しい questionId で追加**し、旧問題は content から削除する（D1 側は物理削除しない。§10.8）。
-- トピック内のレッスン並び順は lessonId の連番で決める（別途 `order` フィールドは持たない。並び替えが必要になった時点で追加を検討）。
-
-### 11.3 表示名（ラベル）の持ち場所
-
-キー（`security` / `xss`）は識別子であり、画面表示用の日本語ラベルとは分離する。
-
-| 対象 | 持ち場所 | 理由 |
-| --- | --- | --- |
-| domain のラベル・並び順 | `packages/shared` の定数マップ（`DOMAIN_LABELS: Record<DomainKey, { label, order }>`） | 4 領域で固定（Zod enum と同じ場所で単一ソース化） |
-| topic のラベル・並び順・概要文 | `content/<domain>/<topic>/index.md`（frontmatter: `{ topic, title, order }`、本文: 概要文） | コンテンツと一緒に増えるため content 側で管理。概要文はレッスン一覧ページの説明に使う |
-| lesson のタイトル | レッスン frontmatter の `title`（既存どおり） | — |
-
-`DOMAIN_LABELS` の確定値（`order` は表示順で 1 始まり。`domainKeySchema` の enum 宣言順・§1 の学習領域の並びと一致させる）:
-
-| domain | label | order |
-| --- | --- | --- |
-| `security` | セキュリティ | 1 |
-| `frontend` | フロントエンド | 2 |
-| `backend` | バックエンド | 3 |
-| `architecture` | アーキテクチャ | 4 |
-
-topic frontmatter の `order` も同様に表示順（0 以上の整数、小さいほど先）とする。
-
-### 11.4 スキーマ・検証の参照先
-
-現在の宣言は [content schema](../packages/shared/src/schema/content.ts)、パス・frontmatter・IDの整合検証は [共通parser](../packages/shared/src/content-parser.ts) を参照する。規範は §11.1〜§11.3と §4.4に定義し、追加作業や完了状況はIssue / PRで管理する。
-
-### 11.5 レッスンあたりの問題数
-
-- 本番の教材は **1 レッスンあたり 5〜7 問を目安**とする。定義・原因・具体例・対策・落とし穴など、トピックの主要な観点を一通りカバーしつつ、AI が 1 レッスンを書く際の執筆・レビュー負荷が過大にならない範囲として設定する。
-- **第6章 Walking Skeleton の「4択3問」は例外**：スタック全体（教材表示 → 採点 → SRS）の疎通確認が目的の最小構成であり、本番教材の目安ではない。Walking Skeleton 貫通後に追加する実際のレッスンは本節の 5〜7 問を基準にする。
-- 5〜7 問は初期の目安であり固定値ではない。トピックの複雑さに応じて増減してよい。
-
-## 12. 環境・デプロイ
-
-### 12.1 環境定義
-
-**local / verification / production** を分離する。verification は既存の隔離環境を使い、GitHub Actions から更新する（§12.9）。preview 環境（PR ごとのデプロイ等）は将来検討とする。
-
-本番切替前の実環境確認には、隔離された検証環境（Issue #218 で作成）を使う。Web は `tech-study-lab-web-test`（`apps/web/wrangler.jsonc` の `env.edge`）、API は `tech-study-lab-api-test`（`apps/api/wrangler.test.jsonc`）、D1 は `tech-study-lab-test` とし、本番の Worker・route・Origin・学習記録は変更しない。D1 へは同じ commit の migration と content から生成した問題キャッシュ・固定ユーザーだけを投入し、解答・閲覧記録は検証用 D1 に保存する。本番データの複製はしない。これは PR ごとの自動 preview 環境ではない。
-
-検証用 Worker と D1 の名称はフレームワークに依存しない `-test` に統一する。D1 は既存 DB の改名をサポートしないため、`tech-study-lab-test` を新規作成し、既存の検証用 D1 `tech-study-lab-vinext` のスキーマ・データ・migration 履歴を export/import して移行する。移行先の ID を検証用 API config へ設定し、テーブルごとの件数と migration 履歴の一致を確認してから接続先を切り替える。旧検証用 D1 は復旧用に保持し、本番 D1 からの複製は行わない。Worker 名はダッシュボードで改名し、公開 URL・Service Binding・Access application の対象 hostname・API の `WEB_ORIGIN`・Client bundle の API URL を新名称に揃える。設定変更だけでは既存の Cloudflare リソースは変更されない。
-
-| 環境 | Web Worker 名 | API Service Binding | build / deploy |
-| --- | --- | --- | --- |
-| local | `tech-study-lab-web`（ローカル実行のみ） | `tech-study-lab-api#InternalApi`（ローカル `wrangler dev`） | `dev` / `build` + `start` |
-| 検証（edge） | `tech-study-lab-web-test` | `tech-study-lab-api-test#InternalApi` | `deploy:edge`（`CLOUDFLARE_ENV=edge` で build） |
-| production | `tech-study-lab-web` | `tech-study-lab-api#InternalApi` | `deploy`（`CLOUDFLARE_ENV` なしで build） |
-
-### 12.2 環境変数・バインディング一覧
-
-§3.1 / §8.4 / §10.5 に散在していた設定値の単一の一覧。**設定値をコードにハードコードしない**（§8.4）。
-
-| 名前 | 種別 | 参照箇所 | local | production |
-| --- | --- | --- | --- | --- |
-| `DB` | D1 バインディング（api） | dal（Drizzle） | `wrangler dev` のローカル D1 | `apps/api/wrangler.toml` の `d1_databases`（要実 ID。§12.4） |
-| `ANSWERS_RATE_LIMITER` | Rate Limiting バインディング（api） | `POST /answers` の永続書き込みガード（[ADR-0004](./adr/0004-persistent-write-rate-limit.md)） | `apps/api/wrangler.toml` の `[[ratelimits]]`（`namespace_id = "11301"`、60 回 / 60 秒） | local と同じ top-level `[[ratelimits]]` を API Worker へデプロイ |
-| `LESSON_VIEWS_RATE_LIMITER` | Rate Limiting バインディング（api） | `POST /lesson-views` の永続書き込みガード（[ADR-0004](./adr/0004-persistent-write-rate-limit.md)） | `apps/api/wrangler.toml` の `[[ratelimits]]`（`namespace_id = "11302"`、30 回 / 60 秒） | local と同じ top-level `[[ratelimits]]` を API Worker へデプロイ |
-| `WEB_ORIGIN` | var（api） | CORS 許可オリジン（§10.5） | `http://localhost:3000` | API deploy 時に `--var WEB_ORIGIN:<web-public-url>` として明示指定 |
-| `ACCESS_ISSUER` | var（api） | Cloudflare Access JWT の issuer 検証（§3.1） | 未設定（両 Access 設定なし＋loopback URL のみ bypass） | API deploy 時に `--var ACCESS_ISSUER:<access-issuer>` として明示指定 |
-| `ACCESS_AUDIENCE` | var（api） | Cloudflare Access JWT の audience 検証（§3.1） | 未設定（両 Access 設定なし＋loopback URL のみ bypass） | API deploy 時に `--var ACCESS_AUDIENCE:<access-audience>` として明示指定 |
-| `API` | Service Binding（web） | Server loader（§3.1・§8.4） | `apps/web/wrangler.jsonc` と同じ宣言。ローカル `wrangler dev` の API へ接続 | `services: [{ binding: "API", service: "tech-study-lab-api", entrypoint: "InternalApi" }]` |
-| `API_BASE_URL` | env（web / Server 専用） | production 以外で `API` binding が未設定の場合のフォールバック（§8.4） | `http://localhost:8787` | 設定しない（Service Binding必須。欠落時はfail-fast） |
-| `NEXT_PUBLIC_API_BASE_URL` | ビルド時 env（web / Client） | Client hook（§8.4） | `http://localhost:8787` | web の deploy 時に対象 API Worker の公開 URL `https://<API Worker 名>.<account subdomain>.workers.dev` を環境変数として明示指定。deploy は URL を解析し、ホスト名の Worker 名がデプロイ先の API（production は `tech-study-lab-api`、検証は `tech-study-lab-api-test`）と一致しない URL、http、path 付き URL を拒否する。custom domain へ移行する場合は、先に本表と deploy の検査を更新する |
-
-### 12.3 ローカル開発手順
-
-1. `pnpm install`
-2. `pnpm --filter @tsl/api db:migrate:local`（初回・スキーマ変更時）
-3. `pnpm --filter @tsl/api content:sync`（初回・content 変更時。ローカル D1 への問題キャッシュ同期。§10.8）
-4. `pnpm --filter @tsl/api db:seed:dev`（任意。固定ユーザーの解答ログ・SRS 状態を開発用データへ再投入。§10.8）
-5. `pnpm --filter @tsl/api dev`（`:8787`）と `pnpm --filter @tsl/web dev`（`:3000`）を並走
-
-web の `dev` は Vinext（Vite）で起動し、`@cloudflare/vite-plugin` が RSC/SSR を workerd 上で実行する。`apps/web/wrangler.jsonc` の `API` Service Binding は dev registry 経由でローカルの API Worker に接続する。production build をローカルで確認するときは `pnpm --filter @tsl/web build` の後に `start`（生成された `dist/server/wrangler.json` を `wrangler dev` で `:3000` に起動）を使う。`preview` は両者を続けて実行する。いずれもブラウザの Origin は `http://localhost:3000` であり、API の既定 `WEB_ORIGIN` と一致する。2 つの `wrangler dev` を同時に起動して inspector port が衝突する場合は、片方に `--inspector-port` を指定する。
-
-Cloudflare の型は `pnpm --filter @tsl/web cf-typegen` で `apps/web/wrangler.jsonc` から生成する。生成物は Git 管理せず、Server 側で使う binding の型は `lib/api-server.ts` で必要な分だけ宣言する。
-
-### 12.4 本番デプロイ手順（順序が仕様）
-
-適用順序と失敗時の停止は [ADR-0010](./adr/0010-deploy-order.md) に移した。
-
-初回のみ：`wrangler d1 create tech-study-lab` を実行し、発行された非秘密の `database_id` を `apps/api/wrangler.toml` に設定して Git 管理する。外部リソースの作成・更新を伴うため、実行前に対象アカウント・D1・Worker・入力値を確認し、明示的な承認を得る。`WEB_ORIGIN`・`ACCESS_ISSUER`・`ACCESS_AUDIENCE` の production 値はリポジトリや `.env` に保存しない。
-
-デプロイ前に、API/public Web hostname と Cloudflare Access application / policy の対象を確認する。ブラウザと同じ `Origin` を指定した `OPTIONS`（`POST` と必要 header を含む）が、Access edge で遮断されず Worker の credentialed CORS 応答に到達するか、同等の正しい Access 応答を返すことを実機で確認する。Access cookie が Web と API の実際の hostname で送信されることも確認できるまで、以下を開始しない。
-
-1. **マイグレーション適用**：`pnpm --filter @tsl/api exec wrangler d1 migrations apply tech-study-lab --remote`
-2. **content sync**：`pnpm --filter @tsl/api content:sync:remote`（`content/` → D1 upsert。§10.8）
-3. **api デプロイ**：`pnpm --filter @tsl/api run deploy --var WEB_ORIGIN:<web-public-url> --var ACCESS_ISSUER:<access-issuer> --var ACCESS_AUDIENCE:<access-audience>`。3 値は**毎回すべて**この deploy 実行時だけ明示指定し、Git や `.env` には保存しない。値を省いた bare deploy は禁止する。Wrangler がローカルまたは不完全な vars へ置き換えると、Access は fail closed となり、CORS も失敗し得る。`pnpm deploy` は pnpm 自身のコマンドと衝突するため、package script は必ず `run deploy` で起動し、引数前に追加の `--` を置かない。
-4. **web デプロイ**：`NEXT_PUBLIC_API_BASE_URL=<api-public-url> pnpm --filter @tsl/web run deploy` を実行する。このコマンドは `CLOUDFLARE_ENV` を外して Vinext の production build を行い、生成された `dist/server/wrangler.json` の Worker 名 `tech-study-lab-web`、`API` Service Binding `tech-study-lab-api#InternalApi`、`DOQueueHandler` の `v1`/`v2` migration 履歴を検査してから、その生成 config を明示して `wrangler deploy` する。`NEXT_PUBLIC_API_BASE_URL` は build 時に Client bundle へ埋め込まれるため、本番 API の公開 URL を毎回指定する。ブラウザが別環境の API へ解答を送らないよう、URL の Worker 名がデプロイ先の API と一致することを build 前に検査する（§12.2）。通常の手動反映は build と upload を続けて実行する。追加引数は `--dry-run` と、§12.9 の成果物分離用の `--prepare-only` / `--upload-only`（同時指定不可）に限定し、CLI による Worker 名・config・env の上書きを防ぐ。
-
-順序の根拠：**スキーマ → データ → API → 画面** の順なら、各ステップの完了時点で稼働中の旧バージョンが壊れない（マイグレーションが追加中心の後方互換であることが前提。§12.6）。
-
-検証環境への web デプロイは `NEXT_PUBLIC_API_BASE_URL=<verification-api-public-url> pnpm --filter @tsl/web run deploy:edge` で行う。`CLOUDFLARE_ENV=edge` で build し、生成 config が Worker 名 `tech-study-lab-web-test`、`API` Service Binding `tech-study-lab-api-test#InternalApi`、空の `migrations`、`workers_dev: true`、`preview_urls: false` であることを検査する。production と検証環境のどちらの deploy も、相手の環境向けに生成された config を Wrangler 起動前に拒否する。設定選択は build 時に行い、deploy 時の環境変数だけで接続先が切り替わると扱わない。`deploy:edge` は本番デプロイ手順に含めない。
-
-検証用 hostname でも公開 `/` と Access で保護する `/home`・`/learn`・`/quiz`・`/review`・`/domains`・`/analytics` の境界を適用する。検証用 API は専用 Access application で保護し、`OPTIONS` は API の credentialed CORS 応答へ転送する。API の deploy と検証 D1 の操作には `apps/api/wrangler.test.jsonc` を明示指定する。API の `WEB_ORIGIN`・`ACCESS_ISSUER`・`ACCESS_AUDIENCE` はデプロイごとに明示指定し、Git や `.env` に保存しない。外部リソース作成、remote D1 への migration/content SQL 実行、Worker/Access 更新は、対象アカウント・検証用リソース・入力値・SQL を確認した承認を得てから行う。実施結果と再実行手順は [Vinext 検証記録](./investigations/2026-10-04-vinext-migration.md) に記録する。
-
-#### 本番 Web の Vinext 切替（Issue #221）
-
-本番 Web Worker `tech-study-lab-web` は OpenNext 成果物で稼働している。リポジトリの標準 build / deploy は Vinext へ一本化したが、本番への最初の Vinext deploy は次の条件をすべて満たしてから、対象・入力値・反映手順を確認した承認に基づいて行う。
-
-1. Issue #220 の CPU 軽減が完了し、Workers Free の検証環境で `/home`・`/review`・`/domains`・`/analytics` × HTML/RSC の連続測定が CPU 上限超過で中断しないこと。
-2. 同じ commit を `deploy:edge` で検証環境へ反映し、主要導線（公開トップ、home、教材、Quiz の採点、Review、領域一覧、分析）、Access 境界、CORS preflight、Logs/Observability を確認していること。
-3. 切替前に `wrangler deployments list --name tech-study-lab-web` で稼働中の OpenNext の version ID と対象 commit を記録していること。
-
-切替は §12.4 の手順4だけを実行し、API・D1 の migration や content sync、本番データの複製は伴わない（API・D1 の契約は変わらない）。切替後は実際の Worker version・binding・主要画面・mutation・Logs を確認し、version ID と証跡を Issue に記録する。失敗時は記録した OpenNext の version ID を `wrangler rollback <version-id> --name tech-study-lab-web` で既知版へ戻し、原因を解消するまで再切替しない。OpenNext の並行運用は恒久化しない。
-
-- 通常リリースは §12.9 の GitHub Actions で実行する。上記コマンドは手動運用・障害調査用として維持する。production も品質検査・環境別 build と変更前の照合が成功したら、人間の追加承認を待たず remote D1 mutation / Worker 更新まで自動実行する。初回 Vinext 切替は上記の条件と Web のみの手順を維持する。
-- 各ステップの成功を確認するまで後続ステップへ進まない。失敗時はそこで停止し、後続の migration/content sync/API/Web deploy を実行しない。復旧が必要な場合は、稼働中の既知の Worker version を確認してから、対象と影響を明示した承認を得てロールバックする。
-
-### 12.5 content 更新の運用ルール
-
-二重反映の規則は [ADR-0006](./adr/0006-content-as-source-of-truth.md) に移した。
-
-content は「web のビルド時バンドル（§8.2）」と「D1 の `questions` 同期（§10.8）」の**二重反映**である。
-
-- content を変更したら、§12.4 の **② content sync と ④ web 再ビルド・デプロイを必ずセットで実行**する。
-- 片方だけ実行すると「画面に問題が表示されるのに採点 API が `QUESTION_NOT_FOUND` を返す」不整合が起きる。
-- CI 化の際は `content/` の差分を検知して両ジョブを必須にする。
-
-### 12.6 マイグレーション運用
-
-変更しない規則と段階的な破壊的変更は [ADR-0011](./adr/0011-immutable-migrations.md) に移した。
-
-- 生成：`pnpm --filter @tsl/api db:generate`（drizzle-kit）→ ローカル適用（`db:migrate:local`）→ テスト → PR。
-- 本番適用はデプロイ手順の先頭（§12.4 の①）。
-- **破壊的変更（列削除・型変更・NOT NULL 追加）は原則避け、追加中心**とする。やむを得ない場合は「新列追加 → データ移行 → 旧列削除」の多段リリースで行う。
-- Git に取り込まれた Drizzle migration のファイル名・SQL 本文、および既存の `meta/*_snapshot.json` は変更・削除・改名しない。migration の履歴は適用済みファイル名と SQL に依存するため、修正が必要なら新しい migration を追加する。CI は PR base に存在する `.sql` と snapshot の blob を checkout 済み PR HEAD と比較し、削除・改名・内容変更を拒否する。新規 migration と snapshot の追加は許可する。`meta/_journal.json` は Drizzle の生成結果として既存 entry を保ったまま新しい entry を末尾へ追加する。CI は既存 entry が同じ順序のまま保持されていることも確認し、journal の削除や既存 entry の変更・削除・並べ替えを拒否する。
-- 過去に `0002_add_question_metadata.sql` として適用済みの**ローカル D1**を、同じ SQL の現行名 `0002_nasty_guardsmen.sql` に合わせる必要がある場合に限り、先に D1 のバックアップ、`d1_migrations` の旧名行の有無、実スキーマが migration 後の状態であることを確認する。旧名行がちょうど 1 件あり、新名行が存在しないときだけ、次の条件付き更新を `wrangler d1 execute tech-study-lab --local` で実行し、更新後の履歴を確認してから `db:migrate:local` を実行する。条件に合わない場合は更新せず、履歴とスキーマを調査する。
-
-  ```sh
-  pnpm --filter @tsl/api exec wrangler d1 execute tech-study-lab --local --command "UPDATE d1_migrations SET name = '0002_nasty_guardsmen.sql' WHERE name = '0002_add_question_metadata.sql' AND (SELECT COUNT(*) FROM d1_migrations WHERE name = '0002_add_question_metadata.sql') = 1 AND NOT EXISTS (SELECT 1 FROM d1_migrations WHERE name = '0002_nasty_guardsmen.sql');"
-  ```
-
-  この履歴修復はローカル D1 に限る。適用済み migration の変更や production 履歴の書き換えには使わない。
-
-### 12.7 バックアップ・観測（当面の運用）
-
-- **バックアップ**：教材・問題は Git にあるため、守る対象は D1 の動的データ（`answer_logs` / `srs_states` / `lesson_views`）のみ。当面は必要時に `wrangler d1 export` を手動実行し、マルチユーザー公開時に定期化（Cron 等）を検討する。
-- **観測**：rate limit / 永続書き込み（[ADR-0004](./adr/0004-persistent-write-rate-limit.md)）では、429・limiter failure・成功した永続書き込みごとに `event`・`endpoint`・`writeUnit` だけを含む PII-free の構造化 Worker log を出す。運用時は Workers Logs の event 別件数と D1 dashboard の `answer_logs` / `lesson_views` / `srs_states` の書き込み・容量メトリクスを同じ時間帯で突合する。`console.error` は §10.6 の未処理エラー出力に限る。Analytics Engine を含む外部監視は、既存のログと D1 メトリクスでは不足すると判断された場合に別 issue で検討する。
-
-### 12.8 通常SSR・標準SSGの実行確認
-
-通常 SSR の認証後 route は、ユーザー固有の API データをリクエストごとに取得し、route error boundary が取得失敗を扱うことを確認する。教材・演習 route は `generateStaticParams` が全 content params を返し、Vinext の production build が標準 SSG を生成することを確認する。Client hook の API client は最初の送信まで遅延生成し、render / SSG 時のブラウザ専用設定への依存を避ける。
-
-- **成果物検証（CI）**：`pnpm build` の後に `pnpm --filter @tsl/web verify:build` を実行する。`dist/server/vinext-prerender.json` の rendered route が `/`・`/learn`・全 content params・`/404` と一致し、`/home`・`/review`・`/domains`・`/analytics` が prerender されていないこと、生成 HTML / RSC と公開 Client JS に `answerIndex` が含まれないこと、SSR の Worker entry と `API`（`InternalApi`）binding が生成 config に存在すること、内部 cache artifact が `run_worker_first` で Worker 経由になることを確認する。
-- **実行時検証（ローカル・検証環境）**：API を起動し、web を `build` + `start` で起動した状態で `pnpm --filter @tsl/web verify:ssg` を実行する（接続先は `WEB_VERIFY_BASE_URL`、既定 `http://localhost:3000`）。content route の HTML / RSC が `x-vinext-cache: HIT` で生成物と一致すること、SSR route が `no-store` で error boundary を返さないこと、別表記 URL と内部 cache artifact の直接取得が 404 になることを確認する。認証後 route は full GET に加えて `?_rsc` navigation も `text/x-component`・`no-store` の通常 SSR として完了することを確認する。
-
-構成確認では、`API` Service Binding が残り、`cacheComponents`、ISR 用の Incremental Cache、R2、KV、Durable Object Queue の有効 binding、Worker 自己参照 binding が存在しないこと、登録済み `DOQueueHandler` の `v1` 作成履歴と後続の `v2` 削除 migration を top-level で維持し検証用 env が継承しないこと、標準 script が OpenNext に依存しないことをテストで固定する。
-
-### 12.9 GitHub Actions による環境別リリース（Issue #36）
-
-適用順序と失敗時の停止は [ADR-0010](./adr/0010-deploy-order.md)、content の同期を毎回実行する規則は [ADR-0006](./adr/0006-content-as-source-of-truth.md) に移した。
-
-- PR CI は既存の検査・build のみ。`develop` push は `verification`、`main` push は `production` を対象とし、手動実行もこの対応を固定する。GitHub Environments の許可ブランチはそれぞれ `develop` / `main` に限定する。
-- `prepare` job は Cloudflare token を持たず、対象 commit を固定して検査・環境別 build・SQL 生成・manifest 作成を完了する。manifest は環境、SHA、source tree、問題数、全ファイルの SHA-256、migration 一覧を含む。API は dry-run で生成した bundle、Web は生成 config と `dist` を反映用成果物として保存する。後続の `apply` job では再ビルドせず、同じ run の成果物を照合して利用する。
-- production も `prepare` 成功後に `apply` が自動開始し、人間の追加承認を待たず environment Secrets から Cloudflare token を取得する。両 environment の required reviewers・wait timer・custom deployment protection rules は設定せず、正確な許可ブランチを preflight で検査する。検証 / 本番の enable flag は明示設定されるまで無効とし、本番初回切替条件を満たす前に有効化しない。PR のマージは従来どおり人間が行う。
-- apply は **設定・manifest・鮮度・検証済み source の検査 → migration → content sync → API → API 確認 → Web → smoke test → 成功記録** の順。どの段階でも失敗したら後続を停止する。同じ環境の通常リリースと復旧は共通 concurrency group で直列化し、`cancel-in-progress: false` とする。
-- content sync の CI 経路は SQL 生成と remote 実行を分離し、manifest の SQL を固定した D1 / config に非対話で適用する。問題が空の CI リリースは書き込み動作確認ができないため拒否する。既存の手動 remote は対話 TTY 確認を維持する。冪等な同期は失敗した run が D1 だけを変更した場合の取りこぼしを避けるため、成功記録の content 差分に関わらず毎回実行する（差分は計画の情報として記録する）。Web は毎回同じ source から反映し、二重反映の片方だけを省略しない。
-- Worker / DB の名前・ID・config、Web origin、公開 API URL、Service Binding、migration 履歴を対象環境と照合し、任意 CLI 引数による上書きを認めない。API の `WEB_ORIGIN` / `ACCESS_ISSUER` / `ACCESS_AUDIENCE` は environment Variables から毎回指定する。認証情報は environment Secrets にのみ保存し、Git・ログ・artifact に含めない。
-- 成功記録は GitHub Deployment に環境・SHA・tree・Worker version・run ID を保存する。本番候補は直近の正常 verification と source tree が一致することを必須とし、merge による SHA の違いを許容する。変更開始前に最新 branch SHA を再検査し、古い run が新しい反映を巻き戻すことを防ぐ。
-- smoke test は公開 `/` と `/health`、未認証の Access redirect、credentialed CORS preflight、CI 専用の Access Service Token を使う認証済み主要画面を検査する。Service Token の Client ID / Secret は environment Secrets に保存し、Web / API の Access Application でこの token に限定する Service Auth policy を運用者が設定する。token 失効時は検査を失敗させる。専用 verification では採点・閲覧記録の書き込みを確認し、production では GET と OPTIONS だけを実行する。Access policy / API 認証境界を自動で弱めない。
-- deploy 前後の実際の Worker version を記録する。通信エラー後の再実行は実状態・適用済み migration・冪等 upsert を確認して行い、失敗した操作をその場で無条件に再試行しない。本番 Worker rollback は対象 version ID と確認した現在の version ID を指定する手動 workflow とし、その実行操作を復旧の承認とする。environment での追加承認は設けず、復旧後は成功ソースの証明を無効にする。D1 の状態は戻らず、DB 復旧は別手順とする。
-- 実行手順、環境設定、artifact のアクセス・保持期間、失敗時の再実行・復旧方法は [デプロイ運用手順](./deployment.md) に定める。初回の環境設定・token 登録・Service Token の登録・更新は運用者が行う。
+- [ADR 索引](./adr/README.md)
+- [デザインシステムと画面の規約](./design-system.md)
+- [コンテンツ規約](./content-guidelines.md)
+- [環境・デプロイ運用](./deployment.md)
+- [AIコーディングエージェント連携仕様](./ai-coding-agents.md)
+- 補助資料（実装時に参照しやすい形へ再構成したもの。本書・ADR・コードと食い違う場合はそちらを正とする）: [API 仕様カタログ](./api-spec.html)・[フロントエンドアーキテクチャ](./frontend-architecture.html)・[バックエンドアーキテクチャ](./backend-architecture.html)・[認証アーキテクチャ](./authentication-architecture.html)

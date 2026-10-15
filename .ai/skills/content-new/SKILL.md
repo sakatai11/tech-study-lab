@@ -11,7 +11,7 @@ Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runt
 
 規約の一次ソースは次の3つである。フィールドや件数の制約をこのスキルへ複製せず、実行時点の一次ソースを参照する。
 
-- `docs/design.md` §11: 配置・ID・問題数
+- `docs/content-guidelines.md`: 配置・ID・問題数
 - `packages/shared/src/schema/content.ts`: frontmatter の構造
 - `packages/shared/src/content-parser.ts`: パスの整合と ID の一意性
 
