@@ -31,17 +31,14 @@ describe('AppShell', () => {
 
     const desktop = screen.getByRole('navigation', { name: 'メインナビゲーション' })
     const desktopDashboard = desktop.querySelector('a[href="/home"]')
-    expect(desktopDashboard).toHaveProperty(
-      'textContent',
-      expect.stringContaining('ダッシュボード'),
-    )
+    expect(desktopDashboard).toHaveProperty('textContent', expect.stringContaining('ホーム'))
     expect(desktopDashboard?.getAttribute('aria-current')).toBe('page')
 
     const mobile = screen.getByRole('navigation', { name: 'モバイルナビゲーション' })
     const mobileHome = mobile.querySelector('a[href="/home"]')
     expect(mobileHome).toHaveProperty('textContent', expect.stringContaining('ホーム'))
     expect(mobileHome?.getAttribute('aria-current')).toBe('page')
-    expect(desktop.querySelector('a[href="/learn/security/xss/preventing-xss"]')).toHaveProperty(
+    expect(desktop.querySelector('a[href="/learn"]')).toHaveProperty(
       'textContent',
       expect.stringContaining('教材'),
     )
@@ -51,7 +48,21 @@ describe('AppShell', () => {
     )
     expect(desktop.querySelector('a[href="/analytics"]')).toHaveProperty(
       'textContent',
-      expect.stringContaining('アナリティクス'),
+      expect.stringContaining('学習分析'),
     )
+  })
+
+  it('links both lesson navigation items to /learn and selects them for the learn section', () => {
+    render(
+      <AppShell currentNavigation="learn">
+        <p>教材一覧</p>
+      </AppShell>,
+    )
+
+    for (const label of ['メインナビゲーション', 'モバイルナビゲーション']) {
+      const link = screen.getByRole('navigation', { name: label }).querySelector('a[href="/learn"]')
+      expect(link?.textContent).toContain('教材')
+      expect(link?.getAttribute('aria-current')).toBe('page')
+    }
   })
 })

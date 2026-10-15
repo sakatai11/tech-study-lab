@@ -42,10 +42,17 @@ body:
         - apps/api（Hono API）
         - packages/shared（スキーマ・型）
         - content/（教材・問題）
-        - docs/design.md（設計更新が必要）
+        - docs/adr・docs/design.md（ADR の追加・置き換えが必要）
         - .github/・CI・設定ファイル
     validations:
       required: true
+  - type: input
+    id: adr-ref
+    attributes:
+      label: 関連 ADR / 新規 ADR の要否
+      description: 契約に関わる場合のみ。関連する ADR（例「ADR-0003」）、またはバグの原因となった契約からの逸脱。契約を新設・変更するなら「新規 ADR が必要」と記載。
+    validations:
+      required: false
   - type: textarea
     id: notes
     attributes:

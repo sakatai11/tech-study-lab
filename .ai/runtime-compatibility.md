@@ -53,9 +53,17 @@
 
 ### Codex サブエージェントのモデル
 
-`.codex/agents/*.toml` に登録するエージェント自身のモデル設定は、各 TOML の `model` / `model_reasoning_effort` が一次ソースである。現在は `reviewer` が `gpt-6-sol` / `high`、`content-author` が `gpt-6-sol` / `medium` である。次節の別モデル CLI レビューで呼ぶモデルとは別物である。
+`.codex/agents/*.toml` に登録するエージェント自身のモデル設定は、各 TOML の `model` / `model_reasoning_effort` が一次ソースである。TOML の値は親セッションのモデルより優先される。現在は `reviewer` が `gpt-6.1-sol` / `high`、`content-author` が `gpt-6.1-sol` / `medium` である。
 
-仕様が曖昧・矛盾している場合、複数領域をまたぐ設計判断が必要な場合、セキュリティレビューの場合は、該当する TOML を `gpt-6-astra` / `high` へ一時的に昇格してよい。昇格は未コミットのローカル上書きで行い、コミットの前に標準設定へ戻す。
+- **固定する理由**: エージェントのモデルを、起動した Codex セッションで選んだモデルに左右させないためである。
+- **更新**: 新しい Sol が出たら、両方の TOML の `model` を揃えて更新する（Issue と PR で行い、`pnpm sync:agents --check` と `pnpm test:hooks` を通す）。モデルを古い方へ戻さないため、次をすべて確かめてから更新する。
+  - 先に Codex CLI を最新にする（`codex update`）。モデルのカタログは CLI が持つため、古い CLI のカタログには新しいモデルが載らないことがある。
+  - 最新にした CLI で `node .ai/scripts/latest-codex-model.mjs sol` を実行し、その出力が現在の TOML の `model` と異なること。
+  - `codex debug models` のカタログで、出力したモデルの `priority` の値が、現在の TOML の `model` の値より小さい（優先される）こと。現在のモデルがカタログにない場合や、現在のモデルの方が優先される場合は更新せず、CLI の状態を調べる。
+
+このモデル設定は、次節の別モデル CLI レビューで呼ぶモデルとは別物である。
+
+仕様が曖昧・矛盾している場合、複数領域をまたぐ設計判断が必要な場合、セキュリティレビューの場合は、該当する TOML の `model` をその時点で最新の Astra（`node .ai/scripts/latest-codex-model.mjs astra` の出力）に、`model_reasoning_effort` を `high` に置き換えて一時的に昇格してよい。昇格は未コミットのローカル上書きで行い、コミットの前に標準設定へ戻す。
 
 ## 別モデル CLI レビュー
 
@@ -63,18 +71,23 @@
 
 | ホストランタイム | オーケストレーターが直接実行するコマンド | モデル指定 | 送信先 |
 |---|---|---|---|
-| Claude Code | `codex exec review --base <effective-base> -c sandbox_mode="read-only"` | `-m gpt-6-sol` | OpenAI |
+| Claude Code | `codex exec -s read-only - < <brief>` | `-m <最新の Sol>`（`node .ai/scripts/latest-codex-model.mjs sol` の出力） | OpenAI |
 | Codex（App / CLI） | `git diff <effective-base>...HEAD \| .ai/scripts/run-claude-review.sh -p ...` | `--model opus` | Anthropic |
 
 - **モデル指定**: `-m` / `--model` で必ず明示する。既定のモデルに委ねない。指定したモデルが使えるかは、起動前に契約とクライアントの環境で確認する。
-- **観点の分担**: `reviewer` が正確性優先、別モデル CLI が仕様準拠優先である（`.ai/review-guidelines.md`）。CLI の出力はオーケストレーターが直接読み、同規約の分類と重要度で判定する。
+  - Codex CLI には、起動のたびにその時点で最新の Sol を渡す。`node .ai/scripts/latest-codex-model.mjs sol` が `codex debug models` のカタログから、一覧に出る Sol 系のうち `priority` の値が最小（最優先）のモデルを1つ選んで出力する。
+  - スクリプトが非0で終わった場合（カタログを取得できない、Sol がない、最新が1つに決まらない、Sol の `priority` が数値でない）は「判定: error」とし、CLI を実行しない。既定のモデルや以前のモデル名で代用しない。
+  - 選んだモデル名は、起動時のヘッダーの `model:` と一致することを確かめ、判定に必要なメタ情報としてレビューの記録（PR 本文など）に残す。一致しない場合は「判定: error」とし、その出力を判定に使わない。
+- **観点の分担**: `reviewer` が正確性優先、別モデル CLI が契約準拠優先（`spec-compliance-first`）である（`.ai/review-guidelines.md`）。CLI の出力はオーケストレーターが直接読み、同規約の分類と重要度で判定する。
 - **起動する主体**: 別モデル CLI はサブエージェントからは起動しない。オーケストレーターが継続セッションで直接起動する。
 - **ブリーフ**: `<scratchpad>` のファイルとして渡し、長文を起動プロンプトへ直接貼らない。ブリーフには、対象 Issue・対象機能・受け入れ条件・範囲外の扱い・差分範囲を含め、同意済みの送信範囲と一致させる。
+  - Codex CLI にはブリーフを stdin（`-`）で渡す。差分は CLI 自身に `git diff <effective-base>...HEAD` で読ませるので、ブリーフにはこのコマンドとコミット範囲を書く。
+  - `codex exec review` サブコマンドは使わない。`--base` と PROMPT（stdin の `-` を含む）を併用できず、ブリーフを渡せないためである（codex-cli 0.160.0 で確認）。
 - **起動前の確認**:
   - `git merge-base <base> HEAD` で effective base を1つに定め、`git rev-parse --verify <effective-base>^{commit}` で検証する。終了コードが非0、出力が空または複数行、検証失敗のいずれかなら「判定: error」とし、CLI を実行しない。
   - レビュー対象はコミット済みの差分に限る。`git status --short` が空であることと、`committedRange` が実際の差分と一致することを確かめる。
 - **read-only の徹底**:
-  - `codex exec review` の既定の Sandbox は `workspace-write` なので、`-c sandbox_mode="read-only"` を必ず付ける。`review` サブコマンドでは `-s` / `--sandbox` は使わない。
+  - Codex CLI には `-s read-only` を必ず付け、Sandbox を設定ファイルの値に委ねない。起動時のヘッダーに `sandbox: read-only` と表示されることを確かめる。
   - Claude CLI には `--allowedTools "Read Grep Glob"` と `--disallowedTools "Edit Write NotebookEdit Bash"` を付け、Keychain wrapper 以外には資格情報を渡さない。
 - **出力の扱い**: raw の stdout / stderr はファイル・ブリーフ・scratchpad に残さない。永続化する場合は、機密を除き、判定に必要なメタ情報だけにする。
 - **監視と失敗**:

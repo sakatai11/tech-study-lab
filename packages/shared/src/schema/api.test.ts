@@ -18,7 +18,7 @@ import {
   reviewQueueResponseSchema,
 } from './api'
 
-describe('answerRequestSchema', () => {
+describe('answerRequestSchema [ADR-0002] [ADR-0003] [ADR-0005]', () => {
   it('selectedIndex 0 と responseTimeMs なしを受け付ける', () => {
     expect(
       answerRequestSchema.safeParse({
@@ -93,6 +93,26 @@ describe('answerRequestSchema', () => {
       }).success,
     ).toBe(false)
   })
+
+  it('クライアント申告の正誤を受け付けない', () => {
+    expect(
+      answerRequestSchema.safeParse({
+        questionId: 'q-1',
+        selectedIndex: 1,
+        isCorrect: true,
+      }).success,
+    ).toBe(false)
+  })
+
+  it('呼び出し元の文脈を受け付けない', () => {
+    expect(
+      answerRequestSchema.safeParse({
+        questionId: 'q-1',
+        selectedIndex: 1,
+        source: 'review',
+      }).success,
+    ).toBe(false)
+  })
 })
 
 describe('answerResponseSchema', () => {
@@ -133,7 +153,7 @@ describe('answerResponseSchema', () => {
   })
 })
 
-describe('lessonViewRequestSchema', () => {
+describe('lessonViewRequestSchema [ADR-0003]', () => {
   it('lessonId を受け付ける', () => {
     expect(lessonViewRequestSchema.safeParse({ lessonId: 'security-xss-01' }).success).toBe(true)
   })
@@ -315,7 +335,7 @@ describe('domainSummarySchema', () => {
   })
 })
 
-describe('analytics response schemas', () => {
+describe('analytics response schemas [ADR-0007]', () => {
   it('accepts the summary contract including retention distribution', () => {
     expect(
       analyticsSummaryResponseSchema.safeParse({
@@ -517,7 +537,7 @@ describe('analytics response schemas', () => {
   })
 })
 
-describe('recentActivityResponseSchema', () => {
+describe('recentActivityResponseSchema [ADR-0014]', () => {
   it('accepts mixed activity items with required fields', () => {
     expect(
       recentActivityResponseSchema.safeParse({

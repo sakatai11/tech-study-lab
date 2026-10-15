@@ -66,7 +66,7 @@ questions:
 `
 }
 
-describe('createContentSyncPayload', () => {
+describe('createContentSyncPayload [ADR-0006]', () => {
   it('extracts the three current XSS questions', () => {
     expect(createContentSyncPayload(xssContentFiles(), FIXED_USER_ID)).toEqual({
       userId: FIXED_USER_ID,
@@ -169,7 +169,7 @@ describe('createContentSyncPayload', () => {
   })
 })
 
-describe('createContentSyncSql', () => {
+describe('createContentSyncSql [ADR-0006]', () => {
   it('upserts current metadata and finalizes active membership in one update', () => {
     const sql = createContentSyncSql(
       {

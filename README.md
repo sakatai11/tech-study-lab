@@ -8,12 +8,12 @@
 
 ## ハイライト
 
-- **仕様駆動開発**：[`docs/design.md`](./docs/design.md) を仕様の正本とし、仕様変更は設計文書の更新から始めます。人間と AI が同じ基準で実装とレビューを行えます。
+- **ADR とテストで守る設計契約**：不変条件はテストで機械的に検証し、テストでは表せない「理由」と「適用範囲」だけを [ADR](./docs/adr/README.md) に残します。契約を変えるときは ADR から始めるので、人間と AI が同じ基準で実装とレビューを行えます。
 - **Issue からPRまでのエージェントパイプライン**：GitHub Issue を起点に、主エージェントが調査・方針決定・実装・品質ゲート・修正を一貫して進め、独立レビューをサブエージェントに委任します。マージは必ず人間が判断します。
 - **機械で守るガードレール**：TypeScript strict、Zod、Biome、dependency-cruiser による依存境界の検証、エージェント契約の検査をすべて CI の PR ゲートに入れています。
 - **Knowledge Graph による影響範囲の特定**：コードと設定から構造グラフを抽出します。エージェントは全文検索の前にグラフで影響範囲を絞り込みます。
 - **Claude Code と Codex の両対応**：スキル・エージェント定義・hooks を `.ai/` に一元化し、どちらのランタイムからも同じワークフローを使えます。
-- **Cloudflare 構成**：Web と Hono API を別々の Worker としてデプロイし、Service Binding と型安全 RPC（`hc`）でつないでいます。Web の開発・ビルド・デプロイ手順は Next.js 互換の Vinext に統一し、本番 Web Worker も Vinext へ移行します。初回切替の条件と手順は [design.md §12.4](./docs/design.md#124-本番デプロイ手順順序が仕様) にまとめています。
+- **Cloudflare 構成**：Web と Hono API を別々の Worker としてデプロイし、Service Binding と型安全 RPC（`hc`）でつないでいます。Web の開発・ビルド・デプロイ手順は Next.js 互換の Vinext に統一し、本番 Web Worker も Vinext へ移行します。初回切替の条件と手順は [環境・デプロイ運用](./docs/deployment.md#本番-web-の-vinext-切替issue-221) にまとめています。
 
 ## 主な機能
 
@@ -62,7 +62,7 @@ SRS は問題単位で管理しており、弱点を1問ごとに追跡できま
 
 設計の詳細は次の資料にまとめています。
 
-- [設計文書（一次ソース）](./docs/design.md)
+- [設計文書（方針・依存方向・データフロー）](./docs/design.md)・[ADR 索引（設計契約）](./docs/adr/README.md)
 - [API 仕様](./docs/api-spec.html) / [フロントエンド](./docs/frontend-architecture.html) / [バックエンド](./docs/backend-architecture.html) / [認証](./docs/authentication-architecture.html)
 
 ## AI 駆動開発の仕組み
@@ -81,7 +81,7 @@ flowchart LR
   PR --> H["人間がレビューしてマージ"]
 ```
 
-- `reviewer` は「正確性重視」のプロファイルで独立レビューを行います。別モデル CLI による「仕様準拠重視」のレビューは、既定では変更のリスクに応じて追加し、Claude と Codex を組み合わせて互いの見落としを補います（[レビュー規約](./.ai/review-guidelines.md)）。
+- `reviewer` は「正確性重視」のプロファイルで独立レビューを行います。別モデル CLI による「契約準拠重視」のレビューは、既定では変更のリスクに応じて追加し、Claude と Codex を組み合わせて互いの見落としを補います（[レビュー規約](./.ai/review-guidelines.md)）。
 - ブランチ運用は Git Flow 型です。作業ブランチは `develop` から切り、`main` へは直接コミットしません。
 
 ### 2. スキルとサブエージェント
@@ -168,7 +168,7 @@ API は `http://localhost:8787`、Web は `http://localhost:3000` で起動し�
 
 GitHub Actions による自動デプロイ。環境設定と有効化を済ませると、`develop` への push で検証環境、`main` への push で本番環境へ反映します。
 
-本番の自動デプロイは、検証環境での確認と初回の Vinext 切替を完了してから有効化します。初回切替は Web のみを対象とし、[設計文書 §12.4](./docs/design.md#124-本番デプロイ手順順序が仕様) の条件と手順に従います。環境設定・有効化・失敗時の再実行・Worker の復旧は [デプロイ運用手順](./docs/deployment.md) を参照してください。
+本番の自動デプロイは、検証環境での確認と初回の Vinext 切替を完了してから有効化します。初回切替は Web のみを対象とし、[環境・デプロイ運用の「本番 Web の Vinext 切替」](./docs/deployment.md#本番-web-の-vinext-切替issue-221) の条件と手順に従います。環境設定・有効化・失敗時の再実行・Worker の復旧は [環境・デプロイ運用](./docs/deployment.md) を参照してください。
 
 ## 今後の予定
 

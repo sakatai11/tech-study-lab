@@ -5,7 +5,7 @@ import { domainKeySchema } from './content'
 /**
  * apps/api の入出力契約。
  * zValidator / route返り値(satisfies) / フロント(z.infer) の3経路で共有する
- * （design.md §8.6, §10.6）。
+ * （design.md §5.1, §5.7）。
  */
 
 export const answerRequestSchema = z

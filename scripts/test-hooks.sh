@@ -1,12 +1,15 @@
 #!/bin/sh
 # AIハーネスの動作と構成の整合を検査するゲート。
 #
-# 1. hook fixture / 共通スキルログ / `sync:agents --check` による hook と生成物の動作検証。
+# 1. hook fixture / 共通スキルログ / `sync:agents --check` による hook と生成物の動作検証と、
+#    別モデル CLI レビューに渡す最新モデルの選択ロジックの検証。
 # 2. Claude Code と Codex の両ランタイムから同じ `.ai/` の一次ソースへ届くことの構成検査
 #    （発見用リンク、Codex agent TOML、パス別ルールの参照、権限迂回フラグの不在）。
 # 3. weekly-retro レンダラーの出力検証。
 # 4. `docs/design.md` の章参照（`§N` / `design.md N.N` / `design.md#<見出しスラッグ>`）が実在する見出しへ
 #    解決されることの検査（scripts/test-design-chapter-refs.mjs）。
+# 5. `docs/adr/` の ADR の書式、「検証」節のリンク先がテストとして実在し ADR 番号を含むこと、
+#    リポジトリ中の `ADR-NNNN` 参照が実在する ADR へ解決されることの検査（scripts/test-adr-refs.mjs）。
 #
 # 契約文書の文言は検査しない。文言の存在はモデルが従うことを保証せず、改善のたびに期待値の更新を
 # 強いるため。ここでは機械的に判定できる構成と、コードの振る舞いだけを固定する。
@@ -75,6 +78,9 @@ jq -e -s '
 ' "$log_dir/skill-usage.jsonl" >/dev/null
 
 node scripts/sync-agent-config.mjs --check
+
+# 別モデル CLI レビューに渡す最新モデルの選択（Issue #247）。CI には codex がないため、選択ロジックだけを検査する。
+node --test .ai/scripts/latest-codex-model.test.mjs >/dev/null
 
 # ---- 2. 両ランタイムの構成整合 ----
 printf '%s\n' "Checking Claude/Codex harness consistency..."
@@ -175,5 +181,9 @@ expect_contains "weekly retro renders parent tracker number without title or URL
 # 章番号の変更・削除で、リポジトリ中の `§N` / `design.md N.N` / `design.md#<見出しスラッグ>` が
 # 黙って腐ることを防ぐ。参照切れ検出の回帰テストはスクリプト側が持つ。
 node scripts/test-design-chapter-refs.mjs
+
+# ---- 5. ADR 参照 ----
+# ADR とテストの対応、ADR 番号の参照が黙って切れることを防ぐ（ADR-0001）。回帰テストはスクリプト側が持つ。
+node scripts/test-adr-refs.mjs
 
 printf '%s\n' "Harness checks passed!"

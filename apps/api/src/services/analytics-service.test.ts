@@ -32,7 +32,7 @@ function createDeps(overrides: Partial<AnalyticsDeps> = {}): AnalyticsDeps {
   }
 }
 
-describe('analytics service', () => {
+describe('analytics service [ADR-0007]', () => {
   it('returns zero values for an empty user', async () => {
     await expect(getAnalyticsSummary(createDeps(), { userId: 'u1', now })).resolves.toEqual({
       totalAnswerCount: 0,

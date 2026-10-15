@@ -51,6 +51,7 @@ describe('lesson view model mappers', () => {
       topic: 'xss',
       id: 'security-xss-01',
       title: '安全な表示',
+      estimatedMinutes: 18,
       markdownBody: '# 本文',
       questions: [
         {

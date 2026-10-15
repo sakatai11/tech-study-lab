@@ -20,12 +20,12 @@ export function ReviewIntro({ dueCount, previews }: ReviewIntroProps) {
         <Badge className="border-purple bg-purple-bg text-purple">{dueCount}問</Badge>
       </div>
       <p className="mb-0 mt-5 leading-7 text-ink-2">
-        dueAt の古い問題から順に復習します。APIで採点された結果と解説を確認できます。
+        期限を過ぎてから長い問題の順に出題します。解答するとすぐに正誤と解説が表示されます。
       </p>
       <div className="mt-5 rounded-xl border-2 border-border bg-well px-4 py-3">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="m-0 text-base font-black text-ink">due プレビュー</h2>
-          <Badge className="border-purple bg-purple-bg text-purple">max 20</Badge>
+          <h2 className="m-0 text-base font-black text-ink">出題予定</h2>
+          <Badge className="border-purple bg-purple-bg text-purple">最大20問</Badge>
         </div>
         <ul className="mt-3 grid gap-2 p-0">
           {previews.map((preview) => (
@@ -35,7 +35,7 @@ export function ReviewIntro({ dueCount, previews }: ReviewIntroProps) {
             >
               <span className="font-mono text-xs text-ink-2">{preview.questionId}</span>
               <span className="font-mono text-xs text-red">
-                {preview.overdueDays > 0 ? `${preview.overdueDays}日滞留` : '今日 due'}
+                {preview.overdueDays > 0 ? `${preview.overdueDays}日超過` : '今日が期限'}
               </span>
             </li>
           ))}

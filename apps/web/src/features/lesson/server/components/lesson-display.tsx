@@ -5,6 +5,7 @@ import ReactMarkdown from 'react-markdown'
 
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
+import { MaterialSymbol } from '@/components/ui/material-symbol'
 import { TermCrumb } from '@/components/ui/term-crumb'
 
 import { LessonViewRecorder } from '../../client/components/lesson-view-recorder'
@@ -28,7 +29,7 @@ export function LessonDisplay({ viewModel }: { viewModel: LessonViewModel }) {
             </h1>
           </div>
           <Badge className="border-blue bg-blue-bg text-blue">
-            {viewModel.questions.length}問 · markdown
+            {viewModel.questions.length}問 · 約{viewModel.estimatedMinutes}分
           </Badge>
         </div>
       </header>
@@ -41,16 +42,18 @@ export function LessonDisplay({ viewModel }: { viewModel: LessonViewModel }) {
 
       <footer className="flex flex-wrap items-center justify-between gap-3">
         <Link
-          className="inline-flex min-h-11 items-center justify-center rounded-xl border-2 border-border bg-surface px-4 py-2.5 font-bold text-ink-2 shadow-[0_4px_0_var(--border)] transition-transform hover:border-border-hi hover:text-ink active:translate-y-1 active:shadow-none"
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border-2 border-border bg-surface px-4 py-2.5 font-bold text-ink-2 shadow-[0_4px_0_var(--border)] transition-transform hover:border-border-hi hover:text-ink active:translate-y-1 active:shadow-none"
           href={`/learn/${viewModel.domain}/${viewModel.topic}`}
         >
-          ← レッスン一覧
+          <MaterialSymbol className="size-5" name="arrow_back" />
+          レッスン一覧
         </Link>
         <Link
-          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-green px-4 py-2.5 font-bold text-white shadow-[0_4px_0_var(--green-shade)] transition-transform hover:brightness-110 active:translate-y-1 active:shadow-none"
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-green px-4 py-2.5 font-bold text-white shadow-[0_4px_0_var(--green-shade)] transition-transform hover:brightness-110 active:translate-y-1 active:shadow-none"
           href={`/quiz/${viewModel.id}`}
         >
-          問題を解く →
+          問題を解く
+          <MaterialSymbol className="size-5" name="arrow_forward" />
         </Link>
       </footer>
     </article>

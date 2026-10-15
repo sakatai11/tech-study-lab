@@ -13,10 +13,11 @@ export function ReviewRunner({ viewModel }: { viewModel: ReviewViewModel }) {
   return (
     <QuizInteractive
       key={viewModel.batchKey}
+      eyebrowPrefix="review"
       explanations={viewModel.explanations}
       hasMore={viewModel.hasMore}
       introContent={<ReviewIntro dueCount={viewModel.dueCount} previews={viewModel.previews} />}
-      introStartLabel="復習を開始 →"
+      introStartLabel="復習を開始"
       onComplete={() => {
         if (viewModel.hasMore) {
           router.refresh()
@@ -25,6 +26,7 @@ export function ReviewRunner({ viewModel }: { viewModel: ReviewViewModel }) {
       questions={viewModel.questions}
       resultHomeHref={viewModel.resultHomeHref}
       resultHomeLabel={viewModel.resultHomeLabel}
+      resultTitle="復習完了"
       title={viewModel.title}
     />
   )

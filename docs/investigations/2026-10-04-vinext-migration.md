@@ -1,10 +1,10 @@
 # Vinext 1.0 移行可否の検証記録
 
-> **2026-10-11 追記**：検証用 Worker を Cloudflare 上でも `tech-study-lab-web-test` / `tech-study-lab-api-test` に改名し、API config を `apps/api/wrangler.test.jsonc` へ改名した。D1 は既存 DB を改名できないため、`tech-study-lab-test` を新規作成して検証データを移行し、接続先の ID を更新した。旧 D1 は復旧用に保持している。以下の `-vinext` の Worker 名・hostname・config パス・version ID は当時の実施記録として残す。現行の設定は [design.md §12.1](../design.md#121-環境定義)、移行結果は [検証用リソースの名称変更記録](2026-10-11-test-resource-rename.md) を参照する。
+> **2026-10-11 追記**：検証用 Worker を Cloudflare 上でも `tech-study-lab-web-test` / `tech-study-lab-api-test` に改名し、API config を `apps/api/wrangler.test.jsonc` へ改名した。D1 は既存 DB を改名できないため、`tech-study-lab-test` を新規作成して検証データを移行し、接続先の ID を更新した。旧 D1 は復旧用に保持している。以下の `-vinext` の Worker 名・hostname・config パス・version ID は当時の実施記録として残す。現行の設定は [環境・デプロイ運用](../deployment.md) の「環境定義」、移行結果は [検証用リソースの名称変更記録](2026-10-11-test-resource-rename.md) を参照する。
 
-> **2026-10-08 追記**：Issue #221 で Vinext を正式な Web 基盤へ移行した。以下は移行判断までの履歴であり、本文中の `dev:vinext` / `build:vinext` / `start:vinext` / `deploy:vinext`、`wrangler.vinext.jsonc`（web）、OpenNext alias shim は現在 `dev` / `build` / `start` / `deploy:edge`、`apps/web/wrangler.jsonc` の `env.edge`、`cloudflare:workers` を直接使う `lib/api-server.ts` に置き換わっている。本番切替の条件（Issue #220 の CPU 上限超過の解消を含む）は [design.md §12.4](../design.md#124-本番デプロイ手順順序が仕様) を参照する。
+> **2026-10-08 追記**：Issue #221 で Vinext を正式な Web 基盤へ移行した。以下は移行判断までの履歴であり、本文中の `dev:vinext` / `build:vinext` / `start:vinext` / `deploy:vinext`、`wrangler.vinext.jsonc`（web）、OpenNext alias shim は現在 `dev` / `build` / `start` / `deploy:edge`、`apps/web/wrangler.jsonc` の `env.edge`、`cloudflare:workers` を直接使う `lib/api-server.ts` に置き換わっている。本番切替の条件（Issue #220 の CPU 上限超過の解消を含む）は [環境・デプロイ運用](../deployment.md) の「本番 Web の Vinext 切替」を参照する。
 
-この文書は2026-10-04のIssue #199で行った初回検証と、2026-10-05のSSG追加検証の記録である。初回の表は prerender 無効の構成の測定値として残し、追加検証の結果と区別する。現在の設計契約は [design.md §8.3](../design.md#83-server--client-コンポーネント境界)、デプロイと実行確認の条件は同書 §12.4・§12.8を参照する。外部Issueの状態はこの記録では保証しない。
+この文書は2026-10-04のIssue #199で行った初回検証と、2026-10-05のSSG追加検証の記録である。初回の表は prerender 無効の構成の測定値として残し、追加検証の結果と区別する。現在の設計契約は [ADR-0013](../adr/0013-no-shared-cache-for-user-data.md)、デプロイと実行確認の条件は [環境・デプロイ運用](../deployment.md) を参照する（当時の参照先は design.md の旧 8.3・12.4・12.8 節）。外部Issueの状態はこの記録では保証しない。
 
 ## 結論
 
@@ -56,7 +56,7 @@ PoC で見つけ、構成で回避した非互換：
 | `turbopack` | Partial | `resolveAlias` / `resolveExtensions` のみ。本リポジトリは `turbopack.root` だけなので影響なし |
 | `next/dist/server/next-server.js` / `__dirname` | Issue | 検出箇所は生成済み `.open-next/` 成果物で、ソースの問題ではない |
 | Middleware / `next/image` | 未使用 | 影響なし |
-| Cache Components / PPR | 未使用（§12.8） | 影響なし |
+| Cache Components / PPR | 未使用（旧 12.8 節） | 影響なし |
 
 テストへの影響：既存の Vitest（Next 非依存）はそのまま通る。PoC の設定不変条件は `scripts/vinext-config.test.ts`、shim は `scripts/vinext-opennext-shim.test.ts`、server 環境だけに shim を適用する alias plugin は `scripts/vinext-opennext-alias-plugin.test.ts` で固定した。
 
@@ -72,7 +72,7 @@ Vinext build の警告：`INEFFECTIVE_DYNAMIC_IMPORT`（`src/app/layout.tsx` と
 
 ## 機能確認（ローカル workerd、production build）
 
-API Worker（`wrangler dev` :8787、ローカル D1 に migrate / content sync / seed 済み）に dev registry 経由で `API` binding を接続した（両経路とも `env.API (tech-study-lab-api#InternalApi) local [connected]`）。ローカルは Access なし＋loopback bypass（§12.2）のため、認証 cookie・preflight の実機確認は対象外。
+API Worker（`wrangler dev` :8787、ローカル D1 に migrate / content sync / seed 済み）に dev registry 経由で `API` binding を接続した（両経路とも `env.API (tech-study-lab-api#InternalApi) local [connected]`）。ローカルは Access なし＋loopback bypass（旧 12.2 節）のため、認証 cookie・preflight の実機確認は対象外。
 
 | 確認項目 | OpenNext | Vinext |
 | --- | --- | --- |
@@ -85,13 +85,13 @@ API Worker（`wrangler dev` :8787、ローカル D1 に migrate / content sync /
 | API 停止時の `/home` | — | 200 で error boundary「ダッシュボードを読み込めませんでした」、API 再起動後に回復 |
 | 正解データ | `answerIndex` の数値は配信 HTML・RSC に 0 件 | `dist/client`・quiz HTML・RSC のいずれも 0 件 |
 
-解説文は `QuizViewModel` の仕様（design.md §7.2：選択肢と解説のみ持ち、正解を含めない）どおり両経路とも quiz の HTML・RSC payload に含まれ、`dist/client` の bundle には含まれなかった。
+解説文は `QuizViewModel` の仕様（design.md 旧 7.2 節：選択肢と解説のみ持ち、正解を含めない）どおり両経路とも quiz の HTML・RSC payload に含まれ、`dist/client` の bundle には含まれなかった。
 
 初回 PoC では prerender を有効にしていない。当初は vinext#2911 を根拠に `cloudflare:workers` の import が失敗すると判断していたが、有効化しての再現確認は行っていなかった。下記の追試では同じ Vinext 1.0.1 で prerender が成功し、その判断を訂正した。
 
 ## SSG 実現方法の追加検証（2026-10-05、ローカル検証済み）
 
-目的は、構成変更によって design.md §8.2・§8.3・§12.8 のビルド時 SSG を維持できるかを検証すること。Node.js 24.19.0 / pnpm 9.15.0、Linux のローカル workerd、Chromium / Playwright 1.58.2 で実施した。Vinext と既存 PoC のバージョンは据え置き、`@vinext/cloudflare@1.0.1` を追加した。
+目的は、構成変更によって design.md 旧 8.2 節・旧 8.3 節・旧 12.8 節 のビルド時 SSG を維持できるかを検証すること。Node.js 24.19.0 / pnpm 9.15.0、Linux のローカル workerd、Chromium / Playwright 1.58.2 で実施した。Vinext と既存 PoC のバージョンは据え置き、`@vinext/cloudflare@1.0.1` を追加した。
 
 ### 検証した構成と結果
 
@@ -281,7 +281,7 @@ API を呼ぶ通常 SSR route は同程度だった。OpenNext のローカル p
 
 ### 再反映の手順と残っている検証
 
-再反映も §12.4 の対象・入力値確認と承認に従う。既存の検証 D1 への migration/content 再適用が必要かを先に判断し、生成 config が検証専用の接続先であることを確認する。
+再反映も 旧 12.4 節 の対象・入力値確認と承認に従う。既存の検証 D1 への migration/content 再適用が必要かを先に判断し、生成 config が検証専用の接続先であることを確認する。
 
 ```sh
 # D1 は毎回専用 config と検証 DB 名を明示する。
@@ -473,7 +473,7 @@ Vinext事前 → OpenNext → Vinext復旧後の3フェーズで、同じChrome�
 
 主要指標はResource Timingの `responseStart - requestStart` と `responseEnd - requestStart` の中央値・nearest-rank p95。取得できた標本数を必ず併記する。補助指標はfetch開始からheader promise解決まで／body読取完了までの時間であり、前者を正確なTTFBとは呼ばない。colo・byte数・cache header・失敗数を保存する。復旧後の再測定で時間帯の変動を確認するが、別フェーズ間のネットワーク・API/D1 cacheの差を完全に除去した測定とは扱わない。
 
-Worker upload / gzipとWranglerのupload・trigger・startup表示値も記録する。既存Vinextの反映時間とOpenNextの今回の反映時間は、asset uploadの有無・実行日時が異なる参考値として区別する。最初のrequestを意図的なWorker cold startとは扱わず、CPU時間・LCP・負荷試験の測定とは区別する。今回の一時反映・復旧については、design §12.4の対象・入力値を確認した承認を得てから実行する。
+Worker upload / gzipとWranglerのupload・trigger・startup表示値も記録する。既存Vinextの反映時間とOpenNextの今回の反映時間は、asset uploadの有無・実行日時が異なる参考値として区別する。最初のrequestを意図的なWorker cold startとは扱わず、CPU時間・LCP・負荷試験の測定とは区別する。今回の一時反映・復旧については、design 旧 12.4 節の対象・入力値を確認した承認を得てから実行する。
 
 ### Vinext事前性能測定の受領（2026-10-08）
 

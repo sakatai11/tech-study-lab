@@ -1,6 +1,6 @@
 import { SELF, applyD1Migrations, env } from 'cloudflare:test'
 import { drizzle } from 'drizzle-orm/d1'
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { DomainKey } from '@tsl/shared'
 
@@ -8,10 +8,12 @@ import initialMigration from '../drizzle/migrations/0000_flowery_quasar.sql?raw'
 import srsVersionMigration from '../drizzle/migrations/0001_add_srs_version.sql?raw'
 import questionMetadataMigration from '../drizzle/migrations/0002_nasty_guardsmen.sql?raw'
 
+import { createAnswerDeps } from './dal/answer-repository'
 import { createReviewDeps } from './dal/review-repository'
 import { FIXED_USER_ID } from './fixed-user'
 import { createInternalApiApp, createPublicApiApp } from './index'
 import type { PlatformRateLimiter } from './persistent-write-rate-limit'
+import { SrsConflictError } from './services/errors'
 
 declare module 'cloudflare:test' {
   interface ProvidedEnv {
@@ -110,7 +112,7 @@ describe('core API endpoints', () => {
     ])
   })
 
-  it('ミドルウェアで確定したユーザーの教材閲覧を記録する', async () => {
+  it('ミドルウェアで確定したユーザーの教材閲覧を記録する [ADR-0003]', async () => {
     const response = await fetchInternal('/lesson-views', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -132,7 +134,7 @@ describe('core API endpoints', () => {
     })
   })
 
-  it('クライアント指定の userId を拒否し教材閲覧を記録しない', async () => {
+  it('クライアント指定の userId を拒否し教材閲覧を記録しない [ADR-0003]', async () => {
     const response = await fetchInternal('/lesson-views', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -148,7 +150,7 @@ describe('core API endpoints', () => {
     })
   })
 
-  it('grades an answer and atomically records its log and next SRS state for the fixed user', async () => {
+  it('grades an answer and atomically records its log and next SRS state for the fixed user [ADR-0002] [ADR-0005]', async () => {
     await seedQuestion('question-1', 2)
 
     const response = await fetchInternal('/answers', {
@@ -191,7 +193,7 @@ describe('core API endpoints', () => {
     })
   })
 
-  it('maps a missing authoritative question to the public 404 error contract', async () => {
+  it('maps a missing authoritative question to the public 404 error contract [ADR-0002]', async () => {
     const response = await fetchInternal('/answers', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -207,7 +209,7 @@ describe('core API endpoints', () => {
     })
   })
 
-  it('rejects a client-provided userId before it can affect the fixed user context', async () => {
+  it('rejects a client-provided userId before it can affect the fixed user context [ADR-0003]', async () => {
     const response = await fetchInternal('/answers', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -238,7 +240,7 @@ describe('core API endpoints', () => {
     },
     { entrypoint: 'public', endpoint: '/lesson-views', body: { lessonId: 'security-xss-01' } },
   ])(
-    'returns the shared 429 contract before a $entrypoint $endpoint D1 write',
+    'returns the shared 429 contract before a $entrypoint $endpoint D1 write [ADR-0004]',
     async ({ entrypoint, endpoint, body }) => {
       const deniedLimiter: PlatformRateLimiter = {
         async limit() {
@@ -287,7 +289,7 @@ describe('core API endpoints', () => {
     { endpoint: '/answers', body: { questionId: 'question-1', selectedIndex: 0 } },
     { endpoint: '/lesson-views', body: { lessonId: 'security-xss-01' } },
   ])(
-    'fails closed without D1 changes when the limiter is unavailable for $endpoint',
+    'fails closed without D1 changes when the limiter is unavailable for $endpoint [ADR-0004]',
     async ({ endpoint, body }) => {
       const unavailableLimiter: PlatformRateLimiter = {
         async limit() {
@@ -317,7 +319,99 @@ describe('core API endpoints', () => {
     },
   )
 
-  it('returns due items at the due boundary in order with a maximum of twenty items', async () => {
+  it('records exactly one answer log per answer when it updates an existing SRS state [ADR-0009]', async () => {
+    await seedQuestion('question-1', 2)
+
+    for (const selectedIndex of [2, 0]) {
+      const response = await fetchInternal('/answers', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ questionId: 'question-1', selectedIndex }),
+      })
+      expect(response.status).toBe(200)
+    }
+
+    await expect(
+      env.DB.prepare(
+        'SELECT is_correct FROM answer_logs ORDER BY answered_at, is_correct DESC',
+      ).all(),
+    ).resolves.toMatchObject({ results: [{ is_correct: 1 }, { is_correct: 0 }] })
+    await expect(
+      env.DB.prepare('SELECT reps, lapses, version FROM srs_states').first(),
+    ).resolves.toEqual({
+      reps: 0,
+      lapses: 1,
+      version: 2,
+    })
+  })
+
+  it('rejects a stale SRS version without writing the answer log or the SRS state [ADR-0009]', async () => {
+    await seedSrsState('question-1', 1_000)
+    await env.DB.prepare('UPDATE srs_states SET version = 1 WHERE question_id = ?')
+      .bind('question-1')
+      .run()
+
+    await expect(
+      createAnswerDeps(drizzle(env.DB)).recordAnswer({
+        userId: FIXED_USER_ID,
+        questionId: 'question-1',
+        isCorrect: true,
+        answeredAt: 2_000,
+        nextSrs: { ease: 2600, intervalDays: 6, reps: 2, lapses: 0, dueAt: 9_000 },
+        expectedVersion: 0,
+      }),
+    ).rejects.toBeInstanceOf(SrsConflictError)
+
+    await expect(env.DB.prepare('SELECT * FROM answer_logs').all()).resolves.toMatchObject({
+      results: [],
+    })
+    await expect(
+      env.DB.prepare('SELECT interval_days, reps, version FROM srs_states').first(),
+    ).resolves.toEqual({ interval_days: 1, reps: 1, version: 1 })
+  })
+
+  describe('persistent write success logs', () => {
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    it('emits a PII-free success event after each persistent write [ADR-0004]', async () => {
+      const info = vi.spyOn(console, 'info').mockImplementation(() => undefined)
+      await seedQuestion('question-1', 2)
+
+      const answerResponse = await fetchInternal('/answers', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ questionId: 'question-1', selectedIndex: 2 }),
+      })
+      const lessonViewResponse = await fetchInternal('/lesson-views', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ lessonId: 'security-xss-01' }),
+      })
+
+      expect(answerResponse.status).toBe(200)
+      expect(lessonViewResponse.status).toBe(201)
+      expect(info.mock.calls).toEqual([
+        [
+          JSON.stringify({
+            event: 'persistent_write_succeeded',
+            endpoint: 'POST /answers',
+            writeUnit: 'answer_log_and_srs_state',
+          }),
+        ],
+        [
+          JSON.stringify({
+            event: 'persistent_write_succeeded',
+            endpoint: 'POST /lesson-views',
+            writeUnit: 'lesson_view',
+          }),
+        ],
+      ])
+    })
+  })
+
+  it('returns due items at the due boundary in order with a maximum of twenty items [ADR-0005]', async () => {
     const now = Date.now()
     await Promise.all(
       Array.from({ length: 21 }, (_, index) =>
@@ -344,7 +438,7 @@ describe('core API endpoints', () => {
     await expect(countResponse.json()).resolves.toEqual({ dueCount: 21 })
   })
 
-  it('includes a state due exactly at the supplied time in the queue and count', async () => {
+  it('includes a state due exactly at the supplied time in the queue and count [ADR-0005]', async () => {
     const now = 1_700_000_000_000
     await seedSrsState('before', now - 1)
     await seedSrsState('at-boundary', now)
@@ -362,7 +456,7 @@ describe('core API endpoints', () => {
     await expect(reviewDeps.countDueQuestions(FIXED_USER_ID, now)).resolves.toBe(2)
   })
 
-  it('returns ordered four-domain summaries with active questions, mastery boundary, and user isolation', async () => {
+  it('returns ordered four-domain summaries with active questions, mastery boundary, and user isolation [ADR-0003] [ADR-0006]', async () => {
     await seedQuestion('security-1', 0, {
       domain: 'security',
       topic: 'xss',
@@ -430,7 +524,7 @@ describe('core API endpoints', () => {
     })
   })
 
-  it('keeps the domains route behind Access and maps repository failures to 500', async () => {
+  it('keeps the domains route behind Access and maps repository failures to 500 [ADR-0008]', async () => {
     const publicResponse = await createPublicApiApp().fetch(
       new Request('https://api.example.com/domains'),
       {
@@ -457,7 +551,7 @@ describe('core API endpoints', () => {
     })
   })
 
-  it('allows an Access-verified public write and rejects unauthorized writes before D1 changes', async () => {
+  it('allows an Access-verified public write and rejects unauthorized writes before D1 changes [ADR-0008]', async () => {
     const app = createPublicApiApp(async () => undefined, { rateLimiters: allowingRateLimiters })
     const bindings = {
       ...env,
@@ -503,7 +597,7 @@ describe('core API endpoints', () => {
     })
   })
 
-  it('rejects an unauthorized non-loopback write through the default public Worker before D1 changes', async () => {
+  it('rejects an unauthorized non-loopback write through the default public Worker before D1 changes [ADR-0008]', async () => {
     const response = await SELF.fetch('https://api.test/answers', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },

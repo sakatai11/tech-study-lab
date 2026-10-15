@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { MaterialSymbol } from '@/components/ui/material-symbol'
 
 import type { QuizQuestionViewModel } from '@/features/shared/quiz-question'
 
@@ -16,6 +17,8 @@ import { QuestionCard } from './question-card'
 type QuizPhase = 'intro' | 'exercise' | 'result'
 
 export type QuizInteractiveProps = {
+  /** アイブロウ（`quiz / intro` 等）の先頭語。復習では `review` を渡す。 */
+  eyebrowPrefix?: string
   explanations: Record<string, string>
   hasMore?: boolean
   introContent?: ReactNode
@@ -25,19 +28,22 @@ export type QuizInteractiveProps = {
   questions: QuizQuestionViewModel[]
   resultHomeHref: string
   resultHomeLabel: string
+  resultTitle?: string
   title: string
 }
 
 export function QuizInteractive({
+  eyebrowPrefix = 'quiz',
   explanations,
   hasMore,
   introContent,
-  introStartLabel = '演習を開始 →',
+  introStartLabel = '演習を開始',
   nextLessonId,
   onComplete,
   questions,
   resultHomeHref,
   resultHomeLabel,
+  resultTitle = '演習完了',
   title,
 }: QuizInteractiveProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -115,14 +121,15 @@ export function QuizInteractive({
     return (
       <Card className="p-5 sm:p-7">
         <p className="m-0 font-mono text-xs font-bold uppercase tracking-[0.18em] text-blue">
-          quiz / empty
+          {eyebrowPrefix} / empty
         </p>
         <h1 className="mb-0 mt-3 text-2xl font-black text-ink sm:text-3xl">{title}</h1>
         <p className="mb-0 mt-5 leading-7 text-ink-2">出題できる問題がありません</p>
         <Link
-          className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl border-2 border-border bg-surface px-4 py-2.5 font-bold text-ink-2 shadow-[0_4px_0_var(--border)] transition-transform hover:border-border-hi hover:text-ink active:translate-y-1 active:shadow-none"
+          className="mt-6 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border-2 border-border bg-surface px-4 py-2.5 font-bold text-ink-2 shadow-[0_4px_0_var(--border)] transition-transform hover:border-border-hi hover:text-ink active:translate-y-1 active:shadow-none"
           href={resultHomeHref}
         >
+          <MaterialSymbol className="size-5" name="arrow_back" />
           {resultHomeLabel}
         </Link>
       </Card>
@@ -137,7 +144,7 @@ export function QuizInteractive({
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="m-0 font-mono text-xs font-bold uppercase tracking-[0.18em] text-blue">
-                  quiz / intro
+                  {eyebrowPrefix} / intro
                 </p>
                 <h1 className="mb-0 mt-3 text-2xl font-black text-ink sm:text-3xl">{title}</h1>
               </div>
@@ -146,7 +153,7 @@ export function QuizInteractive({
               </Badge>
             </div>
             <p className="mb-0 mt-5 leading-7 text-ink-2">
-              1問ずつ解答し、APIで採点された結果と解説を確認します。選択肢表示からの反応時間も記録します。
+              1問ずつ解答すると、その場で正誤と解説が表示されます。解答の結果は復習の予定に反映されます。選択肢が表示されてから解答するまでの時間も記録します。
             </p>
           </>
         )}
@@ -159,6 +166,7 @@ export function QuizInteractive({
           variant="green"
         >
           {introStartLabel}
+          <MaterialSymbol className="size-5" name="arrow_forward" />
         </Button>
       </Card>
     )
@@ -176,9 +184,9 @@ export function QuizInteractive({
     return (
       <Card className="p-5 sm:p-7">
         <p className="m-0 font-mono text-xs font-bold uppercase tracking-[0.18em] text-green">
-          quiz / result
+          {eyebrowPrefix} / result
         </p>
-        <h1 className="mb-0 mt-3 text-3xl font-black text-ink">演習完了</h1>
+        <h1 className="mb-0 mt-3 text-3xl font-black text-ink">{resultTitle}</h1>
         <p className="mb-0 mt-3 text-ink-2">
           <span className="font-mono text-2xl font-black tabular-nums text-ink">
             {correctCount}/{activeQuestions.length}
@@ -216,10 +224,10 @@ export function QuizInteractive({
         ) : null}
         <div className="mt-6 flex flex-wrap gap-3">
           <Button onClick={() => resetQuiz()} variant="ghost">
-            再挑戦
+            すべて解き直す
           </Button>
           <Button disabled={wrongQuestions.length === 0} onClick={startWrongOnly} variant="blue">
-            間違えた問題だけ復習
+            間違えた問題を解き直す
           </Button>
           {onComplete && hasMore ? (
             <Button
@@ -229,21 +237,24 @@ export function QuizInteractive({
               }}
               variant="green"
             >
-              次の復習を取得 →
+              続けて復習する
+              <MaterialSymbol className="size-5" name="arrow_forward" />
             </Button>
           ) : null}
           {nextLessonId ? (
             <Link
-              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-green px-4 py-2.5 font-bold text-white shadow-[0_4px_0_var(--green-shade)] transition-transform hover:brightness-110 active:translate-y-1 active:shadow-none"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-green px-4 py-2.5 font-bold text-white shadow-[0_4px_0_var(--green-shade)] transition-transform hover:brightness-110 active:translate-y-1 active:shadow-none"
               href={`/quiz/${nextLessonId}`}
             >
-              次のレッスンへ →
+              次のレッスンへ
+              <MaterialSymbol className="size-5" name="arrow_forward" />
             </Link>
           ) : (
             <Link
-              className="inline-flex min-h-11 items-center justify-center rounded-xl border-2 border-border bg-surface px-4 py-2.5 font-bold text-ink-2 shadow-[0_4px_0_var(--border)] transition-transform hover:border-border-hi hover:text-ink active:translate-y-1 active:shadow-none"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border-2 border-border bg-surface px-4 py-2.5 font-bold text-ink-2 shadow-[0_4px_0_var(--border)] transition-transform hover:border-border-hi hover:text-ink active:translate-y-1 active:shadow-none"
               href={resultHomeHref}
             >
+              <MaterialSymbol className="size-5" name="arrow_back" />
               {resultHomeLabel}
             </Link>
           )}
@@ -261,16 +272,19 @@ export function QuizInteractive({
       <div className="mb-4 flex items-center justify-between gap-3 px-1">
         <div>
           <p className="m-0 font-mono text-xs font-bold uppercase tracking-[0.18em] text-blue">
-            quiz / exercise
+            {eyebrowPrefix} / exercise
           </p>
           <p className="mb-0 mt-1 text-sm text-mute">
             問題 {currentIndex + 1} / {activeQuestions.length}
           </p>
         </div>
-        <Badge className="border-blue bg-blue-bg text-blue">1–{question.choices.length} keys</Badge>
+        <Badge className="hidden border-blue bg-blue-bg text-blue lg:inline-flex">
+          1〜{question.choices.length}キーで解答
+        </Badge>
       </div>
       <QuestionCard
         explanation={explanations[question.id] ?? '解説を取得できませんでした。'}
+        nextLabel={currentIndex === activeQuestions.length - 1 ? '結果を見る' : '次へ'}
         onAnswer={handleAnswer}
         onNext={() => {
           if (currentIndex === activeQuestions.length - 1) {

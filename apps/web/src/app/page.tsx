@@ -1,14 +1,16 @@
+import { DOMAIN_LABELS, domainKeySchema } from '@tsl/shared'
 import Link from 'next/link'
 
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
+import { MaterialSymbol } from '@/components/ui/material-symbol'
 import { TermCrumb } from '@/components/ui/term-crumb'
 
 const learningSteps = [
   {
     command: 'content.read()',
-    description: 'セキュリティ、フレームワーク、アーキテクチャを読み、設計の理由まで理解する。',
+    description: '4つの領域の教材を読み、設計の理由まで理解する。',
     label: '教材を読む',
   },
   {
@@ -19,7 +21,7 @@ const learningSteps = [
   {
     command: 'srs.review()',
     description: '忘れかけた知識を適切な間隔で復習し、次の実装で使える状態にする。',
-    label: 'SRSで復習する',
+    label: '間隔をあけて復習する',
   },
 ] as const
 
@@ -53,14 +55,15 @@ export default function ProductTopPage() {
             </h1>
             <p className="mb-0 mt-5 max-w-2xl text-pretty text-lg leading-8 text-ink-2">
               tech-study-lab
-              は、個人エンジニアがセキュリティ、フレームワーク、アーキテクチャを読み、確かめ、復習するための学習環境です。
+              は、個人エンジニアがセキュリティ、フロントエンド、バックエンド、アーキテクチャを読み、確かめ、復習するための学習環境です。
             </p>
             <div className="mt-7 flex flex-wrap items-center gap-4">
               <Link
-                className="inline-flex min-h-11 items-center justify-center rounded-xl bg-green px-5 py-3 font-bold text-white shadow-[0_4px_0_var(--green-shade)] transition-transform hover:brightness-110 active:translate-y-1 active:shadow-none"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-green px-5 py-3 font-bold text-white shadow-[0_4px_0_var(--green-shade)] transition-transform hover:brightness-110 active:translate-y-1 active:shadow-none"
                 href="/home"
               >
-                ログインして学習を始める →
+                ログインして学習を始める
+                <MaterialSymbol className="size-5" name="arrow_forward" />
               </Link>
               <p className="m-0 text-pretty text-sm text-mute">
                 アプリ独自のアカウント登録は不要です
@@ -99,10 +102,11 @@ export default function ProductTopPage() {
           <h2 className="mb-0 mt-2 text-balance text-2xl font-black text-ink" id="domains-heading">
             学んだことを、次の設計と実装へ。
           </h2>
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
-            {['Security', 'Frontend / Backend', 'Architecture'].map((domain) => (
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {domainKeySchema.options.map((domain) => (
               <Card className="p-4" key={domain}>
-                <p className="m-0 font-mono text-sm font-bold text-ink">{domain}</p>
+                <p className="m-0 font-mono text-xs font-bold uppercase text-faint">{domain}</p>
+                <p className="mb-0 mt-1 font-bold text-ink">{DOMAIN_LABELS[domain].label}</p>
               </Card>
             ))}
           </div>

@@ -25,7 +25,7 @@ function createDeps(): { deps: ReviewDeps; calls: Array<[string, number]> } {
   }
 }
 
-describe('review service', () => {
+describe('review service [ADR-0005]', () => {
   it('returns the repository queue unchanged after passing the injected time', async () => {
     const { deps, calls } = createDeps()
 

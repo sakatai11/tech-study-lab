@@ -7,7 +7,7 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-describe('createBrowserApiClient', () => {
+describe('createBrowserApiClient [ADR-0012]', () => {
   it('includes credentials so the Cloudflare Access application cookie reaches the public API', async () => {
     vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', 'https://api.example.com')
     const browserFetch = vi

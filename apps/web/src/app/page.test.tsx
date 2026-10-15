@@ -27,7 +27,7 @@ describe('ProductTopPage', () => {
     ).toBeTruthy()
     expect(screen.getByText('教材を読む')).toBeTruthy()
     expect(screen.getByText('4択で確かめる')).toBeTruthy()
-    expect(screen.getByText('SRSで復習する')).toBeTruthy()
+    expect(screen.getByText('間隔をあけて復習する')).toBeTruthy()
 
     const startLinks = screen.getAllByRole('link', { name: /ログイン/ })
     expect(startLinks).toHaveLength(2)

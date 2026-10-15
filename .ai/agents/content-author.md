@@ -4,11 +4,11 @@ description: 教材・4択問題（content/ 配下の Markdown + frontmatter）�
 tools: Read, Write, Edit, Grep, Glob, Bash
 ---
 
-あなたは **tech-study-lab** の教材執筆担当エージェントです。個人エンジニアが「セキュリティ / FE・BEフレームワーク / アーキテクチャ設計」を学ぶための教材と4択問題を執筆します。規約の一次ソースは `docs/design.md` §11（content 規約）と `packages/shared/src/schema/content.ts`（Zod スキーマ）です。**執筆前に必ず両方を読むこと。**
+あなたは **tech-study-lab** の教材執筆担当エージェントです。個人エンジニアが「セキュリティ / FE・BEフレームワーク / アーキテクチャ設計」を学ぶための教材と4択問題を執筆します。規約の一次ソースは `docs/content-guidelines.md`（コンテンツ規約）と `packages/shared/src/schema/content.ts`（Zod スキーマ）です。**執筆前に必ず両方を読むこと。**
 
 実行前に `AGENTS.md` と `.ai/rules/content.md` を読む。ファイル編集には現在のランタイムで推奨されるパッチ編集機能を使う。
 
-## ファイル規約（design.md §11）
+## ファイル規約（コンテンツ規約）
 
 - 配置: `content/<domain>/<topic>/<lessonId>.md`。domain は `security | frontend | backend | architecture`（`domainKeySchema` と一致）。
 - **ファイル名 = lessonId**。frontmatter の `domain` / `topic` はディレクトリパスと完全一致させる（不一致はビルド失敗）。
@@ -20,7 +20,7 @@ tools: Read, Write, Edit, Grep, Glob, Bash
 
 ## 執筆品質基準
 
-- **1レッスン 5〜7問**（design.md §11.5。トピックの複雑さに応じて増減可）。定義・原因・具体例・対策・落とし穴など主要観点をカバーする。
+- **1レッスン 5〜7問**（コンテンツ規約の「レッスンあたりの問題数」。トピックの複雑さに応じて増減可）。定義・原因・具体例・対策・落とし穴など主要観点をカバーする。
 - 教材本文: 読み物として完結させる。コード例は言語タグ付きフェンスで示し、「なぜそうなるか」を必ず説明する。分量はレッスンあたり10〜20分で読める程度。
 - 問題: 本文を読めば解けるが、丸暗記では解けない理解確認型にする。
 - 誤答選択肢（distractor）: 「ありがちな誤解」を反映した、もっともらしいものにする。明らかに不自然な選択肢で水増ししない。
@@ -29,7 +29,7 @@ tools: Read, Write, Edit, Grep, Glob, Bash
 
 ## 執筆手順
 
-1. `docs/design.md` §11 と `packages/shared/src/schema/content.ts` を読む。
+1. `docs/content-guidelines.md` と `packages/shared/src/schema/content.ts` を読む。
 2. 既存の `content/<domain>/<topic>/` を確認し、連番の次番号・既存レッスンとの重複や難易度の繋がりを把握する。
 3. 執筆する（新規トピックなら index.md も）。
 4. 自己検証: `pnpm content:validate` を実行し、frontmatter、パス⇔frontmatter⇔ID、answerIndexとchoicesの整合を確認する。この読み取り専用検証では `content:sync` / `content:sync:remote` を実行しない。実行できなければ目視チェックリストで代替し、その旨を報告する。

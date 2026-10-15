@@ -4,7 +4,7 @@
 
 この仕様書は、**tech-study-lab** で利用するAIコーディングエージェントの設定、共通資産、実行時の差分、検証方法を定義する。対象は Claude Code と Codex App / CLI である。
 
-アプリケーションの設計・機能仕様の一次ソースは [`design.md`](./design.md)。本書はAI開発ハーネスの仕様であり、アプリケーション要件を定義しない。
+アプリケーションの設計契約の一次ソースは [ADR](./adr/README.md)、層と依存方向は [`design.md`](./design.md)。本書はAI開発ハーネスの仕様であり、アプリケーション要件を定義しない。
 
 ## 2. エージェント別の対応範囲
 
@@ -122,9 +122,9 @@ pnpm test:hooks           # hook fixture、共通ログ、同期、両ランタ�
 
 `pnpm test:hooks`（`scripts/test-hooks.sh`）は次を検査する。
 
-1. **hookの動作検証**: Claude/Codexの代表入力fixtureを使い、TODO検出、Codexの明示スキル指定、Claude/Codexのライフサイクルログ、Codexの編集後整形アダプター、`pnpm sync:agents --check` による生成物の同期を確認する。
+1. **hookの動作検証**: Claude/Codexの代表入力fixtureを使い、TODO検出、Codexの明示スキル指定、Claude/Codexのライフサイクルログ、Codexの編集後整形アダプター、`pnpm sync:agents --check` による生成物の同期を確認する。別モデル CLI レビューで最新の Sol を選ぶスクリプト（`.ai/scripts/latest-codex-model.mjs`）の選択ロジックも検証する。
 2. **両ランタイムの構成整合**: `.ai/skills/*`・`.ai/agents/*.md`・`.ai/rules/*.md` ごとに `.claude/` と `.agents/` の発見用リンクがあり `.ai/` を指すこと、取り残しのリンクがないこと、`.ai/agents/<name>.md` と `.codex/agents/<name>.toml` が1対1で `name` が一致すること、パス別ルールが `AGENTS.md` から参照されていること、権限・Sandboxの迂回フラグがハーネスに含まれないことを確認する。
-3. **weekly-retro レンダラーの出力検証**と、**`docs/design.md` の章参照の解決検査**（`scripts/test-design-chapter-refs.mjs`）。
+3. **weekly-retro レンダラーの出力検証**と、**`docs/design.md` の章参照の解決検査**（`scripts/test-design-chapter-refs.mjs`）、**ADR の書式・検証テストとの対応・`ADR-NNNN` 参照の解決検査**（`scripts/test-adr-refs.mjs`）。
 
 契約文書の**文言**は検査しない。文言が存在してもモデルがそれに従う保証にはならず、改善のたびに期待値の更新を強いるためである。文書の内容はレビューで確認する。
 

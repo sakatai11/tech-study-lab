@@ -18,7 +18,7 @@ function createDeps(overrides: Partial<AnswerDeps> = {}) {
   return { deps, recorded }
 }
 
-describe('submitAnswer', () => {
+describe('submitAnswer [ADR-0002] [ADR-0005]', () => {
   it('grades against the stored answer and records the initial SRS transition', async () => {
     const { deps, recorded } = createDeps()
 
@@ -81,6 +81,38 @@ describe('submitAnswer', () => {
     expect(recorded[0]?.responseTimeMs).toBeUndefined()
   })
 
+  it('records every repeated answer and lets the latest one decide the next due date', async () => {
+    let stored: (SrsInput & { version: number }) | null = null
+    const { deps, recorded } = createDeps({
+      findSrsState: async () => stored,
+      recordAnswer: async (params) => {
+        recorded.push(params)
+        stored = { ...params.nextSrs, version: params.expectedVersion + 1 }
+      },
+    })
+
+    await submitAnswer(deps, {
+      userId: 'user-1',
+      questionId: 'question-1',
+      selectedIndex: 2,
+      now: 0,
+    })
+    await submitAnswer(deps, {
+      userId: 'user-1',
+      questionId: 'question-1',
+      selectedIndex: 0,
+      now: 10,
+    })
+
+    expect(
+      recorded.map(({ isCorrect, expectedVersion }) => ({ isCorrect, expectedVersion })),
+    ).toEqual([
+      { isCorrect: true, expectedVersion: 0 },
+      { isCorrect: false, expectedVersion: 1 },
+    ])
+    expect(recorded[1]?.nextSrs).toMatchObject({ reps: 0, lapses: 1, dueAt: 10 + DAY_MS })
+  })
+
   it('rejects a question absent from the authoritative question cache', async () => {
     const { deps, recorded } = createDeps({ findAnswerIndex: async () => null })
 
@@ -96,7 +128,7 @@ describe('submitAnswer', () => {
     expect(recorded).toEqual([])
   })
 
-  it('retries from the latest SRS version after a concurrent update', async () => {
+  it('retries from the latest SRS version after a concurrent update [ADR-0009]', async () => {
     const states: (SrsInput & { version: number })[] = [
       { ease: 2500, intervalDays: 1, reps: 1, lapses: 0, version: 0 },
       { ease: 2500, intervalDays: 1, reps: 1, lapses: 0, version: 1 },
@@ -123,5 +155,27 @@ describe('submitAnswer', () => {
     ).resolves.toEqual({ isCorrect: true, correctIndex: 2 })
 
     expect(writes).toBe(2)
+  })
+
+  it('fails explicitly after three conflicting attempts [ADR-0009]', async () => {
+    let writes = 0
+    const { deps } = createDeps({
+      findSrsState: async () => ({ ease: 2500, intervalDays: 1, reps: 1, lapses: 0, version: 0 }),
+      recordAnswer: async (params) => {
+        writes += 1
+        throw new SrsConflictError(params.userId, params.questionId)
+      },
+    })
+
+    await expect(
+      submitAnswer(deps, {
+        userId: 'user-1',
+        questionId: 'question-1',
+        selectedIndex: 2,
+        now: 100,
+      }),
+    ).rejects.toBeInstanceOf(SrsConflictError)
+
+    expect(writes).toBe(3)
   })
 })

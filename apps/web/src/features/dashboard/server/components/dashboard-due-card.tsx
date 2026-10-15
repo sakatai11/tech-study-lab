@@ -3,11 +3,12 @@ import 'server-only'
 import Link from 'next/link'
 
 import { Card } from '@/components/ui/card'
+import { MaterialSymbol } from '@/components/ui/material-symbol'
 
 import { loadDashboardDueCount } from '../load-dashboard'
 
 const reviewLinkClassName =
-  'mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-green px-4 py-2.5 font-bold text-white shadow-[0_4px_0_var(--green-shade)] transition-transform hover:brightness-110 active:translate-y-1 active:shadow-none'
+  'mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-green px-4 py-2.5 font-bold text-white shadow-[0_4px_0_var(--green-shade)] transition-transform hover:brightness-110 active:translate-y-1 active:shadow-none'
 
 /** 通常 SSR で due 件数を取得する、ダッシュボードのユーザー固有カード。 */
 export async function DashboardDueCard() {
@@ -25,11 +26,16 @@ export async function DashboardDueCard() {
         </p>
         <p className="mb-0 mt-5 font-mono text-3xl font-black tabular-nums text-ink">
           {viewModel.dueCount}
-          <span className="ml-1 text-sm text-mute">問 due</span>
+          <span className="ml-1 text-sm text-mute">問</span>
         </p>
-        <Link className={reviewLinkClassName} href="/review">
-          復習を始める
-        </Link>
+        {viewModel.dueCount > 0 ? (
+          <Link className={reviewLinkClassName} href="/review">
+            復習を始める
+            <MaterialSymbol className="size-5" name="arrow_forward" />
+          </Link>
+        ) : (
+          <p className="mb-0 mt-5 text-sm text-mute">今は復習する問題はありません。</p>
+        )}
       </Card>
     )
   } catch {
@@ -45,6 +51,7 @@ export async function DashboardDueCard() {
         </p>
         <Link className={reviewLinkClassName} href="/review">
           復習を始める
+          <MaterialSymbol className="size-5" name="arrow_forward" />
         </Link>
       </Card>
     )

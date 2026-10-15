@@ -67,12 +67,14 @@ describe('DashboardDataContent', () => {
       screen.getByRole('list', { name: '直近26週・182日間の学習コントリビューション' }),
     ).toBeTruthy()
     expect(screen.getByText('2026-09-01: 4問')).toBeTruthy()
-    const analyticsLink = screen.getByRole('link', { name: 'すべて表示' })
+    const analyticsLink = screen.getByRole('link', { name: '学習分析を見る' })
     expect(analyticsLink).toHaveProperty('href', 'http://localhost:3000/analytics')
     expect(analyticsLink.className).toContain('lg:hidden')
     expect(screen.getByRole('heading', { name: '領域別の習得状況' })).toBeTruthy()
     expect(screen.getByRole('heading', { name: '最近のアクティビティ' })).toBeTruthy()
-    expect(screen.getByText('問題に回答して復習予定を更新しました（安全な画面表示）')).toBeTruthy()
+    expect(
+      screen.getByText('問題に解答し、復習の予定を更新しました（安全な画面表示）'),
+    ).toBeTruthy()
     expect(screen.queryByText('表示用サンプル')).toBeNull()
     expect(screen.queryByText('実際の解答ログはまだ接続していません')).toBeNull()
   })
