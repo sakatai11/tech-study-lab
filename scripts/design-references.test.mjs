@@ -90,7 +90,11 @@ test('wrong relative paths cannot resolve by basename; source symlinks cannot re
   )
   assert.ok(collectReferences(root, ['AGENTS.md']).every((ref) => ref.status === 'local_error'))
   mkdirSync(join(root, '.ai/rules'), { recursive: true })
-  symlinkSync('/etc/hostname', join(root, '.ai/rules/example.md'))
+  const outsideRoot = mkdtempSync(join(tmpdir(), 'design-refs-outside-'))
+  temporaryRoots.push(outsideRoot)
+  const outsideFile = join(outsideRoot, 'example.md')
+  writeFileSync(outsideFile, 'External fixture content must never be read.\n')
+  symlinkSync(outsideFile, join(root, '.ai/rules/example.md'))
   assert.throws(() => collectReferences(root, ['.ai/rules/example.md']), /path_outside_repository/)
 })
 
