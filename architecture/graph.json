@@ -158,8 +158,8 @@
       "lines": 62
     },
     "apps/web/src/features/dashboard/server/load-dashboard.ts": {
-      "sha256": "c19138ce1fcede1425094dbe381ac66a3eb3839f0e2822b10d61c154657e977e",
-      "lines": 75
+      "sha256": "55c00ae5b8d2b05c7c6a828b9f75fae23af8200470a32aba520a800cf54e70ac",
+      "lines": 107
     },
     "apps/web/src/features/domains/api/domains-api.ts": {
       "sha256": "3ce4c3b7c3faf0bf02bbf5bff0fe41b610477cf6a05b4b58fe69c0830226d33e",
@@ -4196,6 +4196,15 @@
       },
       "specifier": "@tsl/shared",
       "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/dashboard/server/load-dashboard.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#DOMAIN_LABELS",
+      "source": {
+        "file": "apps/web/src/features/dashboard/server/load-dashboard.ts",
+        "line": 3
+      }
     },
     {
       "from": "apps/web/src/features/dashboard/server/load-dashboard.ts",
