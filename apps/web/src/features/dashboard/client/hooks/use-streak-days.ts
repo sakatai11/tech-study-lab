@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 
 import { createBrowserApiClient } from '@/lib/api'
+import { subscribeToClientDataInvalidation } from '@/lib/client-data-invalidation'
 
 import { fetchDashboardSummary } from '../../api/dashboard-api'
 
@@ -12,20 +13,27 @@ export function useStreakDays(): number | null {
 
   useEffect(() => {
     let isActive = true
+    let requestId = 0
 
     async function loadStreak() {
+      const currentRequestId = ++requestId
+      setStreakDays(null)
       try {
         const summary = await fetchDashboardSummary(createBrowserApiClient())
-        if (isActive) setStreakDays(summary.currentStreakDays)
+        if (isActive && currentRequestId === requestId) setStreakDays(summary.currentStreakDays)
       } catch {
-        if (isActive) setStreakDays(null)
+        if (isActive && currentRequestId === requestId) setStreakDays(null)
       }
     }
 
+    const unsubscribe = subscribeToClientDataInvalidation('study-activity', () => {
+      void loadStreak()
+    })
     void loadStreak()
 
     return () => {
       isActive = false
+      unsubscribe()
     }
   }, [])
 
