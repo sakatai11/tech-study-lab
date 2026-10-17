@@ -2,10 +2,8 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 
 import { ThemeToggle } from '@/components/theme-toggle'
-import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { MaterialSymbol, type MaterialSymbolName } from '@/components/ui/material-symbol'
-import { ProgressBar } from '@/components/ui/progress-bar'
 
 type NavigationItem = {
   desktopLabel: string
@@ -142,27 +140,16 @@ function DesktopNavigation({
             )
           })}
         </nav>
-        <div className="mt-auto border-t-2 border-border pt-4">
-          <div className="flex items-center justify-between gap-3">
-            <span className="font-semibold text-ink">学習データ</span>
-            <Badge className="border-purple bg-purple-bg text-purple">sample</Badge>
-          </div>
-          <ProgressBar className="mt-3" color="purple" label="基盤実装の進捗" value={35} />
-          <p className="mb-0 mt-2 font-mono text-xs text-faint">foundation: 35%</p>
-        </div>
       </Card>
     </aside>
   )
 }
 
-function MobileHeader() {
+function MobileHeader({ streakBadge }: { streakBadge?: ReactNode }) {
   return (
     <header className="sticky top-0 z-10 flex items-center justify-between gap-2 bg-bg px-4 py-3 lg:hidden">
       <Brand compact />
-      <Badge className="shrink-0 gap-1 border-orange bg-orange-bg font-sans text-xs text-orange">
-        <MaterialSymbol className="size-4" name="local_fire_department" />
-        <span className="tabular-nums">12日</span>
-      </Badge>
+      {streakBadge}
       <ThemeToggle />
     </header>
   )
@@ -219,17 +206,19 @@ export function DashboardShell({
   currentNavigation,
   desktopReviewBadge,
   mobileReviewBadge,
+  mobileStreakBadge,
   navigationHrefs,
 }: {
   children: ReactNode
   currentNavigation: NavigationSection
   desktopReviewBadge?: ReactNode
   mobileReviewBadge?: ReactNode
+  mobileStreakBadge?: ReactNode
   navigationHrefs: NavigationHrefs
 }) {
   return (
     <div className="min-h-dvh bg-bg">
-      <MobileHeader />
+      <MobileHeader streakBadge={mobileStreakBadge} />
       <div className="mx-auto flex max-w-7xl gap-5 px-4 pb-28 pt-4 lg:px-5 lg:pb-5 lg:pt-5">
         <DesktopNavigation
           currentNavigation={currentNavigation}

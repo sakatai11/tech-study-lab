@@ -1,8 +1,19 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { renderToString } from 'react-dom/server'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import type { AnalyticsSummaryResponse } from '@tsl/shared'
+
+const { fetchDashboardSummaryMock } = vi.hoisted(() => ({
+  fetchDashboardSummaryMock: vi.fn(),
+}))
+
+vi.mock('@/features/dashboard/api/dashboard-api', () => ({
+  fetchDashboardSummary: fetchDashboardSummaryMock,
+}))
 
 vi.mock('@/features/dashboard/client/components/due-count-badge', () => ({
   DueCountBadge: () => <span>due</span>,
@@ -19,8 +30,74 @@ vi.mock('@/features/dashboard/server/load-dashboard', () => ({
 
 import { AppShell } from './app-shell'
 
+const summary = {
+  totalAnswerCount: 12,
+  correctAnswerRate: 75,
+  averageResponseTimeMs: 800,
+  masteredQuestionCount: 2,
+  currentStreakDays: 1,
+  thisWeekStudyTimeMs: 120_000,
+  retentionDistribution: { masteredCount: 2, learningCount: 1, dueCount: 1 },
+} satisfies AnalyticsSummaryResponse
+
 describe('AppShell', () => {
+  beforeEach(() => {
+    fetchDashboardSummaryMock.mockReset()
+    fetchDashboardSummaryMock.mockImplementation(() => new Promise(() => {}))
+  })
+
   afterEach(cleanup)
+
+  it('hides the streak while loading instead of showing a fixed number', () => {
+    render(<AppShell currentNavigation="dashboard">home</AppShell>)
+
+    expect(screen.queryByText('12日')).toBeNull()
+    expect(screen.queryByText('連続学習')).toBeNull()
+  })
+
+  it.each([1, 0])('shows the API current streak of %i days', async (currentStreakDays) => {
+    fetchDashboardSummaryMock.mockResolvedValue({ ...summary, currentStreakDays })
+
+    render(<AppShell currentNavigation="dashboard">home</AppShell>)
+
+    expect(await screen.findByText(`${currentStreakDays}日`)).toBeTruthy()
+    expect(screen.getByText('連続学習')).toBeTruthy()
+    expect(fetchDashboardSummaryMock).toHaveBeenCalledTimes(1)
+    expect(screen.queryByText('12日')).toBeNull()
+  })
+
+  it('keeps the streak hidden when the API fails and still renders navigation', async () => {
+    fetchDashboardSummaryMock.mockRejectedValue(new Error('API unavailable'))
+
+    await act(async () => {
+      render(<AppShell currentNavigation="dashboard">home</AppShell>)
+    })
+
+    expect(fetchDashboardSummaryMock).toHaveBeenCalledTimes(1)
+    expect(screen.queryByText('連続学習')).toBeNull()
+    expect(screen.queryByText('12日')).toBeNull()
+    expect(screen.getByRole('navigation', { name: 'モバイルナビゲーション' })).toBeTruthy()
+  })
+
+  it('[ADR-0013] leaves user streak data out of server-rendered content pages', () => {
+    const html = renderToString(<AppShell currentNavigation="learn">教材一覧</AppShell>)
+
+    expect(fetchDashboardSummaryMock).not.toHaveBeenCalled()
+    expect(html).not.toContain('連続学習')
+    expect(html).not.toContain('12日')
+    expect(html).toContain('教材一覧')
+  })
+
+  it('removes sidebar sample progress while preserving all six navigation links', () => {
+    render(<AppShell currentNavigation="dashboard">home</AppShell>)
+
+    const desktop = screen.getByRole('navigation', { name: 'メインナビゲーション' })
+    expect(desktop.querySelectorAll('a')).toHaveLength(6)
+    expect(screen.queryByText('学習データ')).toBeNull()
+    expect(screen.queryByText('sample')).toBeNull()
+    expect(screen.queryByText('foundation: 35%')).toBeNull()
+    expect(screen.queryByRole('progressbar', { name: '基盤実装の進捗' })).toBeNull()
+  })
 
   it('uses /home for the selected desktop dashboard and mobile home navigation', () => {
     render(
