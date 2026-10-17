@@ -4,6 +4,7 @@ import type { AnswerRequest } from '@tsl/shared'
 import { useCallback, useRef, useState } from 'react'
 
 import { type ApiClient, createBrowserApiClient } from '@/lib/api'
+import { invalidateClientData } from '@/lib/client-data-invalidation'
 
 import { submitAnswer as postAnswer } from '../../api/quiz-api'
 import type { SubmittedAnswer } from '../../view-model'
@@ -31,6 +32,7 @@ export function useAnswerSubmit() {
     try {
       clientRef.current ??= createBrowserApiClient()
       const response = await postAnswer(clientRef.current, input)
+      invalidateClientData('study-activity')
       if (generation === generationRef.current) {
         setResults((currentResults) => ({
           ...currentResults,
