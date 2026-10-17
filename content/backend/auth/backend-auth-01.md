@@ -194,8 +194,9 @@ import { jwtVerify } from 'jose'
 const { payload } = await jwtVerify(token, secretKey, {
   algorithms: ['HS256'], // 許可するアルゴリズムを明示する
   issuer: 'https://api.example.com', // 発行者も確認する
+  requiredClaims: ['exp'], // exp の無い（期限切れにならない）トークンを拒否する
 })
-// exp（有効期限）は jwtVerify が検証し、期限切れなら例外を投げる
+// exp は含まれているときだけ検証されるため、requiredClaims で必須にする。期限切れなら例外を投げる
 ```
 
 JWT を使うか Cookie セッションを使うかはどちらが優れているという話ではなく、失効のしやすさ、スケールのさせやすさ、クライアントの種類などで選びます。ブラウザ中心のアプリでは、HttpOnly Cookie のセッションがシンプルで安全に運用しやすい選択肢です。
