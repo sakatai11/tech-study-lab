@@ -269,7 +269,7 @@ Server loader は初回データの fetch と Mapper 呼び出しを統括する
 
 - `/` はユーザー固有データを読まない静的 RSC、`/home`・`/review`・`/domains`・`/analytics` は `dynamic = 'force-dynamic'` を指定した通常のリクエスト時 SSR とする。各 Server loader はリクエストごとに実行し、ユーザー固有データを共有キャッシュしない。
 - 教材・演習の content route は `generateStaticParams` で全 params を列挙する標準 SSG とする（content 取得の契約は §5.1）。`cacheComponents`、`'use cache'` は採用しない。
-- `/learn` はAPIを呼ばず、ビルド時の content だけで一覧本文を生成する静的 RSC とする。共通シェルのユーザー固有 due バッジとストリークは Client leaf が表示後に取得し、静的成果物へ含めない。ストリークは既存の `GET /analytics/summary` の `currentStreakDays` を使い、未取得・失敗時は非表示、0日は「0日」と表示する。
+- `/learn` はAPIを呼ばず、ビルド時の content だけで一覧本文を生成する静的 RSC とする。共通シェルのユーザー固有 due バッジとストリークは Client leaf が表示後に取得し、静的成果物へ含めない。ストリークは既存の `GET /analytics/summary` の `currentStreakDays` を使う。
 - `/home` は due 件数カードと本体を同一 SSR の中で取得し、due 件数と summary・heatmap・domains・recent activity はそれぞれの loader 契約を保つ。loader 内の API 呼び出しは可能な範囲で並列化する。`/domains` は4領域の集計、`/analytics` は summary・weekly・mistakesを読む。忘却曲線・復習タイミングは対象外。
 - due件数・統計・review queue・domains／analytics集計には共有キャッシュを使わない。APIが注入するuser_idをwebの共有キャッシュキーに含められず、ユーザー間の混入が起こり得るためである。
 - Reactの `cache()` によるリクエスト内の取得共有は許可する。ユーザー横断の共有キャッシュとは区別する。復習のdueバッジと本文の取得共有・表示分岐・次バッチへの遷移は §5.3で定義する。
