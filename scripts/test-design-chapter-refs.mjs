@@ -12,16 +12,11 @@
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
+import { slugify } from './markdown-headings.mjs'
+
+export { slugify } from './markdown-headings.mjs'
 
 const designPath = 'docs/design.md'
-
-/** GitHub の見出しスラッグ規則: 小文字化し、記号を除去し、空白を `-` へ置換する。 */
-export function slugify(heading) {
-  return heading
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}\s-]/gu, '')
-    .replace(/\s/g, '-')
-}
 
 /**
  * 見出しから、解決可能な章番号と anchor スラッグを集める。
