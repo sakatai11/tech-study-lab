@@ -12,7 +12,9 @@ const getLessonRouteParams = vi.hoisted(() =>
   vi.fn((): { domain: string; topic: string; lesson: string }[] => []),
 )
 const getLessonContent = vi.hoisted(() => vi.fn())
-const getOrderedTopicRoutes = vi.hoisted(() => vi.fn())
+const getOrderedTopicRoutes = vi.hoisted(() =>
+  vi.fn((): { domain: string; topic: string; order: number }[] => []),
+)
 const fetchDashboardSummary = vi.hoisted(() => vi.fn())
 const fetchDashboardHeatmap = vi.hoisted(() => vi.fn())
 const fetchDashboardDomains = vi.hoisted(() => vi.fn())
@@ -127,6 +129,7 @@ describe('loadDashboardStatic', () => {
     getLessonRouteParams.mockReturnValue([])
     getLessonContent.mockReset()
     getOrderedTopicRoutes.mockReset()
+    getOrderedTopicRoutes.mockReturnValue([])
   })
 
   it('uses /home when no bundled lesson is available', () => {
@@ -156,6 +159,51 @@ describe('loadDashboardStatic', () => {
       quizHref: '/quiz/security-xss-01',
     })
   })
+
+  it('picks the first lesson by domain order, topic order, then lesson ID across domains', () => {
+    // bundle は content/ のパス順なので backend が先に来る。表示順では security が先頭。
+    getLessonRouteParams.mockReturnValue([
+      { domain: 'backend', topic: 'auth', lesson: 'backend-auth-01' },
+      { domain: 'frontend', topic: 'react', lesson: 'frontend-react-01' },
+      { domain: 'security', topic: 'csrf', lesson: 'security-csrf-01' },
+      { domain: 'security', topic: 'sql-injection', lesson: 'security-sql-injection-01' },
+      { domain: 'security', topic: 'xss', lesson: 'security-xss-02' },
+      { domain: 'security', topic: 'xss', lesson: 'security-xss-01' },
+    ])
+    getOrderedTopicRoutes.mockReturnValue([
+      { domain: 'backend', topic: 'auth', order: 0 },
+      { domain: 'frontend', topic: 'react', order: 0 },
+      { domain: 'security', topic: 'csrf', order: 1 },
+      { domain: 'security', topic: 'sql-injection', order: 2 },
+      { domain: 'security', topic: 'xss', order: 0 },
+    ])
+    getLessonContent.mockImplementation((lesson: string) =>
+      lesson === 'security-xss-01'
+        ? { title: 'XSSを防ぐ安全な画面表示', estimatedMinutes: 18, questions: [{ id: 'q1' }] }
+        : { title: lesson, estimatedMinutes: 10, questions: [] },
+    )
+
+    expect(loadDashboardStatic()).toMatchObject({
+      continueHref: '/learn/security/xss/security-xss-01',
+      continueTitle: 'XSSを防ぐ安全な画面表示',
+      learnHref: '/learn/security/xss/security-xss-01',
+      quizHref: '/quiz/security-xss-01',
+    })
+  })
+
+  it('falls back to the next domain when the leading domain has no lessons', () => {
+    getLessonRouteParams.mockReturnValue([
+      { domain: 'backend', topic: 'auth', lesson: 'backend-auth-01' },
+      { domain: 'frontend', topic: 'react', lesson: 'frontend-react-01' },
+    ])
+    getOrderedTopicRoutes.mockReturnValue([
+      { domain: 'backend', topic: 'auth', order: 0 },
+      { domain: 'frontend', topic: 'react', order: 0 },
+      { domain: 'security', topic: 'xss', order: 0 },
+    ])
+
+    expect(loadDashboardStatic().quizHref).toBe('/quiz/frontend-react-01')
+  })
 })
 
 describe('loadDashboard', () => {
@@ -169,6 +217,7 @@ describe('loadDashboard', () => {
     getLessonRouteParams.mockReturnValue([])
     getLessonContent.mockReset()
     getOrderedTopicRoutes.mockReset()
+    getOrderedTopicRoutes.mockReturnValue([])
   })
 
   it('connects once, fetches all dashboard APIs in parallel, and joins content metadata', async () => {
