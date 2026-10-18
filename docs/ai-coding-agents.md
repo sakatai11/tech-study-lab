@@ -130,6 +130,39 @@ pnpm test:hooks           # hook fixture、共通ログ、同期、両ランタ�
 
 このゲートは `.github/workflows/ci.yml` のPR CI（`jq` を含む依存の存在確認つき）で実行され、失敗するとジョブが落ちる。実行時間は約1秒である。実際のCodex App / CLIが外部サービスへ接続してhookを発火する統合テストは、信頼済み環境で別途実施する。
 
+### 7.1 Jevによる設計参照の意味チェック（手動PoC）
+
+`pnpm design-ref:check` は、明示指定した `AGENTS.md`・`.ai/review-guidelines.md`・`.ai/rules/*.md` と、設計章・ADRの意味の対応を調べる補助コマンドである。APIキーや通信を必要とするため、CIや編集hookからは実行しない。既存の参照存在チェック、テスト、人間のレビューは引き続き行う。
+
+```sh
+# APIを呼ばず、送信候補・参照先・要確認理由を確認する
+pnpm --silent design-ref:check --dry-run .ai/rules/web.md .ai/rules/shared.md
+
+# 指定した文書の主張と参照先の抜粋だけをTypeSafeへ送る
+mkdir -p reports
+pnpm --silent design-ref:check .ai/rules/web.md .ai/rules/shared.md > reports/design-references.json
+
+# 日本語24組の固定fixtureを評価する
+pnpm --silent design-ref:check --evaluate > reports/jev-evaluation.json
+pnpm design-ref:test
+```
+
+ローカルではルートの `.env.local` に `TYPESAFE_API_KEY` を設定する。コマンドはこのファイルがある場合だけ読み、既に存在する環境変数を優先する。`.env.local` と `reports/` はGit管理しない。キーを引数・Issue・PR・ログに記載しない。クラウドでは実行環境に同名のシークレットを設定し、HTTPSの `api.typesafe.ai` を許可する。プロキシ経由で置換されるキーのプレースホルダーもそのまま使う。設定変更前から動いているタスクには反映されない場合があるので、適用済み環境で実行する。
+
+モデルは `jev-1.13.0`、質問は `design-reference-v1` に固定する。JSONには出典行・原文・参照先抜粋、`supports` / `contradicts` / `not_addressed` / `insufficient_context`、各確率・confidence・usage・所要時間・入力ハッシュを記録する。confidenceは分布の集中度であり、正しさの保証ではない。未校正の閾値で自動承認しない。
+
+未解決参照は `local_error`、文書全体へのリンク・案内の表・コード例は理由付きの `needs_confirmation` にする。その他の案内や曖昧な主張もモデルが `insufficient_context` を選べる。キー未設定・文脈予算超過・要求上限は `not_run`、HTTP失敗や不正な応答は `error` として残す。最初のAPIエラーで後続送信を止め、自動リトライしない。上限は1実行30要求、`--max-requests 1..100` で明示変更できる。1要求30秒、JSON本文24,000 bytes以内に制限し、抜粋を黙って切り詰めない。
+
+終了コード0はコマンドの実行完了を示し、意味の正しさを承認しない。矛盾や要確認を含め、必ずJSONを読む。未解決・未実行・APIエラーは終了コード2とする（`--dry-run` 自体による未実行は正常）。対象のMarkdown書式は、既存リポジトリで使うATX見出し、インラインリンク、章番号・ADR番号に限定する。任意のMarkdownや文書全体を網羅する監査ではない。
+
+人手との比較は、同じ24組を人が直接確認する時間と、Jevの結果を読んで全件確認する時間を秒で測る。順序効果を抑えるため、可能なら別の担当者・順序で測る。正解ラベルも人が確認する。評価JSONの `datasetHash`・`resultsHash`、`cases: 24`、`reviewer`、ISO日時の `measuredAt`、実測した `baselineSeconds`・`assistedReviewSeconds` を `reports/jev-human-timing.json` に保存し、次で既存の結果と比較する。比較処理はAPIを再実行しない。
+
+```sh
+pnpm --silent design-ref:check --compare reports/jev-evaluation.json --human-timing reports/jev-human-timing.json
+```
+
+評価の現状と限界は [調査記録](./investigations/2026-10-17-jev-design-reference-check.md) に残す。
+
 ## 8. 恒久ルールと権限
 
 - 共通の開発規約、コマンド、検証手順は `AGENTS.md` に置く。

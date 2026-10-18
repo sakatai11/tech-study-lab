@@ -1,0 +1,392 @@
+{
+  "version": 1,
+  "createdAt": "2026-10-17",
+  "labelProvenance": "実API実行前に作成した暫定ラベル。人間による正解ラベルの確認は未実施。",
+  "sourceRevision": "e0eefbade31fbcfe33faa6b12b2e743880fd7230",
+  "cases": [
+    {
+      "id": "contracts-supports",
+      "expected": "supports",
+      "rationale": "対応する決定節が主張を明示している。",
+      "source": {
+        "file": "fixture-only",
+        "line": 1,
+        "text": "設計契約では不変条件はテストで検証し、理由と境界はADRに残す。",
+        "context": "日本語の参照意味評価。実文書を編集せずfixture内で主張または参照先を改変。"
+      },
+      "target": {
+        "file": "docs/adr/0001-contracts-as-adr-and-tests.md",
+        "section": "frozen excerpt",
+        "text": "## 決定\n1. 不変条件はテストで機械的に検証する。\n2. テストで表せない理由と境界だけを `docs/adr/` に ADR として残す。ADR は採用後に書き換えず、判断を変えるときは新しい ADR で置き換える。\n3. ADR を作るのは、契約を新設・変更する Issue だけとする。UI の文言や表示の細部は、コードとテストだけで変更する。\n4. 契約の優先順は ADR → 共有 Zod 契約 → テスト → 実装 とする。\n5. `docs/design.md` は段階的に縮退させ、最終的にプロダクト方針・依存方向・ADR 索引だけを持つ。移行が済むまでは、未移行の節を引き続き設計契約として扱う。\n\n## 境界\n\n- 対象は、AI や人がコードを読んで逆の判断をしうる設計判断（権威の所在、信用境界、データの整合性、セキュリティ、運用順序）である。\n- 現在のファイル配置・型・関数シグネチャは ADR に書かない。コード・共有 Zod・Knowledge Graph を一次ソースとする。\n- 過去の調査・比較・検証結果は `docs/investigations/` に置く。ADR には、採用した判断とその理由だけを書く。\n- 運用ルールの詳細は [README](./README.md) が持つ。"
+      }
+    },
+    {
+      "id": "contracts-contradicts",
+      "expected": "contradicts",
+      "rationale": "fixtureの主張だけを改変し、参照先の明示的な規則を反転した。",
+      "source": {
+        "file": "fixture-only",
+        "line": 1,
+        "text": "不変条件はADRの文章だけで検証し、テストには任せない。",
+        "context": "日本語の参照意味評価。実文書を編集せずfixture内で主張または参照先を改変。"
+      },
+      "target": {
+        "file": "docs/adr/0001-contracts-as-adr-and-tests.md",
+        "section": "frozen excerpt",
+        "text": "## 決定\n1. 不変条件はテストで機械的に検証する。\n2. テストで表せない理由と境界だけを `docs/adr/` に ADR として残す。ADR は採用後に書き換えず、判断を変えるときは新しい ADR で置き換える。\n3. ADR を作るのは、契約を新設・変更する Issue だけとする。UI の文言や表示の細部は、コードとテストだけで変更する。\n4. 契約の優先順は ADR → 共有 Zod 契約 → テスト → 実装 とする。\n5. `docs/design.md` は段階的に縮退させ、最終的にプロダクト方針・依存方向・ADR 索引だけを持つ。移行が済むまでは、未移行の節を引き続き設計契約として扱う。\n\n## 境界\n\n- 対象は、AI や人がコードを読んで逆の判断をしうる設計判断（権威の所在、信用境界、データの整合性、セキュリティ、運用順序）である。\n- 現在のファイル配置・型・関数シグネチャは ADR に書かない。コード・共有 Zod・Knowledge Graph を一次ソースとする。\n- 過去の調査・比較・検証結果は `docs/investigations/` に置く。ADR には、採用した判断とその理由だけを書く。\n- 運用ルールの詳細は [README](./README.md) が持つ。"
+      }
+    },
+    {
+      "id": "contracts-not_addressed",
+      "expected": "not_addressed",
+      "rationale": "存在する別の参照先へ差し替えた。別の主題であり、この主張の根拠を述べていない。",
+      "source": {
+        "file": "fixture-only",
+        "line": 1,
+        "text": "設計契約では不変条件はテストで検証し、理由と境界はADRに残す。",
+        "context": "日本語の参照意味評価。実文書を編集せずfixture内で主張または参照先を改変。"
+      },
+      "target": {
+        "file": "docs/adr/0002-api-authoritative-grading.md",
+        "section": "frozen excerpt",
+        "text": "## 決定\n1. クライアントに渡す出題用 ViewModel（Quiz / Review）は選択肢と解説だけを持ち、正解（`answerIndex`）を含めない。\n2. クライアントは選んだ `selectedIndex` だけを `POST /answers` に送る。正誤（`isCorrect`）をリクエストで受け取らない。\n3. API が D1 の `questions`（content sync が作る正解キャッシュ）と照合して `isCorrect` を決め、その判定を記録する。レスポンスとして `{ isCorrect, correctIndex }` を返す。\n4. `questions` に存在しない問題への解答は記録せず、404（`QUESTION_NOT_FOUND`）を返す。\n5. content の `answerIndex` を後から修正しても、過去の `answer_logs` は再評価しない。記録時点の判定を保持する。\n\n## 境界\n\n- 適用対象は、解答を記録して SRS を更新するすべての経路（`/quiz`・`/review`・間違えた問題の解き直し）である。\n- 教材本文・解説の表示は対象外。これらはバンドル済み content から表示してよい。\n- 解答後に正解を表示するのは API のレスポンス（`correctIndex`）を受け取った後だけとする。\n- 記述式・コード問題を追加する場合も、採点は API の service に置く（採点分岐を追加する）。"
+      }
+    },
+    {
+      "id": "contracts-insufficient_context",
+      "expected": "insufficient_context",
+      "rationale": "指示語だけの曖昧な主張と、意図的に途中で切った抜粋。何を指すか確定できない。",
+      "source": {
+        "file": "fixture-only",
+        "line": 1,
+        "text": "この境界では、それをその層だけで処理する。",
+        "context": "日本語の参照意味評価。実文書を編集せずfixture内で主張または参照先を改変。"
+      },
+      "target": {
+        "file": "docs/adr/0001-contracts-as-adr-and-tests.md",
+        "section": "frozen excerpt",
+        "text": "## 決定\n1. 不変条件はテストで機械的に検証する。\n2. テストで表せない理由と境界だけを `docs/adr/` に ADR として残す。ADR は採用後に書き換えず、判断を変えるときは新しい "
+      }
+    },
+    {
+      "id": "grading-supports",
+      "expected": "supports",
+      "rationale": "対応する決定節が主張を明示している。",
+      "source": {
+        "file": "fixture-only",
+        "line": 2,
+        "text": "正誤はAPIが保存済みの正解と照合して決め、クライアントはselectedIndexだけを送る。",
+        "context": "日本語の参照意味評価。実文書を編集せずfixture内で主張または参照先を改変。"
+      },
+      "target": {
+        "file": "docs/adr/0002-api-authoritative-grading.md",
+        "section": "frozen excerpt",
+        "text": "## 決定\n1. クライアントに渡す出題用 ViewModel（Quiz / Review）は選択肢と解説だけを持ち、正解（`answerIndex`）を含めない。\n2. クライアントは選んだ `selectedIndex` だけを `POST /answers` に送る。正誤（`isCorrect`）をリクエストで受け取らない。\n3. API が D1 の `questions`（content sync が作る正解キャッシュ）と照合して `isCorrect` を決め、その判定を記録する。レスポンスとして `{ isCorrect, correctIndex }` を返す。\n4. `questions` に存在しない問題への解答は記録せず、404（`QUESTION_NOT_FOUND`）を返す。\n5. content の `answerIndex` を後から修正しても、過去の `answer_logs` は再評価しない。記録時点の判定を保持する。\n\n## 境界\n\n- 適用対象は、解答を記録して SRS を更新するすべての経路（`/quiz`・`/review`・間違えた問題の解き直し）である。\n- 教材本文・解説の表示は対象外。これらはバンドル済み content から表示してよい。\n- 解答後に正解を表示するのは API のレスポンス（`correctIndex`）を受け取った後だけとする。\n- 記述式・コード問題を追加する場合も、採点は API の service に置く（採点分岐を追加する）。"
+      }
+    },
+    {
+      "id": "grading-contradicts",
+      "expected": "contradicts",
+      "rationale": "fixtureの主張だけを改変し、参照先の明示的な規則を反転した。",
+      "source": {
+        "file": "fixture-only",
+        "line": 2,
+        "text": "クライアントがisCorrectを決めて送信し、APIは申告された正誤を記録する。",
+        "context": "日本語の参照意味評価。実文書を編集せずfixture内で主張または参照先を改変。"
+      },
+      "target": {
+        "file": "docs/adr/0002-api-authoritative-grading.md",
+        "section": "frozen excerpt",
+        "text": "## 決定\n1. クライアントに渡す出題用 ViewModel（Quiz / Review）は選択肢と解説だけを持ち、正解（`answerIndex`）を含めない。\n2. クライアントは選んだ `selectedIndex` だけを `POST /answers` に送る。正誤（`isCorrect`）をリクエストで受け取らない。\n3. API が D1 の `questions`（content sync が作る正解キャッシュ）と照合して `isCorrect` を決め、その判定を記録する。レスポンスとして `{ isCorrect, correctIndex }` を返す。\n4. `questions` に存在しない問題への解答は記録せず、404（`QUESTION_NOT_FOUND`）を返す。\n5. content の `answerIndex` を後から修正しても、過去の `answer_logs` は再評価しない。記録時点の判定を保持する。\n\n## 境界\n\n- 適用対象は、解答を記録して SRS を更新するすべての経路（`/quiz`・`/review`・間違えた問題の解き直し）である。\n- 教材本文・解説の表示は対象外。これらはバンドル済み content から表示してよい。\n- 解答後に正解を表示するのは API のレスポンス（`correctIndex`）を受け取った後だけとする。\n- 記述式・コード問題を追加する場合も、採点は API の service に置く（採点分岐を追加する）。"
+      }
+    },
+    {
+      "id": "grading-not_addressed",
+      "expected": "not_addressed",
+      "rationale": "存在する別の参照先へ差し替えた。別の主題であり、この主張の根拠を述べていない。",
+      "source": {
+        "file": "fixture-only",
+        "line": 2,
+        "text": "正誤はAPIが保存済みの正解と照合して決め、クライアントはselectedIndexだけを送る。",
+        "context": "日本語の参照意味評価。実文書を編集せずfixture内で主張または参照先を改変。"
+      },
+      "target": {
+        "file": "docs/adr/0003-server-injected-user-id.md",
+        "section": "frozen excerpt",
+        "text": "## 決定\n1. `userId` は API の `userContext` middleware だけが request context に注入する。現在は固定ユーザーを注入する。\n2. route・service・DAL は、middleware が保証した `userId` を受け取るだけとし、自分でユーザーを解決しない。\n3. クライアントが送った `userId` は一切信用しない。ユーザー固有データを書き込むリクエストのスキーマは `userId` を含まず、未知のキーを拒否する（`strict`）。`userId` を含むリクエストは 400 とし、D1 を変更しない。\n4. 解答ログ・SRS 状態・閲覧ログの読み書きは、すべてこの `userId` で分離する。\n\n## 境界\n\n- 適用対象は、ユーザー固有データを読み書きするすべての endpoint である。public entrypoint と Service Binding 用の internal entrypoint の両方で同じ user route を `userContext` の後に mount する。\n- 教材・問題などの共有データ（content、`questions`）は対象外。\n- 将来の認証導入では、`userContext` の中身を「固定値を返す」から「認証情報から `userId` を引く」へ差し替えるだけにする。画面・API 契約・route 以降の層は変えない。\n- Cloudflare Access による保護は public entrypoint の別の境界であり、この ADR は扱わない。"
+      }
+    },
+    {
+      "id": "grading-insufficient_context",
+      "expected": "insufficient_context",
+      "rationale": "指示語だけの曖昧な主張と、意図的に途中で切った抜粋。何を指すか確定できない。",
+      "source": {
+        "file": "fixture-only",
+        "line": 2,
+        "text": "この境界では、それをその層だけで処理する。",
+        "context": "日本語の参照意味評価。実文書を編集せずfixture内で主張または参照先を改変。"
+      },
+      "target": {
+        "file": "docs/adr/0002-api-authoritative-grading.md",
+        "section": "frozen excerpt",
+        "text": "## 決定\n1. クライアントに渡す出題用 ViewModel（Quiz / Review）は選択肢と解説だけを持ち、正解（`answerIndex`）を含めない。\n2. クライアントは選んだ `se"
+      }
+    },
+    {
+      "id": "identity-supports",
+      "expected": "supports",
+      "rationale": "対応する決定節が主張を明示している。",
+      "source": {
+        "file": "fixture-only",
+        "line": 3,
+        "text": "userIdはサーバーのmiddlewareが注入し、クライアント指定のuserIdは信用しない。",
+        "context": "日本語の参照意味評価。実文書を編集せずfixture内で主張または参照先を改変。"
+      },
+      "target": {
+        "file": "docs/adr/0003-server-injected-user-id.md",
+        "section": "frozen excerpt",
+        "text": "## 決定\n1. `userId` は API の `userContext` middleware だけが request context に注入する。現在は固定ユーザーを注入する。\n2. route・service・DAL は、middleware が保証した `userId` を受け取るだけとし、自分でユーザーを解決しない。\n3. クライアントが送った `userId` は一切信用しない。ユーザー固有データを書き込むリクエストのスキーマは `userId` を含まず、未知のキーを拒否する（`strict`）。`userId` を含むリクエストは 400 とし、D1 を変更しない。\n4. 解答ログ・SRS 状態・閲覧ログの読み書きは、すべてこの `userId` で分離する。\n\n## 境界\n\n- 適用対象は、ユーザー固有データを読み書きするすべての endpoint である。public entrypoint と Service Binding 用の internal entrypoint の両方で同じ user route を `userContext` の後に mount する。\n- 教材・問題などの共有データ（content、`questions`）は対象外。\n- 将来の認証導入では、`userContext` の中身を「固定値を返す」から「認証情報から `userId` を引く」へ差し替えるだけにする。画面・API 契約・route 以降の層は変えない。\n- Cloudflare Access による保護は public entrypoint の別の境界であり、この ADR は扱わない。"
+      }
+    },
+    {
+      "id": "identity-contradicts",
+      "expected": "contradicts",
+      "rationale": "fixtureの主張だけを改変し、参照先の明示的な規則を反転した。",
+      "source": {
+        "file": "fixture-only",
+        "line": 3,
+        "text": "クライアントが指定したuserIdを信用して、ユーザー固有データを書き込む。",
+        "context": "日本語の参照意味評価。実文書を編集せずfixture内で主張または参照先を改変。"
+      },
+      "target": {
+        "file": "docs/adr/0003-server-injected-user-id.md",
+        "section": "frozen excerpt",
+        "text": "## 決定\n1. `userId` は API の `userContext` middleware だけが request context に注入する。現在は固定ユーザーを注入する。\n2. route・service・DAL は、middleware が保証した `userId` を受け取るだけとし、自分でユーザーを解決しない。\n3. クライアントが送った `userId` は一切信用しない。ユーザー固有データを書き込むリクエストのスキーマは `userId` を含まず、未知のキーを拒否する（`strict`）。`userId` を含むリクエストは 400 とし、D1 を変更しない。\n4. 解答ログ・SRS 状態・閲覧ログの読み書きは、すべてこの `userId` で分離する。\n\n## 境界\n\n- 適用対象は、ユーザー固有データを読み書きするすべての endpoint である。public entrypoint と Service Binding 用の internal entrypoint の両方で同じ user route を `userContext` の後に mount する。\n- 教材・問題などの共有データ（content、`questions`）は対象外。\n- 将来の認証導入では、`userContext` の中身を「固定値を返す」から「認証情報から `userId` を引く」へ差し替えるだけにする。画面・API 契約・route 以降の層は変えない。\n- Cloudflare Access による保護は public entrypoint の別の境界であり、この ADR は扱わない。"
+      }
+    },
+    {
+      "id": "identity-not_addressed",
+      "expected": "not_addressed",
+      "rationale": "存在する別の参照先へ差し替えた。別の主題であり、この主張の根拠を述べていない。",
+      "source": {
+        "file": "fixture-only",
+        "line": 3,
+        "text": "userIdはサーバーのmiddlewareが注入し、クライアント指定のuserIdは信用しない。",
+        "context": "日本語の参照意味評価。実文書を編集せずfixture内で主張または参照先を改変。"
+      },
+      "target": {
+        "file": "docs/adr/0005-srs-review-rules.md",
+        "section": "frozen excerpt",
+        "text": "## 決定\n1. **SRS 更新の入口は1つ**とする。`POST /answers` は呼び出し元（`/quiz`・`/review`・間違えた問題の解き直し）を区別しない。1解答ごとに `answer_log` の記録と SRS の更新を必ず行い、両者を原子的に書き込む。演習で正解した問題が SM-2 に従って翌日に due になるのは意図した挙動である。\n2. **同一問題の複数回解答は制御しない**。解答のたびに SRS を更新し、最後の解答が次回出題日を決める。`answer_logs` には全解答を残す。\n3. **due の判定は `dueAt <= now`** とする。SQL の where 句と `isDue`（sm2）で意味を一致させる。\n4. **復習キュー**（`GET /review/queue`）は `dueAt` の昇順で、1回のレスポンスに最大20件を返す。残りのバッチがあるかどうかを `hasMore` で返す。フロントは順序を並べ替えない。\n5. **due 件数**（`GET /dashboard/due-count`）は、`due_at <= now` の生の件数とする。content との join や20件の上限では減らさない。\n6. `/review` は解答済みの問題（`srs_states` を持つ問題）だけを扱う。新しい問題は学習フロー（教材 → `/quiz`）で初めて解答する。\n\n## 境界\n\n- 適用対象は、SRS 状態を変更・参照するすべての経路である。\n- 画面に表示する件数（content と join した後の件数）と、空キュー・整合性エラーの分岐は Web の表示契約であり、`docs/design.md` §5.3 が扱う。\n- SM-2 のパラメータ（ease の初期値と下限、間隔）を変える場合は、`sm2.ts` とそのテストを変更する。この ADR の改定は不要である。\n- 演習と復習で採点・記録の仕様を変える必要が出た場合は、この ADR を置き換える。"
+      }
+    },
+    {
+      "id": "identity-insufficient_context",
+      "expected": "insufficient_context",
+      "rationale": "指示語だけの曖昧な主張と、意図的に途中で切った抜粋。何を指すか確定できない。",
+      "source": {
+        "file": "fixture-only",
+        "line": 3,
+        "text": "この境界では、それをその層だけで処理する。",
+        "context": "日本語の参照意味評価。実文書を編集せずfixture内で主張または参照先を改変。"
+      },
+      "target": {
+        "file": "docs/adr/0003-server-injected-user-id.md",
+        "section": "frozen excerpt",
+        "text": "## 決定\n1. `userId` は API の `userContext` middleware だけが request context に注入する。現在は固定ユーザーを注入する。\n2. rout"
+      }
+    },
+    {
+      "id": "srs-supports",
+      "expected": "supports",
+      "rationale": "対応する決定節が主張を明示している。",
+      "source": {
+        "file": "fixture-only",
+        "line": 4,
+        "text": "復習キューはdueAtの昇順で最大20件を返す。",
+        "context": "日本語の参照意味評価。実文書を編集せずfixture内で主張または参照先を改変。"
+      },
+      "target": {
+        "file": "docs/adr/0005-srs-review-rules.md",
+        "section": "frozen excerpt",
+        "text": "## 決定\n1. **SRS 更新の入口は1つ**とする。`POST /answers` は呼び出し元（`/quiz`・`/review`・間違えた問題の解き直し）を区別しない。1解答ごとに `answer_log` の記録と SRS の更新を必ず行い、両者を原子的に書き込む。演習で正解した問題が SM-2 に従って翌日に due になるのは意図した挙動である。\n2. **同一問題の複数回解答は制御しない**。解答のたびに SRS を更新し、最後の解答が次回出題日を決める。`answer_logs` には全解答を残す。\n3. **due の判定は `dueAt <= now`** とする。SQL の where 句と `isDue`（sm2）で意味を一致させる。\n4. **復習キュー**（`GET /review/queue`）は `dueAt` の昇順で、1回のレスポンスに最大20件を返す。残りのバッチがあるかどうかを `hasMore` で返す。フロントは順序を並べ替えない。\n5. **due 件数**（`GET /dashboard/due-count`）は、`due_at <= now` の生の件数とする。content との join や20件の上限では減らさない。\n6. `/review` は解答済みの問題（`srs_states` を持つ問題）だけを扱う。新しい問題は学習フロー（教材 → `/quiz`）で初めて解答する。\n\n## 境界\n\n- 適用対象は、SRS 状態を変更・参照するすべての経路である。\n- 画面に表示する件数（content と join した後の件数）と、空キュー・整合性エラーの分岐は Web の表示契約であり、`docs/design.md` §5.3 が扱う。\n- SM-2 のパラメータ（ease の初期値と下限、間隔）を変える場合は、`sm2.ts` とそのテストを変更する。この ADR の改定は不要である。\n- 演習と復習で採点・記録の仕様を変える必要が出た場合は、この ADR を置き換える。"
+      }
+    },
+    {
+      "id": "srs-contradicts",
+      "expected": "contradicts",
+      "rationale": "fixtureの主張だけを改変し、参照先の明示的な規則を反転した。",
+      "source": {
+        "file": "fixture-only",
+        "line": 4,
+        "text": "復習キューはdueAtの降順で返し、1回の件数に上限はない。",
+        "context": "日本語の参照意味評価。実文書を編集せずfixture内で主張または参照先を改変。"
+      },
+      "target": {
+        "file": "docs/adr/0005-srs-review-rules.md",
+        "section": "frozen excerpt",
+        "text": "## 決定\n1. **SRS 更新の入口は1つ**とする。`POST /answers` は呼び出し元（`/quiz`・`/review`・間違えた問題の解き直し）を区別しない。1解答ごとに `answer_log` の記録と SRS の更新を必ず行い、両者を原子的に書き込む。演習で正解した問題が SM-2 に従って翌日に due になるのは意図した挙動である。\n2. **同一問題の複数回解答は制御しない**。解答のたびに SRS を更新し、最後の解答が次回出題日を決める。`answer_logs` には全解答を残す。\n3. **due の判定は `dueAt <= now`** とする。SQL の where 句と `isDue`（sm2）で意味を一致させる。\n4. **復習キュー**（`GET /review/queue`）は `dueAt` の昇順で、1回のレスポンスに最大20件を返す。残りのバッチがあるかどうかを `hasMore` で返す。フロントは順序を並べ替えない。\n5. **due 件数**（`GET /dashboard/due-count`）は、`due_at <= now` の生の件数とする。content との join や20件の上限では減らさない。\n6. `/review` は解答済みの問題（`srs_states` を持つ問題）だけを扱う。新しい問題は学習フロー（教材 → `/quiz`）で初めて解答する。\n\n## 境界\n\n- 適用対象は、SRS 状態を変更・参照するすべての経路である。\n- 画面に表示する件数（content と join した後の件数）と、空キュー・整合性エラーの分岐は Web の表示契約であり、`docs/design.md` §5.3 が扱う。\n- SM-2 のパラメータ（ease の初期値と下限、間隔）を変える場合は、`sm2.ts` とそのテストを変更する。この ADR の改定は不要である。\n- 演習と復習で採点・記録の仕様を変える必要が出た場合は、この ADR を置き換える。"
+      }
+    },
+    {
+      "id": "srs-not_addressed",
+      "expected": "not_addressed",
+      "rationale": "存在する別の参照先へ差し替えた。別の主題であり、この主張の根拠を述べていない。",
+      "source": {
+        "file": "fixture-only",
+        "line": 4,
+        "text": "復習キューはdueAtの昇順で最大20件を返す。",
+        "context": "日本語の参照意味評価。実文書を編集せずfixture内で主張または参照先を改変。"
+      },
+      "target": {
+        "file": "docs/adr/0006-content-as-source-of-truth.md",
+        "section": "frozen excerpt",
+        "text": "## 決定\n1. 教材・問題の本文、選択肢、正解、解説の一次ソースは `content/` の Markdown + frontmatter とする。API は教材・問題の本文を D1 に書き込まない。\n2. D1 の `questions` は content から同期するキャッシュとし、正誤判定と集計に必要な最小フィールド（`question_id`・`answer_index`・`domain`・`topic`・`lesson_id`・`is_active`）だけを持つ。本文・選択肢・解説は持たない。\n3. Web のビルド時バンドルと D1 への同期は、同じパース経路と共有 content Zod を通す。検証を通った内容だけが D1 に入る。\n4. 同期は冪等とする。現在の問題のメタデータと `answer_index` を先に upsert し、最後に1回の UPDATE で `is_active` の集合を確定する。upsert の途中で失敗した場合は、直前の active 集合を保つ。現在の問題集合が空なら、すべて inactive にする。\n5. content から消えた問題の行は物理削除しない（`answer_logs`・`srs_states` が参照するため）。`is_active = 0` にして集計から外す。\n6. content を変えたら、D1 への同期と Web の再ビルド・デプロイを必ず両方行う。片方だけだと「画面に出る問題を API が `QUESTION_NOT_FOUND` で拒否する」不整合が起きる。CI のリリースは、content の差分の有無にかかわらず毎回同期する。\n7. 一度 `answer_logs` / `srs_states` に記録された `lessonId` / `questionId` は変更しない。意味が変わる改訂は新しい `questionId` で追加し、旧問題は content から削除する。\n\n## 境界\n\n- 対象は教材・問題とそのメタデータである。解答ログ・SRS 状態・閲覧ログなどの動的データは D1 が一次ソースであり、この ADR の対象外。\n- `GET /domains` などの集計は `is_active = 1` の問題だけを数える。\n- ローカル開発用の seed（`dev-seed.ts`）は固定ユーザーの動的データだけを作り直し、`questions` と content には触れない。\n- ID の形式や問題数の目安などの執筆規約は、コンテンツ規約が扱う。"
+      }
+    },
+    {
+      "id": "srs-insufficient_context",
+      "expected": "insufficient_context",
+      "rationale": "指示語だけの曖昧な主張と、意図的に途中で切った抜粋。何を指すか確定できない。",
+      "source": {
+        "file": "fixture-only",
+        "line": 4,
+        "text": "この境界では、それをその層だけで処理する。",
+        "context": "日本語の参照意味評価。実文書を編集せずfixture内で主張または参照先を改変。"
+      },
+      "target": {
+        "file": "docs/adr/0005-srs-review-rules.md",
+        "section": "frozen excerpt",
+        "text": "## 決定\n1. **SRS 更新の入口は1つ**とする。`POST /answers` は呼び出し元（`/quiz`・`/review`・間違えた問題の解き直し）を区別しない。1解答ごとに `ans"
+      }
+    },
+    {
+      "id": "content-supports",
+      "expected": "supports",
+      "rationale": "対応する決定節が主張を明示している。",
+      "source": {
+        "file": "fixture-only",
+        "line": 5,
+        "text": "教材と問題の一次ソースはcontentのMarkdownとfrontmatterであり、D1はキャッシュである。",
+        "context": "日本語の参照意味評価。実文書を編集せずfixture内で主張または参照先を改変。"
+      },
+      "target": {
+        "file": "docs/adr/0006-content-as-source-of-truth.md",
+        "section": "frozen excerpt",
+        "text": "## 決定\n1. 教材・問題の本文、選択肢、正解、解説の一次ソースは `content/` の Markdown + frontmatter とする。API は教材・問題の本文を D1 に書き込まない。\n2. D1 の `questions` は content から同期するキャッシュとし、正誤判定と集計に必要な最小フィールド（`question_id`・`answer_index`・`domain`・`topic`・`lesson_id`・`is_active`）だけを持つ。本文・選択肢・解説は持たない。\n3. Web のビルド時バンドルと D1 への同期は、同じパース経路と共有 content Zod を通す。検証を通った内容だけが D1 に入る。\n4. 同期は冪等とする。現在の問題のメタデータと `answer_index` を先に upsert し、最後に1回の UPDATE で `is_active` の集合を確定する。upsert の途中で失敗した場合は、直前の active 集合を保つ。現在の問題集合が空なら、すべて inactive にする。\n5. content から消えた問題の行は物理削除しない（`answer_logs`・`srs_states` が参照するため）。`is_active = 0` にして集計から外す。\n6. content を変えたら、D1 への同期と Web の再ビルド・デプロイを必ず両方行う。片方だけだと「画面に出る問題を API が `QUESTION_NOT_FOUND` で拒否する」不整合が起きる。CI のリリースは、content の差分の有無にかかわらず毎回同期する。\n7. 一度 `answer_logs` / `srs_states` に記録された `lessonId` / `questionId` は変更しない。意味が変わる改訂は新しい `questionId` で追加し、旧問題は content から削除する。\n\n## 境界\n\n- 対象は教材・問題とそのメタデータである。解答ログ・SRS 状態・閲覧ログなどの動的データは D1 が一次ソースであり、この ADR の対象外。\n- `GET /domains` などの集計は `is_active = 1` の問題だけを数える。\n- ローカル開発用の seed（`dev-seed.ts`）は固定ユーザーの動的データだけを作り直し、`questions` と content には触れない。\n- ID の形式や問題数の目安などの執筆規約は、コンテンツ規約が扱う。"
+      }
+    },
+    {
+      "id": "content-contradicts",
+      "expected": "contradicts",
+      "rationale": "fixtureの主張だけを改変し、参照先の明示的な規則を反転した。",
+      "source": {
+        "file": "fixture-only",
+        "line": 5,
+        "text": "D1に格納した教材本文が一次ソースであり、contentのMarkdownは派生キャッシュである。",
+        "context": "日本語の参照意味評価。実文書を編集せずfixture内で主張または参照先を改変。"
+      },
+      "target": {
+        "file": "docs/adr/0006-content-as-source-of-truth.md",
+        "section": "frozen excerpt",
+        "text": "## 決定\n1. 教材・問題の本文、選択肢、正解、解説の一次ソースは `content/` の Markdown + frontmatter とする。API は教材・問題の本文を D1 に書き込まない。\n2. D1 の `questions` は content から同期するキャッシュとし、正誤判定と集計に必要な最小フィールド（`question_id`・`answer_index`・`domain`・`topic`・`lesson_id`・`is_active`）だけを持つ。本文・選択肢・解説は持たない。\n3. Web のビルド時バンドルと D1 への同期は、同じパース経路と共有 content Zod を通す。検証を通った内容だけが D1 に入る。\n4. 同期は冪等とする。現在の問題のメタデータと `answer_index` を先に upsert し、最後に1回の UPDATE で `is_active` の集合を確定する。upsert の途中で失敗した場合は、直前の active 集合を保つ。現在の問題集合が空なら、すべて inactive にする。\n5. content から消えた問題の行は物理削除しない（`answer_logs`・`srs_states` が参照するため）。`is_active = 0` にして集計から外す。\n6. content を変えたら、D1 への同期と Web の再ビルド・デプロイを必ず両方行う。片方だけだと「画面に出る問題を API が `QUESTION_NOT_FOUND` で拒否する」不整合が起きる。CI のリリースは、content の差分の有無にかかわらず毎回同期する。\n7. 一度 `answer_logs` / `srs_states` に記録された `lessonId` / `questionId` は変更しない。意味が変わる改訂は新しい `questionId` で追加し、旧問題は content から削除する。\n\n## 境界\n\n- 対象は教材・問題とそのメタデータである。解答ログ・SRS 状態・閲覧ログなどの動的データは D1 が一次ソースであり、この ADR の対象外。\n- `GET /domains` などの集計は `is_active = 1` の問題だけを数える。\n- ローカル開発用の seed（`dev-seed.ts`）は固定ユーザーの動的データだけを作り直し、`questions` と content には触れない。\n- ID の形式や問題数の目安などの執筆規約は、コンテンツ規約が扱う。"
+      }
+    },
+    {
+      "id": "content-not_addressed",
+      "expected": "not_addressed",
+      "rationale": "存在する別の参照先へ差し替えた。別の主題であり、この主張の根拠を述べていない。",
+      "source": {
+        "file": "fixture-only",
+        "line": 5,
+        "text": "教材と問題の一次ソースはcontentのMarkdownとfrontmatterであり、D1はキャッシュである。",
+        "context": "日本語の参照意味評価。実文書を編集せずfixture内で主張または参照先を改変。"
+      },
+      "target": {
+        "file": "docs/design.md",
+        "section": "frozen excerpt",
+        "text": "初回データは Server loader が形成し、page から表示 component へ ViewModel を渡す。責務・依存境界は §4.2、表示状態と通信状態の所有者は §5.5、SSR / SSG の実行方式は §5.3に従う。\n\n| 画面 | 初回データ | ユーザー操作後 |\n| --- | --- | --- |\n| 教材 | ビルド時contentをmapperに渡して表示。API GET不要 | 閲覧記録のみ最小Client recorderから送信 |\n| 演習 | ビルド時contentから問題・解説をVM化。API GET不要 | Client hookが解答を送信 |\n| 復習 | API queueのIDをサーバーでbundled contentへjoinしてVM化 | 次バッチ取得はClient Componentから `router.refresh()` でServer loaderを再実行 |\n\n#### 復習の表示契約\n\n- 正解情報の境界は [ADR-0002](./adr/0002-api-authoritative-grading.md) に従う。content loaderや全教材データをClient bundleへimportしない。\n- 静的な表示構造はユーザー固有データを共有キャッシュへ載せず、dueバッジと本文を同じ SSR リクエストで取得する。両者は唯一のloader入口 `loadReviewOnce` を通し、Reactの `cache()` によって同一リクエスト内のqueue取得を1回に畳む。未ラップのloaderはexportしない。共有キャッシュとの違いは §5.3。\n- APIの生のdue件数の意味は [ADR-0005](./adr/0005-srs-review-rules.md)。`ReviewViewModel.dueCount` は、現在のバッチをbundled contentとjoinした後に表示できる問題数であり、contentから削除されたIDはmapperで除外する。join後の表示可能な問題が0件で `hasMore=true` ならcontent整合性エラー、0件でfalseなら通常の空キュー、1件以上なら現在バッチを表示する。空キューをQuizの空問題表示へ委ねない。\n- 表示再利用の境界は §5.6。次バッチがある場合の完了操作で再取得し、mapperが導出した `batchKey` をinteractive subtreeのkeyにして、新しいバッチでは解答結果・画面フェーズをintroへリセットする。\n- 取得・整合性エラーと再試行導線は §5.7。\n\n現在のloaderは [load-review.ts](../apps/web/src/features/review/server/load-review.ts)、表示側は [review-runner.tsx](../apps/web/src/features/review/client/components/review-runner.tsx) を参照する。Graphはloader周辺の構造探索に使い、対象外のClient Componentは実コードを確認する。\n\n#### 実行環境とデータ取得\n\n- 公開トップ・教材・集計画面はRSCで描画し、演習・復習の操作部分はClient Componentとする。レイアウト／ヘッダーはServerとする。画面ごとの初回データは本節の表、演習の状態管理は §5.5。\n- Server専用のfeatureには `import 'server-only'`、Client入口には `'use client'` を置き、ディレクトリ名だけに境界の強制を任せない。依存規則は §4.2。\n- Server Actionsは採用しない（[ADR-0012](./adr/0012-separate-web-and-api-workers.md)）。初回取得はServer loader、mutationはClient hookからHono APIを呼ぶ。API契約とuser_id注入点を単一に保ち、HonoとCloudflareを学ぶ目的に沿わせる。重いフォームなど別の要求が生じた場合に再検討する。\n- Server dataの再取得はClient Componentの `router.refresh()` によるRSC再実行に統一する。API adapterへキャッシュ方針を持ち込まない。"
+      }
+    },
+    {
+      "id": "content-insufficient_context",
+      "expected": "insufficient_context",
+      "rationale": "指示語だけの曖昧な主張と、意図的に途中で切った抜粋。何を指すか確定できない。",
+      "source": {
+        "file": "fixture-only",
+        "line": 5,
+        "text": "この境界では、それをその層だけで処理する。",
+        "context": "日本語の参照意味評価。実文書を編集せずfixture内で主張または参照先を改変。"
+      },
+      "target": {
+        "file": "docs/adr/0006-content-as-source-of-truth.md",
+        "section": "frozen excerpt",
+        "text": "## 決定\n1. 教材・問題の本文、選択肢、正解、解説の一次ソースは `content/` の Markdown + frontmatter とする。API は教材・問題の本文を D1 に書き込まない"
+      }
+    },
+    {
+      "id": "loader-supports",
+      "expected": "supports",
+      "rationale": "対応する決定節が主張を明示している。",
+      "source": {
+        "file": "fixture-only",
+        "line": 6,
+        "text": "初回表示のデータ取得にはServer loaderを使い、ユーザー操作後のmutationはClient hookからHono APIを呼ぶ。",
+        "context": "日本語の参照意味評価。実文書を編集せずfixture内で主張または参照先を改変。"
+      },
+      "target": {
+        "file": "docs/design.md",
+        "section": "frozen excerpt",
+        "text": "初回データは Server loader が形成し、page から表示 component へ ViewModel を渡す。責務・依存境界は §4.2、表示状態と通信状態の所有者は §5.5、SSR / SSG の実行方式は §5.3に従う。\n\n| 画面 | 初回データ | ユーザー操作後 |\n| --- | --- | --- |\n| 教材 | ビルド時contentをmapperに渡して表示。API GET不要 | 閲覧記録のみ最小Client recorderから送信 |\n| 演習 | ビルド時contentから問題・解説をVM化。API GET不要 | Client hookが解答を送信 |\n| 復習 | API queueのIDをサーバーでbundled contentへjoinしてVM化 | 次バッチ取得はClient Componentから `router.refresh()` でServer loaderを再実行 |\n\n#### 復習の表示契約\n\n- 正解情報の境界は [ADR-0002](./adr/0002-api-authoritative-grading.md) に従う。content loaderや全教材データをClient bundleへimportしない。\n- 静的な表示構造はユーザー固有データを共有キャッシュへ載せず、dueバッジと本文を同じ SSR リクエストで取得する。両者は唯一のloader入口 `loadReviewOnce` を通し、Reactの `cache()` によって同一リクエスト内のqueue取得を1回に畳む。未ラップのloaderはexportしない。共有キャッシュとの違いは §5.3。\n- APIの生のdue件数の意味は [ADR-0005](./adr/0005-srs-review-rules.md)。`ReviewViewModel.dueCount` は、現在のバッチをbundled contentとjoinした後に表示できる問題数であり、contentから削除されたIDはmapperで除外する。join後の表示可能な問題が0件で `hasMore=true` ならcontent整合性エラー、0件でfalseなら通常の空キュー、1件以上なら現在バッチを表示する。空キューをQuizの空問題表示へ委ねない。\n- 表示再利用の境界は §5.6。次バッチがある場合の完了操作で再取得し、mapperが導出した `batchKey` をinteractive subtreeのkeyにして、新しいバッチでは解答結果・画面フェーズをintroへリセットする。\n- 取得・整合性エラーと再試行導線は §5.7。\n\n現在のloaderは [load-review.ts](../apps/web/src/features/review/server/load-review.ts)、表示側は [review-runner.tsx](../apps/web/src/features/review/client/components/review-runner.tsx) を参照する。Graphはloader周辺の構造探索に使い、対象外のClient Componentは実コードを確認する。\n\n#### 実行環境とデータ取得\n\n- 公開トップ・教材・集計画面はRSCで描画し、演習・復習の操作部分はClient Componentとする。レイアウト／ヘッダーはServerとする。画面ごとの初回データは本節の表、演習の状態管理は §5.5。\n- Server専用のfeatureには `import 'server-only'`、Client入口には `'use client'` を置き、ディレクトリ名だけに境界の強制を任せない。依存規則は §4.2。\n- Server Actionsは採用しない（[ADR-0012](./adr/0012-separate-web-and-api-workers.md)）。初回取得はServer loader、mutationはClient hookからHono APIを呼ぶ。API契約とuser_id注入点を単一に保ち、HonoとCloudflareを学ぶ目的に沿わせる。重いフォームなど別の要求が生じた場合に再検討する。\n- Server dataの再取得はClient Componentの `router.refresh()` によるRSC再実行に統一する。API adapterへキャッシュ方針を持ち込まない。"
+      }
+    },
+    {
+      "id": "loader-contradicts",
+      "expected": "contradicts",
+      "rationale": "fixtureの主張だけを改変し、参照先の明示的な規則を反転した。",
+      "source": {
+        "file": "fixture-only",
+        "line": 6,
+        "text": "初回表示に必要なAPI取得はすべてClient hookが行い、Server loaderは使わない。",
+        "context": "日本語の参照意味評価。実文書を編集せずfixture内で主張または参照先を改変。"
+      },
+      "target": {
+        "file": "docs/design.md",
+        "section": "frozen excerpt",
+        "text": "初回データは Server loader が形成し、page から表示 component へ ViewModel を渡す。責務・依存境界は §4.2、表示状態と通信状態の所有者は §5.5、SSR / SSG の実行方式は §5.3に従う。\n\n| 画面 | 初回データ | ユーザー操作後 |\n| --- | --- | --- |\n| 教材 | ビルド時contentをmapperに渡して表示。API GET不要 | 閲覧記録のみ最小Client recorderから送信 |\n| 演習 | ビルド時contentから問題・解説をVM化。API GET不要 | Client hookが解答を送信 |\n| 復習 | API queueのIDをサーバーでbundled contentへjoinしてVM化 | 次バッチ取得はClient Componentから `router.refresh()` でServer loaderを再実行 |\n\n#### 復習の表示契約\n\n- 正解情報の境界は [ADR-0002](./adr/0002-api-authoritative-grading.md) に従う。content loaderや全教材データをClient bundleへimportしない。\n- 静的な表示構造はユーザー固有データを共有キャッシュへ載せず、dueバッジと本文を同じ SSR リクエストで取得する。両者は唯一のloader入口 `loadReviewOnce` を通し、Reactの `cache()` によって同一リクエスト内のqueue取得を1回に畳む。未ラップのloaderはexportしない。共有キャッシュとの違いは §5.3。\n- APIの生のdue件数の意味は [ADR-0005](./adr/0005-srs-review-rules.md)。`ReviewViewModel.dueCount` は、現在のバッチをbundled contentとjoinした後に表示できる問題数であり、contentから削除されたIDはmapperで除外する。join後の表示可能な問題が0件で `hasMore=true` ならcontent整合性エラー、0件でfalseなら通常の空キュー、1件以上なら現在バッチを表示する。空キューをQuizの空問題表示へ委ねない。\n- 表示再利用の境界は §5.6。次バッチがある場合の完了操作で再取得し、mapperが導出した `batchKey` をinteractive subtreeのkeyにして、新しいバッチでは解答結果・画面フェーズをintroへリセットする。\n- 取得・整合性エラーと再試行導線は §5.7。\n\n現在のloaderは [load-review.ts](../apps/web/src/features/review/server/load-review.ts)、表示側は [review-runner.tsx](../apps/web/src/features/review/client/components/review-runner.tsx) を参照する。Graphはloader周辺の構造探索に使い、対象外のClient Componentは実コードを確認する。\n\n#### 実行環境とデータ取得\n\n- 公開トップ・教材・集計画面はRSCで描画し、演習・復習の操作部分はClient Componentとする。レイアウト／ヘッダーはServerとする。画面ごとの初回データは本節の表、演習の状態管理は §5.5。\n- Server専用のfeatureには `import 'server-only'`、Client入口には `'use client'` を置き、ディレクトリ名だけに境界の強制を任せない。依存規則は §4.2。\n- Server Actionsは採用しない（[ADR-0012](./adr/0012-separate-web-and-api-workers.md)）。初回取得はServer loader、mutationはClient hookからHono APIを呼ぶ。API契約とuser_id注入点を単一に保ち、HonoとCloudflareを学ぶ目的に沿わせる。重いフォームなど別の要求が生じた場合に再検討する。\n- Server dataの再取得はClient Componentの `router.refresh()` によるRSC再実行に統一する。API adapterへキャッシュ方針を持ち込まない。"
+      }
+    },
+    {
+      "id": "loader-not_addressed",
+      "expected": "not_addressed",
+      "rationale": "存在する別の参照先へ差し替えた。別の主題であり、この主張の根拠を述べていない。",
+      "source": {
+        "file": "fixture-only",
+        "line": 6,
+        "text": "初回表示のデータ取得にはServer loaderを使い、ユーザー操作後のmutationはClient hookからHono APIを呼ぶ。",
+        "context": "日本語の参照意味評価。実文書を編集せずfixture内で主張または参照先を改変。"
+      },
+      "target": {
+        "file": "docs/adr/0001-contracts-as-adr-and-tests.md",
+        "section": "frozen excerpt",
+        "text": "## 決定\n1. 不変条件はテストで機械的に検証する。\n2. テストで表せない理由と境界だけを `docs/adr/` に ADR として残す。ADR は採用後に書き換えず、判断を変えるときは新しい ADR で置き換える。\n3. ADR を作るのは、契約を新設・変更する Issue だけとする。UI の文言や表示の細部は、コードとテストだけで変更する。\n4. 契約の優先順は ADR → 共有 Zod 契約 → テスト → 実装 とする。\n5. `docs/design.md` は段階的に縮退させ、最終的にプロダクト方針・依存方向・ADR 索引だけを持つ。移行が済むまでは、未移行の節を引き続き設計契約として扱う。\n\n## 境界\n\n- 対象は、AI や人がコードを読んで逆の判断をしうる設計判断（権威の所在、信用境界、データの整合性、セキュリティ、運用順序）である。\n- 現在のファイル配置・型・関数シグネチャは ADR に書かない。コード・共有 Zod・Knowledge Graph を一次ソースとする。\n- 過去の調査・比較・検証結果は `docs/investigations/` に置く。ADR には、採用した判断とその理由だけを書く。\n- 運用ルールの詳細は [README](./README.md) が持つ。"
+      }
+    },
+    {
+      "id": "loader-insufficient_context",
+      "expected": "insufficient_context",
+      "rationale": "指示語だけの曖昧な主張と、意図的に途中で切った抜粋。何を指すか確定できない。",
+      "source": {
+        "file": "fixture-only",
+        "line": 6,
+        "text": "この境界では、それをその層だけで処理する。",
+        "context": "日本語の参照意味評価。実文書を編集せずfixture内で主張または参照先を改変。"
+      },
+      "target": {
+        "file": "docs/design.md",
+        "section": "frozen excerpt",
+        "text": "初回データは Server loader が形成し、page から表示 component へ ViewModel を渡す。責務・依存境界は §4.2、表示状態と通信状態の所有者は §5.5、SSR "
+      }
+    }
+  ]
+}
