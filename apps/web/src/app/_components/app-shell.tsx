@@ -5,6 +5,7 @@ import {
   DueCountBadge,
   DueCountProvider,
 } from '@/features/dashboard/client/components/due-count-badge'
+import { StreakBadge } from '@/features/dashboard/client/components/streak-badge'
 import { loadDashboardStatic } from '@/features/dashboard/server/load-dashboard'
 
 type AppShellProps = {
@@ -14,7 +15,7 @@ type AppShellProps = {
 
 /**
  * App Router の composition layer。全画面共通 shell と dashboard feature の
- * 復習バッジを props 契約で合成し、root components の feature 依存を防ぐ。
+ * バッジを props 契約で合成し、root components の feature 依存を防ぐ。
  */
 export function AppShell({ children, currentNavigation }: AppShellProps) {
   const { quizHref } = loadDashboardStatic()
@@ -29,6 +30,7 @@ export function AppShell({ children, currentNavigation }: AppShellProps) {
         mobileReviewBadge={
           <DueCountBadge className="absolute right-2 top-0 grid size-4 place-items-center rounded-full bg-red font-mono text-[9px] font-bold tabular-nums text-white" />
         }
+        mobileStreakBadge={<StreakBadge />}
         navigationHrefs={{
           dashboard: '/home',
           learn: '/learn',

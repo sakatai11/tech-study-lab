@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 
 import { createBrowserApiClient } from '@/lib/api'
+import { invalidateClientData } from '@/lib/client-data-invalidation'
 
 import { recordLessonView } from '../../api/lesson-api'
 
@@ -16,6 +17,7 @@ export function LessonViewRecorder({ lessonId }: LessonViewRecorderProps) {
       try {
         const client = createBrowserApiClient()
         await recordLessonView(client, { lessonId })
+        invalidateClientData('study-activity')
       } catch {
         // 閲覧記録の失敗は教材本文の表示へ影響させない。
       }

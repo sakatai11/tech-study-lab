@@ -24,6 +24,7 @@
 ## 検証
 
 - [rendering-boundaries.test.ts](../../apps/web/src/app/rendering-boundaries.test.ts): 認証後の画面が `force-dynamic` を宣言し、Web のソースが共有データキャッシュを使わない
+- [app-shell.test.tsx](../../apps/web/src/app/_components/app-shell.test.tsx): 共通シェルのストリークを Server 描画に含めず、マウント後に取得する
 - [cloudflare-config.test.ts](../../apps/web/scripts/cloudflare-config.test.ts): Cache Components と ISR 用のキャッシュ基盤を有効にしていない
 - [verify-build.ts](../../apps/web/scripts/verify-build.ts): ビルド成果物で、認証後の画面が prerender されていない（CI の `verify:build`）
 
