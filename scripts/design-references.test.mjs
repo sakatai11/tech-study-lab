@@ -6,6 +6,8 @@ import { join } from 'node:path'
 import { after, test } from 'node:test'
 import {
   MODEL,
+  QUESTION,
+  QUESTION_VERSION,
   collectReferences,
   digest,
   evaluateMetrics,
@@ -96,6 +98,40 @@ test('wrong relative paths cannot resolve by basename; source symlinks cannot re
   writeFileSync(outsideFile, 'External fixture content must never be read.\n')
   symlinkSync(outsideFile, join(root, '.ai/rules/example.md'))
   assert.throws(() => collectReferences(root, ['.ai/rules/example.md']), /path_outside_repository/)
+})
+
+test('source aliases cannot redirect allowed names or parent directories to disallowed repository content', () => {
+  const root = repository()
+  mkdirSync(join(root, '.ai/rules'), { recursive: true })
+  mkdirSync(join(root, 'internal'), { recursive: true })
+  writeFileSync(join(root, 'internal/unrelated.md'), 'Unrelated context\nClaim (design.md 1).\n')
+  symlinkSync(join(root, 'internal/unrelated.md'), join(root, '.ai/rules/example.md'))
+  assert.throws(() => collectReferences(root, ['.ai/rules/example.md']), /source_not_allowed/)
+
+  const parentAliasRoot = repository()
+  mkdirSync(join(parentAliasRoot, '.ai'), { recursive: true })
+  mkdirSync(join(parentAliasRoot, 'internal'), { recursive: true })
+  writeFileSync(join(parentAliasRoot, 'internal/example.md'), 'Claim (design.md 1).\n')
+  symlinkSync(join(parentAliasRoot, 'internal'), join(parentAliasRoot, '.ai/rules'), 'dir')
+  assert.throws(
+    () => collectReferences(parentAliasRoot, ['.ai/rules/example.md']),
+    /source_not_allowed/,
+  )
+})
+
+test('source aliases to allowed policy files and aliased repository roots remain supported', () => {
+  const root = repository()
+  mkdirSync(join(root, '.ai/rules'), { recursive: true })
+  writeFileSync(join(root, 'AGENTS.md'), 'Claim (design.md 1).\n')
+  symlinkSync(join(root, 'AGENTS.md'), join(root, '.ai/rules/example.md'))
+  const aliasParent = mkdtempSync(join(tmpdir(), 'design-refs-root-alias-'))
+  temporaryRoots.push(aliasParent)
+  const rootAlias = join(aliasParent, 'repository')
+  symlinkSync(root, rootAlias, 'dir')
+  const refs = collectReferences(rootAlias, ['.ai/rules/example.md'])
+  assert.equal(refs.length, 1)
+  assert.equal(refs[0].status, 'resolved')
+  assert.equal(refs[0].source.file, '.ai/rules/example.md')
 })
 
 test('unresolved references stay local errors, including anchors and ADR file names', () => {
@@ -265,6 +301,14 @@ test('human timing compares the same completed results offline and refuses misma
     ...row,
     status: 'judged',
     model: MODEL,
+    inputHash: digest({
+      questionVersion: QUESTION_VERSION,
+      request: {
+        model: MODEL,
+        state: { source: row.source, target: row.target },
+        questions: { relation: QUESTION },
+      },
+    }),
     judgment: response(row.expected).answers.relation,
     usage: response().usage,
   }))
@@ -289,6 +333,92 @@ test('human timing compares the same completed results offline and refuses misma
   assert.equal(result.status, 0)
   assert.equal(JSON.parse(result.stdout).requests, 0)
   assert.equal(JSON.parse(result.stdout).humanComparison.savedTotalSeconds, 38)
+  const originalReport = structuredClone(report)
+  const originalTiming = structuredClone(timing)
+  const mutations = [
+    [
+      'claim',
+      (r) => {
+        r.rows[0].source.text = 'Different claim'
+      },
+    ],
+    [
+      'source context',
+      (r) => {
+        r.rows[0].source.context = 'Different context'
+      },
+    ],
+    [
+      'source provenance',
+      (r) => {
+        r.rows[0].source.line++
+      },
+    ],
+    [
+      'evidence',
+      (r) => {
+        r.rows[0].target.text = 'Different evidence'
+      },
+    ],
+    [
+      'target provenance',
+      (r) => {
+        r.rows[0].target.section = 'Different section'
+      },
+    ],
+    [
+      'rationale',
+      (r) => {
+        r.rows[0].rationale = 'Different rationale'
+      },
+    ],
+    [
+      'input hash',
+      (r) => {
+        r.rows[0].inputHash = 'incorrect'
+      },
+    ],
+    [
+      'missing input hash',
+      (r) => {
+        r.rows[0].inputHash = undefined
+      },
+    ],
+    [
+      'question version',
+      (r) => {
+        r.questionVersion = 'different-version'
+      },
+    ],
+    [
+      'edited inputs with recomputed input hash',
+      (r) => {
+        r.rows[0].source.text = 'Different claim'
+        r.rows[0].inputHash = digest({
+          questionVersion: QUESTION_VERSION,
+          request: {
+            model: MODEL,
+            state: { source: r.rows[0].source, target: r.rows[0].target },
+            questions: { relation: QUESTION },
+          },
+        })
+      },
+    ],
+  ]
+  for (const [name, mutate] of mutations) {
+    const altered = structuredClone(originalReport)
+    mutate(altered)
+    altered.resultsHash = digest(altered.rows)
+    writeFileSync(reportPath, JSON.stringify(altered))
+    writeFileSync(
+      timingPath,
+      JSON.stringify({ ...originalTiming, resultsHash: altered.resultsHash }),
+    )
+    const rejected = run()
+    assert.equal(rejected.status, 2, name)
+    assert.equal(rejected.stdout, '', name)
+  }
+  writeFileSync(reportPath, JSON.stringify(originalReport))
   timing.resultsHash = 'different-results'
   writeFileSync(timingPath, JSON.stringify(timing))
   assert.equal(run().status, 2)

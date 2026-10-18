@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
+import { isDeepStrictEqual } from 'node:util'
 import {
   MODEL,
   QUESTION,
@@ -9,6 +10,7 @@ import {
   digest,
   evaluateMetrics,
   judgeReference,
+  referenceInputHash,
   summarize,
   validateResponse,
 } from './design-references.mjs'
@@ -111,6 +113,7 @@ async function main() {
       report.dryRun ||
       report.datasetHash !== dataset.hash ||
       report.model !== MODEL ||
+      report.questionVersion !== QUESTION_VERSION ||
       report.questionHash !== digest(QUESTION) ||
       !Number.isFinite(report.elapsedMs) ||
       report.elapsedMs < 0 ||
@@ -118,8 +121,10 @@ async function main() {
       report.rows.some(
         (row, index) =>
           row.status !== 'judged' ||
-          row.id !== dataset.rows[index].id ||
-          row.expected !== dataset.rows[index].expected,
+          ['id', 'expected', 'rationale', 'source', 'target'].some(
+            (field) => !isDeepStrictEqual(row[field], dataset.rows[index][field]),
+          ) ||
+          row.inputHash !== referenceInputHash(row),
       )
     )
       throw new Error('complete_evaluation_report_required')

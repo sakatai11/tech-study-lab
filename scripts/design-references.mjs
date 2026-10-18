@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { readFileSync, readdirSync, realpathSync } from 'node:fs'
-import { dirname, join, posix, sep } from 'node:path'
+import { dirname, join, posix, relative, sep } from 'node:path'
 import { EnvHttpProxyAgent } from 'undici'
 import { headingSections } from './markdown-headings.mjs'
 
@@ -29,9 +29,12 @@ export const QUESTION = {
 
 export const digest = (value) => createHash('sha256').update(JSON.stringify(value)).digest('hex')
 
-function readSafe(root, file) {
+function readSafe(root, file, { sourceOnly = false } = {}) {
+  const rootPath = realpathSync(root)
   const path = realpathSync(join(root, file))
-  if (!path.startsWith(`${realpathSync(root)}${sep}`)) throw new Error('path_outside_repository')
+  if (!path.startsWith(`${rootPath}${sep}`)) throw new Error('path_outside_repository')
+  if (sourceOnly && !sourceAllowed(relative(rootPath, path).split(sep).join('/')))
+    throw new Error('source_not_allowed')
   return readFileSync(path, 'utf8')
 }
 
@@ -100,7 +103,7 @@ export function collectReferences(root, files) {
   )
   const output = []
   for (const file of [...new Set(files)]) {
-    const text = readSafe(root, file)
+    const text = readSafe(root, file, { sourceOnly: true })
     const lines = text.split('\n')
     let fence = null
     lines.forEach((line, index) => {
@@ -222,6 +225,18 @@ export function validateResponse(response) {
   return { choice: answer.choice, probabilities: distribution, confidence: answer.confidence }
 }
 
+function referenceRequest(ref) {
+  return {
+    model: MODEL,
+    state: { source: ref.source, target: ref.target },
+    questions: { relation: QUESTION },
+  }
+}
+
+export function referenceInputHash(ref) {
+  return digest({ questionVersion: QUESTION_VERSION, request: referenceRequest(ref) })
+}
+
 /** One bounded request, no implicit retry. Errors never contain response bodies or credentials. */
 export async function judgeReference(
   ref,
@@ -229,14 +244,10 @@ export async function judgeReference(
 ) {
   if (ref.status !== 'resolved') return ref
   if (!apiKey?.trim()) return { ...ref, status: 'not_run', reason: 'missing_api_key' }
-  const request = {
-    model: MODEL,
-    state: { source: ref.source, target: ref.target },
-    questions: { relation: QUESTION },
-  }
+  const request = referenceRequest(ref)
   if (Buffer.byteLength(JSON.stringify(request)) > 24000)
     return { ...ref, status: 'not_run', reason: 'context_budget_exceeded' }
-  const inputHash = digest({ questionVersion: QUESTION_VERSION, request })
+  const inputHash = referenceInputHash(ref)
   const started = performance.now()
   try {
     if (fetchImpl === fetch && !proxyAgent) proxyAgent = new EnvHttpProxyAgent()
