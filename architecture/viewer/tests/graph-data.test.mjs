@@ -25,9 +25,10 @@ test('viewer data is extracted from current sources, with bounded, exact source 
   )
 })
 
-function requestPlugin(method, origin) {
+function requestPlugin(method, origin, host = '127.0.0.1:4173', port = 4173) {
   let handler
   graphDataPlugin(root).configureServer({
+    config: { server: { port } },
     middlewares: {
       use(path, fn) {
         assert.equal(path, '/graph-data.json')
@@ -37,7 +38,7 @@ function requestPlugin(method, origin) {
   })
   const result = { status: 200, headers: {}, body: '' }
   handler(
-    { method, headers: { host: '127.0.0.1:4173', ...(origin ? { origin } : {}) } },
+    { method, headers: { ...(host ? { host } : {}), ...(origin ? { origin } : {}) } },
     {
       setHeader(key, value) {
         result.headers[key] = value
@@ -60,4 +61,16 @@ test('graph endpoint rejects writes and cross-origin reads', () => {
   assert.equal(response.status, 200)
   assert.equal(response.headers['Cache-Control'], 'no-store')
   assert.ok(JSON.parse(response.body).graph.nodes.length > 0)
+})
+
+test('graph endpoint rejects DNS rebinding hosts even without Origin or with matching Origin', () => {
+  for (const host of ['evil.example:4173', '127.0.0.1.evil.example:4173', '127.0.0.1:9999']) {
+    assert.equal(requestPlugin('GET', undefined, host).status, 403)
+    assert.equal(requestPlugin('GET', `http://${host}`, host).status, 403)
+  }
+  assert.equal(requestPlugin('GET', undefined, '').status, 403)
+  assert.equal(requestPlugin('GET', undefined, 'localhost:4173').status, 200)
+  assert.equal(requestPlugin('GET', 'http://localhost:4173', 'localhost:4173').status, 200)
+  assert.equal(requestPlugin('GET', undefined, '127.0.0.1:4321', 4321).status, 200)
+  assert.equal(requestPlugin('GET', undefined, '127.0.0.1:4173', 4321).status, 403)
 })

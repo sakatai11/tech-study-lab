@@ -18,12 +18,20 @@ export function graphDataPlugin(root) {
   return {
     name: 'architecture-graph-data',
     configureServer(server) {
+      // Plugin middleware runs before Vite's own Host validation.
+      const port = server.config.server.port
+      const allowedHosts = new Set([`127.0.0.1:${port}`, `localhost:${port}`])
       server.middlewares.use('/graph-data.json', (request, response) => {
         response.setHeader('Content-Type', 'application/json; charset=utf-8')
         response.setHeader('Cache-Control', 'no-store')
         if (request.method !== 'GET') {
           response.writeHead(405, { Allow: 'GET' })
           response.end(JSON.stringify({ error: 'GET only' }))
+          return
+        }
+        if (!allowedHosts.has(request.headers.host)) {
+          response.writeHead(403)
+          response.end(JSON.stringify({ error: 'Loopback hosts only' }))
           return
         }
         const origin = request.headers.origin

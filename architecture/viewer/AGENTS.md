@@ -1,13 +1,9 @@
-# Prototype Instructions
+# Knowledge Graph viewer
 
-Run the local server yourself and open the preview in the browser available to this environment. Do not give the user server-start instructions when you can run it.
+Apply the repository's root AGENTS.md and common review/development rules.
 
-Before making substantial visual changes, use the Product Design plugin's `get-context` skill when the visual source is unclear or no longer matches the current goal. When the user gives durable prototype-specific design feedback, preferences, or decisions, record them in `AGENTS.md`.
+The user selected the second generated design: four dark, colored architecture lanes and a three-column inspector below. Preserve that structure. Use actual extracted nodes, relations, source files, and line numbers instead of invented mock content.
 
-When implementing from a selected generated mock, treat that image as the source of truth for layout, component anatomy, density, spacing, color, typography, visible content, and hierarchy.
+This is a read-only local developer tool. Do not deploy it or expose it beyond loopback as part of ordinary development. Follow architecture/README.md for installation, startup and shutdown.
 
-Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts/prepare-sites-build.mjs`, and `tests/sites-worker.test.mjs` intact so the same local prototype can be handed to Sites. Before a Sites handoff, run `npm run build` and `npm run test:sites`; the build must leave `dist/client/index.html`, `dist/server/index.js`, and `dist/.openai/hosting.json`.
-
-## Viewer-specific decisions
-
-The user selected the second generated design: four dark, colored architecture lanes and a three-column inspector below. Preserve that structure. Use actual extracted nodes, relations, source files, and line numbers instead of invented mock content. The graph is a read-only local developer tool. Do not deploy it or expose it beyond loopback as part of ordinary development.
+The user explicitly requested Product Design. Its starter includes `.openai/hosting.json`, `worker/index.js`, `scripts/prepare-sites-build.mjs`, and `tests/sites-worker.test.mjs`; retain that build compatibility. These files prepare local artifacts and do not grant deployment authorization. App UI belongs in `src/`.
