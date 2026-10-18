@@ -75,6 +75,12 @@ jobs:
         if: github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'develop'
         run: pnpm architecture:test
 
+      - name: Verify Knowledge Graph viewer
+        run: |
+          npm --prefix architecture/viewer ci
+          npm --prefix architecture/viewer run build
+          npm --prefix architecture/viewer run test:sites
+
       - name: Build
         run: pnpm build
 
