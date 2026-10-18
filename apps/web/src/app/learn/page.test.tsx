@@ -9,6 +9,10 @@ vi.mock('@/features/dashboard/client/components/due-count-badge', () => ({
   DueCountProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
 }))
 
+vi.mock('@/features/dashboard/client/components/streak-badge', () => ({
+  StreakBadge: () => null,
+}))
+
 vi.mock('@/features/dashboard/server/load-dashboard', () => ({
   loadDashboardStatic: () => ({ quizHref: undefined }),
 }))

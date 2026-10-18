@@ -35,7 +35,16 @@ vi.mock('@/features/dashboard/server/load-dashboard', () => ({
 
 import { LessonViewRecorder } from '@/features/lesson/client/components/lesson-view-recorder'
 import { QuizInteractive } from '@/features/quiz/client/components/quiz-interactive'
+import { invalidateClientData } from '@/lib/client-data-invalidation'
 import { AppShell } from './app-shell'
+
+let viewportWidth = 390
+const viewportListeners = new Set<() => void>()
+
+function resizeViewport(width: number) {
+  viewportWidth = width
+  for (const listener of viewportListeners) listener()
+}
 
 function createDeferred<T>() {
   let resolvePromise: ((value: T) => void) | undefined
@@ -75,13 +84,84 @@ const summary = {
 
 describe('AppShell', () => {
   beforeEach(() => {
+    viewportWidth = 390
+    viewportListeners.clear()
+    vi.stubGlobal('matchMedia', (query: string) => {
+      if (query !== '(min-width: 1024px)') throw new Error(`Unexpected media query: ${query}`)
+      return {
+        get matches() {
+          return viewportWidth >= 1024
+        },
+        addEventListener: (_event: string, listener: () => void) => viewportListeners.add(listener),
+        removeEventListener: (_event: string, listener: () => void) =>
+          viewportListeners.delete(listener),
+      }
+    })
     fetchDashboardSummaryMock.mockReset()
     fetchDashboardSummaryMock.mockImplementation(() => new Promise(() => {}))
     recordLessonViewMock.mockReset()
     submitAnswerMock.mockReset()
   })
 
-  afterEach(cleanup)
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllGlobals()
+  })
+
+  it('does not fetch a hidden streak on desktop, including after activity', async () => {
+    viewportWidth = 1024
+    fetchDashboardSummaryMock.mockResolvedValue(summary)
+
+    render(<AppShell currentNavigation="dashboard">home</AppShell>)
+    await act(async () => invalidateClientData('study-activity'))
+
+    expect(fetchDashboardSummaryMock).not.toHaveBeenCalled()
+    expect(screen.queryByText('連続学習')).toBeNull()
+  })
+
+  it('starts and stops streak fetching at the desktop breakpoint', async () => {
+    viewportWidth = 1024
+    fetchDashboardSummaryMock
+      .mockResolvedValueOnce(summary)
+      .mockResolvedValueOnce({ ...summary, currentStreakDays: 2 })
+    const { unmount } = render(<AppShell currentNavigation="dashboard">home</AppShell>)
+
+    await act(async () => resizeViewport(1023))
+    expect(await screen.findByText('1日')).toBeTruthy()
+    expect(fetchDashboardSummaryMock).toHaveBeenCalledTimes(1)
+
+    await act(async () => resizeViewport(1024))
+    await act(async () => invalidateClientData('study-activity'))
+    expect(screen.queryByText('連続学習')).toBeNull()
+    expect(fetchDashboardSummaryMock).toHaveBeenCalledTimes(1)
+
+    await act(async () => resizeViewport(1023))
+    expect(await screen.findByText('2日')).toBeTruthy()
+    expect(fetchDashboardSummaryMock).toHaveBeenCalledTimes(2)
+
+    unmount()
+    expect(viewportListeners.size).toBe(0)
+    await act(async () => resizeViewport(390))
+    await act(async () => invalidateClientData('study-activity'))
+    expect(fetchDashboardSummaryMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('ignores an earlier mobile request after switching desktop and back', async () => {
+    const initialSummary = createDeferred<AnalyticsSummaryResponse>()
+    fetchDashboardSummaryMock
+      .mockReturnValueOnce(initialSummary.promise)
+      .mockResolvedValueOnce({ ...summary, currentStreakDays: 2 })
+    render(<AppShell currentNavigation="dashboard">home</AppShell>)
+
+    await act(async () => resizeViewport(1024))
+    await act(async () => resizeViewport(390))
+    expect(await screen.findByText('2日')).toBeTruthy()
+    await act(async () => initialSummary.resolve(summary))
+
+    expect(screen.getByText('2日')).toBeTruthy()
+    expect(screen.queryByText('1日')).toBeNull()
+    expect(fetchDashboardSummaryMock).toHaveBeenCalledTimes(2)
+  })
 
   it.each([true, false])(
     'updates the mounted streak after a recorded answer (correct: %s)',
