@@ -125,12 +125,17 @@ Issue開発での使い方は `.ai/skills/issue-dev-orchestrate/references/archi
 レイヤー別の図と出典コードを表示するローカルビューアを用意している。
 
 ```sh
-# 初回のみ（ビューアは独立した npm package）
+# 初回のみ：リポジトリのルートで両方を実行
+# 抽出器の TypeScript など、ルート側の依存関係を用意
+pnpm install --frozen-lockfile
+# ビューア側の依存関係を用意（独立した npm package）
 npm --prefix architecture/viewer ci
 
 # リポジトリのルートから起動
 pnpm architecture:view
 ```
+
+ビューアはルートの抽出器を利用するため、ビューア側の `npm ci` だけでは起動できない。ルートの依存関係も必要。
 
 表示先は `http://127.0.0.1:4173/`。学習アプリや Cloudflare の起動は不要。
 終了するときは、起動したターミナルで `Ctrl+C` を押す。

@@ -6,7 +6,7 @@
 
 ## 開発
 
-- ルートの `pnpm install` とは独立した package。初回は `npm ci`、起動は `npm run dev`。
+- ビューアは独立した npm package だが、Graph の抽出器はルートの `typescript` などに依存する。初回はリポジトリのルートで `pnpm install --frozen-lockfile` と `npm --prefix architecture/viewer ci` の両方を実行し、`pnpm architecture:view` で起動する。ビューアのディレクトリ内で `npm run dev` を使う場合も、ルート側の依存関係は必要。
 - `src/graph-model.mjs`: 検索、表示フィルター、ネットワーク配置。走査は CLI と共通の `../traversal.mjs` を使う。
 - `src/overview-model.mjs` / `src/LayerOverview.jsx`: 層別概要の集計と一覧・検索・ネットワークへの移動。
 - `graph-data.mjs`: 既存抽出器から Graph と出典抜粋を生成。開発時の再読み込みと静的ビルドで共用する。
