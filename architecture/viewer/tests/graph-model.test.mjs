@@ -76,8 +76,11 @@ test('shared contracts stop expansion unless explicitly selected as a seed', () 
 
 test('every displayed node is laid out exactly once, without changing its real layer', () => {
   const view = selectGraph(graph)
-  const { columns, positions } = layoutGraph(view)
-  assert.equal(columns.flat().length, graph.nodes.length)
+  const { positions } = layoutGraph(view)
+  assert.equal(positions.size, graph.nodes.length)
+  assert.deepEqual(layoutGraph(view).positions, positions)
+  assert.equal(layoutGraph({ nodes: [], edges: [] }).positions.size, 0)
+  assert.ok([...positions.values()].every(({ x, y }) => Number.isFinite(x) && Number.isFinite(y)))
   assert.equal(
     new Set([...positions.values()].map(({ x, y }) => `${x}:${y}`)).size,
     graph.nodes.length,
@@ -86,4 +89,38 @@ test('every displayed node is laid out exactly once, without changing its real l
   assert.equal(deps.layer, 'api-service')
   assert.equal(laneOf(deps), 2)
   assert.equal(laneOf(graph.nodes.find((node) => node.kind === 'http-endpoint')), 1)
+})
+
+test('overview includes every real node once, including future unknown layers', async () => {
+  const { summarizeLayers } = await import('../src/overview-model.mjs')
+  const fixture = {
+    nodes: [...graph.nodes, { id: 'future', layer: 'future-layer' }],
+    edges: graph.edges,
+  }
+  const summary = summarizeLayers(fixture)
+  const ids = summary.flatMap((group) => group.nodes.map((node) => node.id))
+  assert.equal(ids.length, fixture.nodes.length)
+  assert.equal(new Set(ids).size, fixture.nodes.length)
+  assert.ok(
+    summary.find((group) => group.id === 'config').nodes.some((node) => node.id === 'future'),
+  )
+})
+
+test('overview counts real cross-layer relations without inventing a pipeline', async () => {
+  const { summarizeLayers } = await import('../src/overview-model.mjs')
+  const summary = summarizeLayers({
+    nodes: [
+      { id: 'a', layer: 'api-service' },
+      { id: 'b', layer: 'api-dal' },
+      { id: 'c', layer: 'api-service' },
+    ],
+    edges: [
+      { from: 'a', to: 'b' },
+      { from: 'a', to: 'c' },
+    ],
+  })
+  assert.deepEqual(summary.find((group) => group.id === 'service').connections, [
+    { id: 'data', name: 'データの読み書き', count: 1 },
+  ])
+  assert.equal(summary.find((group) => group.id === 'db').connections.length, 0)
 })

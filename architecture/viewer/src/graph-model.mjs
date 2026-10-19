@@ -69,30 +69,73 @@ export function selectGraph(graph, { text = '', depth = 1, relation = 'all', foc
   }
 }
 
-/** Arrange real nodes into presentation lanes. Lane grouping never changes node.layer. */
+/** Deterministic force layout: links attract, nodes repel; source layers remain intact. */
 export function layoutGraph(graph) {
-  const columns = lanes.map(() => [])
-  const distance = new Map([...graph.seeds].map((id) => [id, 0]))
-  for (let step = 1; step <= 4; step++) {
+  const ordered = [...graph.nodes].sort((a, b) => a.id.localeCompare(b.id))
+  const points = ordered.map((node, i) => ({
+    id: node.id,
+    x: Math.cos(i * 2.399963) * Math.sqrt(i + 1) * 90,
+    y: Math.sin(i * 2.399963) * Math.sqrt(i + 1) * 70,
+  }))
+  const byId = new Map(points.map((point) => [point.id, point]))
+  for (let step = 0; step < 160; step++) {
+    const forces = new Map(
+      points.map((point) => [point.id, { x: -point.x * 0.006, y: -point.y * 0.006 }]),
+    )
+    for (let i = 0; i < points.length; i++) {
+      for (let j = i + 1; j < points.length; j++) {
+        const a = points[i]
+        const b = points[j]
+        const dx = a.x - b.x
+        const dy = a.y - b.y
+        const distance = Math.max(1, Math.hypot(dx, dy))
+        const strength = Math.min(45, 18000 / (distance * distance))
+        const fx = (dx / distance) * strength
+        const fy = (dy / distance) * strength
+        forces.get(a.id).x += fx
+        forces.get(a.id).y += fy
+        forces.get(b.id).x -= fx
+        forces.get(b.id).y -= fy
+      }
+    }
     for (const edge of graph.edges) {
-      if (distance.get(edge.from) === step - 1 && !distance.has(edge.to))
-        distance.set(edge.to, step)
-      if (distance.get(edge.to) === step - 1 && !distance.has(edge.from))
-        distance.set(edge.from, step)
+      const a = byId.get(edge.from)
+      const b = byId.get(edge.to)
+      if (!a || !b || a === b) continue
+      const dx = b.x - a.x
+      const dy = b.y - a.y
+      const distance = Math.max(1, Math.hypot(dx, dy))
+      const strength = (distance - 220) * 0.025
+      const fx = (dx / distance) * strength
+      const fy = (dy / distance) * strength
+      forces.get(a.id).x += fx
+      forces.get(a.id).y += fy
+      forces.get(b.id).x -= fx
+      forces.get(b.id).y -= fy
+    }
+    const cooling = 1 - step / 180
+    for (const point of points) {
+      const force = forces.get(point.id)
+      point.x += Math.max(-25, Math.min(25, force.x)) * cooling
+      point.y += Math.max(-25, Math.min(25, force.y)) * cooling
     }
   }
-  const rank = (node) => (distance.get(node.id) ?? 5) * 10 + (node.kind === 'function' ? 0 : 1)
-  for (const node of graph.nodes) columns[laneOf(node)].push(node)
-  for (const column of columns) column.sort((a, b) => rank(a) - rank(b) || a.id.localeCompare(b.id))
-  const positions = new Map()
-  columns.forEach((column, lane) => {
-    column.forEach((node, row) =>
-      positions.set(node.id, { x: lane * 354 + 20, y: 100 + row * 184 }),
-    )
-  })
-  return {
-    columns,
-    positions,
-    height: Math.max(480, 120 + Math.max(...columns.map((column) => column.length)) * 184),
+  // Resolve label collisions after cooling; node boxes are at most 260 x 32.
+  for (let pass = 0; pass < 60; pass++) {
+    for (let i = 0; i < points.length; i++) {
+      for (let j = i + 1; j < points.length; j++) {
+        const a = points[i]
+        const b = points[j]
+        const dx = b.x - a.x
+        const dy = b.y - a.y
+        if (Math.abs(dx) < 280 && Math.abs(dy) < 56) {
+          const shift = (56 - Math.abs(dy)) / 2 + 1
+          const direction = dy >= 0 ? 1 : -1
+          a.y -= shift * direction
+          b.y += shift * direction
+        }
+      }
+    }
   }
+  return { positions: new Map(points.map(({ id, x, y }) => [id, { x, y }])) }
 }

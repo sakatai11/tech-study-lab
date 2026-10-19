@@ -10,6 +10,7 @@ import {
 } from '@xyflow/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import '@xyflow/react/dist/style.css'
+import { LayerOverview } from './LayerOverview.jsx'
 import { laneOf, lanes, layoutGraph, nodeIcon, nodeLabel, selectGraph } from './graph-model.mjs'
 
 function Icon({ name }) {
@@ -19,170 +20,96 @@ function Icon({ name }) {
 }
 
 function CodeNode({ data, selected }) {
-  const { node, seed } = data
-  const file = node.source.file
   return (
-    <div className={`code-node ${lanes[laneOf(node)].color} ${selected ? 'is-selected' : ''}`}>
-      <Handle type="target" position={Position.Left} id="left" />
-      <Handle type="source" position={Position.Right} id="right" />
-      <Handle type="target" position={Position.Top} id="top" />
-      <Handle type="source" position={Position.Bottom} id="bottom" />
-      <div className="node-heading">
-        <Icon name={nodeIcon(node)} />
-        <div>
-          <span className="node-path" title={file}>
-            {file.slice(0, file.lastIndexOf('/'))}/
-          </span>
-          <strong>{nodeLabel(node)}</strong>
-        </div>
-      </div>
-      <div className="node-tags">
-        <span className="tag">{node.layer}</span>
-        {seed && <span className="match-label">検索一致</span>}
-      </div>
-      <div className="node-meta">
-        <span>{node.kind}</span>
-        <span>L{node.source.line}</span>
-      </div>
+    <div
+      title={data.node.id}
+      className={`code-node ${lanes[laneOf(data.node)].color} ${selected ? 'is-selected' : ''}`}
+    >
+      <Handle type="target" position={Position.Left} />
+      <strong>{nodeLabel(data.node)}</strong>
+      <Handle type="source" position={Position.Right} />
     </div>
   )
 }
-
-function LaneNode({ data }) {
-  const lane = lanes[data.index]
-  return (
-    <div className={`lane ${lane.color}`} style={{ height: data.height }}>
-      <div className="lane-heading">
-        <Icon name={lane.icon} />
-        <div>
-          <h2>{lane.name}</h2>
-          <p>{lane.description}</p>
-        </div>
-        <span className="lane-count">{data.count}</span>
-      </div>
-      {!data.count && <p className="lane-empty">この範囲にノードはありません</p>}
-    </div>
-  )
-}
-
-const nodeTypes = { code: CodeNode, lane: LaneNode }
-const edgeStyle = { stroke: '#8298af', strokeWidth: 1.4 }
-
+const nodeTypes = { code: CodeNode }
+const colors = ['#ac7cf4', '#75cf88', '#f5a452', '#74b8f5']
 function GraphBoard({ view, selectedId, onSelect }) {
   const flow = useReactFlow()
   const board = useRef(null)
   const initialized = useNodesInitialized()
-  const readableView = useCallback(() => {
-    const width = board.current?.clientWidth ?? 1400
-    flow.setViewport({ x: 8, y: 8, zoom: Math.min(1, Math.max(0.65, (width - 16) / 1400)) })
-  }, [flow])
   const layout = useMemo(() => layoutGraph(view), [view])
   const signature = view.nodes.map((node) => node.id).join('|')
-  const handleNodeChanges = useCallback(
-    (changes) => {
-      const selection = changes.find(
-        (change) => change.type === 'select' && change.selected && !change.id.startsWith('lane-'),
-      )
-      if (selection) onSelect(selection.id)
-    },
-    [onSelect],
-  )
   const nodes = useMemo(
-    () => [
-      ...lanes.map((_, index) => ({
-        id: `lane-${index}`,
-        type: 'lane',
-        position: { x: index * 354, y: 0 },
-        data: { index, height: layout.height, count: layout.columns[index].length },
-        style: { width: 338, height: layout.height },
-        selectable: false,
-        focusable: false,
-        draggable: false,
-      })),
-      ...view.nodes.map((node) => ({
+    () =>
+      view.nodes.map((node) => ({
         id: node.id,
         type: 'code',
         position: layout.positions.get(node.id),
-        data: { node, seed: view.seeds.has(node.id) },
+        data: { node },
         selected: node.id === selectedId,
         ariaLabel: `${nodeLabel(node)}、${node.layer}、${node.kind}`,
       })),
-    ],
-    [layout, view, selectedId],
+    [view, layout, selectedId],
   )
   const edges = useMemo(
     () =>
       view.edges.map((edge, index) => {
-        const sameColumn = layout.positions.get(edge.from).x === layout.positions.get(edge.to).x
         const active = edge.from === selectedId || edge.to === selectedId
+        const color = colors[laneOf(view.nodes.find((node) => node.id === edge.from))]
         return {
           id: `edge-${index}`,
           source: edge.from,
           target: edge.to,
-          sourceHandle: sameColumn ? 'bottom' : 'right',
-          targetHandle: sameColumn ? 'top' : 'left',
-          type: 'smoothstep',
-          label: edge.relation,
-          markerEnd: { type: MarkerType.ArrowClosed, color: active ? '#a8d1ff' : '#8298af' },
-          style: {
-            ...edgeStyle,
-            stroke: active ? '#a8d1ff' : '#8298af',
-            opacity: selectedId && !active ? 0.38 : 1,
-          },
-          labelStyle: { fill: '#d2deed', fontFamily: 'JetBrains Mono, monospace', fontSize: 10 },
-          labelBgStyle: { fill: '#161f2b', fillOpacity: 1 },
-          labelBgPadding: [6, 5],
-          labelBgBorderRadius: 4,
-          zIndex: active ? 3 : 1,
+          type: 'default',
+          label: active ? edge.relation : undefined,
+          markerEnd: { type: MarkerType.ArrowClosed, color },
+          style: { stroke: color, strokeWidth: active ? 1.6 : 0.8, opacity: active ? 0.9 : 0.26 },
+          labelStyle: { fill: '#cad3df', fontSize: 10 },
+          labelBgStyle: { fill: '#11151c' },
         }
       }),
-    [view, layout, selectedId],
+    [view, selectedId],
   )
   useEffect(() => {
     if (!signature || !initialized) return
-    readableView()
-    const observer = new ResizeObserver(readableView)
+    const fit = () => flow.fitView({ padding: 0.18, maxZoom: 1.2 })
+    fit()
+    const observer = new ResizeObserver(fit)
     observer.observe(board.current)
     return () => observer.disconnect()
-  }, [signature, initialized, readableView])
+  }, [signature, initialized, flow])
   return (
-    <div ref={board} className="graph-board" aria-label="レイヤー別の依存関係グラフ">
+    <div ref={board} className="graph-board" aria-label="ノードと関係のネットワークグラフ">
       <ReactFlow
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
-        panOnScroll
-        zoomOnScroll={false}
-        minZoom={0.15}
-        maxZoom={1.8}
+        minZoom={0.08}
+        maxZoom={2.5}
         nodesDraggable={false}
         nodesConnectable={false}
         edgesFocusable={false}
         deleteKeyCode={null}
-        onNodeClick={(_, node) => {
-          if (node.type === 'code') onSelect(node.id)
-        }}
-        onNodesChange={handleNodeChanges}
         colorMode="dark"
-        onlyRenderVisibleElements={false}
-        ariaLabelConfig={{
-          'node.a11yDescription.default': 'Enter または Space でノードを選択します。',
-          'edge.a11yDescription.default': 'ノード間の構造上の関係です。',
-        }}
+        onNodeClick={(_, node) => onSelect(node.id)}
+        onNodesChange={useCallback(
+          (changes) => {
+            const selected = changes.find((change) => change.type === 'select' && change.selected)
+            if (selected) onSelect(selected.id)
+          },
+          [onSelect],
+        )}
       >
         <Panel position="bottom-left">
           <div className="canvas-tools">
-            <button type="button" onClick={() => flow.zoomOut()}>
-              縮小
-            </button>
             <button type="button" onClick={() => flow.zoomIn()}>
               拡大
             </button>
-            <button type="button" onClick={() => flow.fitView({ padding: 0.035, maxZoom: 1 })}>
-              表示を合わせる
+            <button type="button" onClick={() => flow.zoomOut()}>
+              縮小
             </button>
-            <button type="button" onClick={readableView}>
-              読みやすいサイズ
+            <button type="button" onClick={() => flow.fitView({ padding: 0.18, maxZoom: 1.2 })}>
+              表示を合わせる
             </button>
           </div>
         </Panel>
@@ -322,13 +249,13 @@ export function App() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const [reload, setReload] = useState(0)
-  const [text, setText] = useState('due-count')
-  const [depth, setDepth] = useState(2)
+  const [mode, setMode] = useState('overview')
+  const [text, setText] = useState('')
+  const [depth, setDepth] = useState(3)
   const [relation, setRelation] = useState('flow')
   const [focus, setFocus] = useState(null)
-  const [selectedId, setSelectedId] = useState(
-    'symbol:apps/api/src/services/review-service.ts#getDueCount',
-  )
+  const [categories, setCategories] = useState([true, true, true, true])
+  const [selectedId, setSelectedId] = useState(null)
   useEffect(() => {
     const controller = new AbortController()
     setLoading(true)
@@ -352,17 +279,27 @@ export function App() {
       })
     return () => controller.abort()
   }, [reload])
-  const view = useMemo(
-    () => (data ? selectGraph(data.graph, { text, depth, relation, focus }) : null),
-    [data, text, depth, relation, focus],
-  )
+  const view = useMemo(() => {
+    if (!data) return null
+    const result = selectGraph(data.graph, { text, depth, relation, focus })
+    const nodes = result.nodes.filter((node) => categories[laneOf(node)])
+    const ids = new Set(nodes.map((node) => node.id))
+    return {
+      ...result,
+      nodes,
+      edges: result.edges.filter((edge) => ids.has(edge.from) && ids.has(edge.to)),
+    }
+  }, [data, text, depth, relation, focus, categories])
   const selected =
     view?.nodes.find((node) => node.id === selectedId) ??
     view?.nodes.find((node) => view.seeds.has(node.id)) ??
     view?.nodes[0]
   const explore = useCallback(
     (id) => {
+      setMode('network')
       setFocus(id)
+      const category = laneOf(data.graph.nodes.find((node) => node.id === id))
+      setCategories((values) => values.map((value, index) => index === category || value))
       setText(nodeLabel(data.graph.nodes.find((node) => node.id === id)))
       setSelectedId(id)
     },
@@ -372,118 +309,155 @@ export function App() {
     setText('')
     setFocus(null)
     setSelectedId(null)
+    setCategories([true, true, true, true])
   }
   return (
-    <main>
+    <main className={mode === 'overview' ? 'overview-mode' : 'network-mode'}>
       <header className="app-header">
-        <div className="brand">
-          <Icon name="code" />
-          <span>tech-study-lab</span>
-          <span className="local-label">ローカルビューア</span>
-        </div>
-        <div className="title-row">
-          <h1>Knowledge Graph</h1>
-          <p>
-            コードの関係をレイヤーで可視化し、ファイル・シンボル・エンドポイントのつながりを調べます。
-          </p>
-        </div>
+        <Icon name="account_tree" />
+        <h1>Knowledge Graph</h1>
       </header>
       <section className="toolbar" aria-label="グラフの検索と表示設定">
-        <label className="search-field">
-          <span className="sr-only">ファイル・シンボル・エンドポイントを検索</span>
-          <input
-            type="search"
-            value={text}
-            placeholder="ファイル・シンボル・エンドポイントを検索"
-            onChange={(event) => {
-              setText(event.target.value)
-              setFocus(null)
-            }}
-          />
-        </label>
-        <div className="depth-control">
-          <span id="depth-label">周辺の深さ</span>
-          <fieldset className="segmented" aria-labelledby="depth-label">
-            {[0, 1, 2, 3, 4].map((value) => (
-              <button
-                type="button"
-                key={value}
-                aria-pressed={depth === value}
-                onClick={() => setDepth(value)}
+        {mode === 'overview' ? (
+          <p className="overview-toolbar-note">役割から探す → 構成要素を選ぶ → 関係と出典を確認</p>
+        ) : (
+          <>
+            <label className="search-field">
+              <span className="sr-only">ファイル・シンボル・エンドポイントを検索</span>
+              <input
+                type="search"
+                value={text}
+                placeholder="ファイル・シンボル・エンドポイントを検索"
+                onChange={(event) => {
+                  setText(event.target.value)
+                  setFocus(null)
+                }}
+              />
+            </label>
+            <label className="depth-control">
+              深さ{' '}
+              <select
+                aria-label="周辺の深さ"
+                value={depth}
+                onChange={(event) => setDepth(Number(event.target.value))}
               >
-                {value}
-              </button>
-            ))}
-          </fieldset>
-        </div>
-        <label className="relation-filter">
-          <span>関係</span>
-          <select
-            aria-label="関係"
-            value={relation}
-            onChange={(event) => setRelation(event.target.value)}
-          >
-            <option value="flow">呼び出し・依存</option>
-            <option value="all">すべて（import 含む）</option>
-          </select>
-        </label>
+                {[0, 1, 2, 3, 4].map((value) => (
+                  <option key={value} value={value}>
+                    {value}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="relation-filter">
+              <span>関係</span>
+              <select
+                aria-label="関係"
+                value={relation}
+                onChange={(event) => setRelation(event.target.value)}
+              >
+                <option value="flow">フロー</option>
+                <option value="all">すべて（import 含む）</option>
+              </select>
+            </label>
+          </>
+        )}
         <div className="toolbar-actions">
-          <button type="button" onClick={showAll}>
-            全体を見る
-          </button>
+          {mode === 'network' && (
+            <button type="button" onClick={showAll}>
+              全体を見る
+            </button>
+          )}
           <button type="button" disabled={loading} onClick={() => setReload((value) => value + 1)}>
             {loading ? '読み込み中…' : '再読み込み'}
           </button>
         </div>
       </section>
       <div className="view-meta">
-        <p>
-          {focus
-            ? '選択したノードを起点に表示'
-            : text.trim()
-              ? `「${text.trim()}」に一致するノードと周辺`
-              : '抽出対象の全ノード'}
-          <output className="view-count">
-            {view ? `${view.nodes.length} ノード / ${view.edges.length} 関係` : ''}
-          </output>
-        </p>
-        <p>ドラッグ・スクロールで移動できます。矢印は構造上の関係です。</p>
+        <nav className="view-switch" aria-label="表示方法">
+          <button
+            type="button"
+            aria-pressed={mode === 'overview'}
+            onClick={() => setMode('overview')}
+          >
+            層別の概要
+          </button>
+          <button
+            type="button"
+            aria-pressed={mode === 'network'}
+            onClick={() => setMode('network')}
+          >
+            ネットワーク
+          </button>
+        </nav>
+        {mode === 'network' && (
+          <div className="category-filters" aria-label="表示カテゴリ">
+            {lanes.map((lane, index) => (
+              <button
+                type="button"
+                key={lane.color}
+                className={lane.color}
+                aria-pressed={categories[index]}
+                onClick={() =>
+                  setCategories((values) =>
+                    values.map((value, i) => (i === index ? !value : value)),
+                  )
+                }
+              >
+                <Icon name={lane.icon} />
+                {['Web', 'API', 'Services', 'Shared'][index]}
+              </button>
+            ))}
+          </div>
+        )}
+        <output>
+          {mode === 'overview'
+            ? data
+              ? `${data.graph.nodes.length} 件の構成要素`
+              : ''
+            : view
+              ? `${view.nodes.length} ノード / ${view.edges.length} 関係`
+              : ''}
+        </output>
       </div>
-      {error ? (
-        <section className="empty-state" role="alert">
-          <h2>Graph を読み込めませんでした</h2>
-          <p>{error}</p>
-          <button type="button" onClick={() => setReload((value) => value + 1)}>
-            再試行
-          </button>
-        </section>
-      ) : !view ? (
-        <section className="empty-state" aria-live="polite">
-          <h2>コードの構造を読み込んでいます</h2>
-          <p>ファイル・型・エンドポイントの関係を準備しています。</p>
-        </section>
-      ) : !view.nodes.length ? (
-        <section className="empty-state">
-          <h2>一致するノードがありません</h2>
-          <p>ファイル名や関数名の一部で検索してください。例: dashboard、ReviewDeps</p>
-          <button type="button" onClick={showAll}>
-            全体を見る
-          </button>
-        </section>
-      ) : (
-        <ReactFlowProvider>
-          <GraphBoard view={view} selectedId={selected?.id} onSelect={setSelectedId} />
-        </ReactFlowProvider>
-      )}
-      {data && (
-        <Inspector
-          key={selected?.id ?? 'empty'}
-          node={selected}
-          graph={data.graph}
-          snippet={selected && data.snippets[selected.id]}
-          onExplore={explore}
-        />
-      )}
+      <div className={`workspace ${mode === 'overview' ? 'overview-workspace' : ''}`}>
+        {error ? (
+          <section className="empty-state" role="alert">
+            <h2>Graph を読み込めませんでした</h2>
+            <p>{error}</p>
+            <button type="button" onClick={() => setReload((value) => value + 1)}>
+              再試行
+            </button>
+          </section>
+        ) : !view ? (
+          <section className="empty-state" aria-live="polite">
+            <h2>コードの構造を読み込んでいます</h2>
+            <p>ファイル・型・エンドポイントの関係を準備しています。</p>
+          </section>
+        ) : mode === 'overview' ? (
+          <LayerOverview graph={data.graph} onExplore={explore} />
+        ) : !view.nodes.length ? (
+          <section className="empty-state">
+            <h2>一致するノードがありません</h2>
+            <p>ファイル名や関数名の一部で検索してください。例: dashboard、ReviewDeps</p>
+            <button type="button" onClick={showAll}>
+              全体を見る
+            </button>
+          </section>
+        ) : (
+          <ReactFlowProvider>
+            <GraphBoard view={view} selectedId={selected?.id} onSelect={setSelectedId} />
+          </ReactFlowProvider>
+        )}
+        {data && mode === 'network' && (
+          <Inspector
+            key={selected?.id ?? 'empty'}
+            node={selected}
+            graph={data.graph}
+            snippet={selected && data.snippets[selected.id]}
+            onExplore={explore}
+          />
+        )}
+      </div>
       <footer>
         <p>Graph はコードから抽出した参照情報です。UI・教材など一部の領域は対象外です。</p>
         <span>
