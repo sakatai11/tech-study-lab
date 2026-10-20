@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import ts from 'typescript'
+import { expandSelection } from '../architecture/traversal.mjs'
 
 /** Ontology: node kinds, symbol kinds and per-relation domain/range (architecture/README.md). */
 const symbolKinds = ['db-table', 'contract-schema', 'deps-type', 'type', 'function', 'constant']
@@ -538,7 +539,6 @@ export function assertFresh(saved, current) {
     throw new Error('Architecture snapshot is stale: run node scripts/architecture.mjs extract')
 }
 
-const terminalLayers = new Set(['shared-schema', 'shared-db'])
 /** Owning module of a node id, or undefined when the id carries no module. */
 const moduleOf = (id) =>
   id.startsWith('symbol:')
@@ -554,19 +554,7 @@ export function query(graph, needle, depth = 1) {
     graph.nodes.filter((node) => node.id.includes(needle)).map((node) => node.id),
   )
   if (seeds.size === 0) throw new Error(`No architecture match: ${needle}`)
-  const layers = new Map(graph.nodes.map((node) => [node.id, node.layer]))
-  // Shared contract surfaces connect everything, so reaching one does not expand through it.
-  // Seeding one still does: the caller asked about that contract.
-  const expands = (id) => seeds.has(id) || !terminalLayers.has(layers.get(id))
-  const selected = new Set(seeds)
-  for (let i = 0; i < depth; i++) {
-    const next = new Set(selected)
-    for (const edge of graph.edges) {
-      if (selected.has(edge.from) && expands(edge.from)) next.add(edge.to)
-      if (selected.has(edge.to) && expands(edge.to)) next.add(edge.from)
-    }
-    for (const id of next) selected.add(id)
-  }
+  const selected = expandSelection(graph, seeds, depth)
   // Projection drops anything the id already carries.
   const projectNode = ({ id, kind, layer, symbols, source, ...rest }) => ({
     id,
