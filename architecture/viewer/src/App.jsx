@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import '@xyflow/react/dist/style.css'
 import { LayerOverview } from './LayerOverview.jsx'
 import { laneOf, lanes, layoutGraph, nodeIcon, nodeLabel, selectGraph } from './graph-model.mjs'
+import { parseGraphResponse } from './graph-response.mjs'
 
 function Icon({ name }) {
   return (
@@ -261,13 +262,8 @@ export function App() {
     setLoading(true)
     setError('')
     fetch(`./graph-data.json?refresh=${reload}`, { signal: controller.signal, cache: 'no-store' })
-      .then(async (response) => {
-        const next = await response.json()
-        if (!response.ok) throw new Error(next.error || 'Graph を読み込めませんでした。')
-        if (!next.graph?.nodes || !next.graph?.edges || !next.snippets)
-          throw new Error('Graph データの形式を確認してください。')
-        setData(next)
-      })
+      .then(parseGraphResponse)
+      .then(setData)
       .catch((cause) => {
         if (cause.name !== 'AbortError') {
           setError(cause.message)
