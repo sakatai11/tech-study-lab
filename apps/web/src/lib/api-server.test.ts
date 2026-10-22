@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { dueCountResponseSchema } from '@tsl/shared'
+
+import { parseApiResponse } from './api'
 import { createServerApiClient } from './api-server'
 
 const workerModule = vi.hoisted(() => ({
@@ -48,5 +51,29 @@ describe('createServerApiClient [ADR-0012]', () => {
     await client.answers.$post({ json: { questionId: 'question-1', selectedIndex: 0 } })
 
     expect(urlFetch).toHaveBeenCalledWith('http://localhost:8788/answers', expect.anything())
+  })
+})
+
+describe('parseApiResponse for server clients [ADR-0015]', () => {
+  // 共有スキーマに違反する応答。検証すれば例外になり、省けばそのまま返る。
+  const invalidDueCount = { dueCount: -1 }
+
+  it('returns service binding responses without re-validating them', async () => {
+    workerModule.env = { API: { fetch: vi.fn() } }
+
+    const client = await createServerApiClient()
+
+    expect(parseApiResponse(client, dueCountResponseSchema, invalidDueCount)).toBe(invalidDueCount)
+  })
+
+  it('still validates responses from the URL fallback outside production', async () => {
+    vi.stubEnv('NODE_ENV', 'development')
+
+    const client = await createServerApiClient()
+
+    expect(() => parseApiResponse(client, dueCountResponseSchema, invalidDueCount)).toThrow()
+    expect(parseApiResponse(client, dueCountResponseSchema, { dueCount: 2 })).toEqual({
+      dueCount: 2,
+    })
   })
 })

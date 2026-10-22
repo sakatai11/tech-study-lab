@@ -605,3 +605,85 @@ DOMに表示されたエラー時刻・route・メッセージと無料プラン
 利用者は無料プランの継続を決定し、CPU処理の軽減を [Issue #220](https://github.com/sakatai11/tech-study-lab/issues/220) として切り出した。有料プランへの変更はこの対応の対象に含めない。
 
 検証結果を踏まえたVinextへの全面移行方針は [Issue #221](https://github.com/sakatai11/tech-study-lab/issues/221) に登録した。設計・標準コマンド・CI・本番デプロイをVinextへ一本化し、本番切替前に #220 のCPU軽減と無料プランでの再検証を完了する。採用方針の決定を、未完了の検証の成功や本番への即時反映承認とは扱わない。性能比較の記録は #218 に残し、意図的なAPI障害・復旧試験は引き続き未実施である。
+
+## 2026-10-22: Issue #220 の現行版での CPU 再検証
+
+ここからは [Issue #220](https://github.com/sakatai11/tech-study-lab/issues/220) の現行版での再検証である。上記 2026-10-08 までの測定（旧検証 Web `tech-study-lab-web-vinext`・version `71eb9a2f`）とは対象版・環境が異なり、結果を混在させない。#218 の性能比較や意図的な障害試験の完了とも扱わない。
+
+### 対象版と環境
+
+- 対象 commit: `develop` の `8d30bfd7df467d53a3dd551e5562d1b4b5ba7a80`（PR #260 の merge commit）。測定時の `origin/develop` と一致。
+- 検証 Web `tech-study-lab-web-test` の version `887ad6f6-8a35-44a5-8136-9a06f791e7dc`（100%、2026-10-20T14:40:49Z）。検証 API `tech-study-lab-api-test` の version `a7c7d384-aa3f-4ca4-9fde-b94225578e2f`。どちらも GitHub Actions の Deploy（run `39441062863`）が同じ commit から反映し、GitHub Deployment の記録と一致した。測定のための手動反映はしていない。
+- Web の binding は `API` → `tech-study-lab-api-test#InternalApi`（Service Binding）と `ASSETS`。compatibility date `2025-01-09`、flags `nodejs_compat` / `global_fetch_strictly_public` / `enable_weak_ref`。D1 は `tech-study-lab-test`。
+- 依存: `vinext 1.0.1`、`next 16.2.9`、`react 19.2.7`、`@cloudflare/vite-plugin 1.62.5`、Wrangler `4.147.0`。
+- プラン: Workers Free（Dashboard の表示で確認）。Observability は head sampling rate 1。
+
+### 測定条件と手順
+
+- 利用者が Cloudflare Access に認証した通常の Chrome（`Chrome/152`）のタブで、Claude in Chrome から [`scripts/verification/route-stability.browser.js`](../../scripts/verification/route-stability.browser.js)（SHA-256 `2376aaa2…5323ecf`、測定時点の版）を実行した。viewport は `1591×855` / DPR 1、colo は全件 `NRT`。過去の基準条件（`495×784` / DPR 2）とは viewport が異なるが、測定は `fetch` による GET であり、画面描画の負荷は含まない。検証データは削っていない。
+- 8組（`/home`・`/review`・`/domains`・`/analytics` × HTML / RSC）を各 warmup 2 回＋実測 20 回、ラウンドごとに順序をずらして逐次 GET する。RSC は `?_rsc=` と `RSC: 1`。`cache: no-store`、`credentials: include`。176 件を 1 回とし、3 回連続で実行する。
+- 各応答の 200・元の origin/path・期待 Content-Type・`no-store`・cache HIT なしを確認し、最初の異常応答でその測定を止める。失敗した request は再試行しない。Cookie / JWT / request headers / 応答本文は保存しない。
+
+### 結果: 現行版で再発（判定 B）
+
+- 1 回目（UTC `2026-10-22T11:12:51Z`〜`11:13:30Z`）: 176 件すべて合格。
+- 2 回目: 33 件目の `/domains` HTML（実測 round 3）が UTC `11:13:37.211Z` に 503 / `text/html; charset=UTF-8` / `4758 bytes` / NRT を返し、停止した。`cf-mitigated: challenge` はなかった。3 回連続の完走は満たしていない。
+- 同じ時間帯・同じ version の Observability の履歴ログで、次の 2 件を確認した。
+
+| 日本時間 | request | outcome | cpuTimeMs | ブラウザで観測した応答 |
+| --- | --- | --- | ---: | --- |
+| `2026-10-22 20:13:37.107` | `GET /home?_rsc=` | `exceededCpu` | 19 | 200（検証は合格） |
+| `2026-10-22 20:13:37.419` | `GET /domains` | `exceededCpu` | 11 | 503（測定停止） |
+
+`/home?_rsc=` は CPU 上限超過でもブラウザには 200 が返り、測定スクリプトの検証を通過した。ストリーミング応答の途中で Worker が止まった可能性があり、本文の欠落は検出できていない。ブラウザ側の合否だけでは CPU 上限超過を検出しきれないため、判定にはログを併用する必要がある。
+
+測定直後（UTC 11:16 頃）の直近 1 時間の Observability で、`outcome: ok` の request の `$workers.cpuTimeMs` を URL 別に集計した（単位 ms）。件数には利用者のサインイン時の画面表示も含まれ、時間範囲は Dashboard の 1 時間指定である。
+
+| URL | 件数 | 中央値 | p99 | 最大 |
+| --- | ---: | ---: | ---: | ---: |
+| `/home` | 26 | 37 | 263 | 263 |
+| `/home?_rsc=` | 20 | 23 | 158 | 158 |
+| `/review` | 34 | 11 | 83 | 83 |
+| `/review?_rsc=` | 24 | 8 | 16 | 16 |
+| `/domains` | 21 | 10 | 31 | 31 |
+| `/domains?_rsc=` | 25 | 8 | 12 | 12 |
+| `/analytics` | 25 | 16 | 37 | 37 |
+| `/analytics?_rsc=` | 22 | 11 | 25 | 25 |
+
+Workers Free の CPU 上限は 1 request あたり 10 ms だが、`/home` の HTML は中央値で約 3.7 倍だった。上限を超えた request の多くは失敗しておらず、失敗した 2 件の `cpuTimeMs` は 11 / 19 ms だった。超過の判定は単一 request の値だけでは説明できないため、request ごとの CPU 時間を 10 ms 未満にできたかどうかでは完了を判定しない。完了は、上記の 3 回連続測定とログで判定する。
+
+### CPU プロファイル
+
+- 検証 Web: Observability の Flamegraph で 10 秒間の CPU profile を取得した。取得中に `/home` の HTML / RSC を逐次 52 件送り、その一部は 503 になった。profile はダウンロードしていない。上位は Zod の `_parse` / `_parseSync`（全体の約 14%）、Vinext の request pipeline、トレーシングの `enterSpan` だった。
+- ローカル: 同じ commit の production build（`dist/server/wrangler.json`）とローカル API・D1（`db:seed:dev`）を workerd で起動し、inspector の CPU profiler で 1 request あたりの関数別 CPU を集計した。`/home` の RSC では、応答の Zod 再検証が約 3.5 ms を占めた（ヒートマップ 182 日分の検証 1.8 ms、学習サマリー 0.6 ms、アクティビティ 0.4 ms など）。アクティビティごとの `new Intl.DateTimeFormat` は約 1 ms だった。HTML では、ヒートマップ（182 セルと読み上げ用 182 項目）の描画が約 5 ms を占めた。読み上げ用の各項目は 4 つのテキストノードに分かれ、SSR が間に区切りコメントを挿入していた。
+- `/home` の HTML 157 KB のうち 87 KB は埋め込みの RSC payload だった。HTML は RSC の生成と SSR の両方を通るため、木の大きさに比例して CPU が増える。
+
+### この Issue で行った軽減
+
+根拠のある処理だけを変更した。表示項目・検証データ・アクセシビリティは削っていない。共有キャッシュの導入や SSR から CSR への変更はしていない。
+
+1. Server loader が Service Binding から作った client の応答は、Zod で再検証しない（[ADR-0015](../adr/0015-trust-service-binding-responses.md)）。ブラウザ用 client と URL フォールバックは検証を続ける。
+2. アクティビティの日付整形の `Intl.DateTimeFormat` を、request ごとに作らず使い回す。
+3. ヒートマップの読み上げ用項目を 1 つの文字列で描画し、区切りコメントをなくす。親が `aria-hidden` の各セルから、重複した `aria-hidden` を外す。読み上げ内容と表示は変わらない。
+
+ローカルの修正前後比較は、同じマシンで続けて build・起動し、プロファイラなしで workerd プロセスの CPU 時間を 150 request × 5 回測った中央値で行った（単位 ms）。同じ build でも測定ごとに ±20% 程度ぶれるため、差がこの幅に収まる組は「変化なし」と扱う。
+
+| Route | 応答 | 修正前 | 修正後 | HTML/RSC bytes（前→後） |
+| --- | --- | ---: | ---: | --- |
+| `/home` | HTML | 17.53 | 14.80 | 157,423 → 142,546 |
+| `/home` | RSC | 11.40 | 11.07 | 74,833 → 69,265 |
+| `/review` | HTML | 8.13 | 8.93 | 変化なし |
+| `/review` | RSC | 6.13 | 5.80 | 変化なし |
+| `/domains` | HTML | 6.53 | 7.07 | 変化なし |
+| `/domains` | RSC | 4.27 | 4.67 | 変化なし |
+| `/analytics` | HTML | 10.80 | 9.87 | 変化なし |
+| `/analytics` | RSC | 7.33 | 8.87 | 変化なし |
+
+ローカルで明確に下がったのは `/home` の HTML（約 16%）だけである。profile 上は Zod・Intl の関数が上位から消えたが、他の画面の合計 CPU の差は測定のぶれに埋もれた。ローカルの workerd の CPU 時間は Cloudflare の `cpuTimeMs` と同じ値ではないため、効果の判定は検証環境で行う。
+
+### 状態と残る制約
+
+- 判定は **B（現行版で再発）**。修正版は未反映のため、現時点の状態は「検証未完了」である。修正版を `develop` へマージし、CI が検証環境へ反映した後、同じスクリプト・条件で 176 件 × 3 回を測定する。同じ時間帯・対象 version の Observability で `exceededCpu` と URL 別の `cpuTimeMs` を確認し、修正前の上表と比較する。
+- 再測定で再発した場合の次の候補は、トレーシング（`enterSpan`）など Vinext の request ごとの処理、埋め込み RSC payload を含む HTML の大きさである。いずれもプロファイルの根拠を確認してから判断する。
+- Dashboard の Observability は URL の時間範囲指定が反映されず、集計は 1 時間単位になった。測定 request だけに絞った集計はしていない。
+- 証跡（測定の要約・Observability の集計）は Git 管理外の `apps/web/.wrangler/verification/issue-220/` に保存した。Cookie / JWT / request headers / 応答本文は含めていない。

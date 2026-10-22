@@ -5,7 +5,7 @@ import {
   lessonViewResponseSchema,
 } from '@tsl/shared'
 
-import { type ApiClient, requestJson } from '@/lib/api'
+import { type ApiClient, parseApiResponse, requestJson } from '@/lib/api'
 
 export async function recordLessonView(
   client: ApiClient,
@@ -16,5 +16,5 @@ export async function recordLessonView(
     '教材の閲覧記録に失敗しました。',
   )
 
-  return lessonViewResponseSchema.parse(response)
+  return parseApiResponse(client, lessonViewResponseSchema, response)
 }

@@ -1,6 +1,6 @@
 import { type DomainsResponse, domainsResponseSchema } from '@tsl/shared'
 
-import { type ApiClient, requestJson } from '@/lib/api'
+import { type ApiClient, parseApiResponse, requestJson } from '@/lib/api'
 
 export async function fetchDomains(client: ApiClient): Promise<DomainsResponse> {
   const response = await requestJson(
@@ -8,5 +8,5 @@ export async function fetchDomains(client: ApiClient): Promise<DomainsResponse> 
     '領域別進捗の取得に失敗しました。',
   )
 
-  return domainsResponseSchema.parse(response)
+  return parseApiResponse(client, domainsResponseSchema, response)
 }

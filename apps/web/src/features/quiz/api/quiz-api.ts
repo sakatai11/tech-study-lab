@@ -5,7 +5,7 @@ import {
   answerResponseSchema,
 } from '@tsl/shared'
 
-import { type ApiClient, requestJson } from '@/lib/api'
+import { type ApiClient, parseApiResponse, requestJson } from '@/lib/api'
 
 export async function submitAnswer(
   client: ApiClient,
@@ -16,5 +16,5 @@ export async function submitAnswer(
     '解答の送信に失敗しました。もう一度お試しください。',
   )
 
-  return answerResponseSchema.parse(response)
+  return parseApiResponse(client, answerResponseSchema, response)
 }

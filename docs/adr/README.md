@@ -52,3 +52,4 @@
 | [ADR-0012](./0012-separate-web-and-api-workers.md) | Web と API を別の Worker にし、書き込みは Hono API を通す | Accepted |
 | [ADR-0013](./0013-no-shared-cache-for-user-data.md) | ユーザー固有のデータを Web の共有キャッシュに載せない | Accepted |
 | [ADR-0014](./0014-recent-activity-derived-from-logs.md) | 最近のアクティビティは保存済みのログから導出する | Accepted |
+| [ADR-0015](./0015-trust-service-binding-responses.md) | Service Binding 経由の API 応答は Server loader で Zod 再検証しない | Accepted |

@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { createBrowserApiClient, requestJson } from './api'
+import { dueCountResponseSchema } from '@tsl/shared'
+
+import { createBrowserApiClient, parseApiResponse, requestJson } from './api'
 
 afterEach(() => {
   vi.unstubAllEnvs()
@@ -36,5 +38,17 @@ describe('requestJson', () => {
     await expect(
       requestJson(() => Promise.resolve(new Response(null, { status: 503 })), 'API unavailable'),
     ).rejects.toThrow('API unavailable')
+  })
+})
+
+describe('parseApiResponse for browser clients [ADR-0015]', () => {
+  it('validates browser responses against the shared schema', () => {
+    vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', 'https://api.example.com')
+    const client = createBrowserApiClient()
+
+    expect(parseApiResponse(client, dueCountResponseSchema, { dueCount: 3 })).toEqual({
+      dueCount: 3,
+    })
+    expect(() => parseApiResponse(client, dueCountResponseSchema, { dueCount: -1 })).toThrow()
   })
 })
