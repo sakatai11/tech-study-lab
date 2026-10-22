@@ -96,7 +96,7 @@ content から D1 への seed/upsert（ADR-0006）を `apps/api/scripts/sync-con
 
 本番 Web Worker `tech-study-lab-web` は OpenNext 成果物で稼働している。リポジトリの標準 build / deploy は Vinext へ一本化したが、本番への最初の Vinext deploy は次の条件をすべて満たしてから、対象・入力値・反映手順を確認した承認に基づいて行う。
 
-1. Issue #220 の CPU 軽減が完了し、Workers Free の検証環境で `/home`・`/review`・`/domains`・`/analytics` × HTML/RSC の連続測定が CPU 上限超過で中断しないこと。
+1. Issue #220 の CPU 再検証が完了していること。Workers Free の検証環境で `/home`・`/review`・`/domains`・`/analytics` × HTML/RSC の 176 件測定（`scripts/verification/route-stability.browser.js`）を同じ対象版・条件で 3 回連続完走し、同じ時間帯・対象 version の Logs / Observability に CPU 上限超過がないことを確認する。現行版で再発しなければ追加の CPU 軽減は必須にしない。再発した場合は、根拠のある軽減を行った修正版で同じ検証を満たす。
 2. 同じ commit を `deploy:edge` で検証環境へ反映し、主要導線（公開トップ、home、教材、Quiz の採点、Review、領域一覧、分析）、Access 境界、CORS preflight、Logs/Observability を確認していること。
 3. 切替前に `wrangler deployments list --name tech-study-lab-web` で稼働中の OpenNext の version ID と対象 commit を記録していること。
 
@@ -230,7 +230,7 @@ token の値はチャット・Issue・PR・端末履歴へ貼らず、Cloudflare
 
 ## 本番を有効化する
 
-1. #220 の CPU 軽減・無料プランでの再検証など、「本番 Web の Vinext 切替」の条件を満たす。
+1. #220 の無料プランでの CPU 再検証など、「本番 Web の Vinext 切替」の条件を満たす。
 2. 初回は既存手順どおり **Web のみ**を承認して切り替え、version・動作確認の証跡を残す。この操作を通常の DB → API → Web リリースで代用しない。
 3. 同じソースを検証環境へ反映し、自動 smoke test まで成功させる。
 4. production の branch policy が `main` だけを許可し、Required reviewers・Wait timer・Custom deployment protection rules が未設定であることを確認する。本番用 Variables・Secrets・Access Service Auth を設定し、`PRODUCTION_VINEXT_READY=true` と `PRODUCTION_DEPLOY_ENABLED=true` にする。
