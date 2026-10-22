@@ -12,7 +12,7 @@ import {
   recentActivityResponseSchema,
 } from '@tsl/shared'
 
-import { type ApiClient, requestJson } from '@/lib/api'
+import { type ApiClient, parseApiResponse, requestJson } from '@/lib/api'
 
 /** ダッシュボードで使う due 件数エンドポイントの型安全な境界。 */
 export async function fetchDueCount(client: ApiClient): Promise<DueCountResponse> {
@@ -21,7 +21,7 @@ export async function fetchDueCount(client: ApiClient): Promise<DueCountResponse
     '復習件数の取得に失敗しました。',
   )
 
-  return dueCountResponseSchema.parse(response)
+  return parseApiResponse(client, dueCountResponseSchema, response)
 }
 
 export async function fetchDashboardSummary(client: ApiClient): Promise<AnalyticsSummaryResponse> {
@@ -30,7 +30,7 @@ export async function fetchDashboardSummary(client: ApiClient): Promise<Analytic
     '学習サマリーの取得に失敗しました。',
   )
 
-  return analyticsSummaryResponseSchema.parse(response)
+  return parseApiResponse(client, analyticsSummaryResponseSchema, response)
 }
 
 export async function fetchDashboardHeatmap(client: ApiClient): Promise<AnalyticsHeatmapResponse> {
@@ -39,7 +39,7 @@ export async function fetchDashboardHeatmap(client: ApiClient): Promise<Analytic
     '学習コントリビューションの取得に失敗しました。',
   )
 
-  return analyticsHeatmapResponseSchema.parse(response)
+  return parseApiResponse(client, analyticsHeatmapResponseSchema, response)
 }
 
 export async function fetchDashboardDomains(client: ApiClient): Promise<DomainsResponse> {
@@ -48,7 +48,7 @@ export async function fetchDashboardDomains(client: ApiClient): Promise<DomainsR
     '領域別進捗の取得に失敗しました。',
   )
 
-  return domainsResponseSchema.parse(response)
+  return parseApiResponse(client, domainsResponseSchema, response)
 }
 
 export async function fetchRecentActivity(client: ApiClient): Promise<RecentActivityResponse> {
@@ -57,5 +57,5 @@ export async function fetchRecentActivity(client: ApiClient): Promise<RecentActi
     '最近のアクティビティの取得に失敗しました。',
   )
 
-  return recentActivityResponseSchema.parse(response)
+  return parseApiResponse(client, recentActivityResponseSchema, response)
 }

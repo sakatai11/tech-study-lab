@@ -146,7 +146,7 @@
       "lines": 30
     },
     "apps/web/src/features/analytics/api/analytics-api.ts": {
-      "sha256": "6913bde09ebf050e14ed957603cbe51d0b38e40cb80ffddc386c74eabd9270f2",
+      "sha256": "50f66ca79a874f0ce3835b931a6dae53f09b76fbc5576b26b8c0e5697f520ceb",
       "lines": 36
     },
     "apps/web/src/features/analytics/server/load-analytics.ts": {
@@ -154,7 +154,7 @@
       "lines": 23
     },
     "apps/web/src/features/dashboard/api/dashboard-api.ts": {
-      "sha256": "0ae7c65068548e7870da1fc33856de275ae8f29fe443cbb4b150a2911e036eda",
+      "sha256": "b6b6b7bc2ba3910089e83512dd69b46412b2d4d2f9787531e293f6a5a8cca60d",
       "lines": 62
     },
     "apps/web/src/features/dashboard/server/load-dashboard.ts": {
@@ -162,7 +162,7 @@
       "lines": 107
     },
     "apps/web/src/features/domains/api/domains-api.ts": {
-      "sha256": "3ce4c3b7c3faf0bf02bbf5bff0fe41b610477cf6a05b4b58fe69c0830226d33e",
+      "sha256": "6967faf45f63a8855c49f3aaa4fae38aab875e56083452cb92c9b093868c130b",
       "lines": 13
     },
     "apps/web/src/features/domains/server/load-domains.ts": {
@@ -170,7 +170,7 @@
       "lines": 20
     },
     "apps/web/src/features/lesson/api/lesson-api.ts": {
-      "sha256": "559ff7f01dd1a48916142b10579aa78b5df4d322bfb647e11ab447093f9a7d15",
+      "sha256": "5880c018357fb923eaf56a70c53b5bb3509f230a4201bec886034d73822b691b",
       "lines": 21
     },
     "apps/web/src/features/lesson/server/load-catalog.ts": {
@@ -186,7 +186,7 @@
       "lines": 25
     },
     "apps/web/src/features/quiz/api/quiz-api.ts": {
-      "sha256": "6b94e642585a5c07f6c8457911887817641b6142d7e7148e990033c9bc1795fd",
+      "sha256": "ba8c3e5cad13dfeba4b803d187d7dc3b6852f80e8fadb32ad4ee13dd2209ab2b",
       "lines": 21
     },
     "apps/web/src/features/quiz/server/load-quiz.ts": {
@@ -194,7 +194,7 @@
       "lines": 26
     },
     "apps/web/src/features/review/api/review-api.ts": {
-      "sha256": "da43e1fefd17a6afa191cf3f41efab008e58c6f9795fde246317f33f995a84bd",
+      "sha256": "729e793e847375ecd5f48014bb47f31d8a386b5c2eee15870ac65ea097b10347",
       "lines": 13
     },
     "apps/web/src/features/review/server/load-review.ts": {
@@ -202,8 +202,8 @@
       "lines": 26
     },
     "apps/web/src/lib/api.ts": {
-      "sha256": "c3d4992a420b04cf132305963e6b55d2cafbd6e2a3a86b3cb16fabfbb8bf79cf",
-      "lines": 34
+      "sha256": "bb10e5805d474ed493df19302643710e85d371c954cfee1513226b3ea0579334",
+      "lines": 52
     },
     "apps/web/wrangler.jsonc": {
       "sha256": "f3c8614b961f48da4e5a4014a05737b5f5d71a5126a1e1a8860be24f5b646152",
@@ -293,7 +293,9 @@
         "line": 1
       },
       "layer": "api-dal",
-      "symbols": ["createActivityDeps"]
+      "symbols": [
+        "createActivityDeps"
+      ]
     },
     {
       "id": "apps/api/src/dal/analytics-repository.ts",
@@ -303,7 +305,11 @@
         "line": 1
       },
       "layer": "api-dal",
-      "symbols": ["AnalyticsRepositoryOptions", "createAnalyticsDeps", "toNumber"]
+      "symbols": [
+        "AnalyticsRepositoryOptions",
+        "createAnalyticsDeps",
+        "toNumber"
+      ]
     },
     {
       "id": "apps/api/src/dal/answer-repository.ts",
@@ -313,7 +319,9 @@
         "line": 1
       },
       "layer": "api-dal",
-      "symbols": ["createAnswerDeps"]
+      "symbols": [
+        "createAnswerDeps"
+      ]
     },
     {
       "id": "apps/api/src/dal/domains-repository.ts",
@@ -323,7 +331,9 @@
         "line": 1
       },
       "layer": "api-dal",
-      "symbols": ["createDomainsDeps"]
+      "symbols": [
+        "createDomainsDeps"
+      ]
     },
     {
       "id": "apps/api/src/dal/lesson-view-repository.ts",
@@ -333,7 +343,9 @@
         "line": 1
       },
       "layer": "api-dal",
-      "symbols": ["createLessonViewDeps"]
+      "symbols": [
+        "createLessonViewDeps"
+      ]
     },
     {
       "id": "apps/api/src/dal/review-repository.ts",
@@ -343,7 +355,9 @@
         "line": 1
       },
       "layer": "api-dal",
-      "symbols": ["createReviewDeps"]
+      "symbols": [
+        "createReviewDeps"
+      ]
     },
     {
       "id": "apps/api/src/dev-seed.ts",
@@ -523,7 +537,11 @@
         "line": 1
       },
       "layer": "api-service",
-      "symbols": ["ActivityDeps", "ActivityInput", "getRecentActivity"]
+      "symbols": [
+        "ActivityDeps",
+        "ActivityInput",
+        "getRecentActivity"
+      ]
     },
     {
       "id": "apps/api/src/services/analytics-service.ts",
@@ -562,7 +580,12 @@
         "line": 1
       },
       "layer": "api-service",
-      "symbols": ["AnswerDeps", "SubmitAnswerInput", "VersionedSrsInput", "submitAnswer"]
+      "symbols": [
+        "AnswerDeps",
+        "SubmitAnswerInput",
+        "VersionedSrsInput",
+        "submitAnswer"
+      ]
     },
     {
       "id": "apps/api/src/services/domains-service.ts",
@@ -572,7 +595,13 @@
         "line": 1
       },
       "layer": "api-service",
-      "symbols": ["DomainStatsRow", "DomainsDeps", "DomainsInput", "getDomains", "toSummary"]
+      "symbols": [
+        "DomainStatsRow",
+        "DomainsDeps",
+        "DomainsInput",
+        "getDomains",
+        "toSummary"
+      ]
     },
     {
       "id": "apps/api/src/services/errors.ts",
@@ -592,7 +621,11 @@
         "line": 1
       },
       "layer": "api-service",
-      "symbols": ["LessonViewDeps", "RecordLessonViewInput", "recordLessonView"]
+      "symbols": [
+        "LessonViewDeps",
+        "RecordLessonViewInput",
+        "recordLessonView"
+      ]
     },
     {
       "id": "apps/api/src/services/review-service.ts",
