@@ -293,9 +293,7 @@
         "line": 1
       },
       "layer": "api-dal",
-      "symbols": [
-        "createActivityDeps"
-      ]
+      "symbols": ["createActivityDeps"]
     },
     {
       "id": "apps/api/src/dal/analytics-repository.ts",
@@ -305,11 +303,7 @@
         "line": 1
       },
       "layer": "api-dal",
-      "symbols": [
-        "AnalyticsRepositoryOptions",
-        "createAnalyticsDeps",
-        "toNumber"
-      ]
+      "symbols": ["AnalyticsRepositoryOptions", "createAnalyticsDeps", "toNumber"]
     },
     {
       "id": "apps/api/src/dal/answer-repository.ts",
@@ -319,9 +313,7 @@
         "line": 1
       },
       "layer": "api-dal",
-      "symbols": [
-        "createAnswerDeps"
-      ]
+      "symbols": ["createAnswerDeps"]
     },
     {
       "id": "apps/api/src/dal/domains-repository.ts",
@@ -331,9 +323,7 @@
         "line": 1
       },
       "layer": "api-dal",
-      "symbols": [
-        "createDomainsDeps"
-      ]
+      "symbols": ["createDomainsDeps"]
     },
     {
       "id": "apps/api/src/dal/lesson-view-repository.ts",
@@ -343,9 +333,7 @@
         "line": 1
       },
       "layer": "api-dal",
-      "symbols": [
-        "createLessonViewDeps"
-      ]
+      "symbols": ["createLessonViewDeps"]
     },
     {
       "id": "apps/api/src/dal/review-repository.ts",
@@ -355,9 +343,7 @@
         "line": 1
       },
       "layer": "api-dal",
-      "symbols": [
-        "createReviewDeps"
-      ]
+      "symbols": ["createReviewDeps"]
     },
     {
       "id": "apps/api/src/dev-seed.ts",
@@ -537,11 +523,7 @@
         "line": 1
       },
       "layer": "api-service",
-      "symbols": [
-        "ActivityDeps",
-        "ActivityInput",
-        "getRecentActivity"
-      ]
+      "symbols": ["ActivityDeps", "ActivityInput", "getRecentActivity"]
     },
     {
       "id": "apps/api/src/services/analytics-service.ts",
@@ -580,12 +562,7 @@
         "line": 1
       },
       "layer": "api-service",
-      "symbols": [
-        "AnswerDeps",
-        "SubmitAnswerInput",
-        "VersionedSrsInput",
-        "submitAnswer"
-      ]
+      "symbols": ["AnswerDeps", "SubmitAnswerInput", "VersionedSrsInput", "submitAnswer"]
     },
     {
       "id": "apps/api/src/services/domains-service.ts",
@@ -595,13 +572,7 @@
         "line": 1
       },
       "layer": "api-service",
-      "symbols": [
-        "DomainStatsRow",
-        "DomainsDeps",
-        "DomainsInput",
-        "getDomains",
-        "toSummary"
-      ]
+      "symbols": ["DomainStatsRow", "DomainsDeps", "DomainsInput", "getDomains", "toSummary"]
     },
     {
       "id": "apps/api/src/services/errors.ts",
@@ -621,11 +592,7 @@
         "line": 1
       },
       "layer": "api-service",
-      "symbols": [
-        "LessonViewDeps",
-        "RecordLessonViewInput",
-        "recordLessonView"
-      ]
+      "symbols": ["LessonViewDeps", "RecordLessonViewInput", "recordLessonView"]
     },
     {
       "id": "apps/api/src/services/review-service.ts",
