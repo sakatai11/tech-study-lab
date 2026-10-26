@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { BundledLesson, BundledTopic, DomainKey } from '@tsl/shared'
 
-import { quizCatalogContentToViewModel } from './catalog-mapper'
+import { quizCatalogContentToViewModel } from './mapper'
 
 function entry(domain: DomainKey, topic: string, order: number, ids = ['02', '01']) {
   const content: BundledTopic = {
