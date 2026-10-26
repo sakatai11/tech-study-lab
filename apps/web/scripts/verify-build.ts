@@ -20,7 +20,7 @@ const contentPaths = [
   ),
   ...getQuizRouteParams().map(({ lesson }) => `/quiz/${lesson}`),
 ]
-const staticPaths = ['/', '/learn', ...contentPaths]
+const staticPaths = ['/', '/learn', '/quiz', ...contentPaths]
 const ssrPaths = ['/home', '/review', '/domains', '/analytics']
 
 // SSG: every content param is prerendered and nothing else is, so user-specific routes stay SSR.
