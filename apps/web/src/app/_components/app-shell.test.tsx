@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { renderToString } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -23,14 +23,6 @@ vi.mock('@/features/quiz/api/quiz-api', () => ({ submitAnswer: submitAnswerMock 
 vi.mock('@/features/dashboard/client/components/due-count-badge', () => ({
   DueCountBadge: () => <span>due</span>,
   DueCountProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
-}))
-
-vi.mock('@/features/dashboard/server/load-dashboard', () => ({
-  loadDashboardStatic: () => ({
-    continueHref: '/learn/security/xss/preventing-xss',
-    learnHref: '/learn/security/xss/preventing-xss',
-    quizHref: '/quiz/preventing-xss',
-  }),
 }))
 
 import { LessonViewRecorder } from '@/features/lesson/client/components/lesson-view-recorder'
@@ -83,6 +75,21 @@ const summary = {
 } satisfies AnalyticsSummaryResponse
 
 describe('AppShell', () => {
+  it.each(['dashboard', 'learn', 'quiz', 'review', 'analytics', 'tree'] as const)(
+    'links PC and SP exercise navigation to /quiz from the %s section',
+    (currentNavigation) => {
+      render(<AppShell currentNavigation={currentNavigation}>学習画面</AppShell>)
+
+      for (const name of ['メインナビゲーション', 'モバイルナビゲーション']) {
+        const link = within(screen.getByRole('navigation', { name })).getByRole('link', {
+          name: '演習',
+        })
+        expect(link.getAttribute('href')).toBe('/quiz')
+        expect(link.getAttribute('aria-current')).toBe(currentNavigation === 'quiz' ? 'page' : null)
+      }
+    },
+  )
+
   beforeEach(() => {
     viewportWidth = 390
     viewportListeners.clear()

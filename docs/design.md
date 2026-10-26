@@ -92,7 +92,7 @@ pnpm workspaces による monorepo とする。`apps/web` は画面、`apps/api`
 
 `features + components/ui` 型を採用。`src/app` は薄く保ち、ロジックは `features` に寄せる。
 
-- **Quiz 表示コンポーネント**は `apps/web/src/features/quiz/client/components` に置く。問題・解説・intro 内容・結果導線を表示 props で受け取り、画面フェーズと問題送りを管理する再利用可能な Client Component とする。`/quiz`（レッスン全問）・`/review`（due 問題）・`wrongOnly`（間違えた問題だけ）は供給する ViewModel / 表示 props だけを差し替え、解答 mutation は `client/hooks` の共通 hook を通す。
+- **Quiz 表示コンポーネント**は `apps/web/src/features/quiz/client/components` に置く。問題・解説・intro 内容・結果導線を表示 props で受け取り、画面フェーズと問題送りを管理する再利用可能な Client Component とする。`/quiz/[lesson]`（レッスン全問）・`/review`（due 問題）・`wrongOnly`（間違えた問題だけ）は供給する ViewModel / 表示 props だけを差し替え、解答 mutation は `client/hooks` の共通 hook を通す。
 - feature 内の実行環境固有処理は `client/`・`server/` に分ける。`client/components` は Client Component、`client/hooks` は mutation と通信 state、`server/` は page / Server Component から呼ぶ初回取得・join・ViewModel 化を担当する。両環境から使える `api/`・`mapper.ts`・`view-model.ts` は feature 直下に置き、client/server のどちらかへ重複配置しない。`server/` 配下には `import 'server-only'`、Client Component の入口には `'use client'` を置き、ディレクトリ名だけに境界の強制を任せない。
 - `features/*/server` は「page からしか呼ばれないから app 所有」ではなく、「feature の ViewModel を作るための Server 専用 loader」として feature 所有にする。`src/app` は URL・metadata・layout・route params の受け渡し、loader 呼び出し、feature component への ViewModel の props 渡しだけを担う。feature 固有の表示 UI、content/API DTO の取得、join、sort、filter、ViewModel 化は `features` に閉じ込める。例外として、複数 feature を横断して **1 ページ専用**にデータ取得・join を伴う合成をする処理は `app` 直下ではなく、必要になった時点で `features/<page-feature>/server` のようなページ feature として切り出す。一方、複数ルートが共有する shell と feature の表示部品を props 契約でつなぐ**表示合成**はこの例外の対象外であり、`app/_components/` に置く（`app-shell.tsx`）。この層でも shell の組み立てに必要な loader 呼び出しは行ってよく、禁じるのは join・sort・filter である（`app/**/page.tsx` と同じ粒度）。
 - **`app/` と `features/` は別の軸で命名する。** `app/` の名前は **URL パス**（ユーザーから見た画面の場所）、`features/` の名前は**ドメイン概念名**（扱う対象）である。両者の名前は**一致しなくてよく、一致は要件でもない**。`/home` ↔ `features/dashboard` は、`GET /dashboard/due-count`・`apps/api` の `routes/dashboard.ts`・`NavigationSection` の `'dashboard'`・`components/dashboard-shell.tsx` と語彙を揃えるため feature 側を `home` に改名しない。`/learn/[domain]/[topic]/[lesson]` ↔ `features/lesson` も、URL は学習セクション、feature は扱うリソースを指す。`/quiz`・`/review`・`/domains` のように結果として一致する場合もある。route と feature は 1:1 でもない（`/home` は `features/dashboard` と `features/domains` を使う）。ナビゲーションの `NavigationSection`（`tree` = `/domains` など）は UI ラベル由来の別語彙であり、この 2 軸には含めない。
@@ -201,6 +201,8 @@ content / API から feature component へ至るまでのデータの流れを�
 - **同じパース経路を `content/` → D1 seed/upsert スクリプトでも再利用**し、フロント表示と D1 配信を単一ソースから導く（[ADR-0006](./adr/0006-content-as-source-of-truth.md) の責務分離を維持）。
 - `/learn/...` と `/quiz/...` は content 由来の標準 SSG を維持する。`generateStaticParams` で全 params を返し、route params は `lib/content` の `getLessonRouteParams()` / `getTopicRouteParams()` / `getQuizRouteParams()` を feature loader 経由で読み、page から `lib/content` を直接 import しない。
 - `/learn` は固定URLの静的 RSC としてプリレンダリングする。`features/lesson/server` の一覧 loader が共通 content loader から全トピックとレッスン数を取得し、mapper で領域別に整形する。領域・トピックの一覧やリンクを画面コードへ固定しない。
+
+- `/quiz` は固定URLの静的 RSC としてプリレンダリングする。`features/quiz/server` の一覧 loader が共通 content loader からトピックとレッスンを取得し、純粋 mapper で領域・トピック別の ViewModel（タイトル・問題数・開始リンク）に整形する。共通ナビは一覧へ、ホームは先頭レッスンへ遷移する。
 
 - スキーマは `packages/shared` に集約し二重定義しない（既存 `schema/content`・`db/schema`・`srs/sm2` を土台に拡張）。
 - 同一スキーマを **3 経路で共有**：①content のビルド時パース検証、②API 入力の `zValidator`、③フロントの型（`z.infer`）。

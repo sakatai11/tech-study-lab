@@ -189,6 +189,10 @@
       "sha256": "ba8c3e5cad13dfeba4b803d187d7dc3b6852f80e8fadb32ad4ee13dd2209ab2b",
       "lines": 21
     },
+    "apps/web/src/features/quiz/server/load-catalog.ts": {
+      "sha256": "ea58f0b07f363ea0c635c42912af5ec78342e620fb1512310c3249d9d01260ad",
+      "lines": 22
+    },
     "apps/web/src/features/quiz/server/load-quiz.ts": {
       "sha256": "7869e3a0ee3be735ff134816f5660a588b7114002cea8bcfd58c5d4f6a3dde34",
       "lines": 26
@@ -729,6 +733,16 @@
         "line": 1
       },
       "layer": "web-api",
+      "symbols": []
+    },
+    {
+      "id": "apps/web/src/features/quiz/server/load-catalog.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/web/src/features/quiz/server/load-catalog.ts",
+        "line": 1
+      },
+      "layer": "web-loader",
       "symbols": []
     },
     {
@@ -4487,6 +4501,26 @@
       "source": {
         "file": "apps/web/src/features/quiz/api/quiz-api.ts",
         "line": 1
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/quiz/server/load-catalog.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#domainKeySchema",
+      "source": {
+        "file": "apps/web/src/features/quiz/server/load-catalog.ts",
+        "line": 3
+      }
+    },
+    {
+      "from": "apps/web/src/features/quiz/server/load-catalog.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/web/src/features/quiz/server/load-catalog.ts",
+        "line": 3
       },
       "specifier": "@tsl/shared",
       "typeOnly": false

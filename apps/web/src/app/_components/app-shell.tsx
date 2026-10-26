@@ -6,7 +6,6 @@ import {
   DueCountProvider,
 } from '@/features/dashboard/client/components/due-count-badge'
 import { StreakBadge } from '@/features/dashboard/client/components/streak-badge'
-import { loadDashboardStatic } from '@/features/dashboard/server/load-dashboard'
 
 type AppShellProps = {
   children: ReactNode
@@ -18,8 +17,6 @@ type AppShellProps = {
  * バッジを props 契約で合成し、root components の feature 依存を防ぐ。
  */
 export function AppShell({ children, currentNavigation }: AppShellProps) {
-  const { quizHref } = loadDashboardStatic()
-
   return (
     <DueCountProvider>
       <DashboardShell
@@ -34,7 +31,7 @@ export function AppShell({ children, currentNavigation }: AppShellProps) {
         navigationHrefs={{
           dashboard: '/home',
           learn: '/learn',
-          quiz: quizHref,
+          quiz: '/quiz',
           review: '/review',
           analytics: '/analytics',
           tree: '/domains',
