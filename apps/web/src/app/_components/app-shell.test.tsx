@@ -25,14 +25,6 @@ vi.mock('@/features/dashboard/client/components/due-count-badge', () => ({
   DueCountProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
 }))
 
-vi.mock('@/features/dashboard/server/load-dashboard', () => ({
-  loadDashboardStatic: () => ({
-    continueHref: '/learn/security/xss/preventing-xss',
-    learnHref: '/learn/security/xss/preventing-xss',
-    quizHref: '/quiz/preventing-xss',
-  }),
-}))
-
 import { LessonViewRecorder } from '@/features/lesson/client/components/lesson-view-recorder'
 import { QuizInteractive } from '@/features/quiz/client/components/quiz-interactive'
 import { invalidateClientData } from '@/lib/client-data-invalidation'
@@ -107,6 +99,23 @@ describe('AppShell', () => {
     cleanup()
     vi.unstubAllGlobals()
   })
+
+  it.each(['dashboard', 'learn', 'quiz', 'review', 'analytics', 'tree'] as const)(
+    'links desktop and mobile exercise navigation to /quiz from %s',
+    (currentNavigation) => {
+      render(<AppShell currentNavigation={currentNavigation}>学習画面</AppShell>)
+
+      for (const label of ['メインナビゲーション', 'モバイルナビゲーション']) {
+        const link = screen
+          .getByRole('navigation', { name: label })
+          .querySelector('a[href="/quiz"]')
+        expect(link?.textContent).toContain('演習')
+        expect(link?.getAttribute('aria-current')).toBe(
+          currentNavigation === 'quiz' ? 'page' : null,
+        )
+      }
+    },
+  )
 
   it('does not fetch a hidden streak on desktop, including after activity', async () => {
     viewportWidth = 1024
