@@ -3,7 +3,7 @@ import 'server-only'
 import { env } from 'cloudflare:workers'
 import { type ClientRequestOptions, createClient } from '@tsl/api/client'
 
-import { type ApiClient, localApiBaseUrl } from './api'
+import { type ApiClient, localApiBaseUrl, markServiceBindingClient } from './api'
 
 // `wrangler types` が生成する `Cloudflare.Env` と宣言を衝突させず、Server 側で参照する binding だけを型付けする。
 type WebWorkerEnv = {
@@ -18,7 +18,7 @@ export async function createServerApiClient(): Promise<ApiClient> {
 
   if (api) {
     const apiFetcher: NonNullable<ClientRequestOptions['fetch']> = api.fetch.bind(api)
-    return createClient(serviceBindingBaseUrl, { fetch: apiFetcher })
+    return markServiceBindingClient(createClient(serviceBindingBaseUrl, { fetch: apiFetcher }))
   }
 
   if (process.env.NODE_ENV === 'production') {

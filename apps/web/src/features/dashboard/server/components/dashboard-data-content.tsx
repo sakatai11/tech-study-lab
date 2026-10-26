@@ -37,12 +37,15 @@ function activityDescription(activity: DashboardActivityViewModel): string {
     : '問題に解答し、復習の予定を更新しました'
 }
 
+// Intl.DateTimeFormat の生成は描画より重いため、アクティビティごとに作らず使い回す（Issue #220）。
+const activityDateFormat = new Intl.DateTimeFormat('ja-JP', {
+  day: 'numeric',
+  month: 'numeric',
+  timeZone: 'UTC',
+})
+
 function activityDate(occurredAt: number): string {
-  return new Intl.DateTimeFormat('ja-JP', {
-    day: 'numeric',
-    month: 'numeric',
-    timeZone: 'UTC',
-  }).format(new Date(occurredAt))
+  return activityDateFormat.format(new Date(occurredAt))
 }
 
 function ActivityItem({ activity }: { activity: DashboardActivityViewModel }) {
@@ -128,7 +131,6 @@ export function DashboardDataContent({ viewModel }: { viewModel: DashboardViewMo
         <div aria-hidden="true" className="heatmap-grid mt-5 grid grid-flow-col grid-rows-7 gap-1">
           {heatmap.days.map((day, index) => (
             <span
-              aria-hidden="true"
               className={`heatmap-cell rounded-sm ${heatmapClasses[heatmapLevel(day.answerCount)]}`}
               key={day.date}
               style={{ '--heatmap-index': index } as CSSProperties}
@@ -137,9 +139,8 @@ export function DashboardDataContent({ viewModel }: { viewModel: DashboardViewMo
         </div>
         <ol aria-label="直近26週・182日間の学習コントリビューション" className="sr-only">
           {heatmap.days.map((day) => (
-            <li key={day.date}>
-              {day.date}: {day.answerCount}問
-            </li>
+            // 1つの文字列にし、SSR が隣接テキストの間に区切りコメントを挿入しないようにする（Issue #220）。
+            <li key={day.date}>{`${day.date}: ${day.answerCount}問`}</li>
           ))}
         </ol>
         <div className="mt-4 flex items-center justify-between gap-4 font-mono text-xs text-faint">

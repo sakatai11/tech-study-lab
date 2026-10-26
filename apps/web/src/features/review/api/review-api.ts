@@ -1,6 +1,6 @@
 import { type ReviewQueueResponse, reviewQueueResponseSchema } from '@tsl/shared'
 
-import { type ApiClient, requestJson } from '@/lib/api'
+import { type ApiClient, parseApiResponse, requestJson } from '@/lib/api'
 
 export async function fetchReviewQueue(client: ApiClient): Promise<ReviewQueueResponse> {
   const response = await requestJson(
@@ -8,5 +8,5 @@ export async function fetchReviewQueue(client: ApiClient): Promise<ReviewQueueRe
     '復習キューの取得に失敗しました。',
   )
 
-  return reviewQueueResponseSchema.parse(response)
+  return parseApiResponse(client, reviewQueueResponseSchema, response)
 }
