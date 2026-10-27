@@ -230,6 +230,8 @@ token の値はチャット・Issue・PR・端末履歴へ貼らず、Cloudflare
 
 ## 本番を有効化する
 
+有効化前の確認結果と残条件は [運用確認記録](./investigations/2026-10-27-production-deploy-enablement.md)を参照する。2026-10-28 に本番用 Secrets・Service Auth と保護パスの設定を終えた。本番フラグは無効のままであり、初回 Vinext 切替と CPU 再検証、認証付き CI の実通信確認は未完了である。
+
 1. #220 の無料プランでの CPU 再検証など、「本番 Web の Vinext 切替」の条件を満たす。
 2. 初回は既存手順どおり **Web のみ**を承認して切り替え、version・動作確認の証跡を残す。この操作を通常の DB → API → Web リリースで代用しない。
 3. 同じソースを検証環境へ反映し、自動 smoke test まで成功させる。
