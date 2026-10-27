@@ -91,3 +91,34 @@ production の Environment Secrets は 0 件だった。`CLOUDFLARE_API_TOKEN` /
 #36 の本番自動反映に関する残条件、および #34 の「main の自動デプロイを #36 と照合する」条件は、#262 の本番実行証跡で判断する。この確認記録や検証環境の成功だけで、#262 / #36 / #34 を完了・close しない。
 
 既存実装の確認として `pnpm deployment:test` の10テストが成功した。本番 smoke の GET / OPTIONS 制限、追加承認を要求しない厳密なブランチ制限、未検証ソース・古い run の拒否、各段階の失敗時停止を含む。`pnpm lint`、`pnpm architecture:check`、`git diff --check` も成功した。テストは外部操作を代替しており、本番への実反映の代わりにはならない。
+
+## 2026-10-28: 本番用 Secrets と Service Auth を設定した
+
+利用者が初回設定を依頼し、2つの token の発行・本番 Access アプリへの Service Auth 追加を承認した。以下は前日の未設定状態からの更新であり、Web の Vinext 切替や本番自動デプロイの有効化は含まない。
+
+| 対象 | 登録・確認結果 |
+| --- | --- |
+| CI API token | `tech-study-lab-production-deploy`。対象アカウントの Workers Scripts Write / D1 Write / Account Settings Read。90日、有効期限 `2027-01-26` |
+| Access Service Token | `tech-study-lab-production-smoke`。有効期間 `2160h`（90日）、期限 `2027-01-26 00:07 JST`、状態は有効 |
+| GitHub production Secrets | `CLOUDFLARE_API_TOKEN` / `CF_ACCESS_CLIENT_ID` / `CF_ACCESS_CLIENT_SECRET` の3名称を API のメタデータで読み戻して確認 |
+| Access アプリ | 既存の `tech-study-lab`（`34da82a0-3a6f-406c-8312-1c8c93245895`）。本番 Web の学習ルートと本番 API に適用する共通アプリ |
+| 追加ポリシー | `Production CI Service Auth`（`bf615759-3ab0-4680-9198-c75e01614a0a`）。Action は Service Auth、Include は上記の本番 Service Token 1件だけ |
+| 既存ポリシー | `Allow owner` を維持。API health の別アプリと Bypass health、CORS preflight の設定は変更していない |
+
+API token は対象アカウント内の Workers / D1 を更新できる権限を持つ。本番 Worker / D1 だけへの完全な権限分離とは扱わない。verification 用 token は変更・複製していない。新しい秘密値は Cloudflare の発行画面から GitHub の production Environment に登録し、チャット・ファイル・Issue・PR・端末履歴には記載していない。
+
+Service Auth は保存後のアプリ一覧とポリシー編集画面を開き直し、適用先、Action、Include の token 名を確認した。[Cloudflare の Service Token 手順](https://developers.cloudflare.com/cloudflare-one/access-controls/service-credentials/service-tokens/)に従い、Service Auth を人間向け Allow と併存させた。
+
+### 一覧・分析ルートも Access の保護対象へ追加した
+
+設定前の本番アプリは API 全体と Web の `home*` / `learn/*` / `quiz/*` / `review*` を保護していた。`/learn` / `/quiz` の一覧と `/domains` / `/analytics` は対象外で、未認証 GET は Access redirect を経ず、旧 Web から 404 を返していた。`/learn/*` の指定は親の `/learn` を含まない（[Cloudflare のパス指定](https://developers.cloudflare.com/cloudflare-one/access-controls/policies/app-paths/#match-multi-level-paths)）。
+
+Vinext の画面を反映する前に ADR-0008 の境界を揃えるため、同じ本番アプリへ Web の `learn` / `quiz` / `domains` / `analytics` の4パスを追加した。既存の5宛先と2つの認証ポリシーは維持した。公開トップを対象に含める wildcard は追加していない。
+
+変更後の未認証 GET では `/home` / `/learn` / `/quiz` / `/review` / `/domains` / `/analytics` と API `/domains` がすべて Access のログインへ 302 となった。公開 `/` と API `/health` は 200。本番 Web Origin から API `/answers` への OPTIONS は 204、許可 Origin は本番 Web、credentials は `true`、methods は `GET,POST,OPTIONS`、headers は `Content-Type` だった。GET / OPTIONS だけで確認し、学習記録は更新していない。
+
+### 本番 Web 切替と認証付き CI の実通信確認は残る
+
+今回の設定だけで本番用 token による CI の認証成功まで実証したとは扱わない。認証付きの実通信確認は、初回切替前の確認事項として残る。GitHub に保存した秘密値は読み出せないため、以後の確認は対象を固定した認証付きの実行経路で行い、秘密値をチャットやファイルへ持ち出さない。
+
+`PRODUCTION_VINEXT_READY=false` / `PRODUCTION_DEPLOY_ENABLED=false` を再確認した。前日の CPU 再発を解消する修正版の検証完了、既知の本番 Worker version・対応 commit の確定、Web のみの初回切替、認証済み主要画面の確認が残る。本番 Worker / D1 の反映は行っていない。
