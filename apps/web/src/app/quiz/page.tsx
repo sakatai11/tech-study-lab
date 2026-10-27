@@ -3,7 +3,7 @@ import { loadQuizCatalog } from '@/features/quiz/server/load-catalog'
 
 import { AppShell } from '../_components/app-shell'
 
-export default function QuizPage() {
+export default function QuizListPage() {
   const viewModel = loadQuizCatalog()
 
   return (

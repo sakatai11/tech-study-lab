@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { renderToString } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -75,6 +75,21 @@ const summary = {
 } satisfies AnalyticsSummaryResponse
 
 describe('AppShell', () => {
+  it.each(['dashboard', 'learn', 'quiz', 'review', 'analytics', 'tree'] as const)(
+    'links PC and SP exercise navigation to /quiz from the %s section',
+    (currentNavigation) => {
+      render(<AppShell currentNavigation={currentNavigation}>学習画面</AppShell>)
+
+      for (const name of ['メインナビゲーション', 'モバイルナビゲーション']) {
+        const link = within(screen.getByRole('navigation', { name })).getByRole('link', {
+          name: '演習',
+        })
+        expect(link.getAttribute('href')).toBe('/quiz')
+        expect(link.getAttribute('aria-current')).toBe(currentNavigation === 'quiz' ? 'page' : null)
+      }
+    },
+  )
+
   beforeEach(() => {
     viewportWidth = 390
     viewportListeners.clear()
@@ -99,23 +114,6 @@ describe('AppShell', () => {
     cleanup()
     vi.unstubAllGlobals()
   })
-
-  it.each(['dashboard', 'learn', 'quiz', 'review', 'analytics', 'tree'] as const)(
-    'links desktop and mobile exercise navigation to /quiz from %s',
-    (currentNavigation) => {
-      render(<AppShell currentNavigation={currentNavigation}>学習画面</AppShell>)
-
-      for (const label of ['メインナビゲーション', 'モバイルナビゲーション']) {
-        const link = screen
-          .getByRole('navigation', { name: label })
-          .querySelector('a[href="/quiz"]')
-        expect(link?.textContent).toContain('演習')
-        expect(link?.getAttribute('aria-current')).toBe(
-          currentNavigation === 'quiz' ? 'page' : null,
-        )
-      }
-    },
-  )
 
   it('does not fetch a hidden streak on desktop, including after activity', async () => {
     viewportWidth = 1024

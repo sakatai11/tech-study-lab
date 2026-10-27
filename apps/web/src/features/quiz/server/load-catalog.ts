@@ -4,7 +4,7 @@ import { domainKeySchema } from '@tsl/shared'
 
 import { getLessonsByTopic, getTopicContent, getTopicRouteParams } from '@/lib/content'
 
-import { quizCatalogToViewModel } from '../catalog-mapper'
+import { quizCatalogContentToViewModel } from '../mapper'
 import type { QuizCatalogViewModel } from '../view-model'
 
 export function loadQuizCatalog(): QuizCatalogViewModel {
@@ -17,5 +17,5 @@ export function loadQuizCatalog(): QuizCatalogViewModel {
       : []
   })
 
-  return quizCatalogToViewModel(entries)
+  return quizCatalogContentToViewModel(entries)
 }

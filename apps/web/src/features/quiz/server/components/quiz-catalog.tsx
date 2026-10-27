@@ -22,31 +22,28 @@ export function QuizCatalog({ viewModel }: { viewModel: QuizCatalogViewModel }) 
           <h1 className="m-0 text-balance text-3xl font-black text-ink sm:text-4xl">演習一覧</h1>
         </div>
         <p className="mb-0 mt-3 max-w-2xl text-pretty text-mute">
-          学びたいレッスンを選んで、演習を始めましょう。
+          レッスンを選んで、学んだことを問題で確かめましょう。
         </p>
       </header>
 
       {viewModel.domains.length === 0 ? (
         <Card className="p-5 sm:p-6">
-          <p className="mt-0 text-mute">演習は準備中です。教材を読みながらお待ちください。</p>
-          <Link
-            className="btn btn-ghost inline-flex min-h-11 items-center gap-2 px-4 py-3"
-            href="/learn"
-          >
+          <p className="mb-4 mt-0 text-mute">出題できる演習がありません。</p>
+          <Link className="btn-ghost" href="/learn">
             <MaterialSymbol className="size-5" name="arrow_back" />
             教材一覧へ
           </Link>
         </Card>
       ) : (
         viewModel.domains.map((domain) => (
-          <section aria-labelledby={`quiz-catalog-${domain.domain}`} key={domain.domain}>
+          <section aria-labelledby={`quiz-${domain.domain}`} key={domain.domain}>
             <div className="mb-3 flex items-center gap-3 px-1">
               <span
                 className={`grid size-10 shrink-0 place-items-center rounded-xl ${toneChipClasses[domainTones[domain.domain]]}`}
               >
                 <MaterialSymbol name={domainIcons[domain.domain]} />
               </span>
-              <h2 className="m-0 text-xl font-black text-ink" id={`quiz-catalog-${domain.domain}`}>
+              <h2 className="m-0 text-xl font-black text-ink" id={`quiz-${domain.domain}`}>
                 {domain.label}
               </h2>
             </div>
@@ -58,13 +55,13 @@ export function QuizCatalog({ viewModel }: { viewModel: QuizCatalogViewModel }) 
                   </h3>
                   <ul className="m-0 list-none divide-y-2 divide-border p-0">
                     {topic.lessons.map((lesson) => (
-                      <li key={lesson.lessonId}>
+                      <li key={lesson.id}>
                         <Link
-                          className="flex min-h-11 flex-wrap items-center justify-between gap-4 rounded-xl px-5 py-5 text-ink transition-colors hover:bg-blue-bg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue sm:px-6"
+                          className="flex min-h-11 flex-wrap items-center justify-between gap-3 rounded-xl px-5 py-5 text-ink transition-colors hover:bg-blue-bg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue sm:px-6"
                           href={lesson.href}
                         >
-                          <div className="min-w-0 flex-1 basis-40">
-                            <h4 className="m-0 break-words text-base font-bold">{lesson.title}</h4>
+                          <div className="min-w-0 flex-1 basis-48">
+                            <h4 className="m-0 break-words font-bold">{lesson.title}</h4>
                             <p className="mb-0 mt-1 text-sm text-mute">{lesson.questionCount}問</p>
                           </div>
                           <span className="inline-flex shrink-0 items-center gap-1 text-sm font-bold text-blue">

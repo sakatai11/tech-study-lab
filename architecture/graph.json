@@ -190,7 +190,7 @@
       "lines": 21
     },
     "apps/web/src/features/quiz/server/load-catalog.ts": {
-      "sha256": "7a88681108dc050b0da709504093f963f74182dd286aa449fe22cd6f8c9bd417",
+      "sha256": "2a06c1ae033983c4f5e40732a4dc1d1afc459a1de116f66e2eed29d64e7565b3",
       "lines": 22
     },
     "apps/web/src/features/quiz/server/load-quiz.ts": {

@@ -43,40 +43,34 @@ function lessonSource(topic: string, number: string): ParsedContentSourceFile {
 }
 
 describe('quiz catalog content integration', () => {
-  it('includes new topics and lessons after a content rebuild and preserves same-topic next lessons', async () => {
+  it('reflects new topics and lessons after rebuilding and preserves same-topic next lessons', async () => {
     const sources = [topicSource('react', 1), lessonSource('react', '01')]
     const first = await rebuild(sources)
-    expect(first.loadQuizCatalog().domains[0]?.topics[0]?.lessons).toEqual([
-      {
-        lessonId: 'frontend-react-01',
-        title: 'reactレッスン01',
-        questionCount: 1,
-        href: '/quiz/frontend-react-01',
-      },
+    expect(first.loadQuizCatalog().domains[0]?.topics[0]?.lessons.map(({ id }) => id)).toEqual([
+      'frontend-react-01',
     ])
+    expect(first.loadQuiz('frontend-react-01')?.nextLessonId).toBeUndefined()
 
     sources.push(topicSource('css', 0), lessonSource('css', '01'), lessonSource('react', '02'))
     const { loadQuizCatalog, loadQuiz, listQuizRouteParams } = await rebuild(sources)
     const topics = loadQuizCatalog().domains[0]?.topics
     expect(topics?.map(({ topic }) => topic)).toEqual(['css', 'react'])
-    expect(topics?.[1]?.lessons.map(({ lessonId }) => lessonId)).toEqual([
+    expect(topics?.[1]?.lessons.map(({ id }) => id)).toEqual([
       'frontend-react-01',
       'frontend-react-02',
     ])
-    for (const topic of topics ?? []) {
-      for (const lesson of topic.lessons) {
-        expect(listQuizRouteParams()).toContainEqual({ lesson: lesson.lessonId })
-        expect(loadQuiz(lesson.lessonId)?.title).toBe(lesson.title)
-      }
+    for (const lesson of topics?.flatMap(({ lessons }) => lessons) ?? []) {
+      expect(lesson.href).toBe(`/quiz/${lesson.id}`)
+      expect(listQuizRouteParams()).toContainEqual({ lesson: lesson.id })
+      expect(loadQuiz(lesson.id)?.title).toBe(lesson.title)
     }
     expect(loadQuiz('frontend-react-01')?.nextLessonId).toBe('frontend-react-02')
     expect(loadQuiz('frontend-react-02')?.nextLessonId).toBeUndefined()
+    expect(loadQuiz('frontend-css-01')?.nextLessonId).toBeUndefined()
   })
 
-  it('returns no exercise links for an empty bundle or topics with no lessons', async () => {
-    const empty = await rebuild([])
-    expect(empty.loadQuizCatalog()).toEqual({ domains: [] })
-    const indexOnly = await rebuild([topicSource('react', 0)])
-    expect(indexOnly.loadQuizCatalog()).toEqual({ domains: [] })
+  it('returns an empty catalog for an empty bundle or index-only topics', async () => {
+    expect((await rebuild([])).loadQuizCatalog()).toEqual({ domains: [] })
+    expect((await rebuild([topicSource('react', 0)])).loadQuizCatalog()).toEqual({ domains: [] })
   })
 })
