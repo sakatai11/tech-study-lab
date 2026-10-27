@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { cleanup, render, screen, within } from '@testing-library/react'
+import { DOMAIN_LABELS, domainKeySchema } from '@tsl/shared'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -12,6 +13,7 @@ vi.mock('@/features/dashboard/client/components/streak-badge', () => ({ StreakBa
 
 import * as catalog from '@/features/quiz/server/load-catalog'
 import { loadQuiz } from '@/features/quiz/server/load-quiz'
+import { getLessonsByTopic, getOrderedTopicRoutes } from '@/lib/content'
 import QuizListPage from './page'
 
 describe('quiz catalog page', () => {
@@ -20,30 +22,43 @@ describe('quiz catalog page', () => {
     vi.restoreAllMocks()
   })
 
-  it('offers all five bundled lessons by domain and topic with their question counts', () => {
+  it('exposes every bundled lesson in display order with matching exercise routes and active PC/SP navigation', () => {
     render(<QuizListPage />)
     expect(screen.getByRole('heading', { level: 1, name: '演習一覧' })).toBeTruthy()
-    for (const [domain, ids] of [
-      ['セキュリティ', ['security-xss-01', 'security-csrf-01', 'security-sql-injection-01']],
-      ['フロントエンド', ['frontend-react-01']],
-      ['バックエンド', ['backend-auth-01']],
-    ] as const) {
-      const region = screen.getByRole('region', { name: domain })
-      expect(within(region).getAllByRole('link')).toHaveLength(ids.length)
-      for (const id of ids) {
-        const quiz = loadQuiz(id)
-        expect(quiz).toBeDefined()
-        const link = within(region).getByRole('link', { name: new RegExp(quiz?.title ?? '') })
-        expect(link.getAttribute('href')).toBe(`/quiz/${id}`)
-        expect(link.textContent).toContain(`${quiz?.questions.length}問`)
-      }
+    const catalog = screen.getByRole('main')
+    // 一覧のloader・mapperを期待値に使わず、contentから表示順と全件を検証する。
+    const lessons = getOrderedTopicRoutes()
+      .map((route) => ({ ...route, domain: domainKeySchema.parse(route.domain) }))
+      .sort(
+        (a, b) =>
+          DOMAIN_LABELS[a.domain].order - DOMAIN_LABELS[b.domain].order ||
+          a.order - b.order ||
+          a.topic.localeCompare(b.topic, 'en'),
+      )
+      .flatMap(({ domain, topic }) =>
+        [...getLessonsByTopic(domain, topic)].sort((a, b) =>
+          a.lessonId.localeCompare(b.lessonId, 'en'),
+        ),
+      )
+    expect(lessons.length).toBeGreaterThan(0)
+    const starts = within(catalog).getAllByRole('link')
+    expect(starts.map((link) => link.getAttribute('href'))).toEqual(
+      lessons.map(({ lessonId }) => `/quiz/${lessonId}`),
+    )
+    for (const [index, lesson] of lessons.entries()) {
+      const quiz = loadQuiz(lesson.lessonId)
+      expect(quiz).toBeDefined()
+      expect(quiz?.title).toBe(lesson.title)
+      expect(starts[index]?.textContent).toContain(lesson.title)
+      expect(starts[index]?.textContent).toContain(`${lesson.questions.length}問`)
+      const region = screen.getByRole('region', { name: DOMAIN_LABELS[lesson.domain].label })
+      expect(within(region).getAllByRole('link')).toContain(starts[index])
     }
     for (const name of ['メインナビゲーション', 'モバイルナビゲーション']) {
-      const link = within(screen.getByRole('navigation', { name })).getByRole('link', {
-        name: '演習',
-      })
-      expect(link.getAttribute('href')).toBe('/quiz')
-      expect(link.getAttribute('aria-current')).toBe('page')
+      const navigation = screen.getByRole('navigation', { name })
+      const quizLink = within(navigation).getByRole('link', { name: '演習' })
+      expect(quizLink.getAttribute('href')).toBe('/quiz')
+      expect(quizLink.getAttribute('aria-current')).toBe('page')
     }
   })
 
