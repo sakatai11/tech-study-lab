@@ -19,6 +19,24 @@ export function createBrowserApiClient(): ApiClient {
   return createClient(apiBaseUrl ?? localApiBaseUrl, { fetch: browserApiFetch })
 }
 
+// Server loader が Service Binding から作った client。応答を Zod で再検証しない（ADR-0015）。
+const serviceBindingClients = new WeakSet<ApiClient>()
+
+/** Service Binding から作った Server 用の client を登録する。`api-server.ts` だけが呼ぶ。 */
+export function markServiceBindingClient(client: ApiClient): ApiClient {
+  serviceBindingClients.add(client)
+  return client
+}
+
+/** 応答を共有スキーマで検証する。Service Binding の client だけは型どおりとして再検証を省く（ADR-0015）。 */
+export function parseApiResponse<T>(
+  client: ApiClient,
+  schema: { parse(data: unknown): T },
+  response: unknown,
+): T {
+  return serviceBindingClients.has(client) ? (response as T) : schema.parse(response)
+}
+
 export async function requestJson(
   request: () => Promise<Response>,
   errorMessage: string,
