@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { cleanup, render, screen, within } from '@testing-library/react'
+import { DOMAIN_LABELS, domainKeySchema } from '@tsl/shared'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -11,31 +12,41 @@ vi.mock('@/features/dashboard/client/components/due-count-badge', () => ({
 vi.mock('@/features/dashboard/client/components/streak-badge', () => ({ StreakBadge: () => null }))
 
 import { loadQuiz } from '@/features/quiz/server/load-quiz'
+import { getLessonsByTopic, getOrderedTopicRoutes } from '@/lib/content'
 import QuizPage from './page'
 
 afterEach(cleanup)
 
 describe('quiz catalog page with bundled content', () => {
-  it('exposes all five published lessons with matching exercise routes and active PC/SP navigation', () => {
+  it('exposes every bundled lesson in display order with matching exercise routes and active PC/SP navigation', () => {
     render(<QuizPage />)
     expect(screen.getByRole('heading', { level: 1, name: '演習一覧' })).toBeTruthy()
     const catalog = screen.getByRole('main')
-    const lessons = [
-      ['security-xss-01', 3],
-      ['security-csrf-01', 7],
-      ['security-sql-injection-01', 7],
-      ['frontend-react-01', 7],
-      ['backend-auth-01', 7],
-    ] as const
+    // 一覧のloader・mapperを期待値に使わず、contentから表示順と全件を検証する。
+    const lessons = getOrderedTopicRoutes()
+      .map((route) => ({ ...route, domain: domainKeySchema.parse(route.domain) }))
+      .sort(
+        (a, b) =>
+          DOMAIN_LABELS[a.domain].order - DOMAIN_LABELS[b.domain].order ||
+          a.order - b.order ||
+          a.topic.localeCompare(b.topic, 'en'),
+      )
+      .flatMap(({ domain, topic }) =>
+        [...getLessonsByTopic(domain, topic)].sort((a, b) =>
+          a.lessonId.localeCompare(b.lessonId, 'en'),
+        ),
+      )
+    expect(lessons.length).toBeGreaterThan(0)
     const starts = within(catalog).getAllByRole('link')
     expect(starts.map((link) => link.getAttribute('href'))).toEqual(
-      lessons.map(([id]) => `/quiz/${id}`),
+      lessons.map(({ lessonId }) => `/quiz/${lessonId}`),
     )
-    for (const [index, [id, count]] of lessons.entries()) {
-      const quiz = loadQuiz(id)
+    for (const [index, lesson] of lessons.entries()) {
+      const quiz = loadQuiz(lesson.lessonId)
       expect(quiz).toBeDefined()
-      expect(starts[index]?.textContent).toContain(quiz?.title)
-      expect(starts[index]?.textContent).toContain(`${count}問`)
+      expect(quiz?.title).toBe(lesson.title)
+      expect(starts[index]?.textContent).toContain(lesson.title)
+      expect(starts[index]?.textContent).toContain(`${lesson.questions.length}問`)
     }
     for (const name of ['メインナビゲーション', 'モバイルナビゲーション']) {
       const navigation = screen.getByRole('navigation', { name })
