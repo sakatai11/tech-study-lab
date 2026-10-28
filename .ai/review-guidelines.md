@@ -49,6 +49,38 @@
 
 ADR の一覧は [`docs/adr/README.md`](../docs/adr/README.md) の索引にある。上の表は代表的な対応を示すもので、索引から変更内容に関係する ADR を選ぶ。複数領域にまたがる場合は該当する ADR と文書をすべて読む。`.ai/rules/*.md` が指す章番号（例: 「design.md 5.3」）も併せて参照する。
 
+## Jev設計参照チェック
+
+通常のAIレビュー依頼でも、レビューの実行責任者が次の条件を判定する。Jevは文書間の意味対応の補助であり、コードレビュー・独立レビュー・既存ゲート・人間の判断を置き換えない。新しい必須承認ゲートにはしない。CIや編集hookからAPIを呼ばない。
+
+### 対象選択とdry-run
+
+1. `committedRange` の両端のcommitを確定する。3点差分ならmerge-baseをbaseにする。`pnpm --silent design-ref:review --base <baseCommit> --head <headCommit> --dry-run` のJSONを読む。コマンドはこの2点間の差分を使い、renameは旧パスの削除と新パスの追加として扱う。参照元・参照先の作業コピーはheadと一致させる。不一致は `review_context_dirty` で停止する。無関係な作業ファイルは対象にしない。教材draftだけのレビューは対象外として記録する。
+2. 参照元 `AGENTS.md` / `.ai/review-guidelines.md` / `.ai/rules/*.md` の変更では、そのファイルを明示選択する。参照先 `docs/design.md` / `docs/adr/` の番号付きADRだけの変更でも、現在の参照を逆引きして影響する参照元を選ぶ。章内の微小差分を見落とさないよう参照先は**文書単位**で保守的に判定し、選んだ参照元の全参照を候補にする。対象文書変更時の未解決参照も残す。対象を自動で全ポリシーへ広げたり、Graphで代用したりしない。
+3. JSONの `sources`（明示パスと選択理由）、`deletedSources`、`rows`（参照元の行・前後文、参照先の抜粋・位置、要確認理由）、`endpoint`、`model`、`questionHash`、`maxRequests`、`planHash` を確認する。通常コードだけの差分、参照元がない場合は `no_affected_sources`、参照のない参照元だけなら `no_references_in_selected_sources` として未実施を報告する。削除した参照元に対するAPI判定は行わない。許可外の実パス・symlinkは読み取り時に拒否される。
+
+### 外部送信の許可
+
+- キー・ネットワークの利用可能性、Issueの実装依頼、過去のAPI実行は、今回の外部送信への同意ではない。本文の読み取りが許されても外部送信まで許されたとは解釈しない。
+- ユーザーはdry-runの特定の `planHash` を今回限りで許可できる。または、**今回のレビュー範囲・送信可能な参照元パス・参照先パス・送信内容（行と前後文、参照先抜粋と出典）・送信先・モデル／質問版・要求上限**を指定して事前許可できる。例: 「このPRのレビュー中、`.ai/rules/web.md` の参照行と前後文、および参照する `docs/design.md` とADRの抜粋・出典をTypeSafeの固定endpointへ、現行固定モデル／質問版、最大30要求で送ることを許可」。この許可は当該レビューだけに適用し、恒久ルールに書き戻さない。
+- 実行責任者はセッションの同意と適用される権限を確認する。事前許可が候補をすべて覆う場合は追加確認せず実行する。未承認・範囲外の参照元／参照先・上限増加・送信先や質問の変更には追加確認が必要。承認済みの一部に合わせて黙って候補を削ったり広げたりせず、実行を保留し、候補と不足条件を示す。今回限りの許可や別レビューの結果を再利用しない。
+- 許可されたdry-runの `planHash` を `--execute --approved-plan <planHash>` に渡す。実行時に再収集し、hashが変われば `approved_plan_mismatch` で送信を止める。再dry-runして同意範囲を再確認する。hashは内容の固定であり、同意の証明ではない。実行責任者はAIの自己判断で許可を捏造しない。
+- 1つのレビューでAPIを呼ぶ担当は1人にし、他のレビュアーへ同意の範囲・commit範囲・planHash・JSON結果を `designReferenceReview` として渡す。同じ候補への重複送信はしない。受け手は範囲とhashを確認し、結果を読む。古い結果や欠落を成功と扱わない。読み取り専用サブエージェントが実行権限を持たない場合は実行責任者へ未実施を返す。
+
+### 起動と失敗時の扱い
+
+- `pnpm design-ref:review` と `pnpm design-ref:check` は `.env.local` を自動読み込みしない。ユーザーが起動前に用意した `TYPESAFE_API_KEY` の環境変数・クラウドのsecret bindingを継承する。キーを表示・コマンド引数・ログへ記録しない。存在確認は値を出力せず行う。`.env.local` を子プロセスから読むことも機密ファイルの読み取りであり、Claudeのdenyや適用中の権限を迂回しない。キー設定のためにAIがファイルを開いたり `source` / `--env-file` を使ったりしない。
+- `dependency_missing`: `undici` 等の依存が未導入。許可された環境で `pnpm install --frozen-lockfile` 後に再dry-runする。dry-runとキーなしの確認は依存なしでも動く。
+- `missing_api_key`: 未実施。利用者による環境変数の設定が必要。`network_error` / `request_timeout`: 通信・proxy・CA・許可ホストを確認する。`http_<status>`: API側の認証・制限・障害を確認する。`invalid_json` / `invalid_response`: 応答形式不正であり判定に使わない。レスポンス本文・認証ヘッダー・生の例外をログへ出さない。
+- `request_budget_exhausted` / `context_budget_exceeded`: 未実施。上限の引き上げは同意範囲を再確認し、抜粋を黙って切り詰めない。既定30要求・最大100要求、1要求30秒・24,000 bytes以内。最初のエラーで後続を `stopped_after_error` にし、自動リトライしない。再実行が必要なら原因を解消し、残予算と同意を確認して明示的に1回ずつ行う。
+- `approval_required` / `approved_plan_mismatch` / `review_context_dirty` / パス拒否も未実施理由として残す。未実施・失敗は正常判定や承認ではない。Jevが実行できなくても通常のコードレビューを続け、補助チェックの未実施を明示する。
+
+### 結果のレビューへの対応付け
+
+終了コードだけで判断せずJSONの全 `rows` と `findings` を読む。`source.file:line`、`target.file` と章／行、判定、要確認理由をレビュー結果へ対応付ける。`contradicts` / `not_addressed` / `insufficient_context` は元文書を確認する**候補**であり、自動修正・自動承認しない。`supports`・confidenceも正しさの保証ではない。`needs_confirmation`（案内表・コード例・文書全体参照など）は送信せず、`local_error`（未解決参照）はローカルで確認する。
+
+報告には、実行／対象外／未承認／失敗の別、commit範囲、選択ファイル、planHash、要求件数・残った未実施、上記の対応表と元文書の確認結果を含める。Jev単体の候補をmust-fixへ変換せず、本規約の範囲判定・重要度に従う。`completed` は送信可能な参照の処理完了で、未送信の `needs_confirmation` は引き続き手動確認が必要である。
+
 ## レビュー観点
 
 次の5つを扱う。**優先順は担当するレビュープロファイルによって変わる**（次節）。
