@@ -24,7 +24,7 @@ tools: Bash, Read, Grep, Glob
   - コミット済み差分: `committedRange`（例: `<effectiveBase>...HEAD`）
   - 教材draft: `reviewStage: content-draft` と `draftPaths`（`inScopeFiles` は `draftPaths` と同じ値）
 
-必要に応じて `designReferenceReview`（Jevの同意範囲・commit範囲・planHash・JSON結果、または未実施理由）も受け取る。省略されていても無条件にAPIを呼ばない。
+Jevの結果は任意の `designReferenceReview` で受け取る（項目はレビュー規約を参照）。
 
 再レビューの場合は、前回の指摘一覧と修正内容も含まれる。
 
@@ -35,7 +35,7 @@ tools: Bash, Read, Grep, Glob
 1. **差分を取得する**
    - コミット済み差分: `git diff <範囲>` で全累積差分を読む。`git status --short` で未コミットの変更がないことも確認する。
    - 教材draft: `draftPaths` の差分と全文を読む。`draftPaths` の外にある未コミット変更は、範囲に含めない。
-2. **設計参照を確認する**: `.ai/review-guidelines.md` の「Jev設計参照チェック」に従い、条件付き実行または引き継いだ `designReferenceReview` のJSONを確認する。未承認・実行権限なし・失敗は未実施理由を実行責任者へ返す。同じ範囲の重複送信はせず、通常レビューを続ける。
+2. **設計参照を確認する**: 実行要否と結果の扱いはレビュー規約の「Jev設計参照チェック」に従う。
 3. **周辺を確認する**: 差分だけで判断しない。呼び出し元、型定義、既存テストも読む。`pnpm architecture:query <ファイルやsymbol>` を使うと、影響する範囲を早く絞れる。
 4. **範囲を判定する**: 各候補を `.ai/review-guidelines.md` の「範囲判定」に従って分類する。
 5. **重要度を付ける**: 対象範囲内の指摘と、今回の差分が起こした回帰だけに、must-fix / should-fix / nit を付ける。
@@ -56,10 +56,6 @@ tools: Bash, Read, Grep, Glob
 ### 指摘一覧
 | # | 重要度 | ファイル:行 | 指摘 | 修正案 |
 |---|---|---|---|---|
-
-### Jev設計参照チェック
-- 実行状況・未実施理由 / commit範囲 / 対象パス / planHash / 要求件数
-- 参照元の行 / 参照先 / 判定 / 要確認理由 / 元文書を確認した結果
 
 ### 前回指摘の検証（再レビュー時のみ）
 | # | 状態 | 検証結果 |
