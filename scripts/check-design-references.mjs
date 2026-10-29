@@ -9,8 +9,8 @@ import {
   collectReferences,
   digest,
   evaluateMetrics,
-  judgeReference,
   referenceInputHash,
+  runReferences,
   summarize,
   validateResponse,
 } from './design-references.mjs'
@@ -143,31 +143,7 @@ async function main() {
   const evaluation = config.evaluate ? evaluationCases() : null
   const refs = evaluation?.rows ?? collectReferences(root, config.sources)
   const started = performance.now()
-  const rows = []
-  let requests = 0
-  let stopped = false
-  for (const ref of refs) {
-    if (ref.status !== 'resolved') {
-      rows.push(ref)
-      continue
-    }
-    if (config.dryRun || stopped || requests >= config.maxRequests) {
-      rows.push({
-        ...ref,
-        status: 'not_run',
-        reason: config.dryRun
-          ? 'dry_run'
-          : stopped
-            ? 'stopped_after_error'
-            : 'request_budget_exhausted',
-      })
-      continue
-    }
-    const result = await judgeReference(ref)
-    if (result.inputHash) requests++
-    if (result.status === 'error') stopped = true
-    rows.push(result)
-  }
+  const { rows, requests } = await runReferences(refs, config)
   const elapsedMs = performance.now() - started
   const report = {
     schemaVersion: 1,

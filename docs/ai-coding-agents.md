@@ -130,32 +130,57 @@ pnpm test:hooks           # hook fixture、共通ログ、同期、両ランタ�
 
 このゲートは `.github/workflows/ci.yml` のPR CI（`jq` を含む依存の存在確認つき）で実行され、失敗するとジョブが落ちる。実行時間は約1秒である。実際のCodex App / CLIが外部サービスへ接続してhookを発火する統合テストは、信頼済み環境で別途実施する。
 
-### 7.1 Jevによる設計参照の意味チェック（手動PoC）
+### 7.1 Jevによる設計参照の意味チェック
 
-`pnpm design-ref:check` は、明示指定した `AGENTS.md`・`.ai/review-guidelines.md`・`.ai/rules/*.md` と、設計章・ADRの意味の対応を調べる補助コマンドである。APIキーや通信を必要とするため、CIや編集hookからは実行しない。既存の参照存在チェック、テスト、人間のレビューは引き続き行う。
+Codex／Claude Codeは共通の `pnpm design-ref:review` を使う。AIによる実行可否・送信同意・判定結果の扱いは [レビュー規約](../.ai/review-guidelines.md#jev設計参照チェック) が定義する。
 
 ```sh
-# APIを呼ばず、送信候補・参照先・要確認理由を確認する
-pnpm --silent design-ref:check --dry-run .ai/rules/web.md .ai/rules/shared.md
+# レビュー対象をコミット後、送信候補をオフラインで確認する
+pnpm --silent design-ref:review --base <baseCommit> --head <headCommit> --dry-run
 
-# 指定した文書の主張と参照先の抜粋だけをTypeSafeへ送る
-mkdir -p reports
-pnpm --silent design-ref:check .ai/rules/web.md .ai/rules/shared.md > reports/design-references.json
-
-# 日本語24組の固定fixtureを評価する
-pnpm --silent design-ref:check --evaluate > reports/jev-evaluation.json
-pnpm design-ref:test
+# 送信許可を確認した候補のplanHashで実行する
+pnpm --silent design-ref:review --base <baseCommit> --head <headCommit> --execute --approved-plan <planHash>
 ```
 
-ローカルではルートの `.env.local` に `TYPESAFE_API_KEY` を設定する。コマンドはこのファイルがある場合だけ読み、既に存在する環境変数を優先する。`.env.local` と `reports/` はGit管理しない。キーを引数・Issue・PR・ログに記載しない。クラウドでは実行環境に同名のシークレットを設定し、HTTPSの `api.typesafe.ai` を許可する。プロキシ経由で置換されるキーのプレースホルダーもそのまま使う。設定変更前から動いているタスクには反映されない場合があるので、適用済み環境で実行する。
+`--dry-run` が既定。対象は変更されたポリシーと、変更された設計文書・ADRを参照するポリシーである。参照先は文書単位で判定し、選んだ参照元の全参照を候補にする。削除・改名で未解決になった参照も残る。`planHash` はcommit・候補の本文と出典・送信条件・checkoutに対応し、実行時に再収集した内容との一致を検査する。参照元・参照先の作業コピーとheadの不一致、許可外の実パスは送信前に拒否される。
 
-モデルは `jev-1.13.0`、質問は `design-reference-v1` に固定する。JSONには出典行・原文・参照先抜粋、`supports` / `contradicts` / `not_addressed` / `insufficient_context`、各確率・confidence・usage・所要時間・入力ハッシュを記録する。confidenceは分布の集中度であり、正しさの保証ではない。未校正の閾値で自動承認しない。
+両CLIはプロセス環境の `TYPESAFE_API_KEY` を継承し、`.env.local` は自動読み込みしない。ローカルではユーザーが設定済みのシェル、クラウドではsecret bindingを使う。クラウドの接続先はHTTPSの `api.typesafe.ai` で、継承したproxy・CAを使う。
 
-未解決参照は `local_error`、文書全体へのリンク・案内の表・コード例は理由付きの `needs_confirmation` にする。その他の案内や曖昧な主張もモデルが `insufficient_context` を選べる。キー未設定・文脈予算超過・要求上限は `not_run`、HTTP失敗や不正な応答は `error` として残す。最初のAPIエラーで後続送信を止め、自動リトライしない。上限は1実行30要求、`--max-requests 1..100` で明示変更できる。1要求30秒、JSON本文24,000 bytes以内に制限し、抜粋を黙って切り詰めない。
+モデルは `jev-1.13.0`、質問版は `design-reference-v1`。既定30要求、`--max-requests 1..100`、1要求30秒・JSON本文24,000 bytes以内で、抜粋の切り詰め・自動リトライは行わない。最初のAPIエラーで後続送信を止める。JSONには出典・抜粋・判定・確率・confidence・usage・所要時間・入力ハッシュ、レビュー用の `findings` が入る。
 
-終了コード0はコマンドの実行完了を示し、意味の正しさを承認しない。矛盾や要確認を含め、必ずJSONを読む。未解決・未実行・APIエラーは終了コード2とする（`--dry-run` 自体による未実行は正常）。対象のMarkdown書式は、既存リポジトリで使うATX見出し、インラインリンク、章番号・ADR番号に限定する。任意のMarkdownや文書全体を網羅する監査ではない。
+| 状態・理由 | 対処・確認先 |
+| --- | --- |
+| `no_affected_sources` / `no_references_in_selected_sources` | 対象外。削除した参照元は `deletedSources` に残る |
+| `approval_required` / `approved_plan_mismatch` | 許可範囲とdry-runを再確認 |
+| `review_context_dirty` / パス拒否 | 対象head・作業コピー・実パスを確認 |
+| 引数エラー（`unknown_option` など） / `git_failed` | 引数の誤りとGitの失敗を区別。後者は参照commitの取得状況・リポジトリを確認 |
+| `dependency_missing` | `pnpm install --frozen-lockfile` で依存を導入。dry-runは依存なしでも可能 |
+| `missing_api_key` | 起動前の環境変数設定を確認 |
+| `network_error` / `request_timeout` | proxy・CA・許可ホスト・通信状態を確認 |
+| `http_<status>` | API側の認証・制限・障害を確認 |
+| `invalid_json` / `invalid_response` | 応答形式不正。判定は取得できていない |
+| `request_budget_exhausted` / `context_budget_exceeded` | 要求／文脈予算超過。上限変更には同意範囲の確認が必要 |
+| `stopped_after_error` | 先行エラーで後続を未実施 |
+| `local_error` / `needs_confirmation` | 未解決参照、案内表・コード例・文書全体参照など。API送信せずローカルで確認 |
 
-人手との比較は、同じ24組を人が直接確認する時間と、Jevの結果を読んで全件確認する時間を秒で測る。順序効果を抑えるため、可能なら別の担当者・順序で測る。正解ラベルも人が確認する。評価JSONの `datasetHash`・`resultsHash`、`cases: 24`、`reviewer`、ISO日時の `measuredAt`、実測した `baselineSeconds`・`assistedReviewSeconds` を `reports/jev-human-timing.json` に保存し、次で既存の結果と比較する。比較処理はAPIを再実行しない。
+終了コードは対象外・dry-run・実行完了が0、未承認・未実施・APIエラー・未解決参照が2。`completed` でも `needs_confirmation` は未送信で残る。対応するMarkdownはリポジトリのATX見出し、インラインリンク、章番号・ADR番号に限定される。
+
+通常の「このPRをレビューして」という依頼では、AIがdry-runを読み、送信許可がなければ「未承認のため未実施」と通常レビューの結果に記載する。今回の候補を覆う事前許可があれば実行し、出典・判定・元文書の確認結果を報告する。
+
+手動調査と固定fixtureの評価には直接指定CLIを使う。実行結果はGit対象外の `reports/` に保存できる。
+
+```sh
+pnpm --silent design-ref:check --dry-run .ai/rules/web.md .ai/rules/shared.md
+
+# 以下は外部送信の許可がある場合だけ実行する
+mkdir -p reports
+pnpm --silent design-ref:check .ai/rules/web.md .ai/rules/shared.md > reports/design-references.json
+pnpm --silent design-ref:check --evaluate > reports/jev-evaluation.json
+```
+
+`pnpm design-ref:test` は [Git fixture・mock transportによるrunnerの検証](../scripts/review-design-references.test.mjs) と [参照抽出・固定評価の検証](../scripts/design-references.test.mjs) を実行する。両ランタイムの配線は `pnpm test:hooks` で確認する。共通コマンドの検証は実モデルのE2E試験ではない。
+
+人手との比較では、同じ24組の直接確認とJev結果を用いた確認の時間を秒で測る。評価JSONの `datasetHash`・`resultsHash`、`cases: 24`、`reviewer`、ISO日時の `measuredAt`、実測した `baselineSeconds`・`assistedReviewSeconds` を `reports/jev-human-timing.json` に保存すると、APIを再実行せず比較できる。
 
 ```sh
 pnpm --silent design-ref:check --compare reports/jev-evaluation.json --human-timing reports/jev-human-timing.json

@@ -1,7 +1,6 @@
 import { createHash } from 'node:crypto'
-import { readFileSync, readdirSync, realpathSync } from 'node:fs'
+import { lstatSync, readFileSync, readdirSync, realpathSync } from 'node:fs'
 import { dirname, join, posix, relative, sep } from 'node:path'
-import { EnvHttpProxyAgent } from 'undici'
 import { headingSections } from './markdown-headings.mjs'
 
 // Honour the managed cloud's inherited proxy, NO_PROXY and CA trust on Node 22+.
@@ -9,6 +8,7 @@ import { headingSections } from './markdown-headings.mjs'
 let proxyAgent
 
 export const MODEL = 'jev-1.13.0'
+export const ENDPOINT = 'https://api.typesafe.ai/v1/systemone'
 export const QUESTION_VERSION = 'design-reference-v1'
 export const PRICE = { date: '2026-10-17', inputUsdPerMillion: 0.042, outputUsdPerMillion: 0 }
 export const QUESTION = {
@@ -29,21 +29,30 @@ export const QUESTION = {
 
 export const digest = (value) => createHash('sha256').update(JSON.stringify(value)).digest('hex')
 
-function readSafe(root, file, { sourceOnly = false } = {}) {
+function readSafe(root, file, { sourceOnly = false, allowMissing = false } = {}) {
   const rootPath = realpathSync(root)
+  // A deleted target is unresolved; an existing (including dangling) symlink
+  // must still go through realpath and the normal allowlist checks.
+  if (allowMissing && !lstatSync(join(root, file), { throwIfNoEntry: false })) return null
   const path = realpathSync(join(root, file))
   if (!path.startsWith(`${rootPath}${sep}`)) throw new Error('path_outside_repository')
   if (sourceOnly && !sourceAllowed(relative(rootPath, path).split(sep).join('/')))
     throw new Error('source_not_allowed')
+  if (!sourceOnly && !targetAllowed(relative(rootPath, path).split(sep).join('/')))
+    throw new Error('target_not_allowed')
   return readFileSync(path, 'utf8')
 }
 
-function sourceAllowed(file) {
+export function sourceAllowed(file) {
   return (
     file === 'AGENTS.md' ||
     file === '.ai/review-guidelines.md' ||
     /^\.ai\/rules\/[a-z0-9-]+\.md$/.test(file)
   )
+}
+
+export function targetAllowed(file) {
+  return file === 'docs/design.md' || /^docs\/adr\/[0-9]{4}-[a-z0-9-]+\.md$/.test(file)
 }
 
 function referencesOnLine(line) {
@@ -96,8 +105,8 @@ function referencesOnLine(line) {
 export function collectReferences(root, files) {
   if (!files.length) throw new Error('explicit_source_required')
   for (const file of files) if (!sourceAllowed(file)) throw new Error('source_not_allowed')
-  const design = readSafe(root, 'docs/design.md')
-  const sections = headingSections(design)
+  const design = readSafe(root, 'docs/design.md', { allowMissing: true })
+  const sections = design === null ? [] : headingSections(design)
   const adrFiles = readdirSync(join(root, 'docs/adr')).filter((file) =>
     /^[0-9]{4}-[a-z0-9-]+\.md$/.test(file),
   )
@@ -131,7 +140,7 @@ export function collectReferences(root, files) {
           const section = sections.find((item) =>
             ref.kind === 'chapter' ? item.number === value : item.anchor === value,
           )
-          if (isLink && validPath && value === null) {
+          if (isLink && validPath && value === null && design !== null) {
             target = { file: 'docs/design.md', section: null }
             reason = 'document_level_reference'
           } else if (validPath && section)
@@ -240,7 +249,11 @@ export function referenceInputHash(ref) {
 /** One bounded request, no implicit retry. Errors never contain response bodies or credentials. */
 export async function judgeReference(
   ref,
-  { apiKey = process.env.TYPESAFE_API_KEY, fetchImpl = fetch } = {},
+  {
+    apiKey = process.env.TYPESAFE_API_KEY,
+    fetchImpl = fetch,
+    loadTransport = () => import('undici'),
+  } = {},
 ) {
   if (ref.status !== 'resolved') return ref
   if (!apiKey?.trim()) return { ...ref, status: 'not_run', reason: 'missing_api_key' }
@@ -250,8 +263,11 @@ export async function judgeReference(
   const inputHash = referenceInputHash(ref)
   const started = performance.now()
   try {
-    if (fetchImpl === fetch && !proxyAgent) proxyAgent = new EnvHttpProxyAgent()
-    const response = await fetchImpl('https://api.typesafe.ai/v1/systemone', {
+    if (fetchImpl === fetch && !proxyAgent) {
+      const { EnvHttpProxyAgent } = await loadTransport()
+      proxyAgent = new EnvHttpProxyAgent()
+    }
+    const response = await fetchImpl(ENDPOINT, {
       method: 'POST',
       redirect: 'error',
       signal: AbortSignal.timeout(30000),
@@ -269,7 +285,13 @@ export async function judgeReference(
         inputHash,
       }
     }
-    const body = await response.json()
+    let body
+    try {
+      body = await response.json()
+    } catch (error) {
+      if (error instanceof SyntaxError) throw new Error('invalid_json')
+      throw error
+    }
     const judgment = validateResponse(body)
     return {
       ...ref,
@@ -285,13 +307,41 @@ export async function judgeReference(
       ...ref,
       status: 'error',
       reason:
-        error?.message === 'invalid_response'
-          ? 'invalid_response'
-          : 'request_failed_or_invalid_json',
+        error?.code === 'ERR_MODULE_NOT_FOUND'
+          ? 'dependency_missing'
+          : ['invalid_response', 'invalid_json'].includes(error?.message)
+            ? error.message
+            : ['TimeoutError', 'AbortError'].includes(error?.name)
+              ? 'request_timeout'
+              : 'network_error',
       inputHash,
       elapsedMs: performance.now() - started,
     }
   }
+}
+
+/** Shared by the explicit CLI and review runner; never retries a failed request. */
+export async function runReferences(refs, { dryRun = false, maxRequests = 30, ...options } = {}) {
+  const rows = []
+  let requests = 0
+  let stopped = false
+  for (const ref of refs) {
+    if (ref.status !== 'resolved') rows.push(ref)
+    else if (dryRun || stopped || requests >= maxRequests)
+      rows.push({
+        ...ref,
+        status: 'not_run',
+        reason: dryRun ? 'dry_run' : stopped ? 'stopped_after_error' : 'request_budget_exhausted',
+      })
+    else {
+      const result = await judgeReference(ref, options)
+      // A missing transport dependency fails before any HTTP request can start.
+      if (result.inputHash && result.reason !== 'dependency_missing') requests++
+      if (result.status === 'error') stopped = true
+      rows.push(result)
+    }
+  }
+  return { requests, rows }
 }
 
 export function evaluateMetrics(rows) {
