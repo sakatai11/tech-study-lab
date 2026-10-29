@@ -153,6 +153,7 @@ pnpm --silent design-ref:review --base <baseCommit> --head <headCommit> --execut
 | `no_affected_sources` / `no_references_in_selected_sources` | 対象外。削除した参照元は `deletedSources` に残る |
 | `approval_required` / `approved_plan_mismatch` | 許可範囲とdry-runを再確認 |
 | `review_context_dirty` / パス拒否 | 対象head・作業コピー・実パスを確認 |
+| 引数エラー（`unknown_option` など） / `git_failed` | 引数の誤りとGitの失敗を区別。後者は参照commitの取得状況・リポジトリを確認 |
 | `dependency_missing` | `pnpm install --frozen-lockfile` で依存を導入。dry-runは依存なしでも可能 |
 | `missing_api_key` | 起動前の環境変数設定を確認 |
 | `network_error` / `request_timeout` | proxy・CA・許可ホスト・通信状態を確認 |

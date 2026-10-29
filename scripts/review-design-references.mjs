@@ -15,11 +15,15 @@ import {
 } from './design-references.mjs'
 
 function git(root, args) {
-  return execFileSync('git', args, {
-    cwd: root,
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-  })
+  try {
+    return execFileSync('git', args, {
+      cwd: root,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+  } catch {
+    throw new Error('git_failed')
+  }
 }
 
 function commit(root, revision) {
@@ -63,11 +67,11 @@ export function reviewPlan(root, { base, head = 'HEAD', maxRequests = 30 }) {
     const contextPaths = [...policyPaths, 'docs/design.md', 'docs/adr']
     // The existing collector reads local files. Refuse a checkout that differs from
     // the reviewed head, including untracked context that could affect ADR lookup.
-    if (
-      git(root, ['diff', '--name-only', headCommit, '--', ...contextPaths]).trim() ||
-      git(root, ['ls-files', '--others', '--', ...contextPaths]).trim()
-    )
-      throw new Error('review_context_dirty')
+    const dirtyContext = [
+      ...splitPaths(git(root, ['diff', '--name-only', '-z', headCommit, '--', ...contextPaths])),
+      ...splitPaths(git(root, ['ls-files', '--others', '-z', '--', ...contextPaths])),
+    ].filter((file) => sourceAllowed(file) || targetAllowed(file))
+    if (dirtyContext.length) throw new Error('review_context_dirty')
     const existing = splitPaths(
       git(root, ['ls-tree', '-r', '--name-only', '-z', headCommit, '--', ...policyPaths]),
     )
@@ -206,6 +210,13 @@ async function main() {
       'path_outside_repository',
       'invalid_request_budget',
       'base_required',
+      'invalid_revision',
+      'unknown_option',
+      'duplicate_option',
+      'conflicting_modes',
+      'execute_required',
+      'option_value_required',
+      'git_failed',
     ]
     process.stdout.write(
       `${JSON.stringify({ advisory: true, status: 'error', requests: 0, reason: known.includes(error?.message) ? error.message : 'invalid_arguments_or_context' })}\n`,

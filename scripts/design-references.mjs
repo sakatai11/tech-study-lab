@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { readFileSync, readdirSync, realpathSync } from 'node:fs'
+import { lstatSync, readFileSync, readdirSync, realpathSync } from 'node:fs'
 import { dirname, join, posix, relative, sep } from 'node:path'
 import { headingSections } from './markdown-headings.mjs'
 
@@ -29,8 +29,11 @@ export const QUESTION = {
 
 export const digest = (value) => createHash('sha256').update(JSON.stringify(value)).digest('hex')
 
-function readSafe(root, file, { sourceOnly = false } = {}) {
+function readSafe(root, file, { sourceOnly = false, allowMissing = false } = {}) {
   const rootPath = realpathSync(root)
+  // A deleted target is unresolved; an existing (including dangling) symlink
+  // must still go through realpath and the normal allowlist checks.
+  if (allowMissing && !lstatSync(join(root, file), { throwIfNoEntry: false })) return null
   const path = realpathSync(join(root, file))
   if (!path.startsWith(`${rootPath}${sep}`)) throw new Error('path_outside_repository')
   if (sourceOnly && !sourceAllowed(relative(rootPath, path).split(sep).join('/')))
@@ -102,8 +105,8 @@ function referencesOnLine(line) {
 export function collectReferences(root, files) {
   if (!files.length) throw new Error('explicit_source_required')
   for (const file of files) if (!sourceAllowed(file)) throw new Error('source_not_allowed')
-  const design = readSafe(root, 'docs/design.md')
-  const sections = headingSections(design)
+  const design = readSafe(root, 'docs/design.md', { allowMissing: true })
+  const sections = design === null ? [] : headingSections(design)
   const adrFiles = readdirSync(join(root, 'docs/adr')).filter((file) =>
     /^[0-9]{4}-[a-z0-9-]+\.md$/.test(file),
   )
@@ -137,7 +140,7 @@ export function collectReferences(root, files) {
           const section = sections.find((item) =>
             ref.kind === 'chapter' ? item.number === value : item.anchor === value,
           )
-          if (isLink && validPath && value === null) {
+          if (isLink && validPath && value === null && design !== null) {
             target = { file: 'docs/design.md', section: null }
             reason = 'document_level_reference'
           } else if (validPath && section)

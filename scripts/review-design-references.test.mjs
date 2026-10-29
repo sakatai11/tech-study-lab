@@ -60,6 +60,23 @@ function repository() {
   return { root, base: save(root) }
 }
 
+function reviewCli(root) {
+  for (const file of [
+    'review-design-references.mjs',
+    'design-references.mjs',
+    'markdown-headings.mjs',
+  ]) {
+    mkdirSync(join(root, 'scripts'), { recursive: true })
+    copyFileSync(new URL(file, import.meta.url), join(root, 'scripts', file))
+  }
+  return (args, env = {}) =>
+    spawnSync(process.execPath, [join(root, 'scripts/review-design-references.mjs'), ...args], {
+      cwd: root,
+      env: { ...process.env, TYPESAFE_API_KEY: '', ...env },
+      encoding: 'utf8',
+    })
+}
+
 function response(choice = 'supports') {
   return new Response(
     JSON.stringify({
@@ -161,6 +178,56 @@ test('target rename/deletion and unresolved references stay visible instead of d
     plan.sources.every((item) => item.reasons.includes('unresolved_reference_after_target_change')),
   )
 })
+
+for (const change of ['delete', 'rename']) {
+  test(`design document ${change} preserves broken references and still processes ADRs`, async () => {
+    const { root } = repository()
+    write(
+      root,
+      source,
+      [
+        '境界を守る（design.md 1）。',
+        `境界を守る（[設計](../../${design}#${'1-方針'})）。`,
+        `[設計](../../${design})`,
+        '境界を守る（ADR-0001）。',
+      ].join('\n'),
+    )
+    const base = save(root)
+    if (change === 'delete') rmSync(join(root, design))
+    else renameSync(join(root, design), join(root, 'docs/overview.md'))
+    write(root, 'AGENTS.md', '変更後の境界を守る（ADR-0001）。\n')
+    save(root)
+    const plan = reviewPlan(root, { base })
+    assert.deepEqual(
+      plan.sources.map((item) => item.file),
+      [source, 'AGENTS.md'],
+    )
+    assert.equal(plan.rows.filter((row) => row.status === 'local_error').length, 3)
+    assert.ok(
+      plan.rows
+        .filter((row) => row.status === 'local_error')
+        .every((row) => row.reason === 'unresolved_reference'),
+    )
+    const report = await runReview(plan, {
+      execute: true,
+      approvedPlan: plan.planHash,
+      apiKey: 'fixture',
+      fetchImpl: async (_url, options) => {
+        assert.equal(JSON.parse(options.body).state.target.file, adr('0001'))
+        return response()
+      },
+    })
+    assert.equal(report.status, 'incomplete')
+    assert.equal(report.requests, 2)
+    assert.equal(report.rows.filter((row) => row.status === 'judged').length, 2)
+    const dry = reviewCli(root)(['--base', base, '--dry-run'])
+    assert.equal(dry.status, 2, dry.stderr)
+    const preview = JSON.parse(dry.stdout)
+    assert.equal(preview.requests, 0)
+    assert.equal(preview.findings.filter((row) => row.status === 'local_error').length, 3)
+    assert.deepEqual(preview.sources, plan.sources)
+  })
+}
 
 test('no approval or a changed preview fails closed; same hash allows only selected payloads', async () => {
   const { root, base } = repository()
@@ -366,6 +433,10 @@ test('untracked or staged review context is refused, unrelated work is allowed, 
   write(root, '.ai/rules/new.md', '追加の規則\n')
   assert.throws(() => reviewPlan(root, { base }), /review_context_dirty/)
   rmSync(join(root, '.ai/rules/new.md'))
+  write(root, '.git/info/exclude', '.DS_Store\n*.swp\n')
+  write(root, 'docs/adr/.DS_Store', 'Ignored metadata\n')
+  write(root, '.ai/rules/.web.md.swp', 'Ignored editor metadata\n')
+  assert.equal(reviewPlan(root, { base }).sources.length, 1)
   // Ignored ADRs can still affect the collector's directory lookup and must be refused.
   write(root, '.git/info/exclude', `${adr('0003')}\n`)
   write(root, adr('0003'), 'Ignored context\n')
@@ -384,23 +455,10 @@ test('shared CLI executes the representative runtime cases offline, without .env
   const { root, base } = repository()
   // Both Codex and Claude Code use this exact Node entrypoint via the package script.
   // This checks its executable behaviour; it does not emulate either LLM following prose.
-  for (const file of [
-    'review-design-references.mjs',
-    'design-references.mjs',
-    'markdown-headings.mjs',
-  ]) {
-    mkdirSync(join(root, 'scripts'), { recursive: true })
-    copyFileSync(new URL(file, import.meta.url), join(root, 'scripts', file))
-  }
+  const cli = reviewCli(root)
   write(root, source, '境界を守り続ける（design.md 1）。\n')
   save(root)
-  const script = join(root, 'scripts/review-design-references.mjs')
-  const run = (args, env = {}) =>
-    spawnSync(process.execPath, [script, '--base', base, ...args], {
-      cwd: root,
-      env: { ...process.env, TYPESAFE_API_KEY: '', ...env },
-      encoding: 'utf8',
-    })
+  const run = (args, env = {}) => cli(['--base', base, ...args], env)
   let result = run(['--dry-run'])
   assert.equal(result.status, 0, result.stderr)
   const preview = JSON.parse(result.stdout)
@@ -422,4 +480,31 @@ test('shared CLI executes the representative runtime cases offline, without .env
     readFileSync(join(root, '.env.local'), 'utf8'),
     'TYPESAFE_API_KEY=must-not-be-loaded\n',
   )
+})
+
+test('CLI keeps argument errors distinct from Git failures without leaking raw diagnostics', () => {
+  const { root, base } = repository()
+  const cli = reviewCli(root)
+  const cases = [
+    [[], 'base_required'],
+    [['--unknown'], 'unknown_option'],
+    [['--base'], 'option_value_required'],
+    [['--base', base, '--base', base], 'duplicate_option'],
+    [['--base', base, '--execute', '--dry-run'], 'conflicting_modes'],
+    [['--base', base, '--approved-plan', 'preview'], 'execute_required'],
+    [['--base', base, '--max-requests', '101'], 'invalid_request_budget'],
+    [['--base', 'missing-private-revision'], 'git_failed'],
+  ]
+  for (const [args, reason] of cases) {
+    const result = cli(args)
+    assert.equal(result.status, 2, result.stderr)
+    assert.equal(result.stderr, '')
+    assert.deepEqual(JSON.parse(result.stdout), {
+      advisory: true,
+      status: 'error',
+      requests: 0,
+      reason,
+    })
+    assert.ok(!result.stdout.includes('missing-private-revision'))
+  }
 })
