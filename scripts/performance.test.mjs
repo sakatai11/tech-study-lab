@@ -197,6 +197,7 @@ test('measurement stage keeps partial results and refuses a version that changed
     }),
     /changed before measurement/,
   )
+  assert.equal(state.status, 'inconclusive')
   const failed = {}
   await assert.rejects(
     measureStage({
@@ -285,7 +286,7 @@ test('CPU limit, missing logs, version mismatch and query failures never become 
   for (const [name, observe, expected] of scenarios) {
     const state = await measured()
     await assert.rejects(cpuStage(cpuOptions(state, observe(state))), expected, name)
-    assert.notEqual(state.status, 'passed', name)
+    assert(['failed', 'inconclusive'].includes(state.status), `${name}: ${state.status}`)
   }
   const changed = await measured()
   await assert.rejects(
@@ -296,6 +297,23 @@ test('CPU limit, missing logs, version mismatch and query failures never become 
     ),
     /version-changed-during-test/,
   )
+  // 終了時の version 取得に失敗しても、測定済みのまま出力しない。
+  const unreadable = await measured()
+  let reads = 0
+  await assert.rejects(
+    cpuStage(
+      cpuOptions(unreadable, observeWith(invocationEvents(unreadable)), {
+        liveVersion: async () => {
+          reads++
+          throw new Error('Cloudflare read failed')
+        },
+      }),
+    ),
+    /Cloudflare read failed/,
+  )
+  assert.equal(reads, 1)
+  assert.equal(unreadable.status, 'inconclusive')
+  assert.match(performanceSummary(unreadable), /Performance test: inconclusive/)
 })
 
 test('delayed logs are awaited within the limit, separately from request retries [ADR-0016]', async () => {

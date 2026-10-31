@@ -102,7 +102,7 @@ export async function queryEvents(observe, scriptName, from, to, depth = 0) {
 }
 
 /** 測定段階。応答の検証に失敗したら停止し、取得できた部分結果を state に残す。 */
-export async function measureStage({
+async function measure({
   state,
   target,
   versions,
@@ -145,7 +145,7 @@ export async function measureStage({
 /**
  * CPU ログ照合段階。ログの遅延だけを上限付きで待ち、欠落・version 不一致・取得失敗は判定不能として止める。
  */
-export async function cpuStage({
+async function reconcile({
   state,
   target,
   versions,
@@ -234,6 +234,27 @@ export async function cpuStage({
     baseline,
   )
   state.status = 'passed'
+}
+
+/**
+ * 段階の途中で例外が出たとき、未確定の状態を判定不能にする。
+ * 途中の状態のまま Job Summary・artifact に出力しない。
+ */
+async function settle(state, pending, run) {
+  try {
+    await run()
+  } catch (error) {
+    if (state.status === pending) state.status = 'inconclusive'
+    throw error
+  }
+}
+
+export async function measureStage(options) {
+  await settle(options.state, 'measuring', () => measure(options))
+}
+
+export async function cpuStage(options) {
+  await settle(options.state, 'measured', () => reconcile(options))
 }
 
 /** 成功記録へ載せる証跡。run / attempt・tree・version・条件と結び付ける。 */
