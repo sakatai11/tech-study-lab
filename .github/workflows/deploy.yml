@@ -63,7 +63,8 @@ jobs:
     name: Apply prepared release automatically
     needs: prepare
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # verification は smoke 後に 528 件の測定と CPU ログの待ち合わせ（上限 10 分）まで同じ排他の中で行う。
+    timeout-minutes: 60
     environment:
       name: ${{ github.ref_name == 'main' && 'production' || 'verification' }}
     concurrency:
@@ -109,6 +110,7 @@ jobs:
           ACCESS_AUDIENCE: ${{ vars.ACCESS_AUDIENCE }}
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          CLOUDFLARE_OBSERVABILITY_API_TOKEN: ${{ secrets.CLOUDFLARE_OBSERVABILITY_API_TOKEN }}
         run: node scripts/deployment.mjs apply "$DEPLOY_ENVIRONMENT"
       - name: Store sanitized operation result
         if: always()
@@ -119,3 +121,12 @@ jobs:
           include-hidden-files: true
           if-no-files-found: warn
           retention-days: 30
+      - name: Store sanitized performance test result
+        if: always() && github.ref_name == 'develop'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: performance-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .deploy/performance.json
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 90

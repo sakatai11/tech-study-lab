@@ -2,6 +2,7 @@
  * Cloudflare Access で認証済みの検証 Web /home を開き、DevTools Console へ全体を貼り付けて実行する。
  * GET のみ。Cookie / JWT / request headers / 応答本文は保存・出力しない。
  * 対象版を変えたら CONFIG.commit / webVersion を更新し、別の測定結果と混在させない。
+ * CI の自動測定（scripts/performance-lib.mjs、ADR-0016）と同じ paths・件数・期限を保つ。値を変えるときは両方を揃える。
  */
 ;(async () => {
   const CONFIG = {
