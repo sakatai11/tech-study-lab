@@ -47,9 +47,10 @@
 | [ADR-0007](./0007-analytics-aggregation-boundaries.md) | 学習分析の集計境界を UTC で固定する | Accepted |
 | [ADR-0008](./0008-production-access-boundary.md) | 本番の公開 API は Worker 内で Cloudflare Access の JWT を検証する | Accepted |
 | [ADR-0009](./0009-srs-write-integrity.md) | 解答ログと SRS 状態を原子的に書き込み、競合は version で検出する | Accepted |
-| [ADR-0010](./0010-deploy-order.md) | リリースはスキーマ → データ → API → 画面の順に適用する | Accepted |
+| [ADR-0010](./0010-deploy-order.md) | リリースはスキーマ → データ → API → 画面の順に適用する | Superseded by ADR-0016 |
 | [ADR-0011](./0011-immutable-migrations.md) | 取り込み済みのマイグレーションは変更せず、追加で直す | Accepted |
 | [ADR-0012](./0012-separate-web-and-api-workers.md) | Web と API を別の Worker にし、書き込みは Hono API を通す | Accepted |
 | [ADR-0013](./0013-no-shared-cache-for-user-data.md) | ユーザー固有のデータを Web の共有キャッシュに載せない | Accepted |
 | [ADR-0014](./0014-recent-activity-derived-from-logs.md) | 最近のアクティビティは保存済みのログから導出する | Accepted |
 | [ADR-0015](./0015-trust-service-binding-responses.md) | Service Binding 経由の API 応答は Server loader で Zod 再検証しない | Accepted |
+| [ADR-0016](./0016-performance-gated-promotion.md) | 本番へ昇格できるのは、性能試験まで成功した検証環境と同じ source tree だけにする | Accepted |

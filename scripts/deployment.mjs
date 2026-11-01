@@ -26,6 +26,7 @@ import {
   checkAuthenticatedApi,
   smokeTest,
 } from './deployment-smoke.mjs'
+import { cpuStage, measureStage, performanceProof, performanceSummary } from './performance.mjs'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const release = resolve(root, '.deploy/release')
@@ -153,15 +154,27 @@ async function prepare(environment) {
   )
 }
 
-async function cloudflare(target, path) {
+async function cloudflare(
+  target,
+  path,
+  { method = 'GET', body, token = process.env.CLOUDFLARE_API_TOKEN } = {},
+) {
   const response = await fetch(
     `https://api.cloudflare.com/client/v4/accounts/${target.account}/${path}`,
     {
-      headers: { Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}` },
+      method,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        ...(body ? { 'Content-Type': 'application/json' } : {}),
+      },
+      body: body ? JSON.stringify(body) : undefined,
       signal: AbortSignal.timeout(30_000),
     },
   )
-  assert(response.ok, `Cloudflare read failed (${response.status})`)
+  assert(
+    response.ok,
+    `Cloudflare ${method === 'GET' ? 'read' : 'query'} failed (${response.status})`,
+  )
   const json = await response.json()
   assert.equal(json.success, true, 'Cloudflare read failed')
   return json.result
@@ -198,6 +211,11 @@ function credentials(ctx) {
     'Access audience is missing or invalid',
   )
   accessHeaders(process.env)
+  if (ctx.target.environment === 'verification')
+    assert(
+      process.env.CLOUDFLARE_OBSERVABILITY_API_TOKEN,
+      'Workers Observability token is missing (required for the performance test)',
+    )
 }
 
 async function fresh(ctx) {
@@ -225,6 +243,9 @@ async function apply(environment) {
   const { target, sha, apiUrl } = ctx
   const manifest = readJson(resolve(release, 'manifest.json'))
   const result = { environment, sha, stage: 'preflight', completed: [], before: {}, after: {} }
+  const runAttempt = process.env.GITHUB_RUN_ATTEMPT ?? '1'
+  const perf = {}
+  let baseline = null
   const apiConfig = resolve(release, 'api/wrangler.json')
   const wrangler = (...args) => run(['--filter', '@tsl/api', 'exec', 'wrangler', ...args])
   const stage = (name, fn) => async () => {
@@ -236,7 +257,7 @@ async function apply(environment) {
     writeJson(resolve(root, '.deploy/result.json'), result)
   }
   try {
-    await runRelease({
+    await runRelease(environment, {
       preflight: stage('preflight', async () => {
         validateManifest(release, manifest, environment, sha)
         assert.equal(
@@ -281,6 +302,9 @@ async function apply(environment) {
         // A failed run may have synced D1 without recording success, so the last
         // success record cannot prove D1 matches this content. Always re-sync.
         result.contentSync = true
+        // 比較の基準は直前の成功記録。性能試験を持たない記録は基準にしない。
+        if (environment === 'verification')
+          baseline = (await lastRelease(environment))?.performance ?? null
         result.before.api = await currentVersion(target, target.api)
         result.before.web = await currentVersion(target, target.web)
         rmSync(resolve(root, 'apps/web/dist'), { recursive: true, force: true })
@@ -338,19 +362,73 @@ async function apply(environment) {
       smoke: stage('smoke', async () =>
         smokeTest(target, ctx, readJson(resolve(release, 'content/summary.json'))),
       ),
+      performance: stage('performance', async () =>
+        measureStage({
+          state: perf,
+          target,
+          versions: result.after,
+          liveVersion: (worker) => currentVersion(target, target[worker]),
+          cloudflare: (path, options) => cloudflare(target, path, options),
+          headers: accessHeaders(process.env),
+          webUrl: ctx.webUrl,
+        }),
+      ),
+      cpuLogs: stage('cpuLogs', async () => {
+        await cpuStage({
+          state: perf,
+          target,
+          versions: result.after,
+          liveVersion: (worker) => currentVersion(target, target[worker]),
+          observe: (body) =>
+            cloudflare(target, 'workers/observability/telemetry/query', {
+              method: 'POST',
+              body,
+              token: process.env.CLOUDFLARE_OBSERVABILITY_API_TOKEN,
+            }),
+          baseline,
+          sleep: (ms) => new Promise((done) => setTimeout(done, ms)),
+        })
+        result.performance = {
+          status: perf.status,
+          warnings: perf.comparison.warnings.length,
+          comparison: perf.comparison.status,
+        }
+      }),
       record: stage('record', async () => {
         await recordRelease(environment, sha, {
           kind: 'tsl-release',
           tree: ctx.tree,
           contentTree: ctx.contentTree,
           runId: process.env.GITHUB_RUN_ID,
+          runAttempt,
           apiVersion: result.after.api,
           webVersion: result.after.web,
+          ...(environment === 'verification'
+            ? {
+                performance: performanceProof(perf, {
+                  tree: ctx.tree,
+                  runId: process.env.GITHUB_RUN_ID,
+                  runAttempt,
+                }),
+              }
+            : {}),
         })
         result.success = true
       }),
     })
   } finally {
+    if (perf.status) {
+      // 失敗時も取得できた部分結果を残す。応答本文・認証情報・ログ本文は含めない。
+      writeJson(resolve(root, '.deploy/performance.json'), {
+        environment,
+        sha,
+        tree: ctx.tree,
+        runId: process.env.GITHUB_RUN_ID,
+        runAttempt,
+        ...perf,
+      })
+      summary(performanceSummary(perf))
+    }
     summary(
       `Result: **${result.success ? 'success' : 'failed'}**; last stage: **${result.stage}**\n\nWorker versions: \`${JSON.stringify({ before: result.before, after: result.after })}\`\n\nOn failure, inspect result.json and live versions before retrying. Retry the whole workflow to regenerate its plan. Worker rollback does not restore D1; see docs/deployment.md.`,
     )

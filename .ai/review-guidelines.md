@@ -45,7 +45,7 @@
 | `packages/shared/**` | API スキーマは ADR-0002 / ADR-0003 / ADR-0007 / ADR-0014、SRS は ADR-0005、content のスキーマは ADR-0006 | design.md §5.1・§5.8 |
 | `content/**` | ADR-0006 | [コンテンツ規約](../docs/content-guidelines.md) |
 | テストファイル | テスト名に `[ADR-NNNN]` がある場合はその ADR | [テストルール](rules/testing.md) |
-| ビルド・デプロイ・CI 設定 | ADR-0010（リリースの順序）、ADR-0011（マイグレーション）、ADR-0012・ADR-0013（Worker 構成とキャッシュ） | [環境・デプロイ運用](../docs/deployment.md) |
+| ビルド・デプロイ・CI 設定 | ADR-0016（リリースの順序と性能試験による本番昇格）、ADR-0011（マイグレーション）、ADR-0012・ADR-0013（Worker 構成とキャッシュ） | [環境・デプロイ運用](../docs/deployment.md) |
 
 ADR の一覧は [`docs/adr/README.md`](../docs/adr/README.md) の索引にある。上の表は代表的な対応を示すもので、索引から変更内容に関係する ADR を選ぶ。複数領域にまたがる場合は該当する ADR と文書をすべて読む。`.ai/rules/*.md` が指す章番号（例: 「design.md 5.3」）も併せて参照する。
 

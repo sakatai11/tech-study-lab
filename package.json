@@ -29,7 +29,7 @@
     "sync:agents": "node scripts/sync-agent-config.mjs",
     "test:hooks": "sh scripts/test-hooks.sh",
     "test:secrets": "sh .ai/scripts/test-load-secrets.sh",
-    "deployment:test": "node --test scripts/deployment*.test.mjs",
+    "deployment:test": "node --test scripts/deployment*.test.mjs scripts/performance.test.mjs",
     "design-ref:check": "node scripts/check-design-references.mjs",
     "design-ref:review": "node scripts/review-design-references.mjs",
     "design-ref:test": "node --test scripts/design-references.test.mjs scripts/review-design-references.test.mjs"

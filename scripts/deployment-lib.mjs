@@ -3,6 +3,8 @@ import { createHash } from 'node:crypto'
 import { lstatSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
+import { assertPerformanceProof } from './performance-lib.mjs'
+
 const account = '4459a4d59a634a07eac0400d39b84f20'
 const targets = {
   verification: {
@@ -63,6 +65,7 @@ export function assertFreshSource(environment, sha, latestSha, tree, verificatio
       tree,
       'production source must match the latest successful verification',
     )
+    assertPerformanceProof(verification)
   }
 }
 
@@ -105,6 +108,13 @@ export function assertTargetConfig(target, api, web) {
   if (target.environment === 'verification') {
     assert.equal(web.workers_dev, true)
     assert.equal(web.preview_urls, false)
+    // CPU ログ照合は全 invocation の記録を前提にする（ADR-0016）。
+    for (const config of [api, web])
+      assert.deepEqual(
+        config.observability,
+        { enabled: true, head_sampling_rate: 1 },
+        'verification Workers must log every invocation',
+      )
   }
 }
 
@@ -149,17 +159,19 @@ export function validateManifest(directory, manifest, environment, sha) {
   assert.deepEqual(inventory(directory), manifest.files, 'release artifact hash mismatch')
 }
 
-export async function runRelease(steps) {
-  for (const name of [
-    'preflight',
-    'migrations',
-    'sync',
-    'api',
-    'apiHealth',
-    'web',
-    'smoke',
-    'record',
-  ]) {
+const releaseOrder = ['preflight', 'migrations', 'sync', 'api', 'apiHealth', 'web', 'smoke']
+
+/** 環境ごとの段階。性能測定と CPU ログ照合は検証環境だけで、成功記録の直前に行う（ADR-0016）。 */
+export function releaseStages(environment) {
+  getTarget(environment)
+  return environment === 'verification'
+    ? [...releaseOrder, 'performance', 'cpuLogs', 'record']
+    : [...releaseOrder, 'record']
+}
+
+export async function runRelease(environment, steps) {
+  for (const name of releaseStages(environment)) {
+    assert.equal(typeof steps[name], 'function', `release stage ${name} is missing`)
     await steps[name]()
   }
 }

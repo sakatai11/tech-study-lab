@@ -12,9 +12,31 @@ import {
   createManifest,
   getTarget,
   lastRelease,
+  releaseStages,
   runRelease,
   validateManifest,
 } from './deployment-lib.mjs'
+import { conditionsId } from './performance-lib.mjs'
+
+const tree = 'b'.repeat(40)
+const version = '11111111-1111-1111-1111-111111111111'
+const verified = {
+  tree,
+  runId: '10',
+  runAttempt: '1',
+  apiVersion: version,
+  webVersion: version,
+  performance: {
+    passed: true,
+    conditionsId: conditionsId(),
+    tree,
+    runId: '10',
+    runAttempt: '1',
+    apiVersion: version,
+    webVersion: version,
+    cpu: { status: 'passed' },
+  },
+}
 
 test('branch and environment cannot be selected independently', () => {
   assertWorkflowContext('verification', {
@@ -93,9 +115,25 @@ test('stale run and unverified production source fail before mutations', () => {
   assert.throws(() =>
     assertFreshSource('production', 'a'.repeat(40), 'a'.repeat(40), 'b'.repeat(40), null),
   )
-  assertFreshSource('production', 'a'.repeat(40), 'a'.repeat(40), 'b'.repeat(40), {
-    tree: 'b'.repeat(40),
+  assertFreshSource('production', 'a'.repeat(40), 'a'.repeat(40), tree, verified)
+})
+
+test('production refuses verification records without a matching performance proof [ADR-0016]', () => {
+  const production = (record) =>
+    assertFreshSource('production', 'a'.repeat(40), 'a'.repeat(40), tree, record)
+  const withProof = (change) => ({
+    ...verified,
+    performance: { ...verified.performance, ...change },
   })
+  // 導入前の成功記録（smoke までの成功）は性能試験済みとみなさない。
+  assert.throws(() => production({ ...verified, performance: undefined }), /no performance/)
+  assert.throws(() => production(withProof({ passed: false })), /did not pass/)
+  assert.throws(() => production(withProof({ cpu: { status: 'inconclusive' } })), /CPU log/)
+  assert.throws(() => production(withProof({ conditionsId: 'old-conditions' })), /conditions/)
+  assert.throws(() => production(withProof({ tree: 'c'.repeat(40) })), /source tree/)
+  assert.throws(() => production(withProof({ webVersion: 'other' })), /Web version/)
+  assert.throws(() => production(withProof({ runAttempt: '2' })), /attempt/)
+  assert.throws(() => production({ ...verified, tree: 'c'.repeat(40) }), /latest successful/)
 })
 
 test('API and Web cannot bind a resource from the other environment', () => {
@@ -113,8 +151,22 @@ test('API and Web cannot bind a resource from the other environment', () => {
     migrations: [],
     workers_dev: true,
     preview_urls: false,
+    observability: { enabled: true, head_sampling_rate: 1 },
   }
+  api.observability = { enabled: true, head_sampling_rate: 1 }
   assertTargetConfig(target, api, web)
+  assert.throws(
+    () =>
+      assertTargetConfig(target, api, {
+        ...web,
+        observability: { enabled: true, head_sampling_rate: 0.1 },
+      }),
+    /every invocation/,
+  )
+  assert.throws(
+    () => assertTargetConfig(target, { ...api, observability: undefined }, web),
+    /every invocation/,
+  )
   assert.throws(() =>
     assertTargetConfig(target, { ...api, name: getTarget('production').api }, web),
   )
@@ -161,25 +213,35 @@ test('manifest detects tampered SQL, added files, and wrong environment', () => 
   }
 })
 
-test('release applies schema/data/API/Web in order and stops at every failed stage [ADR-0010]', async () => {
-  const stages = ['preflight', 'migrations', 'sync', 'api', 'apiHealth', 'web', 'smoke', 'record']
-  for (const failed of [undefined, ...stages]) {
-    const calls = []
-    const steps = Object.fromEntries(
-      stages.map((stage) => [
-        stage,
-        async () => {
-          calls.push(stage)
-          if (stage === failed) throw new Error(`failed: ${stage}`)
-        },
-      ]),
-    )
-    if (failed) {
-      await assert.rejects(runRelease(steps), new RegExp(`failed: ${failed}`))
-      assert.deepEqual(calls, stages.slice(0, stages.indexOf(failed) + 1))
-    } else {
-      await runRelease(steps)
-      assert.deepEqual(calls, stages)
+test('release applies schema/data/API/Web in order and stops at every failed stage [ADR-0010] [ADR-0016]', async () => {
+  const common = ['preflight', 'migrations', 'sync', 'api', 'apiHealth', 'web', 'smoke']
+  assert.deepEqual(releaseStages('production'), [...common, 'record'])
+  assert.deepEqual(releaseStages('verification'), [...common, 'performance', 'cpuLogs', 'record'])
+  for (const environment of ['verification', 'production']) {
+    const stages = releaseStages(environment)
+    for (const failed of [undefined, ...stages]) {
+      const calls = []
+      const steps = Object.fromEntries(
+        stages.map((stage) => [
+          stage,
+          async () => {
+            calls.push(stage)
+            if (stage === failed) throw new Error(`failed: ${stage}`)
+          },
+        ]),
+      )
+      if (failed) {
+        await assert.rejects(runRelease(environment, steps), new RegExp(`failed: ${failed}`))
+        assert.deepEqual(calls, stages.slice(0, stages.indexOf(failed) + 1))
+      } else {
+        await runRelease(environment, steps)
+        assert.deepEqual(calls, stages)
+      }
     }
   }
+  // 検証環境で性能段階が欠けた実装は成功記録へ進まない。
+  const missing = Object.fromEntries(
+    releaseStages('production').map((stage) => [stage, async () => {}]),
+  )
+  await assert.rejects(runRelease('verification', missing), /performance is missing/)
 })

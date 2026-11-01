@@ -1,6 +1,6 @@
 # 0010: リリースはスキーマ → データ → API → 画面の順に適用する
 
-- 状態: Accepted
+- 状態: Superseded by [ADR-0016](./0016-performance-gated-promotion.md)
 - 日付: 2026-10-14
 - 関連: Issue #242（`docs/design.md` の旧 12.4 節・旧 12.9 節から移行）
 
