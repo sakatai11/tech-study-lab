@@ -132,19 +132,23 @@ pnpm test:hooks           # hook fixture、共通ログ、同期、両ランタ�
 
 ### 7.1 Jevによる設計参照の意味チェック
 
-Codex／Claude Codeは共通の `pnpm design-ref:review` を使う。AIによる実行可否・送信同意・判定結果の扱いは [レビュー規約](../.ai/review-guidelines.md#jev設計参照チェック) が定義する。
+Codex／Claude Codeは、1Passwordを使うローカル実行では `git jev`（ローカルGit設定の `alias.jev`）を使う。dry-run・helpでは1Passwordを呼ばず、`--execute` 時だけ `op run` で `TYPESAFE_API_KEY` を渡す。実行可否・送信同意・判定結果の扱いは [レビュー規約](../.ai/review-guidelines.md#jev設計参照チェック) に従う。
+
+環境変数にキーがない場合も、`git config --get alias.jev >/dev/null`（0: 設定済み、1: 未設定）と `op --version` で利用可否を確認する。未設定なら不足する設定を利用者に確認する。失敗時はCLI・権限・1Password連携の原因を切り分け、キー未登録と断定しない。
+
+環境変数でキーを渡す環境では、以下の `git jev` を `pnpm --silent design-ref:review` に置き換える。
 
 ```sh
 # レビュー対象をコミット後、送信候補をオフラインで確認する
-pnpm --silent design-ref:review --base <baseCommit> --head <headCommit> --dry-run
+git jev --base <baseCommit> --head <headCommit> --dry-run
 
 # 送信許可を確認した候補のplanHashで実行する
-pnpm --silent design-ref:review --base <baseCommit> --head <headCommit> --execute --approved-plan <planHash>
+git jev --base <baseCommit> --head <headCommit> --execute --approved-plan <planHash>
 ```
 
 `--dry-run` が既定。対象は変更されたポリシーと、変更された設計文書・ADRを参照するポリシーである。参照先は文書単位で判定し、選んだ参照元の全参照を候補にする。削除・改名で未解決になった参照も残る。`planHash` はcommit・候補の本文と出典・送信条件・checkoutに対応し、実行時に再収集した内容との一致を検査する。参照元・参照先の作業コピーとheadの不一致、許可外の実パスは送信前に拒否される。
 
-両CLIはプロセス環境の `TYPESAFE_API_KEY` を継承し、`.env.local` は自動読み込みしない。ローカルではユーザーが設定済みのシェル、クラウドではsecret bindingを使う。クラウドの接続先はHTTPSの `api.typesafe.ai` で、継承したproxy・CAを使う。
+JevのCLIは `.env.local` を自動読み込みしない。APIの接続先はHTTPSの `api.typesafe.ai` で、継承したproxy・CAを使う。
 
 モデルは `jev-1.13.0`、質問版は `design-reference-v1`。既定30要求、`--max-requests 1..100`、1要求30秒・JSON本文24,000 bytes以内で、抜粋の切り詰め・自動リトライは行わない。最初のAPIエラーで後続送信を止める。JSONには出典・抜粋・判定・確率・confidence・usage・所要時間・入力ハッシュ、レビュー用の `findings` が入る。
 
@@ -155,7 +159,7 @@ pnpm --silent design-ref:review --base <baseCommit> --head <headCommit> --execut
 | `review_context_dirty` / パス拒否 | 対象head・作業コピー・実パスを確認 |
 | 引数エラー（`unknown_option` など） / `git_failed` | 引数の誤りとGitの失敗を区別。後者は参照commitの取得状況・リポジトリを確認 |
 | `dependency_missing` | `pnpm install --frozen-lockfile` で依存を導入。dry-runは依存なしでも可能 |
-| `missing_api_key` | 起動前の環境変数設定を確認 |
+| `missing_api_key` | 選択した起動方法のキー受け渡し設定を確認 |
 | `network_error` / `request_timeout` | proxy・CA・許可ホスト・通信状態を確認 |
 | `http_<status>` | API側の認証・制限・障害を確認 |
 | `invalid_json` / `invalid_response` | 応答形式不正。判定は取得できていない |
