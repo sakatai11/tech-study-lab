@@ -41,6 +41,7 @@ describe('domains page loader and content', () => {
     expect(screen.getByRole('region', { name: '領域別の習得状況' })).toBeTruthy()
     for (const label of ['セキュリティ', 'フロントエンド', 'バックエンド', 'アーキテクチャ']) {
       expect(screen.getByRole('heading', { name: label })).toBeTruthy()
+      expect(screen.getByRole('progressbar', { name: `${label} の習得状況` })).toBeTruthy()
     }
     const links = screen.getAllByRole('link', { name: '最初のトピック' })
     expect(links.length).toBeGreaterThan(0)

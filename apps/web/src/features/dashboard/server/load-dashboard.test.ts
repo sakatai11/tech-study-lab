@@ -16,7 +16,6 @@ const getOrderedTopicRoutes = vi.hoisted(() =>
 )
 const fetchDashboardSummary = vi.hoisted(() => vi.fn())
 const fetchDashboardHeatmap = vi.hoisted(() => vi.fn())
-const fetchDashboardDomains = vi.hoisted(() => vi.fn())
 const fetchRecentActivity = vi.hoisted(() => vi.fn())
 
 vi.mock('@/lib/api-server', () => ({ createServerApiClient }))
@@ -26,7 +25,6 @@ vi.mock('@/lib/content', () => ({
   getOrderedTopicRoutes,
 }))
 vi.mock('../api/dashboard-api', () => ({
-  fetchDashboardDomains,
   fetchDashboardHeatmap,
   fetchDashboardSummary,
   fetchRecentActivity,
@@ -84,7 +82,6 @@ describe('loadDashboardStatic', () => {
     createServerApiClient.mockReset()
     fetchDashboardSummary.mockReset()
     fetchDashboardHeatmap.mockReset()
-    fetchDashboardDomains.mockReset()
     fetchRecentActivity.mockReset()
     getLessonRouteParams.mockReset()
     getLessonRouteParams.mockReturnValue([])
@@ -172,7 +169,6 @@ describe('loadDashboard', () => {
     createServerApiClient.mockReset()
     fetchDashboardSummary.mockReset()
     fetchDashboardHeatmap.mockReset()
-    fetchDashboardDomains.mockReset()
     fetchRecentActivity.mockReset()
     getLessonRouteParams.mockReset()
     getLessonRouteParams.mockReturnValue([])
@@ -218,7 +214,6 @@ describe('loadDashboard', () => {
     expect(createServerApiClient).toHaveBeenCalledOnce()
     expect(fetchDashboardSummary).toHaveBeenCalledWith(client)
     expect(fetchDashboardHeatmap).toHaveBeenCalledWith(client)
-    expect(fetchDashboardDomains).not.toHaveBeenCalled()
     expect(getOrderedTopicRoutes).not.toHaveBeenCalled()
     expect(fetchRecentActivity).toHaveBeenCalledWith(client)
 
