@@ -1,13 +1,11 @@
 import {
   type AnalyticsHeatmapResponse,
   type AnalyticsSummaryResponse,
-  type DomainsResponse,
   type DueCountResponse,
   type RecentActivityResponse,
   analyticsHeatmapResponseSchema,
   analyticsRequestSchema,
   analyticsSummaryResponseSchema,
-  domainsResponseSchema,
   dueCountResponseSchema,
   recentActivityResponseSchema,
 } from '@tsl/shared'
@@ -40,15 +38,6 @@ export async function fetchDashboardHeatmap(client: ApiClient): Promise<Analytic
   )
 
   return parseApiResponse(client, analyticsHeatmapResponseSchema, response)
-}
-
-export async function fetchDashboardDomains(client: ApiClient): Promise<DomainsResponse> {
-  const response = await requestJson(
-    () => client.domains.$get({ query: {} }),
-    '領域別進捗の取得に失敗しました。',
-  )
-
-  return parseApiResponse(client, domainsResponseSchema, response)
 }
 
 export async function fetchRecentActivity(client: ApiClient): Promise<RecentActivityResponse> {

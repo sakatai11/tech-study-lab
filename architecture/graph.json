@@ -154,12 +154,12 @@
       "lines": 23
     },
     "apps/web/src/features/dashboard/api/dashboard-api.ts": {
-      "sha256": "b6b6b7bc2ba3910089e83512dd69b46412b2d4d2f9787531e293f6a5a8cca60d",
-      "lines": 62
+      "sha256": "db6c97781e3dce622876549de9734662cc0358601a4b053558ca16ba035ceaa3",
+      "lines": 51
     },
     "apps/web/src/features/dashboard/server/load-dashboard.ts": {
-      "sha256": "55c00ae5b8d2b05c7c6a828b9f75fae23af8200470a32aba520a800cf54e70ac",
-      "lines": 107
+      "sha256": "4f9a82af0d5d5e74d507fd2ea86e105982939c1aab70513ae4f1d33b69f85501",
+      "lines": 99
     },
     "apps/web/src/features/domains/api/domains-api.ts": {
       "sha256": "6967faf45f63a8855c49f3aaa4fae38aab875e56083452cb92c9b093868c130b",
@@ -4051,7 +4051,7 @@
       "to": "endpoint:GET /activity/recent",
       "source": {
         "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-        "line": 56
+        "line": 45
       }
     },
     {
@@ -4060,7 +4060,7 @@
       "to": "endpoint:GET /analytics/heatmap",
       "source": {
         "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-        "line": 38
+        "line": 36
       }
     },
     {
@@ -4069,7 +4069,7 @@
       "to": "endpoint:GET /analytics/summary",
       "source": {
         "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-        "line": 29
+        "line": 27
       }
     },
     {
@@ -4078,16 +4078,7 @@
       "to": "endpoint:GET /dashboard/due-count",
       "source": {
         "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-        "line": 20
-      }
-    },
-    {
-      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-      "relation": "calls-endpoint",
-      "to": "endpoint:GET /domains",
-      "source": {
-        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-        "line": 47
+        "line": 18
       }
     },
     {
@@ -4105,7 +4096,7 @@
       "to": "symbol:packages/shared/src/schema/api.ts#analyticsHeatmapResponseSchema",
       "source": {
         "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-        "line": 7
+        "line": 6
       }
     },
     {
@@ -4114,7 +4105,7 @@
       "to": "symbol:packages/shared/src/schema/api.ts#analyticsRequestSchema",
       "source": {
         "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-        "line": 8
+        "line": 7
       }
     },
     {
@@ -4132,25 +4123,7 @@
       "to": "symbol:packages/shared/src/schema/api.ts#analyticsSummaryResponseSchema",
       "source": {
         "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-        "line": 9
-      }
-    },
-    {
-      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-      "relation": "imports-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#DomainsResponse",
-      "source": {
-        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-        "line": 4
-      }
-    },
-    {
-      "from": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-      "relation": "imports-symbol",
-      "to": "symbol:packages/shared/src/schema/api.ts#domainsResponseSchema",
-      "source": {
-        "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-        "line": 10
+        "line": 8
       }
     },
     {
@@ -4159,7 +4132,7 @@
       "to": "symbol:packages/shared/src/schema/api.ts#DueCountResponse",
       "source": {
         "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-        "line": 5
+        "line": 4
       }
     },
     {
@@ -4168,7 +4141,7 @@
       "to": "symbol:packages/shared/src/schema/api.ts#dueCountResponseSchema",
       "source": {
         "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-        "line": 11
+        "line": 9
       }
     },
     {
@@ -4177,7 +4150,7 @@
       "to": "symbol:packages/shared/src/schema/api.ts#RecentActivityResponse",
       "source": {
         "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-        "line": 6
+        "line": 5
       }
     },
     {
@@ -4186,7 +4159,7 @@
       "to": "symbol:packages/shared/src/schema/api.ts#recentActivityResponseSchema",
       "source": {
         "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-        "line": 12
+        "line": 10
       }
     },
     {
@@ -4195,7 +4168,7 @@
       "to": "apps/web/src/lib/api.ts",
       "source": {
         "file": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-        "line": 15
+        "line": 13
       },
       "specifier": "@/lib/api",
       "typeOnly": false

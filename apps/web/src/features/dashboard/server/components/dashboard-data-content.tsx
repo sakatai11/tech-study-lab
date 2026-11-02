@@ -9,7 +9,6 @@ import { MaterialSymbol, type MaterialSymbolName } from '@/components/ui/materia
 import { type Tone, toneChipClasses } from '@/components/ui/tone'
 
 import type { DashboardActivityViewModel, DashboardViewModel } from '../../view-model'
-import { DashboardDomainProgress } from './dashboard-domain-progress'
 
 const heatmapClasses = ['bg-heat-0', 'bg-heat-1', 'bg-heat-2', 'bg-heat-3', 'bg-heat-4'] as const
 
@@ -75,7 +74,7 @@ function ActivityItem({ activity }: { activity: DashboardActivityViewModel }) {
 }
 
 export function DashboardDataContent({ viewModel }: { viewModel: DashboardViewModel }) {
-  const { summary, heatmap, domains, activity } = viewModel
+  const { summary, heatmap, activity } = viewModel
 
   return (
     <div className="flex flex-col gap-5">
@@ -153,8 +152,6 @@ export function DashboardDataContent({ viewModel }: { viewModel: DashboardViewMo
           <span>More</span>
         </div>
       </Card>
-
-      <DashboardDomainProgress domains={domains} />
 
       <Card className="p-5 sm:p-6" aria-labelledby="recent-activity-heading">
         <div className="flex items-start justify-between gap-3">

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import type { DashboardViewModel } from '../../view-model'
@@ -25,23 +25,6 @@ const viewModel: DashboardViewModel = {
       answerCount: index === 181 ? 4 : 0,
     })),
   },
-  domains: (
-    [
-      ['security', 'セキュリティ'],
-      ['frontend', 'フロントエンド'],
-      ['backend', 'バックエンド'],
-      ['architecture', 'アーキテクチャ'],
-    ] as const
-  ).map(([domain, label]) => ({
-    domain,
-    label,
-    masteredQuestionCount: 1,
-    totalQuestionCount: 2,
-    masteryRate: 50,
-    topicCount: 1,
-    lessonCount: 1,
-    firstTopicHref: `/learn/${domain}/topic`,
-  })),
   activity: [
     {
       id: 'answer:1',
@@ -58,7 +41,7 @@ const viewModel: DashboardViewModel = {
 describe('DashboardDataContent', () => {
   afterEach(cleanup)
 
-  it('shows live summary, heatmap, domains, activity, and no sample labels', () => {
+  it('shows live summary, heatmap, activity, and no sample labels', () => {
     render(<DashboardDataContent viewModel={viewModel} />)
 
     expect(screen.getByText('75')).toBeTruthy()
@@ -70,7 +53,17 @@ describe('DashboardDataContent', () => {
     const analyticsLink = screen.getByRole('link', { name: '学習分析を見る' })
     expect(analyticsLink).toHaveProperty('href', 'http://localhost:3000/analytics')
     expect(analyticsLink.className).toContain('lg:hidden')
-    expect(screen.getByRole('heading', { name: '領域別の習得状況' })).toBeTruthy()
+    expect(screen.queryByRole('heading', { name: '領域別の習得状況' })).toBeNull()
+    expect(screen.queryByText('復習間隔が21日以上になった問題を習得済みとして数えます')).toBeNull()
+    expect(screen.queryByRole('link', { name: /最初のトピック/ })).toBeNull()
+    const heatmap = screen.getByRole('list', {
+      name: '直近26週・182日間の学習コントリビューション',
+    })
+    expect(within(heatmap).getAllByRole('listitem')).toHaveLength(182)
+    expect(within(heatmap).getByText('2026-03-04: 0問')).toBeTruthy()
+    const summary = screen.getByRole('region', { name: '学習サマリー' })
+    expect(within(summary).getByText('習得済み問題')).toBeTruthy()
+    expect(within(summary).getByText('2')).toBeTruthy()
     expect(screen.getByRole('heading', { name: '最近のアクティビティ' })).toBeTruthy()
     expect(
       screen.getByText('問題に解答し、復習の予定を更新しました（安全な画面表示）'),
