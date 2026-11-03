@@ -47,20 +47,16 @@ describe('DashboardDataContent', () => {
     expect(screen.getByText('75')).toBeTruthy()
     expect(screen.getByText('正答率')).toBeTruthy()
     expect(
-      screen.getByRole('list', { name: '直近26週・182日間の学習コントリビューション' }),
+      screen.getByText(
+        '直近182日間で1日学習し、合計4問に解答しました。最も多かったのは9/1の4問です。',
+      ),
     ).toBeTruthy()
-    expect(screen.getByText('2026-09-01: 4問')).toBeTruthy()
     const analyticsLink = screen.getByRole('link', { name: '学習分析を見る' })
     expect(analyticsLink).toHaveProperty('href', 'http://localhost:3000/analytics')
     expect(analyticsLink.className).toContain('lg:hidden')
     expect(screen.queryByRole('heading', { name: '領域別の習得状況' })).toBeNull()
     expect(screen.queryByText('復習間隔が21日以上になった問題を習得済みとして数えます')).toBeNull()
     expect(screen.queryByRole('link', { name: /最初のトピック/ })).toBeNull()
-    const heatmap = screen.getByRole('list', {
-      name: '直近26週・182日間の学習コントリビューション',
-    })
-    expect(within(heatmap).getAllByRole('listitem')).toHaveLength(182)
-    expect(within(heatmap).getByText('2026-03-04: 0問')).toBeTruthy()
     const summary = screen.getByRole('region', { name: '学習サマリー' })
     expect(within(summary).getByText('習得済み問題')).toBeTruthy()
     expect(within(summary).getByText('2')).toBeTruthy()
@@ -70,6 +66,46 @@ describe('DashboardDataContent', () => {
     ).toBeTruthy()
     expect(screen.queryByText('表示用サンプル')).toBeNull()
     expect(screen.queryByText('実際の解答ログはまだ接続していません')).toBeNull()
+  })
+
+  it('draws all 182 days as squares grouped into one path per heatmap level', () => {
+    const { container } = render(
+      <DashboardDataContent
+        viewModel={{
+          ...viewModel,
+          heatmap: {
+            days: viewModel.heatmap.days.map((day, index) => ({
+              ...day,
+              answerCount: [0, 1, 2, 4, 8][index % 5] ?? 0,
+            })),
+          },
+        }}
+      />,
+    )
+
+    const paths = container.querySelectorAll('svg path')
+    expect(paths).toHaveLength(5)
+    const squares = [...paths].map((path) => path.getAttribute('d')?.match(/M/g)?.length ?? 0)
+    expect(squares.reduce((sum, count) => sum + count, 0)).toBe(182)
+    expect(
+      screen.getByText(
+        '直近182日間で145日学習し、合計541問に解答しました。最も多かったのは3/8の8問です。',
+      ),
+    ).toBeTruthy()
+  })
+
+  it('omits empty levels and summarizes a period without answers', () => {
+    const { container } = render(
+      <DashboardDataContent
+        viewModel={{
+          ...viewModel,
+          heatmap: { days: viewModel.heatmap.days.map((day) => ({ ...day, answerCount: 0 })) },
+        }}
+      />,
+    )
+
+    expect(container.querySelectorAll('svg path')).toHaveLength(1)
+    expect(screen.getByText('直近182日間の学習記録はまだありません。')).toBeTruthy()
   })
 
   it('shows an empty activity message when there are no saved facts', () => {
