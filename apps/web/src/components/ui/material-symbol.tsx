@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react'
+
 import { cn } from '@/lib/cn'
 
 /** Names of the official SVGs bundled in `public/icons/material-symbols/`. */
@@ -36,22 +38,13 @@ type MaterialSymbolProps = {
 
 /** Official, self-hosted Material Symbols. Labels belong to the surrounding text. */
 export function MaterialSymbol({ name, className }: MaterialSymbolProps) {
-  const maskImage = `url(/icons/material-symbols/${name}.svg)`
-
+  // mask の指定は CSS（.material-symbol）に置き、アイコンごとの style を URL 1つに絞る。
+  // 全画面のアイコンで RSC / HTML に同じ指定を繰り返さないため（Issue #220）。
   return (
     <span
       aria-hidden="true"
-      className={cn('inline-block size-6 shrink-0 bg-current', className)}
-      style={{
-        maskImage,
-        maskPosition: 'center',
-        maskRepeat: 'no-repeat',
-        maskSize: 'contain',
-        WebkitMaskImage: maskImage,
-        WebkitMaskPosition: 'center',
-        WebkitMaskRepeat: 'no-repeat',
-        WebkitMaskSize: 'contain',
-      }}
+      className={cn('material-symbol inline-block size-6 shrink-0 bg-current', className)}
+      style={{ '--icon': `url(/icons/material-symbols/${name}.svg)` } as CSSProperties}
     />
   )
 }

@@ -2,7 +2,6 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 
 import { ThemeToggle } from '@/components/theme-toggle'
-import { Card } from '@/components/ui/card'
 import { MaterialSymbol, type MaterialSymbolName } from '@/components/ui/material-symbol'
 
 type NavigationItem = {
@@ -17,7 +16,7 @@ export type NavigationSection = 'dashboard' | 'learn' | 'quiz' | 'review' | 'ana
 
 type NavigationHrefs = Partial<Record<NavigationSection, string>>
 
-const desktopNavigation: NavigationItem[] = [
+const navigation: NavigationItem[] = [
   {
     desktopLabel: 'ホーム',
     icon: 'home',
@@ -37,9 +36,7 @@ const desktopNavigation: NavigationItem[] = [
   { desktopLabel: '学習領域', icon: 'category', mobileLabel: '領域', section: 'tree' },
 ]
 
-const mobileNavigation = desktopNavigation.filter((item) => item.mobileLabel)
-
-function Brand({ compact = false }: { compact?: boolean }) {
+function Brand() {
   return (
     <div className="flex min-w-0 items-center gap-3">
       <span className="grid size-10 place-items-center rounded-xl bg-green text-lg font-black text-white shadow-[0_4px_0_var(--green-shade)]">
@@ -47,15 +44,26 @@ function Brand({ compact = false }: { compact?: boolean }) {
       </span>
       <div className="min-w-0">
         <p className="m-0 text-balance font-black text-ink">tech-study-lab</p>
-        {!compact ? (
-          <p className="m-0 font-mono text-[11px] text-faint">dev-native workspace</p>
-        ) : null}
+        <p className="m-0 hidden font-mono text-[11px] text-faint lg:block">dev-native workspace</p>
       </div>
     </div>
   )
 }
 
-function DesktopNavigationContent({
+function NavigationLabel({ item }: { item: NavigationItem }) {
+  if (!item.mobileLabel || item.mobileLabel === item.desktopLabel) {
+    return <span className="text-[11px] lg:text-base">{item.desktopLabel}</span>
+  }
+
+  return (
+    <>
+      <span className="text-[11px] lg:hidden">{item.mobileLabel}</span>
+      <span className="hidden lg:inline">{item.desktopLabel}</span>
+    </>
+  )
+}
+
+function NavigationContent({
   isAvailable,
   item,
   reviewBadge,
@@ -66,96 +74,22 @@ function DesktopNavigationContent({
 }) {
   return (
     <>
-      <MaterialSymbol className="size-5" name={item.icon} />
-      {item.desktopLabel}
+      <MaterialSymbol className="lg:size-5" name={item.icon} />
+      <NavigationLabel item={item} />
       {item.hasDueBadge ? reviewBadge : null}
-      {!isAvailable ? <span className="ml-auto font-mono text-[10px]">準備中</span> : null}
+      {!isAvailable ? (
+        <span className="ml-auto hidden font-mono text-[10px] lg:inline">準備中</span>
+      ) : null}
     </>
   )
 }
 
-function MobileNavigationContent({
-  item,
-  reviewBadge,
-}: {
-  item: NavigationItem
-  reviewBadge?: ReactNode
-}) {
-  return (
-    <>
-      <MaterialSymbol name={item.icon} />
-      <span className="text-[11px]">{item.mobileLabel}</span>
-      {item.hasDueBadge ? reviewBadge : null}
-    </>
-  )
-}
+// SP はボトムタブ、PC はサイドバーとして表示する。同じナビを2回描画しないことで、
+// 全画面の RSC / SSR の CPU を減らす（Issue #220）。
+const navigationItemClassName =
+  'relative min-h-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg font-semibold lg:flex-none lg:flex-row lg:justify-start lg:gap-3 lg:rounded-xl lg:border-2 lg:px-3 lg:text-left'
 
-function DesktopNavigation({
-  currentNavigation,
-  navigationHrefs,
-  reviewBadge,
-}: {
-  currentNavigation: NavigationSection
-  navigationHrefs: NavigationHrefs
-  reviewBadge?: ReactNode
-}) {
-  return (
-    <aside className="sticky top-5 hidden w-60 shrink-0 self-start lg:block">
-      <Card className="flex max-h-[calc(100dvh-2.5rem)] min-h-[36rem] flex-col p-4">
-        <div className="flex items-center justify-between gap-3 border-b-2 border-border pb-5">
-          <Brand />
-          <ThemeToggle />
-        </div>
-        <nav aria-label="メインナビゲーション" className="mt-4 flex flex-col gap-1.5">
-          {desktopNavigation.map((item) => {
-            const href = navigationHrefs[item.section]
-            const isCurrent = item.section === currentNavigation
-
-            return href ? (
-              <Link
-                aria-current={isCurrent ? 'page' : undefined}
-                className={
-                  isCurrent
-                    ? 'flex min-h-11 items-center gap-3 rounded-xl border-2 border-blue bg-blue-bg px-3 text-left font-bold text-blue'
-                    : 'flex min-h-11 items-center gap-3 rounded-xl border-2 border-transparent px-3 text-left font-semibold text-mute transition-colors hover:border-border hover:bg-bg hover:text-ink'
-                }
-                href={href}
-                key={item.desktopLabel}
-              >
-                <DesktopNavigationContent isAvailable item={item} reviewBadge={reviewBadge} />
-              </Link>
-            ) : (
-              <button
-                className="flex min-h-11 cursor-not-allowed items-center gap-3 rounded-xl border-2 border-transparent px-3 text-left font-semibold text-faint opacity-70"
-                disabled
-                key={item.desktopLabel}
-                type="button"
-              >
-                <DesktopNavigationContent
-                  isAvailable={false}
-                  item={item}
-                  reviewBadge={reviewBadge}
-                />
-              </button>
-            )
-          })}
-        </nav>
-      </Card>
-    </aside>
-  )
-}
-
-function MobileHeader({ streakBadge }: { streakBadge?: ReactNode }) {
-  return (
-    <header className="sticky top-0 z-10 flex items-center justify-between gap-2 bg-bg px-4 py-3 lg:hidden">
-      <Brand compact />
-      {streakBadge}
-      <ThemeToggle />
-    </header>
-  )
-}
-
-function MobileNavigation({
+function Navigation({
   currentNavigation,
   navigationHrefs,
   reviewBadge,
@@ -166,34 +100,35 @@ function MobileNavigation({
 }) {
   return (
     <nav
-      aria-label="モバイルナビゲーション"
-      className="fixed inset-x-0 bottom-0 z-20 flex border-t-2 border-border bg-surface px-1.5 pb-[calc(0.625rem_+_env(safe-area-inset-bottom))] pt-2 lg:hidden"
+      aria-label="メインナビゲーション"
+      className="fixed inset-x-0 bottom-0 z-20 flex border-t-2 border-border bg-surface px-1.5 pb-[calc(0.625rem_+_env(safe-area-inset-bottom))] pt-2 lg:static lg:z-auto lg:mt-4 lg:flex-col lg:gap-1.5 lg:border-t-0 lg:bg-transparent lg:p-0"
     >
-      {mobileNavigation.map((item) => {
+      {navigation.map((item) => {
         const href = navigationHrefs[item.section]
         const isCurrent = item.section === currentNavigation
+        const display = item.mobileLabel ? 'flex' : 'hidden lg:flex'
 
         return href ? (
           <Link
             aria-current={isCurrent ? 'page' : undefined}
-            className={
+            className={`${display} ${navigationItemClassName} ${
               isCurrent
-                ? 'relative flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg font-semibold text-blue'
-                : 'relative flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg font-semibold text-mute'
-            }
+                ? 'text-blue lg:border-blue lg:bg-blue-bg lg:font-bold'
+                : 'text-mute lg:border-transparent lg:transition-colors lg:hover:border-border lg:hover:bg-bg lg:hover:text-ink'
+            }`}
             href={href}
-            key={item.desktopLabel}
+            key={item.section}
           >
-            <MobileNavigationContent item={item} reviewBadge={reviewBadge} />
+            <NavigationContent isAvailable item={item} reviewBadge={reviewBadge} />
           </Link>
         ) : (
           <button
-            className="relative flex min-h-11 flex-1 cursor-not-allowed flex-col items-center justify-center gap-0.5 rounded-lg font-semibold text-faint opacity-70"
+            className={`${display} ${navigationItemClassName} cursor-not-allowed text-faint opacity-70 lg:border-transparent`}
             disabled
-            key={item.desktopLabel}
+            key={item.section}
             type="button"
           >
-            <MobileNavigationContent item={item} reviewBadge={reviewBadge} />
+            <NavigationContent isAvailable={false} item={item} reviewBadge={reviewBadge} />
           </button>
         )
       })}
@@ -204,34 +139,35 @@ function MobileNavigation({
 export function DashboardShell({
   children,
   currentNavigation,
-  desktopReviewBadge,
-  mobileReviewBadge,
-  mobileStreakBadge,
   navigationHrefs,
+  reviewBadge,
+  streakBadge,
 }: {
   children: ReactNode
   currentNavigation: NavigationSection
-  desktopReviewBadge?: ReactNode
-  mobileReviewBadge?: ReactNode
-  mobileStreakBadge?: ReactNode
   navigationHrefs: NavigationHrefs
+  reviewBadge?: ReactNode
+  /** SP のアプリバーにだけ表示する。PC では描画しない前提の部品を渡す。 */
+  streakBadge?: ReactNode
 }) {
   return (
     <div className="min-h-dvh bg-bg">
-      <MobileHeader streakBadge={mobileStreakBadge} />
-      <div className="mx-auto flex max-w-7xl gap-5 px-4 pb-28 pt-4 lg:px-5 lg:pb-5 lg:pt-5">
-        <DesktopNavigation
-          currentNavigation={currentNavigation}
-          navigationHrefs={navigationHrefs}
-          reviewBadge={desktopReviewBadge}
-        />
-        <main className="min-w-0 flex-1">{children}</main>
+      <div className="lg:mx-auto lg:flex lg:max-w-7xl lg:gap-5 lg:p-5">
+        {/* SP では子要素をそのまま並べ（上部アプリバーと下部タブ）、PC ではサイドバーのカードにする。 */}
+        <div className="contents lg:sticky lg:top-5 lg:flex lg:max-h-[calc(100dvh-2.5rem)] lg:min-h-[36rem] lg:w-60 lg:shrink-0 lg:flex-col lg:self-start lg:rounded-2xl lg:border-2 lg:border-border lg:bg-surface lg:p-4">
+          <header className="sticky top-0 z-10 flex items-center justify-between gap-2 bg-bg px-4 py-3 lg:static lg:z-auto lg:gap-3 lg:border-b-2 lg:border-border lg:bg-transparent lg:px-0 lg:pb-5 lg:pt-0">
+            <Brand />
+            {streakBadge}
+            <ThemeToggle />
+          </header>
+          <Navigation
+            currentNavigation={currentNavigation}
+            navigationHrefs={navigationHrefs}
+            reviewBadge={reviewBadge}
+          />
+        </div>
+        <main className="min-w-0 px-4 pb-28 pt-4 lg:flex-1 lg:p-0">{children}</main>
       </div>
-      <MobileNavigation
-        currentNavigation={currentNavigation}
-        navigationHrefs={navigationHrefs}
-        reviewBadge={mobileReviewBadge}
-      />
     </div>
   )
 }

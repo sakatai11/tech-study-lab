@@ -57,11 +57,9 @@ describe('learn catalog page', () => {
       expect(within(domain).getByText(/準備中/)).toBeTruthy()
       expect(within(domain).queryByRole('link')).toBeNull()
     }
-    for (const name of ['メインナビゲーション', 'モバイルナビゲーション']) {
-      const navigation = screen.getByRole('navigation', { name })
-      const learnLink = within(navigation).getByRole('link', { name: /教材/ })
-      expect(learnLink.getAttribute('href')).toBe('/learn')
-      expect(learnLink.getAttribute('aria-current')).toBe('page')
-    }
+    const navigation = screen.getByRole('navigation', { name: 'メインナビゲーション' })
+    const learnLink = within(navigation).getByRole('link', { name: /教材/ })
+    expect(learnLink.getAttribute('href')).toBe('/learn')
+    expect(learnLink.getAttribute('aria-current')).toBe('page')
   })
 })

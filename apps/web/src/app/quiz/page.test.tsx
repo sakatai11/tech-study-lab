@@ -54,12 +54,10 @@ describe('quiz catalog page', () => {
       const region = screen.getByRole('region', { name: DOMAIN_LABELS[lesson.domain].label })
       expect(within(region).getAllByRole('link')).toContain(starts[index])
     }
-    for (const name of ['メインナビゲーション', 'モバイルナビゲーション']) {
-      const navigation = screen.getByRole('navigation', { name })
-      const quizLink = within(navigation).getByRole('link', { name: '演習' })
-      expect(quizLink.getAttribute('href')).toBe('/quiz')
-      expect(quizLink.getAttribute('aria-current')).toBe('page')
-    }
+    const navigation = screen.getByRole('navigation', { name: 'メインナビゲーション' })
+    const quizLink = within(navigation).getByRole('link', { name: '演習' })
+    expect(quizLink.getAttribute('href')).toBe('/quiz')
+    expect(quizLink.getAttribute('aria-current')).toBe('page')
   })
 
   it('keeps exercise navigation available without lessons and offers a lesson catalog fallback', () => {

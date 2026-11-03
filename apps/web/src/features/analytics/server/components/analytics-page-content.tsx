@@ -3,9 +3,12 @@ import 'server-only'
 import { AnalyticsDashboard } from '@/features/analytics/server/components/analytics-dashboard'
 import { loadAnalytics } from '@/features/analytics/server/load-analytics'
 
-export async function AnalyticsPageContent() {
-  const viewModel = await loadAnalytics()
+// データ待ちの後に描く範囲を、API の値を使う部分だけに絞る（Issue #220）。
+async function AnalyticsData() {
+  return <AnalyticsDashboard viewModel={await loadAnalytics()} />
+}
 
+export function AnalyticsPageContent() {
   return (
     <div className="flex flex-col gap-5">
       <header className="px-1 pt-1">
@@ -19,7 +22,7 @@ export async function AnalyticsPageContent() {
           解答ログとSRSの状態から、学習の進み方と弱点を確認しましょう。
         </p>
       </header>
-      <AnalyticsDashboard viewModel={viewModel} />
+      <AnalyticsData />
     </div>
   )
 }
