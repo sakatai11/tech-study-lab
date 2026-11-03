@@ -39,7 +39,10 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
     // Last success has the same content tree as this release: sync must still run.
     { environment: 'verification', previousContent: true },
     // Failures after the Workers are updated: the release must stop before the success record.
-    ...['response', 'cpu-exceeded'].map((late) => ({ environment: 'verification', late })),
+    ...['response', 'cpu-exceeded', 'version-mismatch', 'readiness-query'].map((late) => ({
+      environment: 'verification',
+      late,
+    })),
     ...[
       undefined,
       'unverified',
@@ -167,8 +170,9 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
             if (path.endsWith('/workers/subdomain')) return Response.json({success:true,result:{subdomain:'fixture'}});
             if (path.endsWith('/d1/database/' + target.databaseId + '/query')) return Response.json({success:true,result:[{results:[{activeQuestions:1,answerLogs:2,srsStates:1,dueSrs:1,lessonViews:1}]}]});
             if (path.endsWith('/workers/observability/telemetry/query')) {
+              if (process.env.LATE === 'readiness-query') return new Response(null, {status:403});
               const name = JSON.parse(options.body).parameters.filters[0].value;
-              const events = name !== target.web ? [] : rays.map((rayId, i) => ({$metadata:{rayId},$workers:{scriptName:target.web,eventType:'fetch',scriptVersion:{id:'11111111-1111-1111-1111-111111111111'},outcome:process.env.LATE === 'cpu-exceeded' && i === 10 ? 'exceededCpu' : 'ok',cpuTimeMs:12,wallTimeMs:30}}));
+              const events = name !== target.web ? [] : rays.map((rayId, i) => ({$metadata:{rayId},$workers:{scriptName:target.web,eventType:'fetch',scriptVersion:{id:process.env.LATE === 'version-mismatch' && i === 10 ? '22222222-2222-2222-2222-222222222222' : '11111111-1111-1111-1111-111111111111'},outcome:process.env.LATE === 'cpu-exceeded' && i === 10 ? 'exceededCpu' : 'ok',cpuTimeMs:12,wallTimeMs:30}}));
               return Response.json({success:true,result:{events:{events,count:events.length}}});
             }
             if (path.endsWith('/d1/database/' + target.databaseId)) return Response.json({success:true,result:{name:target.database}});
@@ -245,12 +249,21 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
         readFileSync(join(root, 'records.jsonl'), 'utf8').trim().split('\n').map(JSON.parse)
       if (late) {
         const done = ['preflight', 'migrations', 'sync', 'api', 'apiHealth', 'web', 'smoke']
-        assert.deepEqual(operation.completed, late === 'response' ? done : [...done, 'performance'])
-        assert.equal(operation.stage, late === 'response' ? 'performance' : 'cpuLogs')
+        const stopsInPerformance = ['response', 'readiness-query'].includes(late)
+        assert.deepEqual(operation.completed, stopsInPerformance ? done : [...done, 'performance'])
+        assert.equal(operation.stage, stopsInPerformance ? 'performance' : 'cpuLogs')
         assert.throws(() => records(), 'no success record after a failed performance test')
         const report = JSON.parse(readFileSync(join(root, '.deploy/performance.json'), 'utf8'))
-        assert.equal(report.status, 'failed')
-        assert(report.runs.length > 0, 'partial results are kept')
+        if (late === 'readiness-query') {
+          assert.equal(report.status, 'inconclusive')
+          assert.equal(report.readiness.reason, 'observability-query-failed')
+          assert.equal(report.runs, undefined)
+        } else {
+          assert.equal(report.readiness.status, 'passed')
+          assert.equal(report.status, late === 'version-mismatch' ? 'inconclusive' : 'failed')
+          assert(report.runs.length > 0, 'partial results are kept')
+          if (late === 'version-mismatch') assert.equal(report.cpu.reason, 'version-mismatch')
+        }
         assert(!JSON.stringify(report).includes('fixture-secret'))
         assert(!JSON.stringify(report).includes('Learning'))
       } else if (failure) {

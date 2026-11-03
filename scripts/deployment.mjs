@@ -157,8 +157,9 @@ async function prepare(environment) {
 async function cloudflare(
   target,
   path,
-  { method = 'GET', body, token = process.env.CLOUDFLARE_API_TOKEN } = {},
+  { method = 'GET', body, token = process.env.CLOUDFLARE_API_TOKEN, signal } = {},
 ) {
+  const timeout = AbortSignal.timeout(30_000)
   const response = await fetch(
     `https://api.cloudflare.com/client/v4/accounts/${target.account}/${path}`,
     {
@@ -168,7 +169,7 @@ async function cloudflare(
         ...(body ? { 'Content-Type': 'application/json' } : {}),
       },
       body: body ? JSON.stringify(body) : undefined,
-      signal: AbortSignal.timeout(30_000),
+      signal: signal ? AbortSignal.any([timeout, signal]) : timeout,
     },
   )
   assert(
@@ -248,6 +249,13 @@ async function apply(environment) {
   let baseline = null
   const apiConfig = resolve(release, 'api/wrangler.json')
   const wrangler = (...args) => run(['--filter', '@tsl/api', 'exec', 'wrangler', ...args])
+  const observe = (body, signal) =>
+    cloudflare(target, 'workers/observability/telemetry/query', {
+      method: 'POST',
+      body,
+      token: process.env.CLOUDFLARE_OBSERVABILITY_API_TOKEN,
+      signal,
+    })
   const stage = (name, fn) => async () => {
     result.stage = name
     writeJson(resolve(root, '.deploy/result.json'), result)
@@ -371,6 +379,7 @@ async function apply(environment) {
           cloudflare: (path, options) => cloudflare(target, path, options),
           headers: accessHeaders(process.env),
           webUrl: ctx.webUrl,
+          observe,
         }),
       ),
       cpuLogs: stage('cpuLogs', async () => {
@@ -379,12 +388,7 @@ async function apply(environment) {
           target,
           versions: result.after,
           liveVersion: (worker) => currentVersion(target, target[worker]),
-          observe: (body) =>
-            cloudflare(target, 'workers/observability/telemetry/query', {
-              method: 'POST',
-              body,
-              token: process.env.CLOUDFLARE_OBSERVABILITY_API_TOKEN,
-            }),
+          observe,
           baseline,
           sleep: (ms) => new Promise((done) => setTimeout(done, ms)),
         })

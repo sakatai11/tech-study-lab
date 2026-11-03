@@ -3,29 +3,35 @@ import assert from 'node:assert/strict'
 import {
   PERFORMANCE_CONDITIONS,
   aggregate,
+  caseUrl,
   compactCases,
   compareWithBaseline,
   conditionsId,
   cpuVerdict,
+  evaluateResponse,
   measureRoutes,
+  rayIdOf,
   reconcileCpu,
 } from './performance-lib.mjs'
 
 // ログの取り込み遅延を待つ上限と間隔。待ち合わせは同じクエリの再取得であり、測定 request の再試行ではない。
 export const LOG_WAIT = Object.freeze({ deadlineMs: 600_000, intervalMs: 30_000, marginMs: 60_000 })
+const READINESS_WAIT = Object.freeze({ deadlineMs: 300_000, intervalMs: 15_000 })
+const READINESS_PATH = '/home'
 const FIXED_USER_ID = 'user-local-001'
 const EVENT_LIMIT = 2000
 
 /** Node fetch の応答から安全な項目と時間だけを取り出す。本文は長さだけを数えて捨てる。 */
 export function nodeRequest(headers, deadlineMs = PERFORMANCE_CONDITIONS.requestDeadlineMs) {
-  return async (url, kind) => {
+  return async (url, kind, deadlineSignal) => {
     const start = performance.now()
+    const timeout = AbortSignal.timeout(deadlineMs)
     const response = await fetch(url, {
       method: 'GET',
       cache: 'no-store',
       redirect: 'manual',
       headers: kind === 'rsc' ? { ...headers, RSC: '1' } : headers,
-      signal: AbortSignal.timeout(deadlineMs),
+      signal: deadlineSignal ? AbortSignal.any([timeout, deadlineSignal]) : timeout,
     })
     const ttfbMs = performance.now() - start
     const bytes = (await response.arrayBuffer()).byteLength
@@ -101,6 +107,79 @@ export async function queryEvents(observe, scriptName, from, to, depth = 0) {
   ]
 }
 
+/** 同じ CI 経路の HTML/RSC が期待版で実行されたことを、測定とは別の Ray ID で確認する。 */
+async function confirmWebVersion({
+  readiness,
+  origin,
+  request,
+  observe,
+  scriptName,
+  wait,
+  now,
+  sleep,
+}) {
+  const start = now()
+  const until = start + wait.deadlineMs
+  const deadline = AbortSignal.timeout(wait.deadlineMs)
+  readiness.startedAt = new Date(start).toISOString()
+  let probes = []
+  let from
+  let lastReason
+  try {
+    while (!deadline.aborted && now() < until) {
+      if (!probes.length) {
+        readiness.attempts++
+        from = now() - LOG_WAIT.marginMs
+        for (const kind of PERFORMANCE_CONDITIONS.kinds) {
+          const c = { path: READINESS_PATH, kind }
+          lastReason = 'probe-request-failed'
+          const response = await request(caseUrl(origin, c), kind, deadline)
+          const reasons = evaluateResponse(response, c, origin)
+          lastReason = 'probe-response-invalid'
+          if (reasons.length) {
+            readiness.responseIssues = { kind, reasons }
+            assert.fail(lastReason)
+          }
+          probes.push({ rayId: rayIdOf(response.ray) })
+        }
+        lastReason = 'duplicated-probe-ray'
+        assert.equal(new Set(probes.map(({ rayId }) => rayId)).size, probes.length, lastReason)
+      }
+
+      lastReason = 'observability-query-failed'
+      readiness.logQueries++
+      const events = await queryEvents((body) => observe(body, deadline), scriptName, from, now())
+      const verdict = cpuVerdict(
+        reconcileCpu(probes, events, {
+          scriptName,
+          version: readiness.expectedWebVersion,
+        }),
+      )
+      if (verdict.status === 'passed' && !deadline.aborted && now() < until) {
+        readiness.status = 'passed'
+        return
+      }
+      lastReason = verdict.reason ?? 'confirmation-arrived-after-deadline'
+      if (lastReason === 'version-mismatch') {
+        // 旧版を処理した Ray は新版にならない。次の間隔で別の確認リクエストを送る。
+        probes = []
+      } else if (verdict.status !== 'pending' && verdict.status !== 'passed') {
+        assert.fail(lastReason)
+      }
+      const remaining = until - now()
+      if (remaining > 0 && !deadline.aborted) await sleep(Math.min(wait.intervalMs, remaining))
+    }
+    assert.fail('readiness deadline reached')
+  } catch {
+    readiness.status = 'inconclusive'
+    readiness.reason = deadline.aborted || now() >= until ? 'readiness-deadline' : lastReason
+    readiness.lastCheck = lastReason ?? null
+    assert.fail(`Web version readiness stopped: ${readiness.reason}`)
+  } finally {
+    readiness.finishedAt = new Date(now()).toISOString()
+  }
+}
+
 /** 測定段階。応答の検証に失敗したら停止し、取得できた部分結果を state に残す。 */
 async function measure({
   state,
@@ -110,12 +189,35 @@ async function measure({
   cloudflare,
   headers,
   webUrl,
-  request,
+  request = nodeRequest(headers),
+  observe,
+  readinessWait = READINESS_WAIT,
+  now = Date.now,
+  sleep = (ms) => new Promise((done) => setTimeout(done, ms)),
 }) {
   state.status = 'measuring'
   state.conditionsId = conditionsId()
   state.conditions = PERFORMANCE_CONDITIONS
   state.target = { web: target.web, api: target.api, database: target.database, webUrl }
+  state.readiness = {
+    status: 'checking',
+    path: READINESS_PATH,
+    kinds: PERFORMANCE_CONDITIONS.kinds,
+    expectedWebVersion: versions.web,
+    expectedApiDeploymentVersion: versions.api,
+    attempts: 0,
+    logQueries: 0,
+  }
+  await confirmWebVersion({
+    readiness: state.readiness,
+    origin: webUrl,
+    request,
+    observe,
+    scriptName: target.web,
+    wait: readinessWait,
+    now,
+    sleep,
+  })
   state.versions = { start: {}, end: {} }
   for (const worker of ['api', 'web']) {
     state.versions.start[worker] = await liveVersion(worker)
@@ -126,12 +228,13 @@ async function measure({
     )
   }
   state.fixture = await fixtureState(cloudflare, target)
-  state.startedAt = new Date().toISOString()
+  state.startedAt = new Date(now()).toISOString()
   const measurement = await measureRoutes({
     origin: webUrl,
-    request: request ?? nodeRequest(headers),
+    request,
+    now,
   })
-  state.finishedAt = new Date().toISOString()
+  state.finishedAt = new Date(now()).toISOString()
   state.runs = measurement.runs
   state.cases = aggregate(measurement.runs)
   if (!measurement.completed) {
@@ -289,6 +392,7 @@ export function performanceSummary(state) {
     `## Performance test: ${state.status}`,
     '',
     `Conditions: \`${state.conditionsId}\` (${PERFORMANCE_CONDITIONS.runs} runs × ${PERFORMANCE_CONDITIONS.paths.length * PERFORMANCE_CONDITIONS.kinds.length} cases × ${PERFORMANCE_CONDITIONS.warmups}+${PERFORMANCE_CONDITIONS.samples}; ${PERFORMANCE_CONDITIONS.auth})`,
+    `Web version readiness: \`${JSON.stringify(state.readiness ?? null)}\``,
     `Measured: ${state.startedAt ?? '-'} → ${state.finishedAt ?? '-'}; versions start \`${JSON.stringify(state.versions?.start ?? {})}\` end \`${JSON.stringify(state.versions?.end ?? {})}\``,
     `Fixture: \`${JSON.stringify(state.fixture ?? null)}\``,
     `Runs: ${(state.runs ?? []).map((r) => `#${r.run} ${r.completed ? 'completed' : `stopped (${r.stoppedReason})`} ${r.records.length} req`).join('; ') || '-'}`,
