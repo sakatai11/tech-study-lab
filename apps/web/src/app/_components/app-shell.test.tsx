@@ -76,17 +76,15 @@ const summary = {
 
 describe('AppShell', () => {
   it.each(['dashboard', 'learn', 'quiz', 'review', 'analytics', 'tree'] as const)(
-    'links PC and SP exercise navigation to /quiz from the %s section',
+    'links the exercise navigation to /quiz from the %s section',
     (currentNavigation) => {
       render(<AppShell currentNavigation={currentNavigation}>学習画面</AppShell>)
 
-      for (const name of ['メインナビゲーション', 'モバイルナビゲーション']) {
-        const link = within(screen.getByRole('navigation', { name })).getByRole('link', {
-          name: '演習',
-        })
-        expect(link.getAttribute('href')).toBe('/quiz')
-        expect(link.getAttribute('aria-current')).toBe(currentNavigation === 'quiz' ? 'page' : null)
-      }
+      const link = within(
+        screen.getByRole('navigation', { name: 'メインナビゲーション' }),
+      ).getByRole('link', { name: '演習' })
+      expect(link.getAttribute('href')).toBe('/quiz')
+      expect(link.getAttribute('aria-current')).toBe(currentNavigation === 'quiz' ? 'page' : null)
     },
   )
 
@@ -336,7 +334,7 @@ describe('AppShell', () => {
     expect(fetchDashboardSummaryMock).toHaveBeenCalledTimes(1)
     expect(screen.queryByText('連続学習')).toBeNull()
     expect(screen.queryByText('12日')).toBeNull()
-    expect(screen.getByRole('navigation', { name: 'モバイルナビゲーション' })).toBeTruthy()
+    expect(screen.getByRole('navigation', { name: 'メインナビゲーション' })).toBeTruthy()
   })
 
   it('[ADR-0013] leaves user streak data out of server-rendered content pages', () => {
@@ -359,7 +357,7 @@ describe('AppShell', () => {
     expect(screen.queryByRole('progressbar', { name: '基盤実装の進捗' })).toBeNull()
   })
 
-  it('uses /home for the selected desktop dashboard and mobile home navigation', () => {
+  it('uses /home for the selected dashboard navigation', () => {
     render(
       <AppShell currentNavigation="dashboard">
         <p>dashboard content</p>
@@ -371,10 +369,6 @@ describe('AppShell', () => {
     expect(desktopDashboard).toHaveProperty('textContent', expect.stringContaining('ホーム'))
     expect(desktopDashboard?.getAttribute('aria-current')).toBe('page')
 
-    const mobile = screen.getByRole('navigation', { name: 'モバイルナビゲーション' })
-    const mobileHome = mobile.querySelector('a[href="/home"]')
-    expect(mobileHome).toHaveProperty('textContent', expect.stringContaining('ホーム'))
-    expect(mobileHome?.getAttribute('aria-current')).toBe('page')
     expect(desktop.querySelector('a[href="/learn"]')).toHaveProperty(
       'textContent',
       expect.stringContaining('教材'),
@@ -396,10 +390,23 @@ describe('AppShell', () => {
       </AppShell>,
     )
 
-    for (const label of ['メインナビゲーション', 'モバイルナビゲーション']) {
-      const link = screen.getByRole('navigation', { name: label }).querySelector('a[href="/learn"]')
-      expect(link?.textContent).toContain('教材')
-      expect(link?.getAttribute('aria-current')).toBe('page')
-    }
+    const link = screen
+      .getByRole('navigation', { name: 'メインナビゲーション' })
+      .querySelector('a[href="/learn"]')
+    expect(link?.textContent).toContain('教材')
+    expect(link?.getAttribute('aria-current')).toBe('page')
+  })
+
+  it('renders the brand, theme toggle, review badge and navigation once for PC and SP', () => {
+    render(<AppShell currentNavigation="dashboard">home</AppShell>)
+
+    expect(screen.getAllByRole('navigation')).toHaveLength(1)
+    expect(screen.getAllByText('tech-study-lab')).toHaveLength(1)
+    expect(screen.getAllByRole('button', { name: /テーマに切り替える/ })).toHaveLength(1)
+    expect(screen.getAllByText('due')).toHaveLength(1)
+    // SP は「領域」、PC は「学習領域」を CSS で出し分ける。
+    const tree = screen.getByRole('navigation').querySelector('a[href="/domains"]')
+    expect(tree?.textContent).toContain('領域')
+    expect(tree?.textContent).toContain('学習領域')
   })
 })

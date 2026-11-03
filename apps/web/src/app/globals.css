@@ -104,6 +104,13 @@
 }
 
 @layer components {
+  .material-symbol {
+    -webkit-mask: var(--icon) center / contain no-repeat;
+    mask: var(--icon) center / contain no-repeat;
+  }
+}
+
+@layer components {
   .term-crumb {
     display: flex;
     flex-wrap: wrap;
