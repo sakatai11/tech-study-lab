@@ -56,20 +56,24 @@ function formatMonthDay(date: string): string {
   return `${Number(month)}/${Number(day)}`
 }
 
-/** 日ごとの読み上げの代わりに、期間全体の学習量を1文で伝える。 */
+/**
+ * SVG の代わりに読み上げる文。期間全体の要約に続けて、学習した日の日付と解答数を
+ * 1つの文字列で並べる（0件の日は省く）。日ごとに要素を作らないのは、セルと同じく
+ * RSC / SSR の CPU を増やさないため（Issue #220）。
+ */
 function heatmapSummary(days: DashboardViewModel['heatmap']['days']): string {
-  let studiedDays = 0
   let totalAnswers = 0
   let busiest: (typeof days)[number] | undefined
+  const studied: string[] = []
   for (const day of days) {
     if (day.answerCount === 0) continue
-    studiedDays += 1
+    studied.push(`${formatMonthDay(day.date)} ${day.answerCount}問`)
     totalAnswers += day.answerCount
     if (!busiest || day.answerCount > busiest.answerCount) busiest = day
   }
 
   if (!busiest) return `直近${days.length}日間の学習記録はまだありません。`
-  return `直近${days.length}日間で${studiedDays}日学習し、合計${totalAnswers}問に解答しました。最も多かったのは${formatMonthDay(busiest.date)}の${busiest.answerCount}問です。`
+  return `直近${days.length}日間で${studied.length}日学習し、合計${totalAnswers}問に解答しました。最も多かったのは${formatMonthDay(busiest.date)}の${busiest.answerCount}問です。学習した日：${studied.join('、')}。`
 }
 
 function activityDescription(activity: DashboardActivityViewModel): string {
