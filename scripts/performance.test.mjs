@@ -15,6 +15,7 @@ import {
 import {
   cpuStage,
   measureStage,
+  nodeRequest,
   performanceProof,
   performanceSummary,
   queryEvents,
@@ -173,6 +174,61 @@ test('response checks reject redirects, challenges, cache hits and missing evide
   assert.deepEqual(evaluateResponse({ ...ok, ray: null }, c, origin), ['missing-cf-ray'])
   assert.deepEqual(evaluateResponse(ok, { path: '/home', kind: 'rsc' }, origin), ['content-type'])
   assert.equal(rayIdOf('8d9a0b1c2d3e4f50-NRT'), '8d9a0b1c2d3e4f50')
+})
+
+test('request failures preserve safe diagnostics and stop without retry [ADR-0016]', async (t) => {
+  const secret = 'private diagnostic fixture'
+  const headers = { 'cf-ray': 'a547c73b2ced7c0f-STL' }
+  const bodyError = new TypeError(secret, {
+    cause: Object.assign(new Error(secret), { code: 'UND_ERR_SOCKET' }),
+  })
+  const fetch = t.mock.method(globalThis, 'fetch', async () => {
+    throw new TypeError(secret, { cause: { code: secret } })
+  })
+  const request = nodeRequest({})
+  const beforeHeaders = await measureRoutes({ origin, request })
+  const first = beforeHeaders.runs[0].records[0]
+  assert.equal(beforeHeaders.completed, false)
+  assert.deepEqual(first.requestFailure, { phase: 'before-headers', code: 'UNKNOWN' })
+  assert.equal(first.rayId, null)
+  assert.equal(first.ttfbMs, null)
+  assert.equal(fetch.mock.callCount(), 1)
+
+  fetch.mock.mockImplementation(async () => {
+    const response = new Response(secret, { status: 200, headers })
+    response.arrayBuffer = async () => {
+      throw bodyError
+    }
+    return response
+  })
+  const bodyFailure = await measureRoutes({ origin, request })
+  const last = bodyFailure.runs[0].records[0]
+  assert.equal(bodyFailure.completed, false)
+  assert.deepEqual(last.requestFailure, { phase: 'response-body', code: 'UND_ERR_SOCKET' })
+  assert.equal(last.rayId, 'a547c73b2ced7c0f')
+  assert.equal(last.status, 200)
+  assert.equal(last.passed, false)
+  assert(last.completeMs >= last.ttfbMs)
+  assert.equal(fetch.mock.callCount(), 2)
+  assert(!JSON.stringify([beforeHeaders, bodyFailure]).includes(secret))
+  const summary = performanceSummary({ runs: bodyFailure.runs })
+  assert.match(summary, /Request failure: .*a547c73b2ced7c0f.*UND_ERR_SOCKET/)
+  assert(!summary.includes(secret))
+
+  const state = {}
+  await assert.rejects(measureStage(measureOptions(state, { request })), /probe-request-failed/)
+  assert.equal(state.startedAt, undefined)
+  const { ttfbMs, elapsedMs, ...probeFailure } = state.readiness.requestFailure
+  assert(elapsedMs >= ttfbMs)
+  assert.deepEqual(probeFailure, {
+    kind: 'html',
+    phase: 'response-body',
+    code: 'UND_ERR_SOCKET',
+    rayId: last.rayId,
+    status: 200,
+  })
+  assert.equal(fetch.mock.callCount(), 3)
+  assert(!JSON.stringify(state).includes(secret))
 })
 
 test('measurement runs 528 sequential requests in rotated order and stops at the first failure without retry [ADR-0016]', async () => {
