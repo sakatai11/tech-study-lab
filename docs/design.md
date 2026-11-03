@@ -42,7 +42,7 @@ Knowledge Graphの抽出対象・制限・更新方法は [architecture/README.m
 
 | レイヤー | 技術 | 補足 |
 | --- | --- | --- |
-| フロント | Next.js（App Router）互換 API + Vinext | Vite ベースの Vinext で開発・ビルドし、`@cloudflare/vite-plugin` で Cloudflare Workers へデプロイ（Issue #221） |
+| フロント | Next.js（App Router）互換 API + Vinext | コードは Next.js App Router の規約に沿って書き、ローカル開発サーバーの起動とデプロイ用のビルドには Vinext（Vite）を使う。`@cloudflare/vite-plugin` で Cloudflare Workers へデプロイ（Issue #221） |
 | API | Hono | Cloudflare Workers。**主要APIを一通り担当** |
 | DB | Cloudflare D1（SQLite） | ORM は Drizzle |
 | 型・バリデーション | TypeScript strict / Zod | Honoの `zValidator` とフロントで共有 |
