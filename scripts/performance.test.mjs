@@ -64,9 +64,9 @@ function fakeRequest(override = () => null) {
   return { request, calls }
 }
 
-async function measured(request = fakeRequest().request) {
-  const state = {}
-  await measureStage({
+function measureOptions(state, fake = fakeRequest()) {
+  let clock = Date.now()
+  return {
     state,
     target,
     versions,
@@ -74,8 +74,19 @@ async function measured(request = fakeRequest().request) {
     cloudflare: async () => [{ results: [fixtureCounts] }],
     headers: {},
     webUrl: origin,
-    request,
-  })
+    request: fake.request,
+    observe: observeWith(() => probeEvents([1, 2])),
+    readinessWait: { deadlineMs: 60_000, intervalMs: 20_000 },
+    now: () => clock,
+    sleep: async (ms) => {
+      clock += ms
+    },
+  }
+}
+
+async function measured(request = fakeRequest().request) {
+  const state = {}
+  await measureStage(measureOptions(state, { request }))
   return state
 }
 
@@ -94,6 +105,15 @@ function invocationEvents(state, change = () => ({})) {
         ...change(index),
       },
     }))
+}
+
+function probeEvents(numbers, version = versions.web) {
+  return invocationEvents(
+    {
+      runs: [{ records: numbers.map((n) => ({ rayId: rayIdOf(goodResponse('', '', n).ray) })) }],
+    },
+    () => ({ scriptVersion: { id: version } }),
+  )
 }
 
 function cpuOptions(state, observe, extra = {}) {
@@ -182,35 +202,98 @@ test('measurement runs 528 sequential requests in rotated order and stops at the
   }
 })
 
+test('Web readiness waits for old executions and delayed logs before collecting all 528 requests [ADR-0016]', async () => {
+  const state = {}
+  const fake = fakeRequest()
+  let queries = 0
+  const batches = [probeEvents([1, 2], 'web-v0'), probeEvents([3]), probeEvents([3, 4])]
+  await measureStage({
+    ...measureOptions(state, fake),
+    observe: observeWith(() => batches[queries++]),
+  })
+  assert.equal(state.readiness.status, 'passed')
+  assert.equal(state.readiness.attempts, 2)
+  assert.equal(state.readiness.logQueries, 3)
+  assert(state.readiness.finishedAt <= state.startedAt)
+  assert.deepEqual(fake.calls.slice(0, 5), [
+    `${origin}/home`,
+    `${origin}/home?_rsc=`,
+    `${origin}/home`,
+    `${origin}/home?_rsc=`,
+    `${origin}/home`,
+  ])
+  assert.equal(fake.calls.length, 532)
+  assert.equal(state.runs[0].records[0].rayId, '0000000000000005')
+  await cpuStage(
+    cpuOptions(state, observeWith([...batches[0], ...batches[2], ...invocationEvents(state)])),
+  )
+  assert.equal(state.cpu.matched, 528)
+  assert.equal(state.cases[0].cpuMs.n, 60)
+})
+
+test('unconfirmed Web readiness stops before measurement [ADR-0016]', async () => {
+  const scenarios = [
+    {
+      reason: 'readiness-deadline',
+      lastCheck: 'version-mismatch',
+      requests: 6,
+      events: (n) => probeEvents([n - 1, n], 'web-v0'),
+    },
+    { reason: 'readiness-deadline', lastCheck: 'missing-logs', requests: 2, events: () => [] },
+    {
+      reason: 'observability-query-failed',
+      requests: 2,
+      events: () => {
+        throw new Error('403')
+      },
+    },
+    {
+      reason: 'probe-response-invalid',
+      requests: 1,
+      override: (n, url, kind) => ({ ...goodResponse(url, kind, n), status: 500 }),
+    },
+  ]
+  for (const { reason, lastCheck = reason, requests, events, override } of scenarios) {
+    const state = {}
+    const fake = fakeRequest(override)
+    await assert.rejects(
+      measureStage({
+        ...measureOptions(state, fake),
+        observe: observeWith(() => events(fake.calls.length)),
+      }),
+      new RegExp(reason),
+    )
+    assert.equal(state.status, 'inconclusive')
+    assert.equal(state.readiness.reason, reason)
+    assert.equal(state.readiness.lastCheck, lastCheck)
+    assert.equal(state.startedAt, undefined)
+    assert.equal(state.runs, undefined)
+    assert.equal(fake.calls.length, requests)
+    assert.match(performanceSummary(state), new RegExp(reason))
+  }
+})
+
 test('measurement stage keeps partial results and refuses a version that changed before measuring [ADR-0016]', async () => {
   const state = {}
   await assert.rejects(
     measureStage({
-      state,
-      target,
-      versions,
+      ...measureOptions(state),
       liveVersion: async (worker) => (worker === 'web' ? 'manual' : versions.api),
-      cloudflare: async () => [{ results: [fixtureCounts] }],
-      headers: {},
-      webUrl: origin,
-      request: fakeRequest().request,
     }),
     /changed before measurement/,
   )
   assert.equal(state.status, 'inconclusive')
+  assert.equal(state.readiness.status, 'passed')
+  assert.equal(state.runs, undefined)
   const failed = {}
   await assert.rejects(
     measureStage({
-      state: failed,
-      target,
-      versions,
-      liveVersion: async (worker) => versions[worker],
-      cloudflare: async () => [{ results: [fixtureCounts] }],
-      headers: {},
-      webUrl: origin,
-      request: fakeRequest((n, url, kind) =>
-        n === 3 ? { ...goodResponse(url, kind, n), status: 500 } : null,
-      ).request,
+      ...measureOptions(
+        failed,
+        fakeRequest((n, url, kind) =>
+          n === 5 ? { ...goodResponse(url, kind, n), status: 500 } : null,
+        ),
+      ),
     }),
     /stopped: response-validation-failed/,
   )

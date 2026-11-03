@@ -266,7 +266,7 @@ apply は対象環境の Secrets を使用し、manifest・設定・最新 branc
 
 verification の apply は smoke test の成功後、同じ job・同じ concurrency group の中で次を行う。
 
-1. **性能測定（`performance` 段階）**：稼働中の Web/API version が直前に反映した version と一致することを確認し、測定時点の fixture の件数を記録してから測定する。
+1. **性能測定（`performance` 段階）**：次の実行版確認に成功した後、Web/API の配備 version と fixture の件数を確認してから 528 件の測定を開始する。
 2. **CPU ログ照合（`cpuLogs` 段階）**：同じ時間帯の Web Worker の invocation log を Observability API から取得し、全 request の cf-ray と照合する。終了時の Web/API version も読み直す。
 3. **成功記録（`record` 段階）**：上記がすべて成功した場合だけ、性能試験の証跡を含む `tsl-release` を記録する。
 
@@ -282,6 +282,13 @@ verification の apply は smoke test の成功後、同じ job・同じ concurr
 **認証経路の差異**：CI は smoke test と同じ Access Service Token を各 request の header に付け、GitHub-hosted runner の Node.js `fetch` から送る。#220 の手動測定は人間のブラウザの Access cookie を使い、DevTools Console から送る。どちらも Access の検証・Service Binding・API の固定ユーザーの境界は同じだが、送信元の colo・回線・TTFB の測り方（CI は応答 header の受信時刻、ブラウザは Resource Timing）が異なる。そのため CI の応答時間をブラウザの値と直接比べない。CPU 時間は Cloudflare 側の値なので経路に依存しない。利用者のブラウザ Cookie はコピーしない。
 
 **fixture**：検証用 D1 の固定ユーザー（`user-local-001`）を使う。測定前に有効な問題数・解答ログ・SRS 状態・期限切れ SRS・閲覧記録の件数だけを D1 から読み、結果に記録する。smoke test が毎回 1件ずつ解答と閲覧を書き込むため件数は少しずつ増え、SRS の期限も日付とともに変わる。この差は比較の条件として扱う（「警告と比較」）。測定は GET だけで、本番データの複製・更新はしない。画面要素・データ・アクセシビリティを削って速くしない。
+
+### 測定前の Web 実行版確認
+
+- 測定と同じ Access Service Token 付き GET で、検証環境の `/home` の HTML と RSC を取得する。Web から API への Service Binding を含む通常の画面経路を使う。
+- 応答を測定と同じ基準で検証する。両方の `cf-ray` について、期待する Web version の正常な invocation が Workers Observability に 1 件ずつ揃えば実行版確認は成功となる。API version の確認は測定前後の配備情報と測定中の対象版のリソース上限検査までとする。
+- 確認は最大 5 分。ログが未着の場合は同じ Ray ID のログを 15 秒間隔で再取得する。旧版を検出した場合は次の間隔で HTML と RSC の両方を再取得する。上限到達、応答異常、ログ取得失敗などでは理由を記録して停止する。
+- 確認用の Ray ID は 528 件の測定・照合・CPU 分布に含めない。API のリソース上限検査は既存の測定時間帯と前後の余裕を対象とするため、時間帯が重なる確認リクエストに起因する上限超過も停止対象になる。切替確認後の測定で旧版が検出された場合は判定不能で停止する。
 
 ### CPU ログ照合と判定
 
@@ -322,11 +329,11 @@ production の事前検査は、D1・Worker を変更する前に次をすべて
 
 ### 結果の見方と再実行
 
-- **Job Summary**：性能試験の判定、測定条件、測定開始・終了時刻、開始・終了時の Web/API version、fixture の件数、各回の完了状況、CPU ログの一致件数、route × HTML/RSC の表、比較の状態と警告、停止の理由。
+- **Job Summary**：性能試験の判定、実行版確認の対象 version・開始と終了・試行数・ログ照会数・判定、測定条件、測定開始・終了時刻、開始・終了時の Web/API version、fixture の件数、各回の完了状況、CPU ログの一致件数、route × HTML/RSC の表、比較の状態と警告、停止の理由。
 - **`performance-<run>-<attempt>` artifact**：`performance.json`。上記に加えて対象 commit / tree、run / attempt、全 request の安全な項目（status・Content-Type・Cache-Control・キャッシュ状態・cf-ray・colo・応答サイズ・時間・判定理由）。失敗・判定不能でも取得できた部分を残す。保持 90 日。Actions の run 画面から GitHub 認証付きでダウンロードする。Cookie・JWT・Service Token・API token・認証 header・応答本文・ログ本文は含めない。
 - **GitHub Deployment**：成功時だけ、性能試験の要約（判定・条件・tree・version・run / attempt・fixture・CPU の一致件数・比較の状態・route ごとの中央値／P95／最大値）を `tsl-release` の payload に持つ。
 
-失敗・判定不能になった run は成功を記録しないため、本番は進まない。原因を確認してから **Re-run all jobs** か、`develop` から Deploy を手動実行して prepare からやり直す。性能段階だけを再実行する手段は設けない。ログの取り込みが遅れただけの場合も、同じく全体を再実行する。
+失敗・判定不能になった run は成功を記録しないため、本番は進まない。原因を確認してから **Re-run all jobs** か、`develop` から Deploy を手動実行して prepare からやり直す。性能段階だけを再実行する手段は設けない。実行版確認で停止した場合は、Job Summary と artifact の確認結果から配備状況・応答・Observability の権限やログ到着を確認し、同じ手順で全体を再実行する。
 
 ### 責務の分担
 
