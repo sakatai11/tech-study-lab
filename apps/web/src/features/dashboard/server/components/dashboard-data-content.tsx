@@ -1,7 +1,6 @@
 import 'server-only'
 
 import Link from 'next/link'
-import type { CSSProperties } from 'react'
 
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
@@ -11,6 +10,18 @@ import { type Tone, toneChipClasses } from '@/components/ui/tone'
 import type { DashboardActivityViewModel, DashboardViewModel } from '../../view-model'
 
 const heatmapClasses = ['bg-heat-0', 'bg-heat-1', 'bg-heat-2', 'bg-heat-3', 'bg-heat-4'] as const
+const heatmapPathClasses = [
+  'fill-heat-0 stroke-heat-0',
+  'fill-heat-1 stroke-heat-1',
+  'fill-heat-2 stroke-heat-2',
+  'fill-heat-3 stroke-heat-3',
+  'fill-heat-4 stroke-heat-4',
+] as const
+
+// 1セル = 10単位（塗り8 + 角を丸める stroke 1×2）、セル間の隙間 = 2単位。
+const HEATMAP_ROWS = 7
+const HEATMAP_PITCH = 12
+const HEATMAP_CELL = 10
 
 function formatStudyTime(milliseconds: number): string {
   const minutes = Math.floor(milliseconds / 60_000)
@@ -24,6 +35,45 @@ function heatmapLevel(answerCount: number): number {
   if (answerCount >= 4) return 3
   if (answerCount >= 2) return 2
   return answerCount > 0 ? 1 : 0
+}
+
+/**
+ * 182日分のセルを濃さ別の5本の path にまとめる。セルごとに要素を作ると
+ * RSC の serialize と SSR の HTML 化が Workers Free の CPU 上限を超えるため（Issue #220）。
+ */
+function heatmapPaths(days: DashboardViewModel['heatmap']['days']): string[] {
+  const paths: string[] = heatmapPathClasses.map(() => '')
+  days.forEach((day, index) => {
+    const x = Math.floor(index / HEATMAP_ROWS) * HEATMAP_PITCH + 1
+    const y = (index % HEATMAP_ROWS) * HEATMAP_PITCH + 1
+    paths[heatmapLevel(day.answerCount)] += `M${x} ${y}h8v8h-8z`
+  })
+  return paths
+}
+
+function formatMonthDay(date: string): string {
+  const [, month, day] = date.split('-')
+  return `${Number(month)}/${Number(day)}`
+}
+
+/**
+ * SVG の代わりに読み上げる文。期間全体の要約に続けて、学習した日の日付と解答数を
+ * 1つの文字列で並べる（0件の日は省く）。日ごとに要素を作らないのは、セルと同じく
+ * RSC / SSR の CPU を増やさないため（Issue #220）。
+ */
+function heatmapSummary(days: DashboardViewModel['heatmap']['days']): string {
+  let totalAnswers = 0
+  let busiest: (typeof days)[number] | undefined
+  const studied: string[] = []
+  for (const day of days) {
+    if (day.answerCount === 0) continue
+    studied.push(`${formatMonthDay(day.date)} ${day.answerCount}問`)
+    totalAnswers += day.answerCount
+    if (!busiest || day.answerCount > busiest.answerCount) busiest = day
+  }
+
+  if (!busiest) return `直近${days.length}日間の学習記録はまだありません。`
+  return `直近${days.length}日間で${studied.length}日学習し、合計${totalAnswers}問に解答しました。最も多かったのは${formatMonthDay(busiest.date)}の${busiest.answerCount}問です。学習した日：${studied.join('、')}。`
 }
 
 function activityDescription(activity: DashboardActivityViewModel): string {
@@ -75,6 +125,7 @@ function ActivityItem({ activity }: { activity: DashboardActivityViewModel }) {
 
 export function DashboardDataContent({ viewModel }: { viewModel: DashboardViewModel }) {
   const { summary, heatmap, activity } = viewModel
+  const heatmapColumns = Math.max(1, Math.ceil(heatmap.days.length / HEATMAP_ROWS))
 
   return (
     <div className="flex flex-col gap-5">
@@ -127,21 +178,24 @@ export function DashboardDataContent({ viewModel }: { viewModel: DashboardViewMo
             <Badge className="tabular-nums">{summary.currentStreakDays}日連続</Badge>
           </div>
         </div>
-        <div aria-hidden="true" className="heatmap-grid mt-5 grid grid-flow-col grid-rows-7 gap-1">
-          {heatmap.days.map((day, index) => (
-            <span
-              className={`heatmap-cell rounded-sm ${heatmapClasses[heatmapLevel(day.answerCount)]}`}
-              key={day.date}
-              style={{ '--heatmap-index': index } as CSSProperties}
-            />
-          ))}
-        </div>
-        <ol aria-label="直近26週・182日間の学習コントリビューション" className="sr-only">
-          {heatmap.days.map((day) => (
-            // 1つの文字列にし、SSR が隣接テキストの間に区切りコメントを挿入しないようにする（Issue #220）。
-            <li key={day.date}>{`${day.date}: ${day.answerCount}問`}</li>
-          ))}
-        </ol>
+        <svg
+          aria-hidden="true"
+          className="heatmap mt-5 block h-auto w-full"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          viewBox={`0 0 ${heatmapColumns * HEATMAP_PITCH - (HEATMAP_PITCH - HEATMAP_CELL)} ${HEATMAP_ROWS * HEATMAP_PITCH - (HEATMAP_PITCH - HEATMAP_CELL)}`}
+        >
+          {heatmapPaths(heatmap.days).map((path, level) =>
+            path ? (
+              <path
+                className={heatmapPathClasses[level]}
+                d={path}
+                key={heatmapPathClasses[level]}
+              />
+            ) : null,
+          )}
+        </svg>
+        <p className="sr-only">{heatmapSummary(heatmap.days)}</p>
         <div className="mt-4 flex items-center justify-between gap-4 font-mono text-xs text-faint">
           <span>Less</span>
           <div aria-hidden="true" className="flex gap-1">

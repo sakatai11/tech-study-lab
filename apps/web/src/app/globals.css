@@ -129,21 +129,13 @@
     animation: term-cursor-blink 1s steps(1, end) infinite;
   }
 
-  .heatmap-grid {
-    grid-template-columns: repeat(26, minmax(0, 1fr));
-  }
-
   .reveal {
     animation: reveal-rise 500ms ease-out both;
     animation-delay: calc(var(--reveal-index, 0) * 70ms);
   }
 
-  .heatmap-cell {
-    width: 100%;
-    min-width: 0;
-    aspect-ratio: 1;
-    animation: heatmap-enter 240ms ease-out both;
-    animation-delay: calc(var(--heatmap-index, 0) * 8ms);
+  .heatmap {
+    animation: heatmap-enter 480ms ease-out both;
   }
 
   .progress-bar-fill {
@@ -202,13 +194,13 @@
 
     .term-cursor,
     .reveal,
-    .heatmap-cell,
+    .heatmap,
     .progress-bar-fill {
       animation: none;
     }
 
     .reveal,
-    .heatmap-cell {
+    .heatmap {
       opacity: 1;
       transform: none;
     }
