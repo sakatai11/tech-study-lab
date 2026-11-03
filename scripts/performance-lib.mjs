@@ -76,7 +76,7 @@ export function evaluateResponse(response, c, origin) {
 
 /**
  * 8組を逐次 GET で測定する。最初の異常でそのラン以降を止め、失敗 request を再試行しない。
- * `request(url, kind)` は応答の安全な項目と時間だけを返す（タイムアウトは reject）。
+ * `request(url, kind)` は応答の安全な項目と時間、失敗時は取得済みの情報と診断コードだけを返す。
  */
 export async function measureRoutes({
   origin,
@@ -109,7 +109,9 @@ export async function measureRoutes({
         let row
         try {
           const response = await request(caseUrl(origin, c), c.kind)
-          const reasons = evaluateResponse(response, c, origin)
+          const reasons = response.failure
+            ? ['request-failed-or-timeout']
+            : evaluateResponse(response, c, origin)
           row = {
             ...base,
             status: response.status,
@@ -123,6 +125,7 @@ export async function measureRoutes({
             bytes: response.bytes,
             ttfbMs: response.ttfbMs,
             completeMs: response.completeMs,
+            ...(response.failure && { requestFailure: response.failure }),
             passed: reasons.length === 0,
             reasons,
           }

@@ -333,6 +333,8 @@ production の事前検査は、D1・Worker を変更する前に次をすべて
 - **`performance-<run>-<attempt>` artifact**：`performance.json`。上記に加えて対象 commit / tree、run / attempt、全 request の安全な項目（status・Content-Type・Cache-Control・キャッシュ状態・cf-ray・colo・応答サイズ・時間・判定理由）。失敗・判定不能でも取得できた部分を残す。保持 90 日。Actions の run 画面から GitHub 認証付きでダウンロードする。Cookie・JWT・Service Token・API token・認証 header・応答本文・ログ本文は含めない。
 - **GitHub Deployment**：成功時だけ、性能試験の要約（判定・条件・tree・version・run / attempt・fixture・CPU の一致件数・比較の状態・route ごとの中央値／P95／最大値）を `tsl-release` の payload に持つ。
 
+HTTP リクエストの例外は、ヘッダー受信前（`before-headers`）と本文読み取り中（`response-body`）に分けて記録する。Job Summary と artifact で失敗段階、許可リストにある例外コード（該当しなければ `UNKNOWN`）、取得済みの HTTP status・Ray ID、経過時間を確認できる。例外メッセージや応答本文は保存しない。
+
 失敗・判定不能になった run は成功を記録しないため、本番は進まない。原因を確認してから **Re-run all jobs** か、`develop` から Deploy を手動実行して prepare からやり直す。性能段階だけを再実行する手段は設けない。実行版確認で停止した場合は、Job Summary と artifact の確認結果から配備状況・応答・Observability の権限やログ到着を確認し、同じ手順で全体を再実行する。
 
 ### 責務の分担

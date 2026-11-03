@@ -21,20 +21,58 @@ const READINESS_PATH = '/home'
 const FIXED_USER_ID = 'user-local-001'
 const EVENT_LIMIT = 2000
 
+const REQUEST_ERROR_CODES = new Set([
+  'EAI_AGAIN',
+  'ECONNREFUSED',
+  'ECONNRESET',
+  'ENOTFOUND',
+  'EPIPE',
+  'ETIMEDOUT',
+  'UND_ERR_BODY_TIMEOUT',
+  'UND_ERR_CONNECT_TIMEOUT',
+  'UND_ERR_HEADERS_TIMEOUT',
+  'UND_ERR_RES_CONTENT_LENGTH_MISMATCH',
+  'UND_ERR_SOCKET',
+])
+
+function requestErrorCode(error, signal) {
+  if (signal.aborted) return 'ABORTED_BY_DEADLINE'
+  const code = error?.cause?.code ?? error?.code
+  return REQUEST_ERROR_CODES.has(code) ? code : 'UNKNOWN'
+}
+
 /** Node fetch の応答から安全な項目と時間だけを取り出す。本文は長さだけを数えて捨てる。 */
 export function nodeRequest(headers, deadlineMs = PERFORMANCE_CONDITIONS.requestDeadlineMs) {
   return async (url, kind, deadlineSignal) => {
     const start = performance.now()
     const timeout = AbortSignal.timeout(deadlineMs)
-    const response = await fetch(url, {
-      method: 'GET',
-      cache: 'no-store',
-      redirect: 'manual',
-      headers: kind === 'rsc' ? { ...headers, RSC: '1' } : headers,
-      signal: deadlineSignal ? AbortSignal.any([timeout, deadlineSignal]) : timeout,
-    })
-    const ttfbMs = performance.now() - start
-    const bytes = (await response.arrayBuffer()).byteLength
+    const signal = deadlineSignal ? AbortSignal.any([timeout, deadlineSignal]) : timeout
+    let response
+    let ttfbMs
+    let bytes
+    try {
+      response = await fetch(url, {
+        method: 'GET',
+        cache: 'no-store',
+        redirect: 'manual',
+        headers: kind === 'rsc' ? { ...headers, RSC: '1' } : headers,
+        signal,
+      })
+      ttfbMs = performance.now() - start
+      bytes = (await response.arrayBuffer()).byteLength
+    } catch (error) {
+      const ray = response?.headers.get('cf-ray')
+      return {
+        failure: {
+          phase: response ? 'response-body' : 'before-headers',
+          code: requestErrorCode(error, signal),
+        },
+        status: response?.status ?? null,
+        ray: rayIdOf(ray) ? ray : null,
+        ttfbMs: ttfbMs ?? null,
+        completeMs: performance.now() - start,
+      }
+    }
     return {
       url: response.url || url,
       status: response.status,
@@ -134,6 +172,17 @@ async function confirmWebVersion({
           const c = { path: READINESS_PATH, kind }
           lastReason = 'probe-request-failed'
           const response = await request(caseUrl(origin, c), kind, deadline)
+          if (response.failure) {
+            readiness.requestFailure = {
+              kind,
+              ...response.failure,
+              status: response.status,
+              rayId: rayIdOf(response.ray),
+              ttfbMs: response.ttfbMs,
+              elapsedMs: response.completeMs,
+            }
+            assert.fail(lastReason)
+          }
           const reasons = evaluateResponse(response, c, origin)
           lastReason = 'probe-response-invalid'
           if (reasons.length) {
@@ -399,6 +448,12 @@ export function performanceSummary(state) {
     `CPU logs: \`${JSON.stringify(state.cpu ?? null)}\``,
   ]
   if (state.reason) lines.push(`Stopped: ${state.reason}`)
+  const lastRequest = state.runs?.at(-1)?.records.at(-1)
+  if (lastRequest?.requestFailure) {
+    const { path, kind, status, rayId, ttfbMs, completeMs, requestFailure } = lastRequest
+    const detail = { path, kind, status, rayId, ttfbMs, elapsedMs: completeMs, ...requestFailure }
+    lines.push(`Request failure: \`${JSON.stringify(detail)}\``)
+  }
   if (state.cases) {
     lines.push(
       '',
