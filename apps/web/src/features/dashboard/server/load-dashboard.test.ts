@@ -3,7 +3,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type {
   AnalyticsHeatmapResponse,
   AnalyticsSummaryResponse,
-  DomainsResponse,
   RecentActivityResponse,
 } from '@tsl/shared'
 
@@ -17,7 +16,6 @@ const getOrderedTopicRoutes = vi.hoisted(() =>
 )
 const fetchDashboardSummary = vi.hoisted(() => vi.fn())
 const fetchDashboardHeatmap = vi.hoisted(() => vi.fn())
-const fetchDashboardDomains = vi.hoisted(() => vi.fn())
 const fetchRecentActivity = vi.hoisted(() => vi.fn())
 
 vi.mock('@/lib/api-server', () => ({ createServerApiClient }))
@@ -27,7 +25,6 @@ vi.mock('@/lib/content', () => ({
   getOrderedTopicRoutes,
 }))
 vi.mock('../api/dashboard-api', () => ({
-  fetchDashboardDomains,
   fetchDashboardHeatmap,
   fetchDashboardSummary,
   fetchRecentActivity,
@@ -54,43 +51,6 @@ const heatmap = {
   })),
 } satisfies AnalyticsHeatmapResponse
 
-const domains = {
-  domains: [
-    {
-      domain: 'security' as const,
-      masteredQuestionCount: 1,
-      totalQuestionCount: 2,
-      masteryRate: 50,
-      topicCount: 1,
-      lessonCount: 1,
-    },
-    {
-      domain: 'frontend' as const,
-      masteredQuestionCount: 0,
-      totalQuestionCount: 0,
-      masteryRate: 0,
-      topicCount: 0,
-      lessonCount: 0,
-    },
-    {
-      domain: 'backend' as const,
-      masteredQuestionCount: 0,
-      totalQuestionCount: 0,
-      masteryRate: 0,
-      topicCount: 0,
-      lessonCount: 0,
-    },
-    {
-      domain: 'architecture' as const,
-      masteredQuestionCount: 0,
-      totalQuestionCount: 0,
-      masteryRate: 0,
-      topicCount: 0,
-      lessonCount: 0,
-    },
-  ],
-} satisfies DomainsResponse
-
 const activity = {
   items: [
     {
@@ -106,7 +66,6 @@ function mockDashboardRequests(client: object) {
   createServerApiClient.mockResolvedValue(client)
   fetchDashboardSummary.mockResolvedValue(summary)
   fetchDashboardHeatmap.mockResolvedValue(heatmap)
-  fetchDashboardDomains.mockResolvedValue(domains)
   fetchRecentActivity.mockResolvedValue(activity)
 }
 
@@ -123,7 +82,6 @@ describe('loadDashboardStatic', () => {
     createServerApiClient.mockReset()
     fetchDashboardSummary.mockReset()
     fetchDashboardHeatmap.mockReset()
-    fetchDashboardDomains.mockReset()
     fetchRecentActivity.mockReset()
     getLessonRouteParams.mockReset()
     getLessonRouteParams.mockReturnValue([])
@@ -211,7 +169,6 @@ describe('loadDashboard', () => {
     createServerApiClient.mockReset()
     fetchDashboardSummary.mockReset()
     fetchDashboardHeatmap.mockReset()
-    fetchDashboardDomains.mockReset()
     fetchRecentActivity.mockReset()
     getLessonRouteParams.mockReset()
     getLessonRouteParams.mockReturnValue([])
@@ -224,7 +181,6 @@ describe('loadDashboard', () => {
     const client = { name: 'server-client' }
     const summaryRequest = deferred<AnalyticsSummaryResponse>()
     const heatmapRequest = deferred<AnalyticsHeatmapResponse>()
-    const domainsRequest = deferred<DomainsResponse>()
     const activityRequest = deferred<RecentActivityResponse>()
     const started: string[] = []
     createServerApiClient.mockReturnValue(client)
@@ -235,10 +191,6 @@ describe('loadDashboard', () => {
     fetchDashboardHeatmap.mockImplementation(() => {
       started.push('heatmap')
       return heatmapRequest.promise
-    })
-    fetchDashboardDomains.mockImplementation(() => {
-      started.push('domains')
-      return domainsRequest.promise
     })
     fetchRecentActivity.mockImplementation(() => {
       started.push('activity')
@@ -258,26 +210,21 @@ describe('loadDashboard', () => {
     await Promise.resolve()
     await Promise.resolve()
 
-    expect(started).toEqual(['summary', 'heatmap', 'domains', 'activity'])
+    expect(started).toEqual(['summary', 'heatmap', 'activity'])
     expect(createServerApiClient).toHaveBeenCalledOnce()
     expect(fetchDashboardSummary).toHaveBeenCalledWith(client)
     expect(fetchDashboardHeatmap).toHaveBeenCalledWith(client)
-    expect(fetchDashboardDomains).toHaveBeenCalledWith(client)
+    expect(getOrderedTopicRoutes).not.toHaveBeenCalled()
     expect(fetchRecentActivity).toHaveBeenCalledWith(client)
 
     summaryRequest.resolve(summary)
     heatmapRequest.resolve(heatmap)
-    domainsRequest.resolve(domains)
     activityRequest.resolve(activity)
     const viewModel = await viewModelPromise
 
-    expect(viewModel.domains[0]).toMatchObject({
-      label: 'セキュリティ',
-      firstTopicHref: '/learn/security/csrf',
-    })
-    expect(viewModel.domains).not.toContainEqual(
-      expect.objectContaining({ firstTopicHref: '/learn/unknown/invalid' }),
-    )
+    expect(viewModel).not.toHaveProperty('domains')
+    expect(viewModel.summary).toEqual(summary)
+    expect(viewModel.heatmap).toEqual(heatmap)
     expect(viewModel.activity[0]).toMatchObject({ lessonTitle: 'XSS lesson' })
   })
 

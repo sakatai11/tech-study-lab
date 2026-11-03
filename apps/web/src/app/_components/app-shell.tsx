@@ -21,13 +21,10 @@ export function AppShell({ children, currentNavigation }: AppShellProps) {
     <DueCountProvider>
       <DashboardShell
         currentNavigation={currentNavigation}
-        desktopReviewBadge={
-          <DueCountBadge className="ml-auto grid size-5 place-items-center rounded-full bg-red font-mono text-[10px] font-bold tabular-nums text-white" />
+        reviewBadge={
+          <DueCountBadge className="absolute right-2 top-0 grid size-4 place-items-center rounded-full bg-red font-mono text-[9px] font-bold tabular-nums text-white lg:static lg:ml-auto lg:size-5 lg:text-[10px]" />
         }
-        mobileReviewBadge={
-          <DueCountBadge className="absolute right-2 top-0 grid size-4 place-items-center rounded-full bg-red font-mono text-[9px] font-bold tabular-nums text-white" />
-        }
-        mobileStreakBadge={<StreakBadge />}
+        streakBadge={<StreakBadge />}
         navigationHrefs={{
           dashboard: '/home',
           learn: '/learn',

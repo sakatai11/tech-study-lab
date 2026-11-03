@@ -1,8 +1,6 @@
 import type {
   AnalyticsHeatmapResponse,
   AnalyticsSummaryResponse,
-  DomainKey,
-  DomainsResponse,
   DueCountResponse,
   RecentActivityItem,
 } from '@tsl/shared'
@@ -23,22 +21,8 @@ export type DashboardActivityViewModel = RecentActivityItem & {
   lessonTitle: string | null
 }
 
-type DomainSummary = DomainsResponse['domains'][number]
-
-export type DashboardDomainViewModel = DomainSummary & {
-  label: string
-  firstTopicHref?: string
-}
-
-export type DashboardTopicRoute = {
-  domain: DomainKey
-  topic: string
-  order: number
-}
-
 export type DashboardViewModel = {
   summary: AnalyticsSummaryResponse
   heatmap: AnalyticsHeatmapResponse
-  domains: DashboardDomainViewModel[]
   activity: DashboardActivityViewModel[]
 }

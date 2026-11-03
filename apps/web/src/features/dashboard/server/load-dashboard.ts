@@ -6,17 +6,15 @@ import { createServerApiClient } from '@/lib/api-server'
 import { getLessonContent, getLessonRouteParams, getOrderedTopicRoutes } from '@/lib/content'
 
 import {
-  fetchDashboardDomains,
   fetchDashboardHeatmap,
   fetchDashboardSummary,
   fetchDueCount,
   fetchRecentActivity,
 } from '../api/dashboard-api'
-import { dashboardDomainsToViewModel, dashboardToViewModel, dueCountToViewModel } from '../mapper'
+import { dashboardToViewModel, dueCountToViewModel } from '../mapper'
 import type {
   DashboardDueViewModel,
   DashboardStaticViewModel,
-  DashboardTopicRoute,
   DashboardViewModel,
 } from '../view-model'
 
@@ -84,17 +82,11 @@ export async function loadDashboardDueCount(): Promise<DashboardDueViewModel> {
 
 export async function loadDashboard(): Promise<DashboardViewModel> {
   const client = await createServerApiClient()
-  const [summary, heatmap, domains, activity] = await Promise.all([
+  const [summary, heatmap, activity] = await Promise.all([
     fetchDashboardSummary(client),
     fetchDashboardHeatmap(client),
-    fetchDashboardDomains(client),
     fetchRecentActivity(client),
   ])
-  const topicRoutes: DashboardTopicRoute[] = getOrderedTopicRoutes().flatMap((route) => {
-    const result = domainKeySchema.safeParse(route.domain)
-    return result.success ? [{ domain: result.data, topic: route.topic, order: route.order }] : []
-  })
-  const domainViewModel = dashboardDomainsToViewModel(domains, topicRoutes)
   const lessonTitles = new Map(
     getLessonRouteParams().flatMap(({ lesson }) => {
       const content = getLessonContent(lesson)
@@ -102,5 +94,5 @@ export async function loadDashboard(): Promise<DashboardViewModel> {
     }),
   )
 
-  return dashboardToViewModel(summary, heatmap, domainViewModel, activity, lessonTitles)
+  return dashboardToViewModel(summary, heatmap, activity, lessonTitles)
 }
