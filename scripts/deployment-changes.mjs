@@ -5,12 +5,12 @@ import { appendFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-// Unknown paths affect both Workers. Exclusions must never contain runtime/build inputs.
+/** Classify build inputs; unknown paths affect both Workers, while test sources do not. */
 export function affectedWorkers(path) {
   if (path.startsWith('content/')) return ['api', 'web']
   if (
     /(^|\/)(?:AGENTS|CLAUDE|README)\.md$/.test(path) ||
-    /\.(?:test|spec)\.[^/]+$/.test(path) ||
+    /\.(?:test|spec)\.[cm]?[jt]sx?$/.test(path) ||
     /(^|\/)(?:__tests__|__fixtures__)\//.test(path) ||
     /(^|\/)vitest\.config\.[^/]+$/.test(path) ||
     /^(?:docs|architecture|\.ai|\.agents|\.claude|\.codex)\//.test(path) ||
@@ -40,6 +40,7 @@ export function affectedWorkers(path) {
   return ['api', 'web']
 }
 
+/** Resolve a validated commit to its Git tree without reading working-tree files. */
 export function gitTree(ref, cwd) {
   assert.match(ref, /^(?:HEAD|[a-f0-9]{40})$/)
   return execFileSync('git', ['rev-parse', `${ref}^{tree}`], {
@@ -49,8 +50,7 @@ export function gitTree(ref, cwd) {
   }).trim()
 }
 
-// Read only Git object metadata, including paths and file modes. Deletions/renames
-// change these hashes without relying on GitHub's limited changed-file listing.
+/** Hash path/mode/blob metadata per Worker, including deletions and renames. */
 export function workerSources(ref, cwd) {
   assert.match(ref, /^(?:HEAD|[a-f0-9]{40})$/)
   const listing = execFileSync('git', ['ls-tree', '-rz', '--full-tree', ref], {
@@ -69,6 +69,7 @@ export function workerSources(ref, cwd) {
   )
 }
 
+/** Compare a trusted success with the candidate; missing/unreadable baselines force both builds. */
 export function releasePlan(sha, previous, { force = false, cwd } = {}) {
   assert.match(sha, /^[a-f0-9]{40}$/)
   const sources = workerSources(sha, cwd)
@@ -100,6 +101,7 @@ export function releasePlan(sha, previous, { force = false, cwd } = {}) {
   return plan
 }
 
+/** Reject plans for another commit/source or partial releases without a baseline. */
 export function validatePlan(plan, sha, sources) {
   assert.equal(plan.version, 1)
   assert.equal(plan.sha, sha, 'plan commit mismatch')
@@ -111,6 +113,7 @@ export function validatePlan(plan, sha, sources) {
     assert(plan.baseline, 'partial release requires a baseline')
 }
 
+/** Select PR Worker/viewer builds from the base commit, forcing all for manual runs. */
 export function ciChanges(base, { force = false, cwd } = {}) {
   if (force || !base) return { api: true, web: true, viewer: true }
   assert.match(base, /^[a-f0-9]{40}$/)

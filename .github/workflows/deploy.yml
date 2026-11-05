@@ -8,6 +8,11 @@ on:
 permissions:
   contents: read
 
+# Plan only after a preceding release/rollback has finished, including no-op plans.
+concurrency:
+  group: deploy-${{ github.ref_name == 'main' && 'production' || 'verification' }}
+  cancel-in-progress: false
+
 jobs:
   changes:
     name: Detect changes since last successful release
@@ -96,9 +101,6 @@ jobs:
     timeout-minutes: 60
     environment:
       name: ${{ github.ref_name == 'main' && 'production' || 'verification' }}
-    concurrency:
-      group: deploy-${{ github.ref_name == 'main' && 'production' || 'verification' }}
-      cancel-in-progress: false
     permissions:
       contents: read
       actions: read

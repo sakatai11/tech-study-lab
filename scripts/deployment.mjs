@@ -18,6 +18,7 @@ import {
   github,
   lastRelease,
   recordRelease,
+  recordReleaseAttempt,
   runRelease,
   validateManifest,
 } from './deployment-lib.mjs'
@@ -364,6 +365,10 @@ async function apply(environment) {
           rmSync(resolve(root, 'apps/web/dist'), { recursive: true, force: true })
           cpSync(resolve(release, 'web'), resolve(root, 'apps/web/dist'), { recursive: true })
         }
+        await recordReleaseAttempt(environment, sha, {
+          runId: process.env.GITHUB_RUN_ID,
+          runAttempt,
+        })
       }),
       migrations: stage('migrations', async () =>
         wrangler('d1', 'migrations', 'apply', target.database, '--remote', '--config', apiConfig),
@@ -506,6 +511,10 @@ async function rollback(environment, worker, version, expected) {
     'live version changed since rollback request',
   )
   await cloudflare(target, `workers/scripts/${target[worker]}/versions/${version}`)
+  await recordReleaseAttempt(environment, ctx.sha, {
+    runId: process.env.GITHUB_RUN_ID,
+    runAttempt: process.env.GITHUB_RUN_ATTEMPT ?? '1',
+  })
   run([
     '--filter',
     '@tsl/api',

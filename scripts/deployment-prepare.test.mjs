@@ -21,9 +21,9 @@ import { getTarget } from './deployment-lib.mjs'
 
 const source = fileURLToPath(new URL('../', import.meta.url))
 
-test('actual plan/prepare CLIs skip docs and build only selected Workers in both environments [ADR-0017]', () => {
+test('actual plan/prepare CLIs skip docs, recover unfinished mutations, and build only selected Workers [ADR-0017] [ADR-0018]', () => {
   for (const environment of ['verification', 'production']) {
-    for (const scope of ['api', 'web', 'shared', 'docs']) {
+    for (const scope of ['api', 'web', 'shared', 'docs', 'recovery']) {
       const target = getTarget(environment)
       const root = realpathSync(mkdtempSync(join(tmpdir(), 'tsl-prepare-')))
       const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim()
@@ -77,6 +77,7 @@ test('actual plan/prepare CLIs skip docs and build only selected Workers in both
           web: 'apps/web/src/change.ts',
           shared: 'packages/shared/change.ts',
           docs: 'docs/change.md',
+          recovery: 'docs/change.md',
         }[scope]
         put(changed, 'change')
         git('add', changed)
@@ -92,7 +93,7 @@ test('actual plan/prepare CLIs skip docs and build only selected Workers in both
         const sha = git('rev-parse', 'HEAD')
         put(
           'network.mjs',
-          `globalThis.fetch = async (url) => Response.json(String(url).includes('/statuses') ? [{state:'success'}] : [{id:1,sha:${JSON.stringify(previous.sha)},payload:${JSON.stringify({ kind: 'tsl-release', tree: previous.tree, apiVersion: previous.apiVersion, webVersion: previous.webVersion })}}]);`,
+          `globalThis.fetch = async (url) => Response.json(String(url).includes('/statuses') ? [{state:'success'}] : [${scope === 'recovery' ? '{id:2,payload:{kind:"tsl-attempt"}},' : ''}{id:1,sha:${JSON.stringify(previous.sha)},payload:${JSON.stringify({ kind: 'tsl-release', tree: previous.tree, apiVersion: previous.apiVersion, webVersion: previous.webVersion })}}]);`,
         )
         const { env: environments, ...baseWeb } = parse(
           readFileSync(join(root, 'apps/web/wrangler.jsonc'), 'utf8'),
@@ -154,8 +155,8 @@ if (args.includes('--outdir')) fs.writeFileSync(path.join(args[args.indexOf('--o
             .slice(5),
         )
         const workers = {
-          api: ['api', 'shared'].includes(scope),
-          web: ['web', 'shared'].includes(scope),
+          api: ['api', 'shared', 'recovery'].includes(scope),
+          web: ['web', 'shared', 'recovery'].includes(scope),
         }
         assert.deepEqual(plan.workers, workers)
         assert(outputs.includes(`deploy=${scope !== 'docs'}`))

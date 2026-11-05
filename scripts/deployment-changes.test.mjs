@@ -34,6 +34,7 @@ test('Worker scope excludes harness/docs/tests and includes shared runtime input
     assert.deepEqual(affectedWorkers(path), [], path)
   assert.deepEqual(affectedWorkers('apps/web/src/app/page.tsx'), ['web'])
   assert.deepEqual(affectedWorkers('apps/api/src/routes/answers.ts'), ['api'])
+  assert.deepEqual(affectedWorkers('apps/api/wrangler.test.jsonc'), ['api'])
   for (const path of [
     'content/security/x.md',
     'packages/shared/src/schema/api.ts',
@@ -53,7 +54,7 @@ test('Worker scope excludes harness/docs/tests and includes shared runtime input
     assert.deepEqual(affectedWorkers(path), ['api', 'web'], path)
 })
 
-test('release scope compares the last success, handles deletions/renames, and falls back to both [ADR-0017]', () => {
+test('release scope compares the last success, handles deletions/renames, and falls back to both [ADR-0017] [ADR-0018]', () => {
   const cwd = mkdtempSync(join(tmpdir(), 'tsl-scope-'))
   const git = (...args) => execFileSync('git', args, { cwd, encoding: 'utf8' }).trim()
   const put = (path, value) => {
@@ -92,6 +93,11 @@ test('release scope compares the last success, handles deletions/renames, and fa
       'a later docs/harness push must retain changes from a failed release',
     )
     const apiSuccess = { ...previous, sha: failedRelease, tree: gitTree(failedRelease, cwd) }
+    assert.deepEqual(
+      releasePlan(base, apiSuccess, { cwd }).workers,
+      { api: true, web: false },
+      'a reverted source must be compared after the preceding apply has recorded success',
+    )
     assert.deepEqual(releasePlan(head, apiSuccess, { cwd }).workers, { api: false, web: false })
     assert.deepEqual(releasePlan(head, null, { cwd }).workers, { api: true, web: true })
     assert.deepEqual(releasePlan(head, previous, { cwd, force: true }).workers, {
@@ -113,6 +119,34 @@ test('release scope compares the last success, handles deletions/renames, and fa
     assert.throws(() => validatePlan({ ...partial, baseline: null }, deleted, partial.sources))
     assert.throws(() => validatePlan(partial, base, partial.sources))
     assert.throws(() => validatePlan(partial, deleted, workerSources(base, cwd)))
+  } finally {
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test('verification config changes are deployed alone and alongside Web changes [ADR-0017]', () => {
+  const cwd = mkdtempSync(join(tmpdir(), 'tsl-config-scope-'))
+  const git = (...args) => execFileSync('git', args, { cwd, encoding: 'utf8' }).trim()
+  const commit = () => {
+    git('add', '.')
+    git('-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', 'commit', '-qm', 'fixture')
+    return git('rev-parse', 'HEAD')
+  }
+  try {
+    git('init', '-q')
+    mkdirSync(join(cwd, 'apps/api'), { recursive: true })
+    mkdirSync(join(cwd, 'apps/web'), { recursive: true })
+    writeFileSync(join(cwd, 'apps/api/wrangler.test.jsonc'), '{"compatibility_date":"2026-11-01"}')
+    writeFileSync(join(cwd, 'apps/web/index.ts'), 'web-v1')
+    const sha = commit()
+    const previous = { sha, tree: gitTree(sha, cwd), apiVersion: 'api-1', webVersion: 'web-1' }
+    writeFileSync(join(cwd, 'apps/api/wrangler.test.jsonc'), '{"compatibility_date":"2026-11-06"}')
+    const configOnly = commit()
+    assert.deepEqual(releasePlan(configOnly, previous, { cwd }).workers, { api: true, web: false })
+    assert.deepEqual(ciChanges(sha, { cwd }), { api: true, web: false, viewer: true })
+    writeFileSync(join(cwd, 'apps/web/index.ts'), 'web-v2')
+    const mixed = commit()
+    assert.deepEqual(releasePlan(mixed, previous, { cwd }).workers, { api: true, web: true })
   } finally {
     rmSync(cwd, { recursive: true, force: true })
   }

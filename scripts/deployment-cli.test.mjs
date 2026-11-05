@@ -22,8 +22,11 @@ import { conditionsId } from './performance-lib.mjs'
 const source = fileURLToPath(new URL('../', import.meta.url))
 const verification = getTarget('verification')
 
-test('actual apply CLI uploads prepared files in order and refuses invalid releases before any mutation [ADR-0006] [ADR-0010] [ADR-0016] [ADR-0017]', () => {
+test('actual apply CLI records attempts before mutations and refuses invalid releases [ADR-0006] [ADR-0010] [ADR-0016] [ADR-0017] [ADR-0018]', () => {
   const scenarios = [
+    { environment: 'verification', command: 'rollback' },
+    { environment: 'production', command: 'rollback' },
+    { environment: 'verification', command: 'rollback', failure: 'attempt-status' },
     { environment: 'verification', scope: 'api' },
     { environment: 'verification', scope: 'web' },
     { environment: 'verification', scope: 'api', failure: 'skipped-version' },
@@ -41,6 +44,8 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
       'disabled',
       'sampling',
       'observability-token',
+      'attempt-create',
+      'attempt-status',
     ].map((failure) => ({
       environment: 'verification',
       failure,
@@ -61,7 +66,15 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
       'verification-changed',
     ].map((failure) => ({ environment: 'production', failure })),
   ]
-  for (const { environment, failure, previousContent, late, scope, sourceDelta } of scenarios) {
+  for (const {
+    environment,
+    failure,
+    previousContent,
+    late,
+    scope,
+    sourceDelta,
+    command = 'apply',
+  } of scenarios) {
     const target = getTarget(environment)
     const root = realpathSync(mkdtempSync(join(tmpdir(), 'tsl-apply-test-')))
     const json = (path, value) => writeFileSync(join(root, path), JSON.stringify(value))
@@ -186,7 +199,12 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
       // Child tooling is captured, never executed. The fetch replacement refuses unknown URLs.
       writeFileSync(
         join(root, 'bin/pnpm'),
-        `#!${process.execPath}\nrequire('node:fs').appendFileSync(${JSON.stringify(join(root, 'commands.jsonl'))}, JSON.stringify(process.argv.slice(2)) + '\\n')\n`,
+        `#!${process.execPath}
+const fs = require('node:fs'), assert = require('node:assert/strict');
+assert(fs.readFileSync(${JSON.stringify(join(root, 'records.jsonl'))}, 'utf8').includes('"kind":"tsl-attempt"'));
+assert(fs.readFileSync(${JSON.stringify(join(root, 'statuses.jsonl'))}, 'utf8').includes('"state":"in_progress"'));
+fs.appendFileSync(${JSON.stringify(join(root, 'commands.jsonl'))}, JSON.stringify(process.argv.slice(2)) + '\\n');
+`,
       )
       chmodSync(join(root, 'bin/pnpm'), 0o755)
       writeFileSync(
@@ -207,13 +225,21 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
             if (path.endsWith('/deployment-branch-policies')) return Response.json({branch_policies:[{name:process.env.FAILURE === 'branch-policy' ? '*' : target.branch,type:'branch'}]});
             if (path.endsWith('/environments/' + target.environment)) return Response.json({deployment_branch_policy:{custom_branch_policies:true}, protection_rules:[]});
             if (path.endsWith('/git/ref/heads/' + target.branch)) return Response.json({object:{sha:process.env.FAILURE === 'stale' ? 'f'.repeat(40) : process.env.GITHUB_SHA}});
-            if (path.endsWith('/deployments') && options.method === 'POST') { appendFileSync(${JSON.stringify(join(root, 'records.jsonl'))}, options.body + '\\n'); return Response.json({id:1}); }
+            if (path.endsWith('/deployments') && options.method === 'POST') {
+              if (process.env.FAILURE === 'attempt-create') return new Response(null, {status:500});
+              appendFileSync(${JSON.stringify(join(root, 'records.jsonl'))}, options.body + '\\n');
+              return Response.json({id:1});
+            }
             if (path.endsWith('/deployments') && target.environment === 'production' && new URL(url).searchParams.get('environment') === 'verification') return Response.json(process.env.FAILURE === 'unverified' ? [] : [{id:2,sha:verificationSha,payload:{kind:'tsl-release',tree:verificationTree,runId:'7',runAttempt:'1',apiVersion:'11111111-1111-1111-1111-111111111111',webVersion:'11111111-1111-1111-1111-111111111111',...(process.env.FAILURE === 'no-performance-proof' ? {} : {performance:proof})}}]);
             if (path.endsWith('/deployments') && prior) return Response.json([{id:3,sha:process.env.FAILURE === 'baseline-changed' ? 'f'.repeat(40) : prior.sha,payload:{kind:'tsl-release',tree:prior.tree,apiVersion:prior.apiVersion,webVersion:prior.webVersion}}]);
             if (path.endsWith('/deployments') && process.env.PREVIOUS_CONTENT) return Response.json([{id:3,sha:'e'.repeat(40),payload:{kind:'tsl-release',contentTree:${JSON.stringify(git('rev-parse', 'HEAD:content'))}}}]);
             if (path.endsWith('/deployments')) return Response.json([]);
             if (path.endsWith('/deployments/3/statuses')) return Response.json([{state:'success'}]);
-            if (path.endsWith('/deployments/1/statuses')) return Response.json({});
+            if (path.endsWith('/deployments/1/statuses')) {
+              if (process.env.FAILURE === 'attempt-status') return new Response(null, {status:500});
+              appendFileSync(${JSON.stringify(join(root, 'statuses.jsonl'))}, options.body + '\\n');
+              return Response.json({});
+            }
             if (path.endsWith('/deployments/2/statuses')) return Response.json([{state:'success'}]);
           }
           if (url.startsWith('https://api.cloudflare.com/client/v4/accounts/' + target.account + '/')) {
@@ -226,6 +252,7 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
               return Response.json({success:true,result:{events:{events,count:events.length}}});
             }
             if (path.endsWith('/d1/database/' + target.databaseId)) return Response.json({success:true,result:{name:target.database}});
+            if (path.endsWith('/versions/11111111-1111-1111-1111-111111111111')) return Response.json({success:true,result:{}});
             if (path.endsWith('/deployments')) return Response.json({success:true,result:{deployments:[{versions:[{version_id:(process.env.FAILURE === 'verification-changed' && path.includes(verification.api)) || (process.env.FAILURE === 'skipped-version' && path.includes(target[${JSON.stringify(scope === 'api' ? 'web' : 'api')}])) ? '22222222-2222-2222-2222-222222222222' : '11111111-1111-1111-1111-111111111111',percentage:100}]}]}});
           }
           if (new URL(url).hostname === target.api + '.fixture.workers.dev' || new URL(url).hostname === target.web + '.fixture.workers.dev') {
@@ -255,8 +282,15 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
           '--import',
           join(root, 'network.mjs'),
           join(root, 'scripts/deployment.mjs'),
-          'apply',
+          command,
           environment,
+          ...(command === 'rollback'
+            ? [
+                'api',
+                '11111111-1111-1111-1111-111111111111',
+                '11111111-1111-1111-1111-111111111111',
+              ]
+            : []),
         ],
         {
           cwd: root,
@@ -294,15 +328,35 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
         failure || late ? 1 : 0,
         `${environment}/${failure}: ${result.stdout}\n${result.stderr}`,
       )
-      const operation = JSON.parse(readFileSync(join(root, '.deploy/result.json'), 'utf8'))
       const records = () =>
         readFileSync(join(root, 'records.jsonl'), 'utf8').trim().split('\n').map(JSON.parse)
+      if (command === 'rollback') {
+        assert.deepEqual(
+          records().map(({ payload }) => payload.kind),
+          failure ? ['tsl-attempt'] : ['tsl-attempt', 'tsl-rollback'],
+        )
+        if (failure) assert.throws(() => readFileSync(join(root, 'commands.jsonl')))
+        else {
+          const commands = readFileSync(join(root, 'commands.jsonl'), 'utf8')
+            .trim()
+            .split('\n')
+            .map(JSON.parse)
+          assert.equal(commands.length, 1)
+          assert(commands[0].includes('rollback'))
+        }
+        continue
+      }
+      const operation = JSON.parse(readFileSync(join(root, '.deploy/result.json'), 'utf8'))
       if (late) {
         const done = ['preflight', 'migrations', 'sync', 'api', 'apiHealth', 'web', 'smoke']
         const stopsInPerformance = ['response', 'readiness-query'].includes(late)
         assert.deepEqual(operation.completed, stopsInPerformance ? done : [...done, 'performance'])
         assert.equal(operation.stage, stopsInPerformance ? 'performance' : 'cpuLogs')
-        assert.throws(() => records(), 'no success record after a failed performance test')
+        assert.deepEqual(
+          records().map(({ payload }) => payload.kind),
+          ['tsl-attempt'],
+          'failed mutations must leave the baseline invalidated',
+        )
         const report = JSON.parse(readFileSync(join(root, '.deploy/performance.json'), 'utf8'))
         if (late === 'readiness-query') {
           assert.equal(report.status, 'inconclusive')
@@ -349,7 +403,17 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
         if (scope !== 'web') assert(commands[2].includes(join(release, 'api/wrangler.json')))
         if (scope !== 'api') assert(commands.at(-1).includes('--upload-only'))
         assert(!commands.some((args) => args.includes('build')))
-        const [record] = records()
+        const [attempt, record] = records()
+        assert.equal(attempt.payload.kind, 'tsl-attempt')
+        assert.equal(record.payload.kind, 'tsl-release')
+        const statuses = readFileSync(join(root, 'statuses.jsonl'), 'utf8')
+          .trim()
+          .split('\n')
+          .map(JSON.parse)
+        assert.deepEqual(
+          statuses.map(({ state }) => state),
+          ['in_progress', 'success'],
+        )
         assert.equal(record.payload.runAttempt, '1')
         if (environment === 'verification') {
           assert.equal(record.payload.performance.passed, true)

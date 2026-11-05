@@ -149,8 +149,10 @@ content は「web のビルド時バンドル（設計文書 §5.1）」と「D1
 
 変更範囲の判定・適用順序・失敗時の停止・性能試験による本番昇格の条件は [ADR-0017](./adr/0017-change-scoped-releases.md)、content の同期を毎回実行する規則は [ADR-0006](./adr/0006-content-as-source-of-truth.md) が持つ。
 
+計画から適用までの排他と、失敗・中断後の再反映を判断する開始記録は [ADR-0018](./adr/0018-release-attempt-consistency.md) が持つ。
+
 - PR CI は既存の検査・build のみ。`develop` push は `verification`、`main` push は `production` を対象とし、手動実行もこの対応を固定する。GitHub Environments の許可ブランチはそれぞれ `develop` / `main` に限定する。
-- `changes` job は、各環境の最後の成功記録と対象 commit を比較し、対象 Worker を決める。対象がなければ `prepare` / `apply` を省略する。Cloudflare token は使用しない。
+- `changes` job は、先行リリース・ロールバックの終了後に各環境の最後の信頼できる成功記録と対象 commit を比較し、対象 Worker を決める。対象がなければ `prepare` / `apply` を省略する。未完了の開始記録があれば比較不能として両 Worker を対象にする。Cloudflare token は使用しない。
 - `prepare` job は Cloudflare token を持たず、対象 commit を固定して検査・対象 Worker の環境別 build・SQL 生成・manifest 作成を完了する。manifest は環境、SHA、source tree、Worker ごとのソース hash、対象 Worker、比較元の成功記録、問題数、全ファイルの SHA-256、migration 一覧を含む。対象 API の dry-run bundle、対象 Web の生成 config と `dist` を保存する。後続の `apply` job では再ビルドせず、同じ run の成果物を照合して利用する。
 - production も `prepare` 成功後に `apply` が自動開始し、人間の追加承認を待たず environment Secrets から Cloudflare token を取得する。両 environment の required reviewers・wait timer・custom deployment protection rules は設定せず、正確な許可ブランチを preflight で検査する。検証 / 本番の enable flag は明示設定されるまで無効とし、本番初回切替条件を満たす前に有効化しない。PR のマージは従来どおり人間が行う。
 - apply は **設定・manifest・鮮度・検証済み source の検査 → migration → content sync → API → API 確認 → Web → smoke test →（verification だけ）性能測定 → CPU ログ照合 → 成功記録** の順。対象外 Worker の更新だけを省略し、どの段階でも失敗したら後続を停止する。production は、配備対象ソースが一致する検証成功記録と性能証跡を確認する（「検証環境の性能試験」）。同じ環境の通常リリースと復旧は共通 concurrency group で直列化し、`cancel-in-progress: false` とする。
@@ -178,7 +180,7 @@ PR は検査のみ、`develop` は検証環境、`main` は本番環境へ、品
 
 PR では型・lint・テスト・ハーネス検査を維持し、Worker ビルドと Web 成果物検査を条件付きで実行する。Knowledge Graph viewer のビルドもアプリ・viewer 関連の変更時に絞る。workflow 全体はパスで除外しない。
 
-成功記録なし・比較不能・ロールバック後は両方を対象とする。**Deploy の手動実行も両方を対象**とし、Git に表れない Variables/Secrets の更新や復旧後の再反映に使う。片方を省略するときは、apply の変更前にその稼働 version と比較元の記録の一致を確認する。不一致や計画後の成功記録の変更は停止し、全体を再実行する。手動更新で版がずれた場合は Deploy を手動実行する。
+成功記録なし・比較不能・ロールバック後・遠隔変更が未完了の場合は両方を対象とする。検証用の `apps/api/wrangler.test.jsonc` は API の実際の配備設定であり、テスト用ソースの除外には含めない。**Deploy の手動実行も両方を対象**とし、Git に表れない Variables/Secrets の更新や復旧後の再反映に使う。片方を省略するときは、apply の変更前にその稼働 version と比較元の記録の一致を確認する。不一致や計画後の成功記録の変更は停止し、全体を再実行する。手動更新で版がずれた場合は Deploy を手動実行する。
 
 ## 初回設定
 
@@ -266,13 +268,15 @@ prepare は Cloudflare の変更権限を持たず、locked dependencies、品�
 
 apply は対象環境の Secrets を使用し、manifest・設定・最新 branch SHA・検証ソース、比較元の成功記録、省略する Worker の実 version、実アカウントの workers.dev subdomain、現在の API に対する Service Token 認証を変更前に検査する。次に **migration → content sync → API deploy → API health → Web upload → smoke test →（verification だけ）性能測定 → CPU ログ照合 → 成功記録**を行い、対象外 Worker の更新だけを省略する。Web upload は再ビルドせず prepare の receipt・全ファイル hash を照合する。content sync は冪等なため毎回実行する（失敗 run が D1 だけを更新した後に content が戻っても取りこぼさない）。content 差分は計画に情報として表示する。問題が空のリリースは拒否する。
 
-同一環境の deploy / rollback は `deploy-verification` / `deploy-production` concurrency group を共有する。性能測定と CPU ログ照合は apply job の中で行うため、測定中に通常フローの別デプロイや rollback は始まらない。変更開始済みの run は新しい push でキャンセルしない。変更開始前に branch が進んでいた場合は古い run を拒否する。
+同一環境の deploy / rollback は `deploy-verification` / `deploy-production` concurrency group を共有する。Deploy は workflow 全体で排他を取り、`changes` の計画から `prepare`、`apply`、成功記録まで保持する。apply job に同じ排他を重ねない。ビルド中や性能測定中も、後続の計画や rollback は待機する。変更開始済みの run は新しい push でキャンセルしない。変更開始前に branch が進んでいた場合は古い run を拒否する。
+
+apply は事前検査の後、D1・Worker を変更する前に GitHub Deployment へ `tsl-attempt` を保存し、`in_progress` とする。ロールバックも Worker の変更前に同じ開始記録を残す。保存できなければ遠隔変更を行わない。後続の `tsl-release` 成功記録がない開始記録は、失敗・中断後も比較元を無効にする。ソースが過去の成功版へ戻っていても、次回は全体を準備し直して migration/content sync・両 Worker の配備・検査を行う。通常のドキュメント更新で未完了の開始記録がなければ、ビルド・配備・D1 同期を省略できる。
 
 結果の確認先:
 
 - Actions の Job Summary：plan、処理段階、反映前後の Worker version、成功 / 失敗。
 - `deployment-result-<run>-<attempt>` artifact：認証情報を除いた `result.json`。保持 30 日。
-- GitHub Deployment：全ステップ成功時だけ作成する `tsl-release` 記録（環境・SHA・tree・content tree・version・run ID / attempt。verification は性能試験の証跡を含む）。
+- GitHub Deployment：変更開始前の `tsl-attempt` 記録（環境・SHA・run ID / attempt）と、全ステップ成功時だけ作成する `tsl-release` 記録（環境・SHA・tree・content tree・version・run ID / attempt。verification は性能試験の証跡を含む）。
 - `performance-<run>-<attempt>` artifact（verification だけ）：性能試験の `performance.json`。保持 90 日。「検証環境の性能試験」を参照。
 - `release-<run>-<attempt>` artifact：ビルド成果物・SQL・manifest。保持 3 日。認証情報は含めないが、サーバー成果物・解答データを含む。ダウンロードには GitHub 認証と artifact のアクセス権が必要であり、公開 Web assets へ転用しない。永続的な秘密の保存先にはしない。
 
