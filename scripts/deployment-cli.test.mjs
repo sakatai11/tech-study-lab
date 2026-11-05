@@ -15,14 +15,26 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
+import { releasePlan } from './deployment-changes.mjs'
 import { createManifest, getTarget } from './deployment-lib.mjs'
 import { conditionsId } from './performance-lib.mjs'
 
 const source = fileURLToPath(new URL('../', import.meta.url))
 const verification = getTarget('verification')
 
-test('actual apply CLI uploads prepared files in order and refuses invalid releases before any mutation [ADR-0006] [ADR-0010] [ADR-0016]', () => {
+test('actual apply CLI records attempts before mutations and refuses invalid releases [ADR-0006] [ADR-0010] [ADR-0016] [ADR-0017] [ADR-0018]', () => {
   const scenarios = [
+    { environment: 'verification', command: 'rollback' },
+    { environment: 'production', command: 'rollback' },
+    { environment: 'verification', command: 'rollback', failure: 'attempt-status' },
+    { environment: 'verification', scope: 'api' },
+    { environment: 'verification', scope: 'web' },
+    { environment: 'verification', scope: 'api', failure: 'skipped-version' },
+    { environment: 'verification', scope: 'web', failure: 'skipped-version' },
+    { environment: 'verification', scope: 'api', failure: 'baseline-changed' },
+    { environment: 'verification', scope: 'api', failure: 'unsafe-skip' },
+    { environment: 'production', sourceDelta: 'docs' },
+    { environment: 'production', sourceDelta: 'runtime', failure: 'source-mismatch' },
     ...[
       undefined,
       'auth',
@@ -32,6 +44,8 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
       'disabled',
       'sampling',
       'observability-token',
+      'attempt-create',
+      'attempt-status',
     ].map((failure) => ({
       environment: 'verification',
       failure,
@@ -52,7 +66,15 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
       'verification-changed',
     ].map((failure) => ({ environment: 'production', failure })),
   ]
-  for (const { environment, failure, previousContent, late } of scenarios) {
+  for (const {
+    environment,
+    failure,
+    previousContent,
+    late,
+    scope,
+    sourceDelta,
+    command = 'apply',
+  } of scenarios) {
     const target = getTarget(environment)
     const root = realpathSync(mkdtempSync(join(tmpdir(), 'tsl-apply-test-')))
     const json = (path, value) => writeFileSync(join(root, path), JSON.stringify(value))
@@ -62,6 +84,7 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
       for (const name of [
         'deployment.mjs',
         'deployment-lib.mjs',
+        'deployment-changes.mjs',
         'deployment-smoke.mjs',
         'performance.mjs',
         'performance-lib.mjs',
@@ -81,6 +104,36 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
         '-m',
         'fixture',
       )
+      const baseSha = git('rev-parse', 'HEAD')
+      const baseTree = git('rev-parse', 'HEAD^{tree}')
+      const prior = scope
+        ? {
+            sha: baseSha,
+            tree: baseTree,
+            apiVersion: '11111111-1111-1111-1111-111111111111',
+            webVersion: '11111111-1111-1111-1111-111111111111',
+          }
+        : null
+      if (scope || sourceDelta) {
+        const path =
+          sourceDelta === 'docs' ? 'docs/change.md' : `apps/${scope ?? 'api'}/src/change.ts`
+        mkdirSync(join(root, path, '..'), { recursive: true })
+        writeFileSync(join(root, path), 'changed')
+        if (failure === 'unsafe-skip') {
+          mkdirSync(join(root, 'apps/web/src'), { recursive: true })
+          writeFileSync(join(root, 'apps/web/src/change.ts'), 'also changed')
+        }
+        git('add', sourceDelta === 'docs' ? 'docs' : 'apps')
+        git(
+          '-c',
+          'user.name=Test',
+          '-c',
+          'user.email=test@example.invalid',
+          'commit',
+          '-m',
+          'change',
+        )
+      }
       const sha = git('rev-parse', 'HEAD')
       const tree = git('rev-parse', 'HEAD^{tree}')
       const release = join(root, '.deploy/release')
@@ -117,6 +170,8 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
         preview_urls: false,
         observability: { enabled: true, head_sampling_rate: failure === 'sampling' ? 0.5 : 1 },
       })
+      cpSync(join(release, 'web/server/wrangler.json'), join(release, 'web-config.json'))
+      if (scope === 'api') rmSync(join(release, 'web'), { recursive: true })
       json('.deploy/release/content/summary.json', {
         smokeQuestion: 'test-q1',
         smokeLesson: 'test',
@@ -128,6 +183,10 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
           environment,
           sha,
           tree,
+          plan: {
+            ...releasePlan(sha, prior, { cwd: root }),
+            ...(failure === 'unsafe-skip' ? { workers: { api: true, web: false } } : {}),
+          },
           contentTree: git('rev-parse', 'HEAD:content'),
           questionCount: 1,
           runId: 'fixture',
@@ -140,7 +199,12 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
       // Child tooling is captured, never executed. The fetch replacement refuses unknown URLs.
       writeFileSync(
         join(root, 'bin/pnpm'),
-        `#!${process.execPath}\nrequire('node:fs').appendFileSync(${JSON.stringify(join(root, 'commands.jsonl'))}, JSON.stringify(process.argv.slice(2)) + '\\n')\n`,
+        `#!${process.execPath}
+const fs = require('node:fs'), assert = require('node:assert/strict');
+assert(fs.readFileSync(${JSON.stringify(join(root, 'records.jsonl'))}, 'utf8').includes('"kind":"tsl-attempt"'));
+assert(fs.readFileSync(${JSON.stringify(join(root, 'statuses.jsonl'))}, 'utf8').includes('"state":"in_progress"'));
+fs.appendFileSync(${JSON.stringify(join(root, 'commands.jsonl'))}, JSON.stringify(process.argv.slice(2)) + '\\n');
+`,
       )
       chmodSync(join(root, 'bin/pnpm'), 0o755)
       writeFileSync(
@@ -149,7 +213,10 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
         import { appendFileSync } from 'node:fs';
         const target = ${JSON.stringify(target)};
         const rays = [];
-        const proof = {passed:true,conditionsId:${JSON.stringify(conditionsId())},tree:${JSON.stringify(tree)},runId:'7',runAttempt:'1',apiVersion:'11111111-1111-1111-1111-111111111111',webVersion:'11111111-1111-1111-1111-111111111111',cpu:{status:'passed'}};
+        const verificationTree = ${JSON.stringify(sourceDelta ? baseTree : tree)};
+        const verificationSha = ${JSON.stringify(sourceDelta ? baseSha : sha)};
+        const prior = ${JSON.stringify(prior)};
+        const proof = {passed:true,conditionsId:${JSON.stringify(conditionsId())},tree:verificationTree,runId:'7',runAttempt:'1',apiVersion:'11111111-1111-1111-1111-111111111111',webVersion:'11111111-1111-1111-1111-111111111111',cpu:{status:'passed'}};
         const verification = ${JSON.stringify(verification)};
         globalThis.fetch = async (url, options = {}) => {
           url = String(url);
@@ -158,12 +225,21 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
             if (path.endsWith('/deployment-branch-policies')) return Response.json({branch_policies:[{name:process.env.FAILURE === 'branch-policy' ? '*' : target.branch,type:'branch'}]});
             if (path.endsWith('/environments/' + target.environment)) return Response.json({deployment_branch_policy:{custom_branch_policies:true}, protection_rules:[]});
             if (path.endsWith('/git/ref/heads/' + target.branch)) return Response.json({object:{sha:process.env.FAILURE === 'stale' ? 'f'.repeat(40) : process.env.GITHUB_SHA}});
-            if (path.endsWith('/deployments') && options.method === 'POST') { appendFileSync(${JSON.stringify(join(root, 'records.jsonl'))}, options.body + '\\n'); return Response.json({id:1}); }
-            if (path.endsWith('/deployments') && target.environment === 'production' && new URL(url).searchParams.get('environment') === 'verification') return Response.json(process.env.FAILURE === 'unverified' ? [] : [{id:2,sha:process.env.GITHUB_SHA,payload:{kind:'tsl-release',tree:${JSON.stringify(tree)},runId:'7',runAttempt:'1',apiVersion:'11111111-1111-1111-1111-111111111111',webVersion:'11111111-1111-1111-1111-111111111111',...(process.env.FAILURE === 'no-performance-proof' ? {} : {performance:proof})}}]);
+            if (path.endsWith('/deployments') && options.method === 'POST') {
+              if (process.env.FAILURE === 'attempt-create') return new Response(null, {status:500});
+              appendFileSync(${JSON.stringify(join(root, 'records.jsonl'))}, options.body + '\\n');
+              return Response.json({id:1});
+            }
+            if (path.endsWith('/deployments') && target.environment === 'production' && new URL(url).searchParams.get('environment') === 'verification') return Response.json(process.env.FAILURE === 'unverified' ? [] : [{id:2,sha:verificationSha,payload:{kind:'tsl-release',tree:verificationTree,runId:'7',runAttempt:'1',apiVersion:'11111111-1111-1111-1111-111111111111',webVersion:'11111111-1111-1111-1111-111111111111',...(process.env.FAILURE === 'no-performance-proof' ? {} : {performance:proof})}}]);
+            if (path.endsWith('/deployments') && prior) return Response.json([{id:3,sha:process.env.FAILURE === 'baseline-changed' ? 'f'.repeat(40) : prior.sha,payload:{kind:'tsl-release',tree:prior.tree,apiVersion:prior.apiVersion,webVersion:prior.webVersion}}]);
             if (path.endsWith('/deployments') && process.env.PREVIOUS_CONTENT) return Response.json([{id:3,sha:'e'.repeat(40),payload:{kind:'tsl-release',contentTree:${JSON.stringify(git('rev-parse', 'HEAD:content'))}}}]);
             if (path.endsWith('/deployments')) return Response.json([]);
             if (path.endsWith('/deployments/3/statuses')) return Response.json([{state:'success'}]);
-            if (path.endsWith('/deployments/1/statuses')) return Response.json({});
+            if (path.endsWith('/deployments/1/statuses')) {
+              if (process.env.FAILURE === 'attempt-status') return new Response(null, {status:500});
+              appendFileSync(${JSON.stringify(join(root, 'statuses.jsonl'))}, options.body + '\\n');
+              return Response.json({});
+            }
             if (path.endsWith('/deployments/2/statuses')) return Response.json([{state:'success'}]);
           }
           if (url.startsWith('https://api.cloudflare.com/client/v4/accounts/' + target.account + '/')) {
@@ -176,7 +252,8 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
               return Response.json({success:true,result:{events:{events,count:events.length}}});
             }
             if (path.endsWith('/d1/database/' + target.databaseId)) return Response.json({success:true,result:{name:target.database}});
-            if (path.endsWith('/deployments')) return Response.json({success:true,result:{deployments:[{versions:[{version_id:process.env.FAILURE === 'verification-changed' && path.includes(verification.api) ? '22222222-2222-2222-2222-222222222222' : '11111111-1111-1111-1111-111111111111',percentage:100}]}]}});
+            if (path.endsWith('/versions/11111111-1111-1111-1111-111111111111')) return Response.json({success:true,result:{}});
+            if (path.endsWith('/deployments')) return Response.json({success:true,result:{deployments:[{versions:[{version_id:(process.env.FAILURE === 'verification-changed' && path.includes(verification.api)) || (process.env.FAILURE === 'skipped-version' && path.includes(target[${JSON.stringify(scope === 'api' ? 'web' : 'api')}])) ? '22222222-2222-2222-2222-222222222222' : '11111111-1111-1111-1111-111111111111',percentage:100}]}]}});
           }
           if (new URL(url).hostname === target.api + '.fixture.workers.dev' || new URL(url).hostname === target.web + '.fixture.workers.dev') {
             if (path === '/health') return Response.json({status:'ok'});
@@ -205,8 +282,15 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
           '--import',
           join(root, 'network.mjs'),
           join(root, 'scripts/deployment.mjs'),
-          'apply',
+          command,
           environment,
+          ...(command === 'rollback'
+            ? [
+                'api',
+                '11111111-1111-1111-1111-111111111111',
+                '11111111-1111-1111-1111-111111111111',
+              ]
+            : []),
         ],
         {
           cwd: root,
@@ -244,15 +328,35 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
         failure || late ? 1 : 0,
         `${environment}/${failure}: ${result.stdout}\n${result.stderr}`,
       )
-      const operation = JSON.parse(readFileSync(join(root, '.deploy/result.json'), 'utf8'))
       const records = () =>
         readFileSync(join(root, 'records.jsonl'), 'utf8').trim().split('\n').map(JSON.parse)
+      if (command === 'rollback') {
+        assert.deepEqual(
+          records().map(({ payload }) => payload.kind),
+          failure ? ['tsl-attempt'] : ['tsl-attempt', 'tsl-rollback'],
+        )
+        if (failure) assert.throws(() => readFileSync(join(root, 'commands.jsonl')))
+        else {
+          const commands = readFileSync(join(root, 'commands.jsonl'), 'utf8')
+            .trim()
+            .split('\n')
+            .map(JSON.parse)
+          assert.equal(commands.length, 1)
+          assert(commands[0].includes('rollback'))
+        }
+        continue
+      }
+      const operation = JSON.parse(readFileSync(join(root, '.deploy/result.json'), 'utf8'))
       if (late) {
         const done = ['preflight', 'migrations', 'sync', 'api', 'apiHealth', 'web', 'smoke']
         const stopsInPerformance = ['response', 'readiness-query'].includes(late)
         assert.deepEqual(operation.completed, stopsInPerformance ? done : [...done, 'performance'])
         assert.equal(operation.stage, stopsInPerformance ? 'performance' : 'cpuLogs')
-        assert.throws(() => records(), 'no success record after a failed performance test')
+        assert.deepEqual(
+          records().map(({ payload }) => payload.kind),
+          ['tsl-attempt'],
+          'failed mutations must leave the baseline invalidated',
+        )
         const report = JSON.parse(readFileSync(join(root, '.deploy/performance.json'), 'utf8'))
         if (late === 'readiness-query') {
           assert.equal(report.status, 'inconclusive')
@@ -268,6 +372,13 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
         assert(!JSON.stringify(report).includes('Learning'))
       } else if (failure) {
         assert.equal(result.status, 1, `${failure}: ${result.stderr}`)
+        const reason = {
+          'skipped-version': `skipped ${scope === 'api' ? 'web' : 'api'} version changed`,
+          'baseline-changed': 'release baseline changed',
+          'unsafe-skip': 'cannot skip changed web source',
+          'source-mismatch': 'production source must match',
+        }[failure]
+        if (reason) assert(result.stderr.includes(reason), result.stderr)
         assert.deepEqual(operation.completed, [])
         assert.throws(() => readFileSync(join(root, 'commands.jsonl')))
       } else {
@@ -278,19 +389,31 @@ test('actual apply CLI uploads prepared files in order and refuses invalid relea
           .split('\n')
           .map(JSON.parse)
         assert.deepEqual(
-          commands.map((args, index) => args.slice(index === 3 ? 3 : 4, index === 3 ? 5 : 6)),
+          commands.map((args) =>
+            args.slice(args[3] === 'node' ? 3 : 4, args[3] === 'node' ? 5 : 6),
+          ),
           [
             ['d1', 'migrations'],
             ['d1', 'execute'],
-            ['deploy', '--config'],
-            ['node', 'scripts/deploy.mjs'],
+            ...(scope !== 'web' ? [['deploy', '--config']] : []),
+            ...(scope !== 'api' ? [['node', 'scripts/deploy.mjs']] : []),
           ],
         )
         assert(commands[1].includes(join(release, 'content/sync.sql')))
-        assert(commands[2].includes(join(release, 'api/wrangler.json')))
-        assert(commands[3].includes('--upload-only'))
+        if (scope !== 'web') assert(commands[2].includes(join(release, 'api/wrangler.json')))
+        if (scope !== 'api') assert(commands.at(-1).includes('--upload-only'))
         assert(!commands.some((args) => args.includes('build')))
-        const [record] = records()
+        const [attempt, record] = records()
+        assert.equal(attempt.payload.kind, 'tsl-attempt')
+        assert.equal(record.payload.kind, 'tsl-release')
+        const statuses = readFileSync(join(root, 'statuses.jsonl'), 'utf8')
+          .trim()
+          .split('\n')
+          .map(JSON.parse)
+        assert.deepEqual(
+          statuses.map(({ state }) => state),
+          ['in_progress', 'success'],
+        )
         assert.equal(record.payload.runAttempt, '1')
         if (environment === 'verification') {
           assert.equal(record.payload.performance.passed, true)

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -82,6 +82,42 @@ test('release baseline survives failed runs and is invalidated by rollback', asy
   assert.equal(await lastRelease('verification', api), null)
 })
 
+test('an unfinished mutation invalidates the baseline until a newer success [ADR-0018]', async () => {
+  const success = { id: 1, sha: 'a'.repeat(40), payload: { kind: 'tsl-release', tree } }
+  const attempt = { id: 2, sha: 'b'.repeat(40), payload: { kind: 'tsl-attempt' } }
+  let deployments = [attempt, success]
+  const api = async (path) =>
+    path.startsWith('deployments?') ? deployments : [{ state: 'success' }]
+  assert.equal(await lastRelease('verification', api), null)
+  // Missing/failure statuses must not make an interrupted mutation disappear.
+  for (const statuses of [[], [{ state: 'in_progress' }], [{ state: 'failure' }]]) {
+    assert.equal(
+      await lastRelease('verification', async (path) =>
+        path.startsWith('deployments?') ? deployments : statuses,
+      ),
+      null,
+    )
+  }
+  deployments = [{ ...success, id: 3 }, attempt, success]
+  assert.equal((await lastRelease('verification', api)).sha, success.sha)
+})
+
+test('planning and apply share a workflow lock with rollback and cannot self-deadlock [ADR-0018]', () => {
+  const deploy = readFileSync(new URL('../.github/workflows/deploy.yml', import.meta.url), 'utf8')
+  const rollback = readFileSync(
+    new URL('../.github/workflows/rollback.yml', import.meta.url),
+    'utf8',
+  )
+  const root = deploy.slice(0, deploy.indexOf('\njobs:'))
+  assert.match(
+    root,
+    /^concurrency:\n {2}group: deploy-\$\{\{[^\n]+\}\}\n {2}cancel-in-progress: false/m,
+  )
+  assert(!/^ {4}concurrency:/m.test(deploy), 'a job cannot reacquire its workflow lock')
+  assert.match(rollback, /group: deploy-\$\{\{ inputs.environment \}\}/)
+  assert.match(rollback, /cancel-in-progress: false/)
+})
+
 test('production proceeds without reviewer approval but requires an exact branch policy', () => {
   const protection = {
     protection_rules: [],
@@ -134,6 +170,29 @@ test('production refuses verification records without a matching performance pro
   assert.throws(() => production(withProof({ webVersion: 'other' })), /Web version/)
   assert.throws(() => production(withProof({ runAttempt: '2' })), /attempt/)
   assert.throws(() => production({ ...verified, tree: 'c'.repeat(40) }), /latest successful/)
+})
+
+test('promotion compares deployable sources while keeping the proof bound to its original tree [ADR-0017]', () => {
+  const candidate = { api: 'a'.repeat(64), web: 'b'.repeat(64) }
+  const check = (record, sources) =>
+    assertFreshSource('production', 'a'.repeat(40), 'a'.repeat(40), 'c'.repeat(40), record, sources)
+  check(verified, { candidate, verified: candidate })
+  assert.throws(
+    () => check(verified, { candidate, verified: { ...candidate, api: 'c'.repeat(64) } }),
+    /latest successful/,
+  )
+  assert.throws(
+    () => check(verified, { candidate, verified: { ...candidate, web: 'c'.repeat(64) } }),
+    /latest successful/,
+  )
+  assert.throws(
+    () =>
+      check(
+        { ...verified, performance: { ...verified.performance, tree: 'c'.repeat(40) } },
+        { candidate, verified: candidate },
+      ),
+    /source tree/,
+  )
 })
 
 test('API and Web cannot bind a resource from the other environment', () => {
@@ -213,7 +272,7 @@ test('manifest detects tampered SQL, added files, and wrong environment', () => 
   }
 })
 
-test('release applies schema/data/API/Web in order and stops at every failed stage [ADR-0010] [ADR-0016]', async () => {
+test('release applies schema/data/API/Web in order and stops at every failed stage [ADR-0010] [ADR-0016] [ADR-0017]', async () => {
   const common = ['preflight', 'migrations', 'sync', 'api', 'apiHealth', 'web', 'smoke']
   assert.deepEqual(releaseStages('production'), [...common, 'record'])
   assert.deepEqual(releaseStages('verification'), [...common, 'performance', 'cpuLogs', 'record'])
