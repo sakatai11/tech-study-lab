@@ -52,7 +52,7 @@ export function assertDeploymentProtection(environment, config, policies) {
   )
 }
 
-export function assertFreshSource(environment, sha, latestSha, tree, verification) {
+export function assertFreshSource(environment, sha, latestSha, tree, verification, sources) {
   assert.match(sha, /^[a-f0-9]{40}$/)
   assert.equal(
     sha,
@@ -60,11 +60,19 @@ export function assertFreshSource(environment, sha, latestSha, tree, verificatio
     'branch advanced; start a new run instead of deploying stale artifacts',
   )
   if (environment === 'production') {
-    assert.equal(
-      verification?.tree,
-      tree,
-      'production source must match the latest successful verification',
-    )
+    if (sources) {
+      for (const worker of ['api', 'web']) assert.match(sources.candidate[worker], /^[a-f0-9]{64}$/)
+      assert.deepEqual(
+        sources.candidate,
+        sources.verified,
+        'production source must match the latest successful verification',
+      )
+    } else
+      assert.equal(
+        verification?.tree,
+        tree,
+        'production source must match the latest successful verification',
+      )
     assertPerformanceProof(verification)
   }
 }

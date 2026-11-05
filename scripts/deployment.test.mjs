@@ -136,6 +136,25 @@ test('production refuses verification records without a matching performance pro
   assert.throws(() => production({ ...verified, tree: 'c'.repeat(40) }), /latest successful/)
 })
 
+test('promotion compares deployable sources while keeping the proof bound to its original tree [ADR-0017]', () => {
+  const candidate = { api: 'a'.repeat(64), web: 'b'.repeat(64) }
+  const check = (record, sources) =>
+    assertFreshSource('production', 'a'.repeat(40), 'a'.repeat(40), 'c'.repeat(40), record, sources)
+  check(verified, { candidate, verified: candidate })
+  assert.throws(
+    () => check(verified, { candidate, verified: { ...candidate, api: 'c'.repeat(64) } }),
+    /latest successful/,
+  )
+  assert.throws(
+    () =>
+      check(
+        { ...verified, performance: { ...verified.performance, tree: 'c'.repeat(40) } },
+        { candidate, verified: candidate },
+      ),
+    /source tree/,
+  )
+})
+
 test('API and Web cannot bind a resource from the other environment', () => {
   const target = getTarget('verification')
   const api = {
@@ -213,7 +232,7 @@ test('manifest detects tampered SQL, added files, and wrong environment', () => 
   }
 })
 
-test('release applies schema/data/API/Web in order and stops at every failed stage [ADR-0010] [ADR-0016]', async () => {
+test('release applies schema/data/API/Web in order and stops at every failed stage [ADR-0010] [ADR-0016] [ADR-0017]', async () => {
   const common = ['preflight', 'migrations', 'sync', 'api', 'apiHealth', 'web', 'smoke']
   assert.deepEqual(releaseStages('production'), [...common, 'record'])
   assert.deepEqual(releaseStages('verification'), [...common, 'performance', 'cpuLogs', 'record'])
