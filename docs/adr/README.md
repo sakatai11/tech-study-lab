@@ -56,3 +56,4 @@
 | [ADR-0016](./0016-performance-gated-promotion.md) | 本番へ昇格できるのは、性能試験まで成功した検証環境と同じ source tree だけにする | Superseded by ADR-0017 |
 | [ADR-0017](./0017-change-scoped-releases.md) | デプロイに影響する変更だけを、Worker ごとに反映する | Accepted |
 | [ADR-0018](./0018-release-attempt-consistency.md) | 変更処理の開始から成功までを記録し、省略判定を環境の状態に合わせる | Accepted |
+| [ADR-0019](./0019-csr-for-user-specific-screens.md) | 認証後の4画面は、静的な枠をビルド時に生成し、ユーザー固有データをブラウザで取得・描画する | Proposed |

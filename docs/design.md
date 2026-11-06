@@ -86,14 +86,14 @@ pnpm workspaces による monorepo とする。`apps/web` は画面、`apps/api`
 
 - フロント ⇔ API は Hono の `hc`（型安全RPC）で接続。
 - Drizzle スキーマと Zod スキーマを `packages/shared` に集約し、フロント・API・DBで単一ソース化する。
-- `apps/web` と `apps/api` は別の Worker としてデプロイし、Web の Server loader は Service Binding（`InternalApi`）、ブラウザは API Worker の公開 URL で API を呼ぶ。書き込みは Hono API を通す（[ADR-0012](./adr/0012-separate-web-and-api-workers.md)）。公開 entrypoint の検証の順序は [ADR-0008](./adr/0008-production-access-boundary.md)、`user_id` の決定は [ADR-0003](./adr/0003-server-injected-user-id.md) が持つ。
+- `apps/web` と `apps/api` は別の Worker としてデプロイし、ブラウザは API Worker の公開 URL で API を呼ぶ。ユーザー固有データの取得も書き込みも、この経路で Hono API を通す（[ADR-0012](./adr/0012-separate-web-and-api-workers.md)、[ADR-0019](./adr/0019-csr-for-user-specific-screens.md)）。Web Worker の Service Binding（`InternalApi`）は読み取りに使わない。呼び出し元がなくなるため、[ADR-0019](./adr/0019-csr-for-user-specific-screens.md) の段階2で撤去する。公開 entrypoint の検証の順序は [ADR-0008](./adr/0008-production-access-boundary.md)、`user_id` の決定は [ADR-0003](./adr/0003-server-injected-user-id.md) が持つ。
 
 ### 4.2 フロントエンドの層と import 境界
 
 `features + components/ui` 型を採用。`src/app` は薄く保ち、ロジックは `features` に寄せる。
 
 - **Quiz 表示コンポーネント**は `apps/web/src/features/quiz/client/components` に置く。問題・解説・intro 内容・結果導線を表示 props で受け取り、画面フェーズと問題送りを管理する再利用可能な Client Component とする。`/quiz/[lesson]`（レッスン全問）・`/review`（due 問題）・`wrongOnly`（間違えた問題だけ）は供給する ViewModel / 表示 props だけを差し替え、解答 mutation は `client/hooks` の共通 hook を通す。
-- feature 内の実行環境固有処理は `client/`・`server/` に分ける。`client/components` は Client Component、`client/hooks` は mutation と通信 state、`server/` は page / Server Component から呼ぶ初回取得・join・ViewModel 化を担当する。両環境から使える `api/`・`mapper.ts`・`view-model.ts` は feature 直下に置き、client/server のどちらかへ重複配置しない。`server/` 配下には `import 'server-only'`、Client Component の入口には `'use client'` を置き、ディレクトリ名だけに境界の強制を任せない。
+- feature 内の実行環境固有処理は `client/`・`server/` に分ける。`client/components` は Client Component、`client/hooks` はユーザー固有データの取得・再取得と mutation、およびそれに伴う通信 state、`server/` は page / Server Component から呼ぶ content 由来の初回取得・join・ViewModel 化を担当する。ユーザー固有データは `server/` で取得しない（[ADR-0019](./adr/0019-csr-for-user-specific-screens.md)）。両環境から使える `api/`・`mapper.ts`・`view-model.ts` は feature 直下に置き、client/server のどちらかへ重複配置しない。`server/` 配下には `import 'server-only'`、Client Component の入口には `'use client'` を置き、ディレクトリ名だけに境界の強制を任せない。
 - `features/*/server` は「page からしか呼ばれないから app 所有」ではなく、「feature の ViewModel を作るための Server 専用 loader」として feature 所有にする。`src/app` は URL・metadata・layout・route params の受け渡し、loader 呼び出し、feature component への ViewModel の props 渡しだけを担う。feature 固有の表示 UI、content/API DTO の取得、join、sort、filter、ViewModel 化は `features` に閉じ込める。例外として、複数 feature を横断して **1 ページ専用**にデータ取得・join を伴う合成をする処理は `app` 直下ではなく、必要になった時点で `features/<page-feature>/server` のようなページ feature として切り出す。一方、複数ルートが共有する shell と feature の表示部品を props 契約でつなぐ**表示合成**はこの例外の対象外であり、`app/_components/` に置く（`app-shell.tsx`）。この層でも shell の組み立てに必要な loader 呼び出しは行ってよく、禁じるのは join・sort・filter である（`app/**/page.tsx` と同じ粒度）。
 - **`app/` と `features/` は別の軸で命名する。** `app/` の名前は **URL パス**（ユーザーから見た画面の場所）、`features/` の名前は**ドメイン概念名**（扱う対象）である。両者の名前は**一致しなくてよく、一致は要件でもない**。`/home` ↔ `features/dashboard` は、`GET /dashboard/due-count`・`apps/api` の `routes/dashboard.ts`・`NavigationSection` の `'dashboard'`・`components/dashboard-shell.tsx` と語彙を揃えるため feature 側を `home` に改名しない。`/learn/[domain]/[topic]/[lesson]` ↔ `features/lesson` も、URL は学習セクション、feature は扱うリソースを指す。`/quiz`・`/review`・`/domains` のように結果として一致する場合もある。route と feature は 1:1 でもない（共通シェルが使う `features/dashboard` のバッジは複数ルートに表示する）。ナビゲーションの `NavigationSection`（`tree` = `/domains` など）は UI ラベル由来の別語彙であり、この 2 軸には含めない。
 - `apps/web` 側では `_DAL` / `dal` という名前を使わない。DB へ直接アクセスしないため、Data Access Layer は `apps/api` 側の Drizzle / D1 アクセス層として定義する。
@@ -108,8 +108,8 @@ pnpm workspaces による monorepo とする。`apps/web` は画面、`apps/api`
 | `app/**/page.tsx`・`layout.tsx` | URL、metadata、layout、route params、`notFound()`、loader 呼び出し、feature component への props 渡し | `features/*/server`、`features/*/client/components`、全画面共通 component、`components/ui` | `lib/content`、feature の `api`・`mapper`・`client/hooks` の直接利用、DTO の join・sort・filter、feature 固有 UI の実装 |
 | `app/_components/**` | `/` を除くすべての認証後ルート（`/home` とユーザー向け学習ルート。ADR-0008）が共有する shell と、feature の表示部品を props 契約で合成する composition layer。shell の組み立てと、そのために必要な loader 呼び出しに徹する。private folder であり route を持たない | `features/*/server`、`features/*/client/components`、全画面共通 component、`components/ui` | `lib/content`、feature の `api`・`mapper`・`client/hooks` の直接利用、DTO の join・sort・filter、feature 固有 UI の実装、1 ページ専用のデータ合成（→ `features/<page-feature>/server`）。公開トップ `/` はこの層を使わない |
 | `features/*/client/components` | Client Component。ViewModel の表示、画面フェーズ・現在問題・`wrongOnly`・キーボード操作などの表示操作 state | 同 feature の `client/hooks`・`view-model`、`components/ui`、props 契約が公開された再利用 component | `server`、`lib/api-server`、content loader、API client の直接利用、DTO 変換 |
-| `features/*/client/hooks` | Browser API client の生成、mutation と、それに伴う `submitting`・`error`・API 由来の結果 state。共通シェルのユーザー固有バッジはマウント後の取得も扱う（§5.3） | 同 feature の `api`、`lib` の横断インフラ、共有 DTO 型 | Server data の再取得、`server`、`lib/api-server`、content loader、mapper、ViewModel の複製保持、画面レイアウト |
-| `features/*/server` | Server loaderと必要なServer Component。初回データ取得、複数データの join、mapper 呼び出し、ViewModel の返却 | 同 feature の `api`・`mapper`・`view-model`、`lib/api`・`lib/api-server`・`lib/content`、Server専用ライブラリ、**子として描画するための** `client/components`（props 契約経由の合成。ロジックの取り込みではない） | `client/hooks`（mutation・通信 state ロジックの取り込み）、ブラウザ専用 API、Client state の複製 |
+| `features/*/client/hooks` | Browser API client の生成、ユーザー固有データの初回取得・再取得（`lib/` の共通取得 hook 経由）、mutation と、それに伴う loading・空・`error`・`submitting`・API 由来の結果 state。取得結果は同 feature の mapper で ViewModel 化する。共通シェルのユーザー固有バッジもマウント後の取得を扱う（§5.3） | 同 feature の `api`・`mapper`・`view-model`、`lib` の横断インフラ、共有 DTO 型 | `server`、`lib/api-server`、content loader、ViewModel の複製保持、画面レイアウト |
+| `features/*/server` | Server loaderと必要なServer Component。content 由来の初回データ取得、複数データの join、mapper 呼び出し、ViewModel の返却。ユーザー固有データは取得しない | 同 feature の `api`・`mapper`・`view-model`、`lib/api`・`lib/api-server`・`lib/content`、Server専用ライブラリ、**子として描画するための** `client/components`（props 契約経由の合成。ロジックの取り込みではない） | `client/hooks`（mutation・通信 state ロジックの取り込み）、ブラウザ専用 API、Client state の複製 |
 | `features/*/mapper` | Content data / DTO から ViewModel への純粋変換 | 共有入力型、同 feature の `view-model`、`features/shared` の小さい純粋変換 | fetch、content loader、API client、React state、副作用 |
 | `features/*/api` | endpoint 固有の `hc` path・method・引数、共有 Zod による入出力検証（Service Binding の応答は再検証しない。ADR-0015）、機能固有のエラーメッセージ | `ApiClient` 型・`requestJson`・`parseApiResponse`（`lib/api`）、共有 DTO / Zod | API client の生成、ViewModel 化、UI state、Server / Browser 固有 API |
 | `components`（root） | 全画面共通のレイアウト shell・テーマ切替 | `components/ui`・`lib/cn`・React | feature 内部層（`server`/`client`/`api`/`mapper`）・content・API への直接アクセス |
@@ -197,7 +197,7 @@ content / API から feature component へ至るまでのデータの流れを�
 - ビルド時に `gray-matter` でパースし、`packages/shared` の Zod（`schema/content`）で検証してから**型付きデータとしてインライン化**する。
 - 本文描画は `react-markdown` 等のレンダラを用いる（RSC で完結）。MDX は採用しない（ビルド設定と frontmatter 抽出が複雑化するため）。
 - content 参照は `apps/web/src/lib/content.ts` に集約する。`getLessonContent(lessonId)`・`getLessonsByTopic(domain, topic)`・`getBundledQuestions()`・`getQuestionById(questionId)` を共通関数として用意し、初回表示の実行経路では `features/*/server` の Server loader だけが呼び出す。page は loader、mapper は引数で渡された Content data だけを参照し、`lib/content` を直接 import しない。ビルド・同期スクリプトと `lib/content` 自身のテストはこの制約の対象外とする。
-- `getBundledQuestions()` は `/review` の `question_id` 解決用に `questionId` index を返せる形にする。各 feature で frontmatter 配列を直接走査しない。
+- `getBundledQuestions()` は `questionId` index を返せる形にする。各 feature で frontmatter 配列を直接走査しない。`/review` は問題本文をブラウザで結合するため、これを Client へ渡さず、ビルド時に生成する問題索引（`answerIndex` を含まない静的 JSON）を使う（§5.3）。索引は `content:generate` が生成し、`content:check` が差分を検出する。
 - **同じパース経路を `content/` → D1 seed/upsert スクリプトでも再利用**し、フロント表示と D1 配信を単一ソースから導く（[ADR-0006](./adr/0006-content-as-source-of-truth.md) の責務分離を維持）。
 - `/learn/...` と `/quiz/...` は content 由来の標準 SSG を維持する。`generateStaticParams` で全 params を返し、route params は `lib/content` の `getLessonRouteParams()` / `getTopicRouteParams()` / `getQuizRouteParams()` を feature loader 経由で読み、page から `lib/content` を直接 import しない。
 - `/learn` は固定URLの静的 RSC としてプリレンダリングする。`features/lesson/server` の一覧 loader が共通 content loader から全トピックとレッスン数を取得し、mapper で領域別に整形する。領域・トピックの一覧やリンクを画面コードへ固定しない。
@@ -211,15 +211,27 @@ content / API から feature component へ至るまでのデータの流れを�
 ### 5.2 層構造（Content data / DTO → Mapper → ViewModel → page → feature component）
 
 ```text
-初回表示（Server）
+教材・演習の初回表示（Server）
 
 page
   → Server loader
-      → content loader または feature API adapter
-          → Content data または serializable DTO（@tsl/shared）
+      → content loader
+          → Content data（@tsl/shared）
       → Mapper（純粋関数、web 固有）
           → ViewModel（web 固有型）
   → feature component へ ViewModel を props 渡し
+
+ユーザー固有データ（Client。/home・/review・/domains・/analytics）
+
+page（静的な枠と loading 状態をビルド時に生成）
+  → feature component
+      → Client hook（lib/ の共通取得 hook）
+          → feature API adapter
+              → API（Hono、公開 entrypoint）
+          → Mapper（純粋関数、web 固有）
+              → ViewModel（web 固有型）
+          → loading / empty / error / success state
+  → state を受けて再描画
 
 ユーザー操作後（Client）
 
@@ -231,7 +243,7 @@ feature component
   → state を受けて再描画
 ```
 
-Server loader は初回データの fetch と Mapper 呼び出しを統括する。Client hook はユーザー操作後の通信を統括するが、初期 ViewModel の形成や複製保持は行わない。例外として、共通シェルの due バッジとストリークは静的成果物へ含められないため、マウント後に Client hook で取得する（§5.3）。page は App Router 固有の関心事と loader 呼び出しに限定し、feature component が表示を担当する。
+Server loader は content 由来の初回データの取得と Mapper 呼び出しを統括する。認証後の4画面のユーザー固有データは、Client hook が取得して Mapper で ViewModel 化する（[ADR-0019](./adr/0019-csr-for-user-specific-screens.md)）。Client hook はユーザー操作後の通信も統括するが、ViewModel の複製保持は行わない。共通シェルの due バッジとストリークも、静的成果物へ含められないため、マウント後に Client hook で取得する（§5.3）。page は App Router 固有の関心事と、loader または feature component の呼び出しに限定し、feature component が表示を担当する。
 
 - **Content data**：`content/` の Markdown + frontmatter をビルド時にパース・検証した型付きデータ。教材本文・問題本文・解説の主経路。
 - **DTO**：API レスポンス型。`packages/shared` の Zod スキーマ（§5.1）から型推論、AppType に含まれる。due queue・answer 結果・集計値など動的データの契約。
@@ -240,58 +252,59 @@ Server loader は初回データの fetch と Mapper 呼び出しを統括する
 
 ### 5.3 Server loader と Client hook
 
-初回データは Server loader が形成し、page から表示 component へ ViewModel を渡す。責務・依存境界は §4.2、表示状態と通信状態の所有者は §5.5、SSR / SSG の実行方式は §5.3に従う。
+content 由来の初回データは Server loader が形成し、page から表示 component へ ViewModel を渡す。認証後の4画面（`/home`・`/review`・`/domains`・`/analytics`）のユーザー固有データは、Client hook がブラウザから取得し、同 feature の mapper で ViewModel 化する（[ADR-0019](./adr/0019-csr-for-user-specific-screens.md)）。責務・依存境界は §4.2、表示状態と通信状態の所有者は §5.5、SSR / SSG の実行方式は §5.3に従う。
 
 | 画面 | 初回データ | ユーザー操作後 |
 | --- | --- | --- |
 | 教材 | ビルド時contentをmapperに渡して表示。API GET不要 | 閲覧記録のみ最小Client recorderから送信 |
 | 演習 | ビルド時contentから問題・解説をVM化。API GET不要 | Client hookが解答を送信 |
-| 復習 | API queueのIDをサーバーでbundled contentへjoinしてVM化 | 次バッチ取得はClient Componentから `router.refresh()` でServer loaderを再実行 |
+| 復習 | マウント後、Client hookがAPI queueのIDと問題索引（正解を含まない静的JSON）を取得し、mapperで結合してVM化 | 次バッチがある場合、バッチ完了時にClient hookがqueueを再取得 |
+| ホーム・領域・分析 | マウント後、Client hookがAPIから取得してVM化。ホームの4本の取得は1つのhookが並列に実行し、状態は画面単位で1組 | 解答・閲覧記録後は `study-activity` の無効化通知で再取得 |
 
 #### 復習の表示契約
 
-- 正解情報の境界は [ADR-0002](./adr/0002-api-authoritative-grading.md) に従う。content loaderや全教材データをClient bundleへimportしない。
-- 静的な表示構造はユーザー固有データを共有キャッシュへ載せず、dueバッジと本文を同じ SSR リクエストで取得する。両者は唯一のloader入口 `loadReviewOnce` を通し、Reactの `cache()` によって同一リクエスト内のqueue取得を1回に畳む。未ラップのloaderはexportしない。共有キャッシュとの違いは §5.3。
-- APIの生のdue件数の意味は [ADR-0005](./adr/0005-srs-review-rules.md)。`ReviewViewModel.dueCount` は、現在のバッチをbundled contentとjoinした後に表示できる問題数であり、contentから削除されたIDはmapperで除外する。join後の表示可能な問題が0件で `hasMore=true` ならcontent整合性エラー、0件でfalseなら通常の空キュー、1件以上なら現在バッチを表示する。空キューをQuizの空問題表示へ委ねない。
-- 表示再利用の境界は §5.6。次バッチがある場合の完了操作で再取得し、mapperが導出した `batchKey` をinteractive subtreeのkeyにして、新しいバッチでは解答結果・画面フェーズをintroへリセットする。
+- 正解情報の境界は [ADR-0002](./adr/0002-api-authoritative-grading.md) に従う。問題索引は `answerIndex` を含まない。索引は保護パス配下の静的 JSON として配信し、Client は `fetch` で取得する。索引・content loader・全教材データを Client bundle へ import しない。
+- dueバッジと本文は同じ取得を共有する。共通取得 hook が同じキーの進行中の取得を共有し、queue 取得を1回に畳む。共有キャッシュとの違いは §5.3。
+- APIの生のdue件数の意味は [ADR-0005](./adr/0005-srs-review-rules.md)。`ReviewViewModel.dueCount` は、現在のバッチを問題索引とjoinした後に表示できる問題数であり、索引にないIDはmapperで除外する。join後の表示可能な問題が0件で `hasMore=true` ならcontent整合性エラー、0件でfalseなら通常の空キュー、1件以上なら現在バッチを表示する。空キューをQuizの空問題表示へ委ねない。
+- 表示再利用の境界は §5.6。次バッチがある場合の完了操作でだけqueueを再取得し、mapperが導出した `batchKey` をinteractive subtreeのkeyにして、新しいバッチでは解答結果・画面フェーズをintroへリセットする。解答ごとの `study-activity` の無効化ではqueueを再取得しない。バッチの途中で問題が差し替わるためである。
 - 取得・整合性エラーと再試行導線は §5.7。
 
-現在のloaderは [load-review.ts](../apps/web/src/features/review/server/load-review.ts)、表示側は [review-runner.tsx](../apps/web/src/features/review/client/components/review-runner.tsx) を参照する。Graphはloader周辺の構造探索に使い、対象外のClient Componentは実コードを確認する。
+現在の実装はコードと [Knowledge Graph](../architecture/README.md) を参照する。
 
 #### 実行環境とデータ取得
 
-- 公開トップ・教材・集計画面はRSCで描画し、演習・復習の操作部分はClient Componentとする。レイアウト／ヘッダーはServerとする。画面ごとの初回データは本節の表、演習の状態管理は §5.5。
+- 公開トップ・教材・集計画面の静的な枠はビルド時にRSCで描画し、認証後の4画面のユーザー固有部分と、演習・復習の操作部分はClient Componentとする。レイアウト／ヘッダーはServerとする。画面ごとの初回データは本節の表、演習の状態管理は §5.5。
 - Server専用のfeatureには `import 'server-only'`、Client入口には `'use client'` を置き、ディレクトリ名だけに境界の強制を任せない。依存規則は §4.2。
-- Server Actionsは採用しない（[ADR-0012](./adr/0012-separate-web-and-api-workers.md)）。初回取得はServer loader、mutationはClient hookからHono APIを呼ぶ。API契約とuser_id注入点を単一に保ち、HonoとCloudflareを学ぶ目的に沿わせる。重いフォームなど別の要求が生じた場合に再検討する。
-- Server dataの再取得はClient Componentの `router.refresh()` によるRSC再実行に統一する。API adapterへキャッシュ方針を持ち込まない。
+- Server Actionsは採用しない（[ADR-0012](./adr/0012-separate-web-and-api-workers.md)）。ユーザー固有データの取得も mutation も、Client hookからHono APIを呼ぶ。API契約とuser_id注入点を単一に保ち、HonoとCloudflareを学ぶ目的に沿わせる。重いフォームなど別の要求が生じた場合に再検討する。
+- ユーザー固有データの再取得は Client hook が行い、`router.refresh()` は鮮度の回復に使わない。取得状態（loading・空・エラー・再試行）は `lib/` の共通取得 hook に集約し、同じキーの進行中の取得を共有する。データ取得ライブラリは導入しない（[ADR-0019](./adr/0019-csr-for-user-specific-screens.md)）。API adapterへキャッシュ方針を持ち込まない。
 
 #### 通常 SSR・標準 SSG
 
-ユーザー固有のデータを共有キャッシュに載せない規則は [ADR-0013](./adr/0013-no-shared-cache-for-user-data.md) が持つ。
+ユーザー固有のデータを共有キャッシュに載せない規則は [ADR-0019](./adr/0019-csr-for-user-specific-screens.md) が持つ（[ADR-0013](./adr/0013-no-shared-cache-for-user-data.md) を置き換えた）。
 
-- `/` はユーザー固有データを読まない静的 RSC、`/home`・`/review`・`/domains`・`/analytics` は `dynamic = 'force-dynamic'` を指定した通常のリクエスト時 SSR とする。各 Server loader はリクエストごとに実行し、ユーザー固有データを共有キャッシュしない。
+- `/` はユーザー固有データを読まない静的 RSC とする。`/home`・`/review`・`/domains`・`/analytics` は `force-dynamic` を指定せず、静的な枠と Client Component の loading 状態だけをビルド時にプリレンダリングする（SSG＋CSR。[ADR-0019](./adr/0019-csr-for-user-specific-screens.md)）。静的な成果物にユーザー固有データを含めない。ユーザー固有データは Client hook が取得し、共有キャッシュしない。
 - 教材・演習の content route は `generateStaticParams` で全 params を列挙する標準 SSG とする（content 取得の契約は §5.1）。`cacheComponents`、`'use cache'` は採用しない。
-- `/learn` はAPIを呼ばず、ビルド時の content だけで一覧本文を生成する静的 RSC とする。共通シェルのユーザー固有 due バッジとストリークは Client leaf が表示後に取得し、静的成果物へ含めない。これは Client hook をユーザー操作後の通信に使う原則の例外である。ストリークは既存の `GET /analytics/summary` の `currentStreakDays` を使い、解答・教材閲覧の記録成功後にも再取得する。取得のやり直しはブラウザ内の無効化通知で伝え、Server loader が形成した ViewModel の再取得は従来どおり `router.refresh()` に委ねる。
-- `/home` は due 件数カードと本体を同一 SSR の中で取得し、due 件数と summary・heatmap・recent activity はそれぞれの loader 契約を保つ。loader 内の API 呼び出しは可能な範囲で並列化する。領域別の習得状況とトピック選択は `/domains` に集約し、ホームでは領域データを取得しない。`/domains` は4領域の集計、`/analytics` は summary・weekly・mistakesを読む。忘却曲線・復習タイミングは対象外。
+- `/learn` はAPIを呼ばず、ビルド時の content だけで一覧本文を生成する静的 RSC とする。共通シェルのユーザー固有 due バッジとストリークは Client leaf が表示後に取得し、静的成果物へ含めない。ストリークは既存の `GET /analytics/summary` の `currentStreakDays` を使い、解答・教材閲覧の記録成功後にも再取得する。取得のやり直しはブラウザ内の無効化通知で伝える。
+- `/home` は due 件数・summary・heatmap・recent activity を1つの Client hook が並列に取得し、状態は画面単位で1組とする。due 件数と summary・heatmap・recent activity はそれぞれの API 契約を保つ。領域別の習得状況とトピック選択は `/domains` に集約し、ホームでは領域データを取得しない。`/domains` は4領域の集計、`/analytics` は summary・weekly・mistakesを読む。忘却曲線・復習タイミングは対象外。
 - due件数・統計・review queue・domains／analytics集計には共有キャッシュを使わない。APIが注入するuser_idをwebの共有キャッシュキーに含められず、ユーザー間の混入が起こり得るためである。
-- Reactの `cache()` によるリクエスト内の取得共有は許可する。ユーザー横断の共有キャッシュとは区別する。復習のdueバッジと本文の取得共有・表示分岐・次バッチへの遷移は §5.3で定義する。
-- 解答後や画面復帰時は `router.refresh()` で Server loader を再実行して鮮度を回復する。復習のバッチ完了時の条件は §5.3。
-- web Worker は API Service Binding と静的 asset 配信に必要な最小構成だけを使う。content route のビルド時 HTML / RSC は Vinext の `prerender` と `@vinext/cloudflare` の `staticAssetsAdapter` で `ASSETS` binding から配信し、内部 cache artifact（`/_vinext/static-cache/*`）は `assets.run_worker_first` で Worker へ通して外部からの直接取得を防ぐ。ISR 用の Incremental Cache、R2、KV、Durable Object Queue の有効 binding、Worker 自己参照 binding は持たない。OpenNext 時代に登録した Durable Object の履歴を設定に残す理由は [記録](./investigations/2026-10-14-opennext-durable-object-history.md) にある。
+- Reactの `cache()` によるリクエスト内の取得共有は許可する。ユーザー横断の共有キャッシュとは区別する。ブラウザ内の取得状態の保持はユーザー単位であり、共有キャッシュではない。
+- 解答後は `study-activity` の無効化通知でClient hookが再取得し、鮮度を回復する。復習のバッチ完了時の条件は §5.3。bfcache やタブ復帰時の再取得は対象外とする。
+- web Worker は静的 asset 配信に必要な最小構成だけを使う。API Service Binding は読み取りに使わず、[ADR-0019](./adr/0019-csr-for-user-specific-screens.md) の段階2で撤去する。content route と認証後4画面の静的な枠のビルド時 HTML / RSC は Vinext の `prerender` と `@vinext/cloudflare` の `staticAssetsAdapter` で `ASSETS` binding から配信し、内部 cache artifact（`/_vinext/static-cache/*`）は `assets.run_worker_first` で Worker へ通して外部からの直接取得を防ぐ。ISR 用の Incremental Cache、R2、KV、Durable Object Queue の有効 binding、Worker 自己参照 binding は持たない。OpenNext 時代に登録した Durable Object の履歴を設定に残す理由は [記録](./investigations/2026-10-14-opennext-durable-object-history.md) にある。
 
 #### API client
 
-Service Binding と公開 URL の使い分け、`credentials` と CORS の規則は [ADR-0012](./adr/0012-separate-web-and-api-workers.md) が持つ。
+`credentials` と CORS の規則は [ADR-0012](./adr/0012-separate-web-and-api-workers.md)、ユーザー固有データの読み取りを公開 URL に統一する判断は [ADR-0019](./adr/0019-csr-for-user-specific-screens.md) が持つ。
 
 - `apps/api` が `AppType` をエクスポート → `apps/web` は `hc<AppType>` で型安全クライアントを生成（既存 `apps/api/src/client.ts` のファクトリを利用。Service Binding の fetch を渡せるよう、ファクトリは `hc` の第2引数（`fetch` オプション等）を受け取れる形に拡張する）。
 - `apps/web/src/lib/api.ts` に**API 共通基盤を集約**する。クライアント生成と共通レスポンス処理は同じ小さな責務群であり、原則ファイルを分けない。例外として、Workers runtime の `cloudflare:workers` を参照する Server 用生成は Client bundle へ入れられないため、`import 'server-only'` を置いた `apps/web/src/lib/api-server.ts` に分ける。baseURL は env（Workers バインディング / 環境変数）から解決し、ハードコードしない。
-  - `createServerApiClient`（`lib/api-server.ts`）：Server loader 用。本番は Service Binding（`cloudflare:workers` の `env.API.fetch` を `hc` のカスタム `fetch` に渡す）を必須とし、binding 欠落は fail-fast する。production 以外で binding がない場合だけ env の URL にフォールバックする。
+  - `createServerApiClient`（`lib/api-server.ts`）：Server loader 用。ユーザー固有データには使わず、呼び出し元がなくなるため [ADR-0019](./adr/0019-csr-for-user-specific-screens.md) の段階2で撤去する。それまでは、本番は Service Binding（`cloudflare:workers` の `env.API.fetch` を `hc` のカスタム `fetch` に渡す）を必須とし、binding 欠落は fail-fast する。production 以外で binding がない場合だけ env の URL にフォールバックする。
   - `createBrowserApiClient`：Client hook 用。env から解決した API Worker の公開 baseURL を使い、Cloudflare Access application cookie を API ドメインへ送るため `credentials: 'include'` を常に指定する。
 - feature の `api/` は呼び出し側から `ApiClient` を受け取り、`hc` の path・method・引数、共有 Zod による入出力検証、機能固有のエラーメッセージを薄く閉じ込める。Server loader と Client hook の両方から使うため、client 生成、`server-only`、cookies、headers、秘密情報など環境専用処理を入れない。
 - `res.ok` チェックと `res.json()` 変換は `apps/web/src/lib/api.ts` の `requestJson` に共通化する。応答の検証は同じファイルの `parseApiResponse` を通し、Service Binding から作った Server 用 client の応答だけは Zod で再検証しない（ADR-0015）。ブラウザ用 client と URL フォールバックの client は検証する。
 - `hc` の path 呼び出し自体は文字列パスの汎用 fetch に置き換えない。`client.review.queue.$get()` のような endpoint ごとの wrapper を残すことで、Hono RPC の型推論を維持する。
-- 初回表示に必要な `GET /dashboard/due-count`・`GET /review/queue` は Server loader から呼び、ViewModel に整形して page 経由で feature component へ props として渡す。
-- ユーザー操作後の `POST /answers` は Client hook から呼ぶ。`GET /review/queue` の再取得は Client Component の `router.refresh()` で Server loader に委譲する。初回表示で不要なスピナーを出さない。
-- 通常 SSR の Server loader はリクエストごとに `createServerApiClient` を解決し、`API` Service Binding の fetch を `hc` に渡す。共有 Incremental Cache や再検証 Queue を API client 層へ持ち込まない。
+- 初回表示に必要な `GET /dashboard/due-count`・`GET /review/queue` などのユーザー固有データは Client hook が呼び、mapper で ViewModel に整形して feature component へ渡す。loading・空・エラーの状態は hook が持つ。
+- ユーザー操作後の `POST /answers` は Client hook から呼ぶ。`GET /review/queue` の再取得は、バッチ完了時に Client hook が行う。
+- Client hook はリクエストごとにブラウザ用 client で API を呼ぶ。共有 Incremental Cache や再検証 Queue を API client 層へ持ち込まない。
 
 ### 5.4 型とファイルの配置
 
@@ -337,9 +350,9 @@ Quiz と Review の表示再利用は、feature VM同士を継承・交差させ
 
 ### 5.7 エラー処理
 
-- 初回データの取得・検証失敗はServer側でthrowし、routeの `error.tsx` で扱う。復習のcontent整合性分岐は §5.3に従う。
-- mutationの待機・失敗はhookの `submitting`・`error` を表示componentへ渡して扱う。再取得中の表示が必要なら `isRefreshing` またはrouteの `loading.tsx` を用いる。
-- `/review/error.tsx` は本番で秘匿され得るServer Componentの `error.message` から失敗種別を判定しない。API/通信の一時的失敗とcontent不整合の両方を含む案内を表示する。`reset` による再試行と、恒久的な不整合で再試行ループに閉じ込めないためのホームへのLinkを提供する。
+- content 由来の初回データの取得・検証失敗はServer側でthrowし、routeの `error.tsx` で扱う。ユーザー固有データの取得・検証失敗は、Client hookが `error` 状態として表示componentへ渡し、再試行を提供する。`error.tsx` はClientの非同期取得の失敗を捕捉しないため、これに頼らない。復習のcontent整合性分岐は §5.3に従う。
+- 取得・mutationの待機・失敗はhookの `loading`・`submitting`・`error` を表示componentへ渡して扱う。再取得中の表示が必要なら `isRefreshing` を用いる。
+- `/review` は、API/通信の一時的失敗とcontent不整合を、どちらも `error` 状態として表示する。`error.message` から失敗種別を判定せず、両方を含む案内を出す。再試行と、恒久的な不整合で再試行ループに閉じ込めないためのホームへのLinkを提供する。
 - 教材閲覧のfire-and-forget記録は、失敗しても本文表示やroute error boundaryへ波及させない（§5.6）。
 
 #### API のエラー

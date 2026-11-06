@@ -6,10 +6,10 @@ paths:
 # apps/web（Vinext / Next.js 互換）ルール
 
 - Server / Client コンポーネント境界は design.md 5.3 に従う。`'use client'` は必要最小限のリーフに置く。
-- API 呼び出しは `hc` クライアント（`apps/api/src/client.ts` のファクトリ）経由。`fetch` の直書きはしない（design.md 5.3、ADR-0012）。
+- API 呼び出しは `hc` クライアント（`apps/api/src/client.ts` のファクトリ）経由。`fetch` の直書きはしない（design.md 5.3、ADR-0012）。例外は、復習の問題索引（ビルド時に生成する静的 JSON）の取得だけとする（ADR-0019）。
 - Cloudflare binding は `cloudflare:workers` から読み、参照は Server 専用の `src/lib/api-server.ts` に閉じる。Client から import される `src/lib/api.ts` には入れない（design.md 5.3）。
 - Web の dev / build / deploy は Vinext（Vite）。OpenNext や `next dev` / `next build` 前提の手順・依存を戻さない（`docs/deployment.md` の「ローカル開発」「本番への手動デプロイ」）。
-- データ整形は「Content data / DTO → Mapper → ViewModel → page」の層構造に従う（design.md 5.2）。page に生の DTO を直接渡さない。
+- データ整形は「Content data / DTO → Mapper → ViewModel」の層構造に従う（design.md 5.2）。content 由来のデータは Server loader から page 経由で、認証後4画面のユーザー固有データは Client hook から component へ ViewModel を渡す（ADR-0019）。page や component に生の DTO を直接渡さない。
 - content の読み取りは `getBundledQuestions()` 等のローダー経由。各 feature で frontmatter 配列を直接走査しない（design.md 5.1）。
 - 本文描画は `react-markdown` 系レンダラ。MDX は採用しない。
 - `dangerouslySetInnerHTML` は使用しない。
