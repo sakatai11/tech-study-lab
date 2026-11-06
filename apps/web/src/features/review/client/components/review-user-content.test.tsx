@@ -93,6 +93,26 @@ describe('ReviewUserContent [ADR-0019]', () => {
     expect(fetchReviewQueue).toHaveBeenCalledTimes(2)
   })
 
+  it('shows the loading state while the next batch loads and an error with a retry when it fails', async () => {
+    let rejectNext: (reason?: unknown) => void = () => {}
+    fetchReviewQueue
+      .mockResolvedValueOnce({ hasMore: true, items: [{ questionId: 'q1', dueAt: 0 }] })
+      .mockReturnValueOnce(
+        new Promise((_, reject) => {
+          rejectNext = reject
+        }),
+      )
+    renderReview()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'runner:q1:true' }))
+
+    expect(screen.getByRole('status').textContent).toContain('復習キューを読み込んでいます')
+    expect(screen.queryByRole('button', { name: 'runner:q1:true' })).toBeNull()
+    rejectNext(new Error('offline'))
+    expect(await screen.findByText('復習データを読み込めませんでした')).toBeTruthy()
+    expect(screen.getByRole('button', { name: '再読み込み' })).toBeTruthy()
+  })
+
   it('shows the normal empty-queue card when nothing is due and no batch remains', async () => {
     fetchReviewQueue.mockResolvedValue({ hasMore: false, items: [] })
     renderReview()

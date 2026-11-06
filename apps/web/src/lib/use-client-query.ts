@@ -75,7 +75,8 @@ function isFresh(entry: CacheEntry, maxAgeMs: number): boolean {
 /**
  * ユーザー固有データをマウント後にブラウザで取得する共通 hook（ADR-0019）。
  * 静的に生成した HTML では loading 状態を描画し、取得はマウント後にだけ始める。
- * 表示中のデータがあれば、取り直す間もそれを表示し続ける。
+ * 保持（cache）を指定した場合は、取り直す間も表示中のデータを表示し続ける。指定しない場合は
+ * 取り直すたびに loading とエラーの状態へ戻る（復習のバッチ遷移など）。
  * 古いリクエストの結果とアンマウント後の結果は反映しない。
  */
 export function useClientQuery<T>(
@@ -97,7 +98,10 @@ export function useClientQuery<T>(
 
   const reload = useCallback(() => {
     const requestId = ++requestIdRef.current
-    setState((current) => (current.status === 'success' ? current : { status: 'loading' }))
+    const keepShown = cacheRef.current !== undefined
+    setState((current) =>
+      keepShown && current.status === 'success' ? current : { status: 'loading' },
+    )
     loadRef.current().then(
       (data) => {
         // 新しい取得や無効化の後に届いた古い応答は、表示にも保持にも使わない。
@@ -116,9 +120,9 @@ export function useClientQuery<T>(
       },
       (error: unknown) => {
         if (requestId !== requestIdRef.current) return
-        // 表示中のデータがあれば、取り直しの失敗では消さない。
+        // 保持する画面では、表示中のデータを取り直しの失敗で消さない。
         setState((current) =>
-          current.status === 'success'
+          keepShown && current.status === 'success'
             ? current
             : {
                 status: 'error',

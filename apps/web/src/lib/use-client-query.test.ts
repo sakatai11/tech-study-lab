@@ -100,6 +100,22 @@ describe('useClientQuery [ADR-0019]', () => {
     expect(load).toHaveBeenCalledTimes(1)
   })
 
+  it('returns to loading and then error on reload without a cache, even after success', async () => {
+    const next = createDeferred<string>()
+    const load = vi
+      .fn<() => Promise<string>>()
+      .mockResolvedValueOnce('batch 1')
+      .mockReturnValueOnce(next.promise)
+    const { result } = renderHook(() => useClientQuery(load))
+    await waitFor(() => expect(result.current.status).toBe('success'))
+
+    act(() => result.current.reload())
+    expect(result.current.status).toBe('loading')
+    await act(async () => next.reject(new Error('offline')))
+
+    expect(result.current).toMatchObject({ status: 'error', error: new Error('offline') })
+  })
+
   describe('cache', () => {
     afterEach(() => vi.restoreAllMocks())
 
