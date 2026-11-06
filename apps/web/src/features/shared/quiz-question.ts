@@ -6,7 +6,9 @@ export type QuizQuestionViewModel = {
   choices: string[]
 }
 
-export function contentQuestionToQuizQuestion(question: McqQuestion): QuizQuestionViewModel {
+export function contentQuestionToQuizQuestion(
+  question: Pick<McqQuestion, 'id' | 'prompt' | 'choices'>,
+): QuizQuestionViewModel {
   return {
     id: question.id,
     prompt: question.prompt,

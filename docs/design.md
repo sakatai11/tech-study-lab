@@ -197,7 +197,7 @@ content / API から feature component へ至るまでのデータの流れを�
 - ビルド時に `gray-matter` でパースし、`packages/shared` の Zod（`schema/content`）で検証してから**型付きデータとしてインライン化**する。
 - 本文描画は `react-markdown` 等のレンダラを用いる（RSC で完結）。MDX は採用しない（ビルド設定と frontmatter 抽出が複雑化するため）。
 - content 参照は `apps/web/src/lib/content.ts` に集約する。`getLessonContent(lessonId)`・`getLessonsByTopic(domain, topic)`・`getBundledQuestions()`・`getQuestionById(questionId)` を共通関数として用意し、初回表示の実行経路では `features/*/server` の Server loader だけが呼び出す。page は loader、mapper は引数で渡された Content data だけを参照し、`lib/content` を直接 import しない。ビルド・同期スクリプトと `lib/content` 自身のテストはこの制約の対象外とする。
-- `getBundledQuestions()` は `questionId` index を返せる形にする。各 feature で frontmatter 配列を直接走査しない。`/review` は問題本文をブラウザで結合するため、これを Client へ渡さず、ビルド時に生成する問題索引（`answerIndex` を含まない静的 JSON）を使う（§5.3）。索引は `content:generate` が生成し、`content:check` が差分を検出する。
+- `getBundledQuestions()` は `questionId` index を返せる形にする。各 feature で frontmatter 配列を直接走査しない。`/review` は問題本文をブラウザで結合するため、静的な page の loader がこれから `answerIndex` を除いた問題索引を作り、props で Client へ渡す（§5.3）。
 - **同じパース経路を `content/` → D1 seed/upsert スクリプトでも再利用**し、フロント表示と D1 配信を単一ソースから導く（[ADR-0006](./adr/0006-content-as-source-of-truth.md) の責務分離を維持）。
 - `/learn/...` と `/quiz/...` は content 由来の標準 SSG を維持する。`generateStaticParams` で全 params を返し、route params は `lib/content` の `getLessonRouteParams()` / `getTopicRouteParams()` / `getQuizRouteParams()` を feature loader 経由で読み、page から `lib/content` を直接 import しない。
 - `/learn` は固定URLの静的 RSC としてプリレンダリングする。`features/lesson/server` の一覧 loader が共通 content loader から全トピックとレッスン数を取得し、mapper で領域別に整形する。領域・トピックの一覧やリンクを画面コードへ固定しない。
@@ -258,13 +258,13 @@ content 由来の初回データは Server loader が形成し、page から表�
 | --- | --- | --- |
 | 教材 | ビルド時contentをmapperに渡して表示。API GET不要 | 閲覧記録のみ最小Client recorderから送信 |
 | 演習 | ビルド時contentから問題・解説をVM化。API GET不要 | Client hookが解答を送信 |
-| 復習 | マウント後、Client hookがAPI queueのIDと問題索引（正解を含まない静的JSON）を取得し、mapperで結合してVM化 | 次バッチがある場合、バッチ完了時にClient hookがqueueを再取得 |
+| 復習 | 静的なpageが正解を含まない問題索引をpropsで渡す。マウント後、Client hookがAPI queueを取得し、mapperで索引と結合してVM化 | 次バッチがある場合、バッチ完了時にClient hookがqueueを再取得 |
 | ホーム・領域・分析 | マウント後、Client hookがAPIから取得してVM化。ホームの4本の取得は1つのhookが並列に実行し、状態は画面単位で1組 | 解答・閲覧記録後は `study-activity` の無効化通知で再取得 |
 
 #### 復習の表示契約
 
-- 正解情報の境界は [ADR-0002](./adr/0002-api-authoritative-grading.md) に従う。問題索引は `answerIndex` を含まない。索引は保護パス配下の静的 JSON として配信し、Client は `fetch` で取得する。索引・content loader・全教材データを Client bundle へ import しない。
-- dueバッジと本文は同じ取得を共有する。共通取得 hook が同じキーの進行中の取得を共有し、queue 取得を1回に畳む。共有キャッシュとの違いは §5.3。
+- 正解情報の境界は [ADR-0002](./adr/0002-api-authoritative-grading.md) に従う。問題索引は `answerIndex` を含まない。索引はビルド時に静的な page の loader が作り、props で Client へ渡す。索引・content loader・全教材データを Client bundle へ import しない。
+- dueバッジと本文は同じ取得を共有する。1つの Client hook の結果を Context で両者へ渡し、queue 取得を1回に畳む。共有キャッシュとの違いは §5.3。
 - APIの生のdue件数の意味は [ADR-0005](./adr/0005-srs-review-rules.md)。`ReviewViewModel.dueCount` は、現在のバッチを問題索引とjoinした後に表示できる問題数であり、索引にないIDはmapperで除外する。join後の表示可能な問題が0件で `hasMore=true` ならcontent整合性エラー、0件でfalseなら通常の空キュー、1件以上なら現在バッチを表示する。空キューをQuizの空問題表示へ委ねない。
 - 表示再利用の境界は §5.6。次バッチがある場合の完了操作でだけqueueを再取得し、mapperが導出した `batchKey` をinteractive subtreeのkeyにして、新しいバッチでは解答結果・画面フェーズをintroへリセットする。解答ごとの `study-activity` の無効化ではqueueを再取得しない。バッチの途中で問題が差し替わるためである。
 - 取得・整合性エラーと再試行導線は §5.7。
@@ -276,7 +276,7 @@ content 由来の初回データは Server loader が形成し、page から表�
 - 公開トップ・教材・集計画面の静的な枠はビルド時にRSCで描画し、認証後の4画面のユーザー固有部分と、演習・復習の操作部分はClient Componentとする。レイアウト／ヘッダーはServerとする。画面ごとの初回データは本節の表、演習の状態管理は §5.5。
 - Server専用のfeatureには `import 'server-only'`、Client入口には `'use client'` を置き、ディレクトリ名だけに境界の強制を任せない。依存規則は §4.2。
 - Server Actionsは採用しない（[ADR-0012](./adr/0012-separate-web-and-api-workers.md)）。ユーザー固有データの取得も mutation も、Client hookからHono APIを呼ぶ。API契約とuser_id注入点を単一に保ち、HonoとCloudflareを学ぶ目的に沿わせる。重いフォームなど別の要求が生じた場合に再検討する。
-- ユーザー固有データの再取得は Client hook が行い、`router.refresh()` は鮮度の回復に使わない。取得状態（loading・空・エラー・再試行）は `lib/` の共通取得 hook に集約し、同じキーの進行中の取得を共有する。データ取得ライブラリは導入しない（[ADR-0019](./adr/0019-csr-for-user-specific-screens.md)）。API adapterへキャッシュ方針を持ち込まない。
+- ユーザー固有データの再取得は Client hook が行い、`router.refresh()` は鮮度の回復に使わない。取得状態（loading・空・エラー・再試行）は `lib/` の共通取得 hook に集約し、同じデータを複数の component が使う場合は1つの取得結果を Context で共有する。データ取得ライブラリは導入しない（[ADR-0019](./adr/0019-csr-for-user-specific-screens.md)）。API adapterへキャッシュ方針を持ち込まない。
 
 #### 通常 SSR・標準 SSG
 

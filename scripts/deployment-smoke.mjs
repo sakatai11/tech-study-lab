@@ -39,6 +39,18 @@ export async function checkAuthenticatedApi(apiUrl, env = process.env, request =
   assert.equal(typeof (await response.json()).dueCount, 'number')
 }
 
+// 4画面の HTML はユーザー固有データを含まないため、画面がブラウザで呼ぶ API の GET を認証付きで確かめる（ADR-0019）。
+export const userScreenApiPaths = [
+  '/dashboard/due-count',
+  '/analytics/summary',
+  '/analytics/heatmap',
+  '/analytics/weekly',
+  '/analytics/mistakes',
+  '/activity/recent',
+  '/review/queue',
+  '/domains',
+]
+
 export async function smokeTest(target, urls, summary, env = process.env, request = fetch) {
   const auth = accessHeaders(env)
   const issuer = new URL(env.ACCESS_ISSUER)
@@ -88,6 +100,15 @@ export async function smokeTest(target, urls, summary, env = process.env, reques
         ),
       `Web ${path} error page`,
     )
+  }
+  for (const path of userScreenApiPaths) {
+    const response = await get(`${urls.apiUrl}${path}`, { headers: auth })
+    assert.equal(response.status, 200, `authenticated API ${path} failed`)
+    assert(
+      response.headers.get('content-type')?.includes('application/json'),
+      `authenticated API ${path} is not JSON`,
+    )
+    await response.json()
   }
   if (target.environment === 'verification') {
     const headers = { ...auth, Origin: urls.webUrl, 'Content-Type': 'application/json' }

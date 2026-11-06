@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { getTarget } from './deployment-lib.mjs'
-import { smokeTest } from './deployment-smoke.mjs'
+import { smokeTest, userScreenApiPaths } from './deployment-smoke.mjs'
 
 const urls = {
   apiUrl: 'https://api.example.workers.dev',
@@ -19,6 +19,7 @@ function fixture({
   missingProtection = false,
   failedAuth = false,
   errorBoundary = false,
+  brokenUserApi = false,
 } = {}) {
   const calls = []
   const request = async (url, options = {}) => {
@@ -47,6 +48,10 @@ function fixture({
           })
     if (failedAuth) return new Response(null, { status: 403 })
     if (path === '/dashboard/due-count') return Response.json({ dueCount: 1 })
+    if (url.startsWith(urls.apiUrl) && userScreenApiPaths.includes(path))
+      return brokenUserApi && path === '/review/queue'
+        ? new Response(null, { status: 503 })
+        : Response.json({})
     if (path === '/answers') return Response.json({ isCorrect: true, correctIndex: 0 })
     if (path === '/lesson-views') return Response.json({ recorded: true }, { status: 201 })
     return new Response(
@@ -74,12 +79,22 @@ test('production smoke only reads; verification explicitly exercises writes', as
   }
 })
 
-test('bad CORS, missing Access protection, rejected service auth, or a 200 error page fails the release', async () => {
+test('authenticated GETs cover every API the static user screens fetch in the browser [ADR-0019]', async () => {
+  const { calls, request } = fixture()
+  await smokeTest(getTarget('production'), urls, content, env, request)
+  const apiGets = calls
+    .filter(({ url, method, headers }) => url.startsWith(urls.apiUrl) && !method && headers)
+    .map(({ url }) => new URL(url).pathname)
+  for (const path of userScreenApiPaths) assert(apiGets.includes(path), path)
+})
+
+test('bad CORS, missing Access protection, rejected service auth, a 200 error page, or a failing user API fails the release', async () => {
   for (const options of [
     { brokenCors: true },
     { missingProtection: true },
     { failedAuth: true },
     { errorBoundary: true },
+    { brokenUserApi: true },
   ]) {
     const { calls, request } = fixture(options)
     await assert.rejects(smokeTest(getTarget('verification'), urls, content, env, request))

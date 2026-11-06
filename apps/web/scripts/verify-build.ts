@@ -4,7 +4,9 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { getLessonRouteParams, getQuizRouteParams, getTopicRouteParams } from '../src/lib/content'
 
 // Run after build without a server (CI).
-// 認証後の画面が prerender されていないこと（ADR-0013）と、成果物に正解が含まれないこと（ADR-0002）を確かめる。
+// 認証後の4画面が静的な枠として prerender され、ユーザー固有データを含まないこと（ADR-0019。
+// 4画面を prerender しない ADR-0013 の規則を置き換えた）と、
+// 成果物に正解が含まれないこと（ADR-0002）を確かめる。
 // pnpm --filter @tsl/web verify:build
 const root = new URL('../', import.meta.url)
 const read = (path: string) => readFileSync(new URL(path, root))
@@ -20,20 +22,17 @@ const contentPaths = [
   ),
   ...getQuizRouteParams().map(({ lesson }) => `/quiz/${lesson}`),
 ]
-const staticPaths = ['/', '/learn', '/quiz', ...contentPaths]
-const ssrPaths = ['/home', '/review', '/domains', '/analytics']
+const userShellPaths = ['/home', '/review', '/domains', '/analytics']
+const staticPaths = ['/', '/learn', '/quiz', ...userShellPaths, ...contentPaths]
+// ユーザー固有の API 応答にだけ現れるキー。静的な成果物に入っていれば、ビルド時に取得したことになる。
+const userDataPattern =
+  /\b(?:dueCount|dueAt|masteryRate|masteredQuestionCount|currentStreakDays|correctAnswerRate|occurredAt|retentionDistribution)\b/
 
-// SSG: every content param is prerendered and nothing else is, so user-specific routes stay SSR.
+// SSG: every content param and the user screens' static shells are prerendered, and nothing else is.
 const renderedPaths = manifest.routes
   .filter(({ status }) => status === 'rendered')
   .map(({ route, path }) => path ?? route)
 assert.deepEqual(new Set(renderedPaths), new Set([...staticPaths, '/404']))
-for (const pathname of ssrPaths) {
-  assert(
-    manifest.routes.some((route) => route.route === pathname && route.status === 'skipped'),
-    `${pathname} must be rendered per request`,
-  )
-}
 
 for (const pathname of staticPaths) {
   for (const kind of ['html', 'rsc'] as const) {
@@ -41,6 +40,11 @@ for (const pathname of staticPaths) {
     const generated = read(`dist/server/prerendered-routes/${relativePath}`).toString()
     assert(generated.length > 0, `${pathname} ${kind} is empty`)
     assert(!answerIndexPattern.test(generated), `${pathname} ${kind} leaks answerIndex`)
+    if (userShellPaths.includes(pathname)) {
+      assert(!userDataPattern.test(generated), `${pathname} ${kind} contains user-specific data`)
+      if (kind === 'html')
+        assert(generated.includes('aria-busy="true"'), `${pathname} has no loading state`)
+    }
   }
 }
 
@@ -86,7 +90,7 @@ console.log(
     {
       contentRoutes: contentPaths.length,
       prerendered: renderedPaths.length,
-      ssrRoutes: ssrPaths,
+      userShellRoutes: userShellPaths,
       privateCacheArtifacts: Object.keys(privateIndex).length,
     },
     null,

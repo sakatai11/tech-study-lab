@@ -27,7 +27,7 @@ const included = (file) =>
   /\.(ts|tsx)$/.test(file) &&
   !/\.test\.|\.d\.ts$|\/test\/|generated-content/.test(file) &&
   (!file.startsWith('apps/web/') ||
-    /\/features\/[^/]+\/(api\/|server\/load-)|\/lib\/api\.ts$/.test(file))
+    /\/features\/[^/]+\/(api\/|server\/load-|client\/hooks\/)|\/lib\/api\.ts$/.test(file))
 
 /** Deterministic layer from path convention; every extracted file resolves to exactly one. */
 export function layerOf(file) {
@@ -40,6 +40,7 @@ export function layerOf(file) {
   if (file.startsWith('packages/shared/src/db/')) return 'shared-db'
   if (file.startsWith('packages/shared/src/')) return 'shared-domain'
   if (/^apps\/web\/src\/features\/[^/]+\/server\/load-/.test(file)) return 'web-loader'
+  if (/^apps\/web\/src\/features\/[^/]+\/client\/hooks\//.test(file)) return 'web-hook'
   if (/^apps\/web\/src\/features\/[^/]+\/api\//.test(file) || file === 'apps/web/src/lib/api.ts')
     return 'web-api'
   if (fixedFiles.includes(file)) return 'config'

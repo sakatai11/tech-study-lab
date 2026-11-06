@@ -1,13 +1,13 @@
-import type { McqQuestion, ReviewQueueResponse } from '@tsl/shared'
+import type { ReviewQueueResponse } from '@tsl/shared'
 
 import { contentQuestionToQuizQuestion } from '../shared/quiz-question'
-import type { ReviewViewModel } from './view-model'
+import type { ReviewQuestionIndexEntry, ReviewViewModel } from './view-model'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
 export function reviewQueueToViewModel(
   queue: ReviewQueueResponse,
-  questions: ReadonlyMap<string, McqQuestion>,
+  questions: ReadonlyMap<string, ReviewQuestionIndexEntry>,
   now: number,
 ): ReviewViewModel {
   const joinedItems = queue.items.flatMap((item) => {

@@ -1,18 +1,19 @@
-import { ReviewDueBadge } from '@/features/review/server/components/review-due-badge'
+import { ReviewDueBadge } from '@/features/review/client/components/review-due-badge'
+import { ReviewQueueProvider } from '@/features/review/client/components/review-queue-provider'
+import { ReviewUserContent } from '@/features/review/client/components/review-user-content'
 import { ReviewPageShell } from '@/features/review/server/components/review-page-shell'
-import { ReviewUserContent } from '@/features/review/server/components/review-user-content'
+import { loadReviewQuestionIndex } from '@/features/review/server/load-review-index'
 import { AppShell } from '../_components/app-shell'
 
-export const dynamic = 'force-dynamic'
-
-export default async function ReviewPage() {
-  // Both components call loadReviewOnce. React cache() keeps the request-local
-  // queue read to one API request while normal SSR waits for the complete page.
-  const [dueBadge, userContent] = await Promise.all([ReviewDueBadge(), ReviewUserContent()])
-
+// 静的な枠と loading 状態だけをビルド時に生成し、due queue はブラウザで取得する（ADR-0019）。
+export default function ReviewPage() {
   return (
     <AppShell currentNavigation="review">
-      <ReviewPageShell dueBadge={dueBadge}>{userContent}</ReviewPageShell>
+      <ReviewQueueProvider index={loadReviewQuestionIndex()}>
+        <ReviewPageShell dueBadge={<ReviewDueBadge />}>
+          <ReviewUserContent />
+        </ReviewPageShell>
+      </ReviewQueueProvider>
     </AppShell>
   )
 }

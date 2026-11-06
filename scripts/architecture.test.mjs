@@ -103,7 +103,7 @@ test('extracts existing endpoint, schema and loader relations with provenance', 
   )
   assert(graph.edges.some((e) => e.relation === 'derives-schema'))
   const selected = query(graph, '/dashboard/due-count', 2)
-  assert(selected.nodes.some((n) => n.id.includes('load-dashboard.ts')))
+  assert(selected.nodes.some((n) => n.id.includes('use-dashboard.ts')))
   assertFresh(graph, extract(sources))
 })
 
@@ -118,10 +118,10 @@ for (const [label, file, before, after] of [
   ],
   ['shared schema', 'packages/shared/src/schema/api.ts', 'z.object(', 'z.object( /* changed */'],
   [
-    'loader',
-    'apps/web/src/features/dashboard/server/load-dashboard.ts',
-    'const client = await createServerApiClient()',
-    'const client = await createServerApiClient(); await createServerApiClient()',
+    'client hook',
+    'apps/web/src/features/dashboard/client/hooks/use-dashboard.ts',
+    'const client = createBrowserApiClient()',
+    'const client = createBrowserApiClient(); createBrowserApiClient()',
   ],
 ]) {
   test(`detects stale snapshot after ${label} changes`, () => {
@@ -188,6 +188,7 @@ test('classifies symbol kinds and layers from syntax and path convention', () =>
   assert.equal(kindOf('symbol:packages/shared/src/srs/sm2.ts#DAY_MS'), 'constant')
   assert(graph.nodes.every((node) => node.layer === layerOf(node.source.file)))
   assert.equal(layerOf('apps/web/src/features/dashboard/server/load-dashboard.ts'), 'web-loader')
+  assert.equal(layerOf('apps/web/src/features/dashboard/client/hooks/use-dashboard.ts'), 'web-hook')
   assert.throws(() => layerOf('apps/web/src/components/thing.tsx'), /Unclassified layer/)
 })
 

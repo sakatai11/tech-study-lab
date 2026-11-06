@@ -1,11 +1,9 @@
 import 'server-only'
 
-import { DomainProgressSection } from '@/features/domains/server/components/domain-progress-section'
-import { loadDomains } from '@/features/domains/server/load-domains'
+import { DomainProgressSection } from '@/features/domains/client/components/domain-progress-section'
+import { loadDomainTopicRoutes } from '@/features/domains/server/load-domains'
 
-export async function DomainsPageContent() {
-  const viewModel = await loadDomains()
-
+export function DomainsPageContent() {
   return (
     <div className="flex flex-col gap-5">
       <header className="px-1 pt-1">
@@ -19,7 +17,7 @@ export async function DomainsPageContent() {
           4つの領域から、次に読むトピックを選びましょう。
         </p>
       </header>
-      <DomainProgressSection viewModel={viewModel} />
+      <DomainProgressSection topicRoutes={loadDomainTopicRoutes()} />
     </div>
   )
 }

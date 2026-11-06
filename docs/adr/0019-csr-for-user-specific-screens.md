@@ -1,6 +1,6 @@
 # 0019: 認証後の4画面は、静的な枠をビルド時に生成し、ユーザー固有データをブラウザで取得・描画する
 
-- 状態: Proposed
+- 状態: Accepted
 - 日付: 2026-11-06
 - 関連: Issue #288、Issue #220、Issue #277（[ADR-0013](./0013-no-shared-cache-for-user-data.md) を置き換え、[ADR-0012](./0012-separate-web-and-api-workers.md) の決定2、[ADR-0008](./0008-production-access-boundary.md) の決定5、[ADR-0015](./0015-trust-service-binding-responses.md) の前提を変える）
 
@@ -23,14 +23,15 @@ Issue #220 の調査では、フレームワークの処理が約 8.5 ms を占�
 - 要素数のさらなる削減や framework の更新: #220 で実施済みで、framework の更新は効果がなかった。下限は残る。
 - 有料プランへの変更: Workers Free の継続という制約に反する。ただし、この ADR の決定で CPU 上限超過が解消しない場合の判断先とする。
 - `force-dynamic` を維持し、ユーザー固有データだけを CSR にする: API の待ちと待ち後の描画は外れるが、リクエストごとの描画とフレームワークの処理が残り、CPU 上限超過を解消できる見込みが弱いため採らない。
+- 問題索引を静的 JSON として配信し、Client が `fetch` する: 古い索引をキャッシュで使わない対策、索引の配信パスが Access の保護範囲に入ることの実機確認、`fetch` の直書き禁止への例外、content 生成物の追加が必要になる。page の props で渡せば索引は同じビルドの HTML / RSC に含まれ、これらが不要になるため採らない。
 - SWR や TanStack Query の導入: 復習はバッチ中の問題を固定する必要があり、フォーカス復帰などの自動再検証を止める設定を重ねることになる。既存の無効化通知（`client-data-invalidation.ts`）とも二重になり、4画面に必要な機能も小さいため採らない。
 
 ## 決定
 
 1. 4画面の `page` から `force-dynamic` を外し、静的な枠と Client Component の loading 状態だけをビルド時にプリレンダリングする（SSG）。ユーザー固有データの取得・join・ViewModel 化・描画は、HTML / RSC の生成時に実行せず、静的な成果物にユーザー固有データを含めない。
 2. ユーザー固有データは Client hook が `createBrowserApiClient`（API Worker の公開 entrypoint）で取得し、共有 Zod で応答を検証してから、純粋な mapper で ViewModel 化する。4画面の読み取りに Service Binding は使わない。`client/hooks` は同 feature の `api` と `mapper` を呼んでよい。`/home` の4本の取得は1つの hook が並列に実行し、loading・エラー・再試行の状態は画面単位で1組とする。呼び出し元がなくなる `InternalApi`・Service Binding・`createServerApiClient` は撤去する。
-3. 復習の問題本文は、ビルド時に生成する「正解を含まない問題索引」を静的 JSON として保護パス配下に配信し、Client が `fetch` して queue の ID と結合する。索引を Client bundle へ import しない。索引は `answerIndex` を含まない（[ADR-0002](./0002-api-authoritative-grading.md)）。
-4. 鮮度は Client の取得で保つ。画面のマウント時に取得し、統計系の画面は `study-activity` の無効化通知で再取得する。復習の queue は、バッチ完了時だけ再取得し、解答ごとには差し替えない。復習のバッジと本文は同じ取得を共有する。loading・空・エラー・再試行は hook が持つ。取得状態は `lib/` の共通 hook に集約し、同じキーの進行中の取得を共有する。データ取得ライブラリは導入しない。
+3. content 由来のデータは、ビルド時に静的な page（Server）が作り、props で Client に渡す。復習では「正解を含まない問題索引」を渡し、Client が queue の ID と結合する。`/home` のレッスン名と `/domains` のトピック route も同じ経路で渡す。索引と content loader を Client bundle へ import せず、索引は `answerIndex` を含まない（[ADR-0002](./0002-api-authoritative-grading.md)）。
+4. 鮮度は Client の取得で保つ。画面のマウント時に取得し、統計系の画面は `study-activity` の無効化通知で再取得する。復習の queue は、バッチ完了時だけ再取得し、解答ごとには差し替えない。復習のバッジと本文は同じ取得を共有する。loading・空・エラー・再試行は hook が持つ。取得状態は `lib/` の共通 hook に集約する。同じデータを複数の component が使う場合は、1つの取得結果を Context で共有する。データ取得ライブラリは導入しない。
 5. ADR-0013 から次を引き継ぐ。ユーザー固有のデータ（due 件数、学習統計、復習キュー、領域別の集計、学習分析）を Web の共有キャッシュに載せない。`cacheComponents`、`'use cache'`、ISR 用の Incremental Cache・再検証 Queue は使わない。同じリクエスト内で取得を共有する React の `cache()` は許可する。ブラウザ内の取得状態の保持は、ユーザー単位の状態であり共有キャッシュではない。
 
 ## 境界
@@ -42,24 +43,20 @@ Issue #220 の調査では、フレームワークの処理が約 8.5 ms を占�
 - bfcache やタブ復帰時の再取得は、この ADR の対象外とする（現状も実装がない）。
 - ユーザー固有データを読まない画面（公開トップ `/`、教材一覧 `/learn`、教材・演習の content route）と4画面の静的な枠は、ビルド時の静的生成にしてよい。共通シェルの due バッジとストリークは、表示後に Client が取得する。
 - 実装は2段階に分ける。段階1で4画面を SSG＋CSR に切り替え、CPU 時間を前後比較する。段階2で `InternalApi`・Service Binding・`createServerApiClient` を撤去する。段階2は別の Issue で扱い、API Worker・デプロイ手順・ADR-0015 の状態変更を伴う。
-- 索引は Access が保護する `/review/` 配下に置く（ファイル名は実装で決める）。この配信パスが、検証環境と本番の Cloudflare Access の保護範囲に入ることは、運用者が実機で確認する。リポジトリからは確認できない。
-- 索引はビルドごとに内容が変わり得る。ブラウザや CDN のキャッシュで古い索引を使わないよう、ファイル名に内容のハッシュを含めるか、再検証を要求する応答ヘッダーを付ける。古い索引にない問題 ID は mapper が除外し、決定4の整合性エラーの規則に従う。
+- 問題索引は `/review` の HTML / RSC に含まれ、Access が保護するページと同じ範囲で配信される。大きさは問題数に比例する（2026-11-06 時点の31問で HTML 約70 KB・RSC 約52 KB）。大きくなりすぎた場合は、配信方法をこの ADR の置き換えで見直す。
 - 4画面の HTML はユーザー固有データを含まないため、HTML の応答だけではデータ取得の失敗を検出できない。リリース時の smoke test は、4画面の HTML に加えて、4画面が使う API の GET を認証付きで確認する。
 
 ## 検証
 
-（骨子。実装時に、`[ADR-0019]` を付けたテストへのリンクに置き換える）
-
-- 4画面の page が `force-dynamic` を宣言せず、Server でユーザー固有データを取得しないこと（`rendering-boundaries.test.ts` を変更。現在は `force-dynamic` の宣言を要求している）
-- ビルド成果物で4画面がプリレンダリングされ、HTML / RSC に正解やユーザー固有データが含まれないこと（`verify-build.ts` を変更。現在は4画面が prerender されないことを要求している）
-- 実行時に4画面の HTML / RSC が静的配信（`x-vinext-cache: HIT`）で返ること（`verify-ssg.ts` を変更。現在は4画面が `no-store` のリクエスト時描画であることを要求している）
-- smoke test が、4画面の HTML と、4画面が使う API の GET を認証付きで確認すること（`deployment-smoke.mjs` を変更）
-- 問題索引に `answerIndex` が含まれないこと（索引の生成スクリプトのテスト）
-- `content:check` が索引の差分を検出すること
-- 復習の queue が、解答ごとではなくバッチ完了時だけ再取得されること（`review-runner.test.tsx` を拡張）
-- 変更範囲判定で、索引の出力パスが web の対象になること（`deployment-changes.test.mjs` にケースを追加）
-- 未認証で索引の URL が Access にリダイレクトされること（`deployment-smoke`）
-- 取得後の表示と loading・空・エラー・再試行（hook と component の Vitest。API は `fetch` のモック）
+- [rendering-boundaries.test.ts](../../apps/web/src/app/rendering-boundaries.test.ts): 4画面の page が `force-dynamic` もリクエスト時の処理も持たず、Server のモジュールがユーザー固有データを取得しない
+- [verify-build.ts](../../apps/web/scripts/verify-build.ts): ビルド成果物で4画面がプリレンダリングされ、HTML / RSC にユーザー固有データと正解が含まれず、loading 状態を含む（CI の `verify:build`）
+- [verify-ssg.ts](../../apps/web/scripts/verify-ssg.ts): 実行時に4画面の HTML / RSC がビルド成果物のまま静的配信される（`verify:ssg`）
+- [load-review-index.test.ts](../../apps/web/src/features/review/server/load-review-index.test.ts): 問題索引が全問題を持ち、正解を含まない
+- [use-client-query.test.ts](../../apps/web/src/lib/use-client-query.test.ts): マウント後の取得、エラーと再試行、購読したキーだけでの再取得、古い応答とアンマウント後の応答の無視
+- [review-user-content.test.tsx](../../apps/web/src/features/review/client/components/review-user-content.test.tsx): バッジと本文が1回の取得を共有し、次のバッチはバッチ完了時にだけ取得し、空・エラー・整合性エラーで再試行とホームへの導線を出す
+- [dashboard-user-sections.test.tsx](../../apps/web/src/features/dashboard/client/components/dashboard-user-sections.test.tsx): `/home` の取得を並列に行い、状態を画面単位で1組にし、due 件数だけの失敗では画面を出し、記録後に取得し直す
+- [domain-progress-section.test.tsx](../../apps/web/src/features/domains/client/components/domain-progress-section.test.tsx)・[analytics-user-content.test.tsx](../../apps/web/src/features/analytics/client/components/analytics-user-content.test.tsx): ブラウザで取得し、loading とエラーからの再試行を表示する
+- [deployment-smoke.test.mjs](../../scripts/deployment-smoke.test.mjs): smoke test が4画面の使う API の GET を認証付きで確認し、失敗でリリースを止める
 
 性能測定の条件（`PERFORMANCE_CONDITIONS`）は変えない。CPU 時間の前後比較は、既存の条件の HTML と RSC で行う。
 

@@ -2,21 +2,9 @@ import 'server-only'
 
 import { DOMAIN_LABELS, domainKeySchema } from '@tsl/shared'
 
-import { createServerApiClient } from '@/lib/api-server'
 import { getLessonContent, getLessonRouteParams, getOrderedTopicRoutes } from '@/lib/content'
 
-import {
-  fetchDashboardHeatmap,
-  fetchDashboardSummary,
-  fetchDueCount,
-  fetchRecentActivity,
-} from '../api/dashboard-api'
-import { dashboardToViewModel, dueCountToViewModel } from '../mapper'
-import type {
-  DashboardDueViewModel,
-  DashboardStaticViewModel,
-  DashboardViewModel,
-} from '../view-model'
+import type { DashboardStaticViewModel } from '../view-model'
 
 /**
  * 表示順（domain の order → topic の order → lessonId）で先頭のレッスンを返す。
@@ -73,26 +61,14 @@ export function loadDashboardStatic(): DashboardStaticViewModel {
 }
 
 /**
- * ユーザー固有の due 件数を取得する非キャッシュ loader。
- * 通常SSRでリクエストごとに取得するユーザー固有データ。
+ * 最近のアクティビティに出すレッスン名。content 由来の静的データとして、
+ * ビルド時に page から Client へ props で渡す（ADR-0019）。
  */
-export async function loadDashboardDueCount(): Promise<DashboardDueViewModel> {
-  return dueCountToViewModel(await fetchDueCount(await createServerApiClient()))
-}
-
-export async function loadDashboard(): Promise<DashboardViewModel> {
-  const client = await createServerApiClient()
-  const [summary, heatmap, activity] = await Promise.all([
-    fetchDashboardSummary(client),
-    fetchDashboardHeatmap(client),
-    fetchRecentActivity(client),
-  ])
-  const lessonTitles = new Map(
+export function loadLessonTitles(): Record<string, string> {
+  return Object.fromEntries(
     getLessonRouteParams().flatMap(({ lesson }) => {
       const content = getLessonContent(lesson)
       return content ? [[lesson, content.title] as const] : []
     }),
   )
-
-  return dashboardToViewModel(summary, heatmap, activity, lessonTitles)
 }

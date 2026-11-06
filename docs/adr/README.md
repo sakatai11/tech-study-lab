@@ -50,10 +50,10 @@
 | [ADR-0010](./0010-deploy-order.md) | リリースはスキーマ → データ → API → 画面の順に適用する | Superseded by ADR-0016 |
 | [ADR-0011](./0011-immutable-migrations.md) | 取り込み済みのマイグレーションは変更せず、追加で直す | Accepted |
 | [ADR-0012](./0012-separate-web-and-api-workers.md) | Web と API を別の Worker にし、書き込みは Hono API を通す | Accepted |
-| [ADR-0013](./0013-no-shared-cache-for-user-data.md) | ユーザー固有のデータを Web の共有キャッシュに載せない | Accepted |
+| [ADR-0013](./0013-no-shared-cache-for-user-data.md) | ユーザー固有のデータを Web の共有キャッシュに載せない | Superseded by ADR-0019 |
 | [ADR-0014](./0014-recent-activity-derived-from-logs.md) | 最近のアクティビティは保存済みのログから導出する | Accepted |
 | [ADR-0015](./0015-trust-service-binding-responses.md) | Service Binding 経由の API 応答は Server loader で Zod 再検証しない | Accepted |
 | [ADR-0016](./0016-performance-gated-promotion.md) | 本番へ昇格できるのは、性能試験まで成功した検証環境と同じ source tree だけにする | Superseded by ADR-0017 |
 | [ADR-0017](./0017-change-scoped-releases.md) | デプロイに影響する変更だけを、Worker ごとに反映する | Accepted |
 | [ADR-0018](./0018-release-attempt-consistency.md) | 変更処理の開始から成功までを記録し、省略判定を環境の状態に合わせる | Accepted |
-| [ADR-0019](./0019-csr-for-user-specific-screens.md) | 認証後の4画面は、静的な枠をビルド時に生成し、ユーザー固有データをブラウザで取得・描画する | Proposed |
+| [ADR-0019](./0019-csr-for-user-specific-screens.md) | 認証後の4画面は、静的な枠をビルド時に生成し、ユーザー固有データをブラウザで取得・描画する | Accepted |
