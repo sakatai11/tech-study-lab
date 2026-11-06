@@ -278,7 +278,7 @@ content 由来の初回データは Server loader が形成し、page から表�
 - Server Actionsは採用しない（[ADR-0012](./adr/0012-separate-web-and-api-workers.md)）。ユーザー固有データの取得も mutation も、Client hookからHono APIを呼ぶ。API契約とuser_id注入点を単一に保ち、HonoとCloudflareを学ぶ目的に沿わせる。重いフォームなど別の要求が生じた場合に再検討する。
 - ユーザー固有データの再取得は Client hook が行い、`router.refresh()` は鮮度の回復に使わない。取得状態（loading・空・エラー・再試行）は `lib/` の共通取得 hook に集約し、同じデータを複数の component が使う場合は1つの取得結果を Context で共有する。データ取得ライブラリは導入しない（[ADR-0019](./adr/0019-csr-for-user-specific-screens.md)）。API adapterへキャッシュ方針を持ち込まない。
 
-#### 通常 SSR・標準 SSG
+#### 標準 SSG とブラウザでの取得
 
 ユーザー固有のデータを共有キャッシュに載せない規則は [ADR-0019](./adr/0019-csr-for-user-specific-screens.md) が持つ（[ADR-0013](./adr/0013-no-shared-cache-for-user-data.md) を置き換えた）。
 

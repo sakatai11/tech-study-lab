@@ -136,7 +136,7 @@ content は「web のビルド時バンドル（設計文書 §5.1）」と「D1
 - **バックアップ**：教材・問題は Git にあるため、守る対象は D1 の動的データ（`answer_logs` / `srs_states` / `lesson_views`）のみ。当面は必要時に `wrangler d1 export` を手動実行し、マルチユーザー公開時に定期化（Cron 等）を検討する。
 - **観測**：rate limit / 永続書き込み（[ADR-0004](./adr/0004-persistent-write-rate-limit.md)）では、429・limiter failure・成功した永続書き込みごとに `event`・`endpoint`・`writeUnit` だけを含む PII-free の構造化 Worker log を出す。運用時は Workers Logs の event 別件数と D1 dashboard の `answer_logs` / `lesson_views` / `srs_states` の書き込み・容量メトリクスを同じ時間帯で突合する。`console.error` は未処理エラーの出力（設計文書 §5.7）に限る。Analytics Engine を含む外部監視は、既存のログと D1 メトリクスでは不足すると判断された場合に別 issue で検討する。
 
-## 通常 SSR・標準 SSG の実行確認
+## 標準 SSG の実行確認
 
 認証後の4画面（`/home`・`/review`・`/domains`・`/analytics`）は、静的な枠と loading 状態だけをビルド時に生成し、ユーザー固有データはブラウザの Client hook が取得する（[ADR-0019](./adr/0019-csr-for-user-specific-screens.md)）。成果物にユーザー固有データが含まれないこと、取得失敗を hook のエラー状態が扱うことを確認する。教材・演習 route は `generateStaticParams` が全 content params を返し、Vinext の production build が標準 SSG を生成することを確認する。Client hook の API client は最初の送信まで遅延生成し、render / SSG 時のブラウザ専用設定への依存を避ける。
 
