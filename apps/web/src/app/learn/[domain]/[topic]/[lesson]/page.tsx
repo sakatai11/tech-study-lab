@@ -9,7 +9,7 @@ type LessonPageProps = {
 }
 
 // content 由来で API に依存しないため、generateStaticParams で全件を
-// ビルド時に静的生成する（design.md 5.1、ADR-0013）。
+// ビルド時に静的生成する（design.md 5.1、ADR-0019）。
 export function generateStaticParams() {
   return listLessonRouteParams()
 }

@@ -20,7 +20,7 @@ describe('HomeError', () => {
     expect(screen.getByText('ダッシュボードを読み込めませんでした')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: '再読み込み' }))
     expect(reset).toHaveBeenCalledOnce()
-    expect(screen.getByRole('link', { name: 'ホームへ' })).toHaveProperty(
+    expect(screen.getByRole('link', { name: 'トップへ' })).toHaveProperty(
       'href',
       'http://localhost:3000/',
     )

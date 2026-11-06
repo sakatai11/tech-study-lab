@@ -31,7 +31,7 @@ pnpm --filter @tsl/api dev    # Hono / wrangler dev → http://localhost:8787
 pnpm --filter @tsl/web dev    # Vinext（Vite + workerd）→ http://localhost:3000
 ```
 
-起動ログで listen 開始を確認してから次へ進む（api は D1 バインディング、web は `API` Service Binding がローカル API へ接続できることを確認）。production build で確認する場合は web を `pnpm --filter @tsl/web build` → `start`（同じく :3000）で起動し、`pnpm --filter @tsl/web verify:ssg` で SSG/SSR の配信を確認する。2 つの `wrangler dev` の inspector port が衝突したら、片方に `--inspector-port` を指定する。
+起動ログで listen 開始を確認してから次へ進む（api は D1 バインディング）。認証後の4画面（`/home`・`/review`・`/domains`・`/analytics`）はブラウザから API を呼ぶので（ADR-0019）、ブラウザ用の API URL（`NEXT_PUBLIC_API_BASE_URL`、未設定なら `http://localhost:8787`）と API の `WEB_ORIGIN`（CORS）がローカルの組み合わせに合っていることも確認する。production build で確認する場合は web を `pnpm --filter @tsl/web build` → `start`（同じく :3000）で起動し、`pnpm --filter @tsl/web verify:ssg` で静的配信（4画面を含む）を確認する。2 つの `wrangler dev` の inspector port が衝突したら、片方に `--inspector-port` を指定する。
 
 ### 3. API 単体の確認
 
@@ -54,7 +54,7 @@ curl -s http://localhost:8787/api/lessons | head -20
      --command "SELECT * FROM answer_logs ORDER BY rowid DESC LIMIT 3;"
    ```
 4. **SRS**: 解答後に `srs_states` が更新されていること（同様に D1 照会）。
-5. UI の見た目まで確認が必要な場合のみ、現在のランタイムで利用可能なブラウザ機能で該当ページを開いて操作する。利用できなければ UI は未確認と報告する。
+5. UI の見た目まで確認が必要な場合のみ、現在のランタイムで利用可能なブラウザ機能で該当ページを開いて操作する。利用できなければ UI は未確認と報告する。認証後の4画面は、HTML に loading 状態しか入らないので、`curl` ではデータ表示を確認できない。データの表示・エラー・再取得はブラウザで確認する。
 
 ### 5. 後片付けと報告
 

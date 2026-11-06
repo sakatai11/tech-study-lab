@@ -82,6 +82,7 @@ Graphの語彙定義。node kind・relation・`layer` は**構文とパス規約
 | `shared-domain` | `packages/shared/src/` のその他 |
 | `web-api` | `apps/web/src/features/*/api/`、`apps/web/src/lib/api.ts` |
 | `web-loader` | `apps/web/src/features/*/server/load-*` |
+| `web-hook` | `apps/web/src/features/*/client/hooks/` |
 | `config` | dependency-cruiser設定、Worker設定 |
 
 ### 設計契約への参照を持たない
@@ -97,7 +98,7 @@ Graphは設計契約の本文を持たないのと同様に、契約への**参�
 ## 抽出対象
 
 - `apps/api/src`、`packages/shared/src` の非テスト `.ts/.tsx`。
-- Web の `features/*/api/`、`features/*/server/load-*`、`lib/api.ts`。
+- Web の `features/*/api/`、`features/*/server/load-*`、`features/*/client/hooks/`、`lib/api.ts`。認証後4画面のユーザー固有データは Client hook が API を呼ぶ（ADR-0019）。
 - Web JSONC、API TOML、dependency-cruiser 設定。
 - ローカルimport/export、名前付きshared importと宣言、`typeof`によるschema由来、appのmount、Hono endpoint、WebのHono client呼び出しをASTから取得。各node/edgeにファイルと1始まり行番号を付ける。
 - 既存dependency-cruiserルール名と出典を記録する。依存制約の実検査は既存 `pnpm lint` が担当する。

@@ -115,7 +115,7 @@ flowchart LR
 | `pnpm architecture:check` | Knowledge Graph のスナップショットがコードと一致しているか（develop 向け PR のみ） |
 | `pnpm architecture:test` | Knowledge Graph の抽出・検証ロジックのテスト（develop 向け PR のみ） |
 | `pnpm build` | web（Vinext production build）/ api のビルド |
-| `pnpm --filter @tsl/web verify:build` | SSG / SSR の生成物、Service Binding、公開成果物への正解データ混入を検査 |
+| `pnpm --filter @tsl/web verify:build` | SSG の生成物（認証後4画面の静的な枠を含む）、Service Binding、公開成果物への正解データとユーザー固有データの混入を検査 |
 
 ## リポジトリ構成
 

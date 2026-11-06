@@ -1,5 +1,3 @@
-import 'server-only'
-
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { MaterialSymbol, type MaterialSymbolName } from '@/components/ui/material-symbol'

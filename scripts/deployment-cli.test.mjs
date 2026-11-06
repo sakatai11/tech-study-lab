@@ -264,6 +264,7 @@ fs.appendFileSync(${JSON.stringify(join(root, 'commands.jsonl'))}, JSON.stringif
             if (path === '/dashboard/due-count') return Response.json({dueCount:1});
             if (path === '/answers') return Response.json({isCorrect:true});
             if (path === '/lesson-views') return Response.json({recorded:true},{status:201});
+            if (new URL(url).hostname === target.api + '.fixture.workers.dev' && ['/analytics/summary','/analytics/heatmap','/analytics/weekly','/analytics/mistakes','/activity/recent','/review/queue','/domains'].includes(path)) return Response.json({});
             if (['/home','/review','/domains','/analytics'].includes(path)) {
               const ray = (rays.length + 1).toString(16).padStart(16, '0');
               rays.push(ray);
