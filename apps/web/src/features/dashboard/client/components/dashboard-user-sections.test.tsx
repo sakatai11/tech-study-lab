@@ -10,6 +10,7 @@ import type {
 } from '@tsl/shared'
 
 import { invalidateClientData } from '@/lib/client-data-invalidation'
+import { clearClientQueryCache } from '@/lib/use-client-query'
 
 const api = vi.hoisted(() => ({
   createBrowserApiClient: vi.fn(() => ({ name: 'browser-client' })),
@@ -73,6 +74,7 @@ describe('DashboardUserSections [ADR-0019]', () => {
 
   afterEach(() => {
     cleanup()
+    clearClientQueryCache()
     vi.clearAllMocks()
   })
 
@@ -115,6 +117,18 @@ describe('DashboardUserSections [ADR-0019]', () => {
     fireEvent.click(screen.getByRole('button', { name: '再読み込み' }))
 
     expect(await screen.findByText('最近のアクティビティ')).toBeTruthy()
+  })
+
+  it('shows the kept data at once on return and does not request again while it is fresh', async () => {
+    const first = render(<DashboardUserSections lessonTitles={lessonTitles} />)
+    await screen.findByText('最近のアクティビティ')
+    first.unmount()
+
+    render(<DashboardUserSections lessonTitles={lessonTitles} />)
+
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(screen.getByText('最近のアクティビティ')).toBeTruthy()
+    expect(api.fetchDashboardSummary).toHaveBeenCalledTimes(1)
   })
 
   it('loads again after study activity is recorded', async () => {

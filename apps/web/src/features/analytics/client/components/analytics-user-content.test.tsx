@@ -10,6 +10,7 @@ import type {
 } from '@tsl/shared'
 
 import { invalidateClientData } from '@/lib/client-data-invalidation'
+import { clearClientQueryCache } from '@/lib/use-client-query'
 
 const api = vi.hoisted(() => ({
   createBrowserApiClient: vi.fn(() => ({ name: 'browser-client' })),
@@ -58,6 +59,7 @@ describe('AnalyticsUserContent [ADR-0019]', () => {
 
   afterEach(() => {
     cleanup()
+    clearClientQueryCache()
     vi.clearAllMocks()
   })
 

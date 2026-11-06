@@ -31,7 +31,7 @@ Issue #220 の調査では、フレームワークの処理が約 8.5 ms を占�
 1. 4画面の `page` から `force-dynamic` を外し、静的な枠と Client Component の loading 状態だけをビルド時にプリレンダリングする（SSG）。ユーザー固有データの取得・join・ViewModel 化・描画は、HTML / RSC の生成時に実行せず、静的な成果物にユーザー固有データを含めない。
 2. ユーザー固有データは Client hook が `createBrowserApiClient`（API Worker の公開 entrypoint）で取得し、共有 Zod で応答を検証してから、純粋な mapper で ViewModel 化する。4画面の読み取りに Service Binding は使わない。`client/hooks` は同 feature の `api` と `mapper` を呼んでよい。`/home` の4本の取得は1つの hook が並列に実行し、loading・エラー・再試行の状態は画面単位で1組とする。呼び出し元がなくなる `InternalApi`・Service Binding・`createServerApiClient` は撤去する。
 3. content 由来のデータは、ビルド時に静的な page（Server）が作り、props で Client に渡す。復習では「正解を含まない問題索引」を渡し、Client が queue の ID と結合する。`/home` のレッスン名と `/domains` のトピック route も同じ経路で渡す。索引と content loader を Client bundle へ import せず、索引は `answerIndex` を含まない（[ADR-0002](./0002-api-authoritative-grading.md)）。
-4. 鮮度は Client の取得で保つ。画面のマウント時に取得し、統計系の画面は `study-activity` の無効化通知で再取得する。復習の queue は、バッチ完了時だけ再取得し、解答ごとには差し替えない。復習のバッジと本文は同じ取得を共有する。loading・空・エラー・再試行は hook が持つ。取得状態は `lib/` の共通 hook に集約する。同じデータを複数の component が使う場合は、1つの取得結果を Context で共有する。データ取得ライブラリは導入しない。
+4. 鮮度は Client の取得で保つ。画面のマウント時に取得し、統計系の画面は `study-activity` の無効化通知で再取得する。統計系の画面は取得結果をタブ内のメモリに一定時間保持し、画面へ戻ったときは前回のデータをすぐ表示して、保持期間を過ぎていれば表示したまま裏で取り直す。無効化通知を受けた保持データは、画面を離れている間でも古いものとして扱い、次の表示で取り直す。復習の queue は保持せず画面を開くたびに取得し、バッチ完了時だけ再取得して、解答ごとには差し替えない。復習のバッジと本文は同じ取得を共有する。loading・空・エラー・再試行は hook が持つ。取得状態は `lib/` の共通 hook に集約する。同じデータを複数の component が使う場合は、1つの取得結果を Context で共有する。データ取得ライブラリは導入しない。
 5. ADR-0013 から次を引き継ぐ。ユーザー固有のデータ（due 件数、学習統計、復習キュー、領域別の集計、学習分析）を Web の共有キャッシュに載せない。`cacheComponents`、`'use cache'`、ISR 用の Incremental Cache・再検証 Queue は使わない。同じリクエスト内で取得を共有する React の `cache()` は許可する。ブラウザ内の取得状態の保持は、ユーザー単位の状態であり共有キャッシュではない。
 
 ## 境界
@@ -41,6 +41,7 @@ Issue #220 の調査では、フレームワークの処理が約 8.5 ms を占�
 - 静的な成果物は Worker が `ASSETS` binding から読んで返すため、Worker の invocation は残る。性能測定の条件（対象ルート、HTML/RSC など）と CPU ログ照合は変えない。静的配信の経路で使う CPU は、検証環境の測定で確かめる。
 - この決定で CPU 上限超過が解消しない場合（検証環境の全リクエストで HTTP 503 と `exceededCpu` が0件にならない場合）は、Workers Free の前提を見直す判断に進む。
 - bfcache やタブ復帰時の再取得は、この ADR の対象外とする（現状も実装がない）。
+- 保持はタブ内のメモリだけに置き、`localStorage` などへ永続化しない。ページの再読み込みで消えるため、Access で別のユーザーに切り替えた後に前のユーザーのデータを表示しない。
 - ユーザー固有データを読まない画面（公開トップ `/`、教材一覧 `/learn`、教材・演習の content route）と4画面の静的な枠は、ビルド時の静的生成にしてよい。共通シェルの due バッジとストリークは、表示後に Client が取得する。
 - 実装は2段階に分ける。段階1で4画面を SSG＋CSR に切り替え、CPU 時間を前後比較する。段階2で `InternalApi`・Service Binding・`createServerApiClient` を撤去する。段階2は別の Issue で扱い、API Worker・デプロイ手順・ADR-0015 の状態変更を伴う。
 - 問題索引は `/review` の HTML / RSC に含まれ、Access が保護するページと同じ範囲で配信される。大きさは問題数に比例する（2026-11-06 時点の31問で HTML 約70 KB・RSC 約52 KB）。大きくなりすぎた場合は、配信方法をこの ADR の置き換えで見直す。
@@ -52,9 +53,9 @@ Issue #220 の調査では、フレームワークの処理が約 8.5 ms を占�
 - [verify-build.ts](../../apps/web/scripts/verify-build.ts): ビルド成果物で4画面がプリレンダリングされ、HTML / RSC にユーザー固有データと正解が含まれず、loading 状態を含む（CI の `verify:build`）
 - [verify-ssg.ts](../../apps/web/scripts/verify-ssg.ts): 実行時に4画面の HTML / RSC がビルド成果物のまま静的配信される（`verify:ssg`）
 - [load-review-index.test.ts](../../apps/web/src/features/review/server/load-review-index.test.ts): 問題索引が全問題を持ち、正解を含まない
-- [use-client-query.test.ts](../../apps/web/src/lib/use-client-query.test.ts): マウント後の取得、エラーと再試行、購読したキーだけでの再取得、古い応答とアンマウント後の応答の無視
+- [use-client-query.test.ts](../../apps/web/src/lib/use-client-query.test.ts): マウント後の取得、エラーと再試行、購読したキーだけでの再取得、古い応答とアンマウント後の応答の無視、保持期間内の再表示で取得しないこと、期限切れと離れている間の無効化で取り直すこと
 - [review-user-content.test.tsx](../../apps/web/src/features/review/client/components/review-user-content.test.tsx): バッジと本文が1回の取得を共有し、次のバッチはバッチ完了時にだけ取得し、空・エラー・整合性エラーで再試行とホームへの導線を出す
-- [dashboard-user-sections.test.tsx](../../apps/web/src/features/dashboard/client/components/dashboard-user-sections.test.tsx): `/home` の取得を並列に行い、状態を画面単位で1組にし、due 件数だけの失敗では画面を出し、記録後に取得し直す
+- [dashboard-user-sections.test.tsx](../../apps/web/src/features/dashboard/client/components/dashboard-user-sections.test.tsx): `/home` の取得を並列に行い、状態を画面単位で1組にし、due 件数だけの失敗では画面を出し、戻ったときは保持したデータをすぐ表示し、記録後に取得し直す
 - [domain-progress-section.test.tsx](../../apps/web/src/features/domains/client/components/domain-progress-section.test.tsx)・[analytics-user-content.test.tsx](../../apps/web/src/features/analytics/client/components/analytics-user-content.test.tsx): ブラウザで取得し、loading とエラーからの再試行を表示する
 - [deployment-smoke.test.mjs](../../scripts/deployment-smoke.test.mjs): smoke test が4画面の使う API の GET を認証付きで確認し、失敗でリリースを止める
 

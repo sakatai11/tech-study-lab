@@ -3,7 +3,11 @@
 import { useCallback } from 'react'
 
 import { createBrowserApiClient } from '@/lib/api'
-import { type ClientQueryResult, useClientQuery } from '@/lib/use-client-query'
+import {
+  type ClientQueryResult,
+  STATISTICS_MAX_AGE_MS,
+  useClientQuery,
+} from '@/lib/use-client-query'
 
 import { fetchDomains } from '../../api/domains-api'
 import { domainsToViewModel } from '../../mapper'
@@ -18,5 +22,8 @@ export function useDomains(
     [topicRoutes],
   )
 
-  return useClientQuery(load, { revalidateOn: ['study-activity'] })
+  return useClientQuery(load, {
+    revalidateOn: ['study-activity'],
+    cache: { key: 'domains', maxAgeMs: STATISTICS_MAX_AGE_MS },
+  })
 }

@@ -1,7 +1,11 @@
 'use client'
 
 import { createBrowserApiClient } from '@/lib/api'
-import { type ClientQueryResult, useClientQuery } from '@/lib/use-client-query'
+import {
+  type ClientQueryResult,
+  STATISTICS_MAX_AGE_MS,
+  useClientQuery,
+} from '@/lib/use-client-query'
 
 import {
   fetchAnalyticsMistakes,
@@ -24,5 +28,8 @@ async function loadAnalytics(): Promise<AnalyticsViewModel> {
 
 /** 学習分析をブラウザで取得する。記録後は study-activity で取得し直す（ADR-0019）。 */
 export function useAnalytics(): ClientQueryResult<AnalyticsViewModel> {
-  return useClientQuery(loadAnalytics, { revalidateOn: ['study-activity'] })
+  return useClientQuery(loadAnalytics, {
+    revalidateOn: ['study-activity'],
+    cache: { key: 'analytics', maxAgeMs: STATISTICS_MAX_AGE_MS },
+  })
 }

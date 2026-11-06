@@ -5,6 +5,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createClient } from '@tsl/api/client'
 
+import { clearClientQueryCache } from '@/lib/use-client-query'
+
 const createBrowserApiClient = vi.hoisted(() => vi.fn())
 vi.mock('@/lib/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/api')>()),
@@ -36,6 +38,7 @@ function domainsResponse() {
 describe('DomainProgressSection [ADR-0019]', () => {
   afterEach(() => {
     cleanup()
+    clearClientQueryCache()
     vi.resetAllMocks()
   })
 

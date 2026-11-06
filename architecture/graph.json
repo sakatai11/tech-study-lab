@@ -150,16 +150,16 @@
       "lines": 36
     },
     "apps/web/src/features/analytics/client/hooks/use-analytics.ts": {
-      "sha256": "e6fd46ec3f418cf17e6e2fbfa50c604c5c0c5c65b41be1c906de96225d07baeb",
-      "lines": 29
+      "sha256": "2f6aa1a09ee1199ad14c2553d7c99393c0f90a7fada1513e0dbfdb56e105f936",
+      "lines": 36
     },
     "apps/web/src/features/dashboard/api/dashboard-api.ts": {
       "sha256": "db6c97781e3dce622876549de9734662cc0358601a4b053558ca16ba035ceaa3",
       "lines": 51
     },
     "apps/web/src/features/dashboard/client/hooks/use-dashboard.ts": {
-      "sha256": "09ed2fe4a984d0ec6731652d6cd64465a57728988c86628a85fe1b5ae3294094",
-      "lines": 40
+      "sha256": "de652512eb62a0805e59824305c1a8a912535d48b4f0de555a50e01d87c060a7",
+      "lines": 48
     },
     "apps/web/src/features/dashboard/client/hooks/use-due-count.ts": {
       "sha256": "b65d754e3e07452d4a562c15a23882dae30abb6cb0f5d65a18e2f1ccce139e2b",
@@ -178,8 +178,8 @@
       "lines": 13
     },
     "apps/web/src/features/domains/client/hooks/use-domains.ts": {
-      "sha256": "f1af84fdd1b165a75bf94f89cc0a115262e8d3ff5e23e65a84aa02970dd9f02f",
-      "lines": 23
+      "sha256": "2bd099f1b588731f27d4933b8f863787345d5d3de621b0c0db0b9775b8466d9f",
+      "lines": 30
     },
     "apps/web/src/features/domains/server/load-domains.ts": {
       "sha256": "c623b543321e316122c8910f434ce67994345bd1aeec7cae149b5bcedcfdc4b2",
@@ -222,8 +222,8 @@
       "lines": 13
     },
     "apps/web/src/features/review/client/hooks/use-review-queue.ts": {
-      "sha256": "8e024764f3a7d50c8062f2c95a282f87c1599e2260303bcf05255bf06ac9c7d0",
-      "lines": 33
+      "sha256": "151434f0df71a03bb994febf1f755fefe8b3b5c9b23f7c9555452c6adba13a2f",
+      "lines": 34
     },
     "apps/web/src/features/review/server/load-review-index.ts": {
       "sha256": "8e7fee1d87f2d08a317649b6665bdea608839ed919613b9db01c96234f5af31a",
@@ -4124,7 +4124,7 @@
       "to": "apps/web/src/features/analytics/api/analytics-api.ts",
       "source": {
         "file": "apps/web/src/features/analytics/client/hooks/use-analytics.ts",
-        "line": 6
+        "line": 10
       },
       "specifier": "../../api/analytics-api",
       "typeOnly": false
@@ -4285,7 +4285,7 @@
       "to": "apps/web/src/features/dashboard/api/dashboard-api.ts",
       "source": {
         "file": "apps/web/src/features/dashboard/client/hooks/use-dashboard.ts",
-        "line": 8
+        "line": 12
       },
       "specifier": "../../api/dashboard-api",
       "typeOnly": false
@@ -4449,7 +4449,7 @@
       "to": "apps/web/src/features/domains/api/domains-api.ts",
       "source": {
         "file": "apps/web/src/features/domains/client/hooks/use-domains.ts",
-        "line": 8
+        "line": 12
       },
       "specifier": "../../api/domains-api",
       "typeOnly": false

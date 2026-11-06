@@ -288,7 +288,7 @@ content 由来の初回データは Server loader が形成し、page から表�
 - `/home` は due 件数・summary・heatmap・recent activity を1つの Client hook が並列に取得し、状態は画面単位で1組とする。due 件数と summary・heatmap・recent activity はそれぞれの API 契約を保つ。領域別の習得状況とトピック選択は `/domains` に集約し、ホームでは領域データを取得しない。`/domains` は4領域の集計、`/analytics` は summary・weekly・mistakesを読む。忘却曲線・復習タイミングは対象外。
 - due件数・統計・review queue・domains／analytics集計には共有キャッシュを使わない。APIが注入するuser_idをwebの共有キャッシュキーに含められず、ユーザー間の混入が起こり得るためである。
 - Reactの `cache()` によるリクエスト内の取得共有は許可する。ユーザー横断の共有キャッシュとは区別する。ブラウザ内の取得状態の保持はユーザー単位であり、共有キャッシュではない。
-- 解答後は `study-activity` の無効化通知でClient hookが再取得し、鮮度を回復する。復習のバッチ完了時の条件は §5.3。bfcache やタブ復帰時の再取得は対象外とする。
+- 解答後は `study-activity` の無効化通知でClient hookが再取得し、鮮度を回復する。統計系の画面（ホーム・領域・分析）は取得結果をタブ内のメモリに保持し（`STATISTICS_MAX_AGE_MS`）、画面へ戻ったときは前回のデータをすぐ表示して、期限切れか無効化済みなら表示したまま裏で取り直す。復習の queue は保持しない。復習のバッチ完了時の条件は §5.3。bfcache やタブ復帰時の再取得は対象外とする。
 - web Worker は静的 asset 配信に必要な最小構成だけを使う。API Service Binding は読み取りに使わず、[ADR-0019](./adr/0019-csr-for-user-specific-screens.md) の段階2で撤去する。content route と認証後4画面の静的な枠のビルド時 HTML / RSC は Vinext の `prerender` と `@vinext/cloudflare` の `staticAssetsAdapter` で `ASSETS` binding から配信し、内部 cache artifact（`/_vinext/static-cache/*`）は `assets.run_worker_first` で Worker へ通して外部からの直接取得を防ぐ。ISR 用の Incremental Cache、R2、KV、Durable Object Queue の有効 binding、Worker 自己参照 binding は持たない。OpenNext 時代に登録した Durable Object の履歴を設定に残す理由は [記録](./investigations/2026-10-14-opennext-durable-object-history.md) にある。
 
 #### API client
