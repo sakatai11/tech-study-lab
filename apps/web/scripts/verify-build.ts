@@ -8,6 +8,7 @@ import {
   getQuizRouteParams,
   getTopicRouteParams,
 } from '../src/lib/content'
+import { findUserData } from './user-data-check'
 
 // Run after build without a server (CI).
 // 認証後の4画面が静的な枠として prerender され、ユーザー固有データを含まないこと（ADR-0019。
@@ -30,26 +31,8 @@ const contentPaths = [
 ]
 const userShellPaths = ['/home', '/review', '/domains', '/analytics']
 const staticPaths = ['/', '/learn', '/quiz', ...userShellPaths, ...contentPaths]
-// ユーザー固有の API 応答のキー。静的な成果物に JSON のキー（直後に引用符と `:`）として
-// 入っていれば、ビルド時に取得したことになる。教材の本文に語として出てもキーの形にはならない。
-const userDataKeys = [
-  'dueCount',
-  'dueAt',
-  'hasMore',
-  'masteryRate',
-  'masteredQuestionCount',
-  'totalQuestionCount',
-  'totalAnswerCount',
-  'correctAnswerRate',
-  'averageResponseTimeMs',
-  'thisWeekStudyTimeMs',
-  'currentStreakDays',
-  'retentionDistribution',
-  'answerCount',
-  'occurredAt',
-]
-// 4画面の静的な枠が props として持つ教材の文（問題索引とレッスン名）。教材が JSON の例として
-// これらのキーを含む場合は、そのキーを検査から外す。ユーザー固有データと区別できないためである。
+// 4画面の静的な枠が props として持つ教材の文（問題索引とレッスン名）。JSON の例としてユーザー固有の
+// キーを含む文は、取り除いてから検査する（user-data-check.ts）。
 const shellContentTexts = [
   ...[...getBundledQuestions().values()].flatMap(({ prompt, choices, explanation }) => [
     prompt,
@@ -58,15 +41,6 @@ const shellContentTexts = [
   ]),
   ...getLessonRouteParams().flatMap(({ lesson }) => getLessonContent(lesson)?.title ?? []),
 ]
-const contentKeys = userDataKeys.filter((key) =>
-  shellContentTexts.some((text) => new RegExp(`\\b${key}"?\\s*:`).test(text)),
-)
-const checkedUserDataKeys = userDataKeys.filter((key) => !contentKeys.includes(key))
-// 全キーを外すと何にでも一致してしまうので、検査するキーがない場合は検査しない。
-const userDataPattern =
-  checkedUserDataKeys.length > 0
-    ? new RegExp(`\\b(?:${checkedUserDataKeys.join('|')})(?:&quot;|\\\\?")\\s*:`)
-    : undefined
 
 // SSG: every content param and the user screens' static shells are prerendered, and nothing else is.
 const renderedPaths = manifest.routes
@@ -81,7 +55,8 @@ for (const pathname of staticPaths) {
     assert(generated.length > 0, `${pathname} ${kind} is empty`)
     assert(!answerIndexPattern.test(generated), `${pathname} ${kind} leaks answerIndex`)
     if (userShellPaths.includes(pathname)) {
-      assert(!userDataPattern?.test(generated), `${pathname} ${kind} contains user-specific data`)
+      const leaked = findUserData(generated, shellContentTexts)
+      assert(!leaked, `${pathname} ${kind} contains user-specific data: ${leaked}`)
       if (kind === 'html')
         assert(generated.includes('aria-busy="true"'), `${pathname} has no loading state`)
     }
@@ -131,7 +106,6 @@ console.log(
       contentRoutes: contentPaths.length,
       prerendered: renderedPaths.length,
       userShellRoutes: userShellPaths,
-      userDataKeysSkippedForContent: contentKeys,
       privateCacheArtifacts: Object.keys(privateIndex).length,
     },
     null,
