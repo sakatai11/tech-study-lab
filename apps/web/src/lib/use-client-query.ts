@@ -6,7 +6,12 @@ import { subscribeToClientDataInvalidation } from './client-data-invalidation'
 
 export type ClientQueryState<T> =
   | { status: 'loading' }
-  | { status: 'success'; data: T }
+  | {
+      status: 'success'
+      data: T
+      /** 表示中のデータを残したまま、裏の取り直しに失敗した場合のエラー。画面は再試行を出す。 */
+      refreshError?: Error
+    }
   | { status: 'error'; error: Error }
 
 export type ClientQueryResult<T> = ClientQueryState<T> & {
@@ -100,7 +105,9 @@ export function useClientQuery<T>(
     const requestId = ++requestIdRef.current
     const keepShown = cacheRef.current !== undefined
     setState((current) =>
-      keepShown && current.status === 'success' ? current : { status: 'loading' },
+      keepShown && current.status === 'success'
+        ? { status: 'success', data: current.data }
+        : { status: 'loading' },
     )
     loadRef.current().then(
       (data) => {
@@ -118,16 +125,14 @@ export function useClientQuery<T>(
         }
         setState({ status: 'success', data })
       },
-      (error: unknown) => {
+      (caught: unknown) => {
         if (requestId !== requestIdRef.current) return
-        // 保持する画面では、表示中のデータを取り直しの失敗で消さない。
+        const error = caught instanceof Error ? caught : new Error('データの取得に失敗しました。')
+        // 保持する画面では、表示中のデータを残したまま失敗を伝える。
         setState((current) =>
           keepShown && current.status === 'success'
-            ? current
-            : {
-                status: 'error',
-                error: error instanceof Error ? error : new Error('データの取得に失敗しました。'),
-              },
+            ? { status: 'success', data: current.data, refreshError: error }
+            : { status: 'error', error },
         )
       },
     )

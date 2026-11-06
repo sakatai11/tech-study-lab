@@ -176,11 +176,12 @@ describe('useClientQuery [ADR-0019]', () => {
       expect(load).toHaveBeenCalledTimes(2)
     })
 
-    it('keeps the shown data when a background refetch fails', async () => {
+    it('keeps the shown data and reports the failure when a background refetch fails', async () => {
       const load = vi
         .fn<() => Promise<string>>()
         .mockResolvedValueOnce('shown')
         .mockRejectedValueOnce(new Error('offline'))
+        .mockReturnValueOnce(new Promise(() => {}))
       const { result } = renderHook(() =>
         useClientQuery(load, { cache: { key: 'failure', maxAgeMs: 60_000 } }),
       )
@@ -188,8 +189,16 @@ describe('useClientQuery [ADR-0019]', () => {
 
       act(() => result.current.reload())
       expect(result.current).toMatchObject({ status: 'success', data: 'shown' })
-      await waitFor(() => expect(load).toHaveBeenCalledTimes(2))
-      expect(result.current).toMatchObject({ status: 'success', data: 'shown' })
+      await waitFor(() =>
+        expect(result.current).toMatchObject({
+          status: 'success',
+          data: 'shown',
+          refreshError: new Error('offline'),
+        }),
+      )
+
+      act(() => result.current.reload())
+      expect(result.current).not.toHaveProperty('refreshError')
     })
   })
 })

@@ -22,7 +22,7 @@ export default function HomeError({ error, reset }: { error: Error; reset: () =>
             ダッシュボードを読み込めませんでした
           </h1>
           <p className="mb-0 mt-3 leading-7 text-ink-2">
-            一時的な通信の問題が発生している可能性があります。再読み込みを試すか、ホームへ戻ってください。
+            一時的な通信の問題が発生している可能性があります。再読み込みを試すか、トップへ戻ってください。
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Button onClick={reset} variant="blue">
@@ -32,7 +32,7 @@ export default function HomeError({ error, reset }: { error: Error; reset: () =>
               className="inline-flex min-h-11 items-center justify-center rounded-xl border-2 border-border px-4 py-2.5 font-bold text-ink transition-colors hover:bg-well"
               href="/"
             >
-              ホームへ
+              トップへ
             </Link>
             <Link
               className="inline-flex min-h-11 items-center justify-center rounded-xl border-2 border-border px-4 py-2.5 font-bold text-ink transition-colors hover:bg-well"

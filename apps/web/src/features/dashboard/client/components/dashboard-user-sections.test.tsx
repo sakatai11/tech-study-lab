@@ -85,7 +85,23 @@ describe('DashboardUserSections [ADR-0019]', () => {
     expect(screen.getByRole('status').textContent).toContain('学習の状況を読み込んでいます')
   })
 
-  it('fetches all dashboard APIs in parallel with one browser client and joins lesson titles', async () => {
+  it('starts all four dashboard requests before any of them finishes', async () => {
+    const started: string[] = []
+    const pending = (name: string) => () => {
+      started.push(name)
+      return new Promise<never>(() => {})
+    }
+    api.fetchDueCount.mockImplementation(pending('due'))
+    api.fetchDashboardSummary.mockImplementation(pending('summary'))
+    api.fetchDashboardHeatmap.mockImplementation(pending('heatmap'))
+    api.fetchRecentActivity.mockImplementation(pending('activity'))
+
+    render(<DashboardUserSections lessonTitles={lessonTitles} />)
+
+    await waitFor(() => expect(started).toEqual(['due', 'summary', 'heatmap', 'activity']))
+  })
+
+  it('fetches the dashboard APIs with one browser client and joins lesson titles', async () => {
     render(<DashboardUserSections lessonTitles={lessonTitles} />)
 
     expect(await screen.findByText('教材「XSS lesson」を閲覧しました')).toBeTruthy()
@@ -129,6 +145,19 @@ describe('DashboardUserSections [ADR-0019]', () => {
     expect(screen.queryByRole('status')).toBeNull()
     expect(screen.getByText('最近のアクティビティ')).toBeTruthy()
     expect(api.fetchDashboardSummary).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the data and offers a retry when a refetch after recording fails', async () => {
+    render(<DashboardUserSections lessonTitles={lessonTitles} />)
+    await screen.findByText('最近のアクティビティ')
+    api.fetchDashboardSummary.mockRejectedValueOnce(new Error('offline'))
+
+    act(() => invalidateClientData('study-activity'))
+
+    expect(await screen.findByText(/最新の内容を読み込めませんでした/)).toBeTruthy()
+    expect(screen.getByText('最近のアクティビティ')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: '再読み込み' }))
+    await waitFor(() => expect(screen.queryByText(/最新の内容を読み込めませんでした/)).toBeNull())
   })
 
   it('loads again after study activity is recorded', async () => {

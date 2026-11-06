@@ -16,7 +16,7 @@ export function DashboardDueCard({ dueCount }: { dueCount: number | null }) {
         </p>
         <h2 className="mb-0 mt-3 text-2xl font-black text-ink">今日の復習</h2>
         <p className="mb-0 mt-2 text-pretty text-sm leading-6 text-mute">
-          復習件数を取得できませんでした。復習ページからキューを確認できます。
+          復習件数を取得できませんでした。復習ページから復習する問題を確認できます。
         </p>
         <Link className={reviewLinkClassName} href="/review">
           復習を始める

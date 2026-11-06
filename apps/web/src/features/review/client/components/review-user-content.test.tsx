@@ -56,7 +56,7 @@ describe('ReviewUserContent [ADR-0019]', () => {
     fetchReviewQueue.mockReturnValue(new Promise(() => {}))
     renderReview()
 
-    expect(screen.getByRole('status').textContent).toContain('復習キューを読み込んでいます')
+    expect(screen.getByRole('status').textContent).toContain('復習する問題を読み込んでいます')
     expect(screen.queryByText(/問$/)).toBeNull()
   })
 
@@ -106,7 +106,7 @@ describe('ReviewUserContent [ADR-0019]', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'runner:q1:true' }))
 
-    expect(screen.getByRole('status').textContent).toContain('復習キューを読み込んでいます')
+    expect(screen.getByRole('status').textContent).toContain('復習する問題を読み込んでいます')
     expect(screen.queryByRole('button', { name: 'runner:q1:true' })).toBeNull()
     rejectNext(new Error('offline'))
     expect(await screen.findByText('復習データを読み込めませんでした')).toBeTruthy()

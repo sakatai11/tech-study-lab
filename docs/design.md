@@ -351,7 +351,7 @@ Quiz と Review の表示再利用は、feature VM同士を継承・交差させ
 ### 5.7 エラー処理
 
 - content 由来の初回データの取得・検証失敗はServer側でthrowし、routeの `error.tsx` で扱う。ユーザー固有データの取得・検証失敗は、Client hookが `error` 状態として表示componentへ渡し、再試行を提供する。`error.tsx` はClientの非同期取得の失敗を捕捉しないため、これに頼らない。復習のcontent整合性分岐は §5.3に従う。
-- 取得・mutationの待機・失敗はhookの `loading`・`submitting`・`error` を表示componentへ渡して扱う。再取得中の表示が必要なら `isRefreshing` を用いる。
+- 取得・mutationの待機・失敗はhookの `loading`・`submitting`・`error` を表示componentへ渡して扱う。統計系の画面で表示中のデータを残したまま裏の取り直しに失敗した場合は、hookの `refreshError` で失敗と再試行を表示する（ADR-0019）。
 - `/review` は、API/通信の一時的失敗とcontent不整合を、どちらも `error` 状態として表示する。`error.message` から失敗種別を判定せず、両方を含む案内を出す。再試行と、恒久的な不整合で再試行ループに閉じ込めないためのホームへのLinkを提供する。
 - 教材閲覧のfire-and-forget記録は、失敗しても本文表示やroute error boundaryへ波及させない（§5.6）。
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { LoadErrorCard, LoadingCard } from '@/components/ui/load-state'
+import { LoadErrorCard, LoadingCard, RefreshErrorNotice } from '@/components/ui/load-state'
 
 import type { DomainTopicRoute } from '../../view-model'
 import { useDomains } from '../hooks/use-domains'
@@ -36,10 +36,13 @@ export function DomainProgressSection({
           title="学習領域を読み込めませんでした"
         />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {domains.data.domains.map((domain) => (
-            <DomainProgressCard domain={domain} key={domain.domain} />
-          ))}
+        <div className="flex flex-col gap-4">
+          {domains.refreshError ? <RefreshErrorNotice onRetry={domains.reload} /> : null}
+          <div className="grid gap-4 sm:grid-cols-2">
+            {domains.data.domains.map((domain) => (
+              <DomainProgressCard domain={domain} key={domain.domain} />
+            ))}
+          </div>
         </div>
       )}
     </section>

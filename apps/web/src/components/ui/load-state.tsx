@@ -49,3 +49,20 @@ export function LoadErrorCard({ code, title, message, onRetry, links }: LoadErro
     </Card>
   )
 }
+
+/**
+ * 前回のデータを表示したまま、裏の取り直しに失敗したことを伝える。
+ * 古いデータを最新と誤解させず、再試行の操作を残す（ADR-0019）。
+ */
+export function RefreshErrorNotice({ onRetry }: { onRetry: () => void }) {
+  return (
+    <Card className="flex flex-wrap items-center justify-between gap-3 border-red p-4" role="alert">
+      <p className="m-0 text-sm font-semibold text-ink-2">
+        最新の内容を読み込めませんでした。前回の内容を表示しています。
+      </p>
+      <Button onClick={onRetry} variant="ghost">
+        再読み込み
+      </Button>
+    </Card>
+  )
+}

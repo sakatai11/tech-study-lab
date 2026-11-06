@@ -6,11 +6,11 @@
 
 ## 背景
 
-`/home`・`/review`・`/domains`・`/analytics` は、Server loader がリクエストごとにユーザー固有データを取得し、ViewModel 化して描画している（`docs/design.md` §5.3）。検証環境では `/review` の HTML が Workers Free の CPU 上限に達し、HTTP 503（`exceededCpu`）を返した。ログ上の CPU 時間は 10〜16 ms で、SSR のどの処理が支配的かは特定できていない。
+`/home`・`/review`・`/domains`・`/analytics` は、Server loader がリクエストごとにユーザー固有データを取得し、ViewModel 化して描画している（`docs/design.md` §5.3）。検証環境では `/review` の HTML が Workers Free の CPU 上限に達し、HTTP 503（`exceededCpu`）を返した。SSR のどの処理が支配的かは、ログからは特定できていない。観測の詳細は [調査記録](../investigations/2026-11-06-user-screens-static-shells.md) にある。
 
-Issue #220 の調査では、フレームワークの処理が約 8.5 ms を占め、要素数と「非同期の待ちの後に描く本文」が CPU を左右することが分かっている。ユーザー固有の本文を Server で描かなければ、後者が Web Worker の CPU から外れる。ただし `force-dynamic` のままでは、静的な枠と Client Component の loading 状態をリクエストごとに描画するため、フレームワークの処理は残る。
+Issue #220 の調査では、リクエストごとの描画にはフレームワークの処理による下限があり、その上に要素数と「非同期の待ちの後に描く本文」が CPU を左右することが分かっている（同じ調査記録）。ユーザー固有の本文を Server で描かなければ、後者が Web Worker の CPU から外れる。ただし `force-dynamic` のままでは、静的な枠と Client Component の loading 状態をリクエストごとに描画するため、フレームワークの処理は残る。
 
-教材・演習の静的ページは、プリレンダリングした HTML / RSC を `_vinext/static-cache/` に置き、Worker が `ASSETS` binding 経由で読んで返している（[Vinext 移行の調査記録](../investigations/2026-10-04-vinext-migration.md)）。4画面の枠を同じ方式にすれば、リクエストごとの描画をなくしつつ、Worker の invocation は残る。そのため、性能試験の CPU ログ照合（測定した全リクエストを invocation log と1対1で対応付ける）は従来どおり使える。
+教材・演習の静的ページは、プリレンダリングした HTML / RSC を Worker が `ASSETS` binding 経由で読んで返している（[Vinext 移行の調査記録](../investigations/2026-10-04-vinext-migration.md)）。4画面の枠を同じ方式にすれば、リクエストごとの描画をなくしつつ、Worker の invocation は残る。そのため、性能試験の CPU ログ照合（測定した全リクエストを invocation log と1対1で対応付ける）は従来どおり使える。
 
 [ADR-0013](./0013-no-shared-cache-for-user-data.md) の決定2（認証後の画面は `force-dynamic` の SSR）と決定5（`router.refresh()` で鮮度を回復する）、[ADR-0012](./0012-separate-web-and-api-workers.md) の決定2（Server loader は Service Binding で API を呼ぶ）は、この前提で書かれている。
 
@@ -31,7 +31,7 @@ Issue #220 の調査では、フレームワークの処理が約 8.5 ms を占�
 1. 4画面の `page` から `force-dynamic` を外し、静的な枠と Client Component の loading 状態だけをビルド時にプリレンダリングする（SSG）。ユーザー固有データの取得・join・ViewModel 化・描画は、HTML / RSC の生成時に実行せず、静的な成果物にユーザー固有データを含めない。
 2. ユーザー固有データは Client hook が `createBrowserApiClient`（API Worker の公開 entrypoint）で取得し、共有 Zod で応答を検証してから、純粋な mapper で ViewModel 化する。4画面の読み取りに Service Binding は使わない。`client/hooks` は同 feature の `api` と `mapper` を呼んでよい。`/home` の4本の取得は1つの hook が並列に実行し、loading・エラー・再試行の状態は画面単位で1組とする。呼び出し元がなくなる `InternalApi`・Service Binding・`createServerApiClient` は撤去する。
 3. content 由来のデータは、ビルド時に静的な page（Server）が作り、props で Client に渡す。復習では「正解を含まない問題索引」を渡し、Client が queue の ID と結合する。`/home` のレッスン名と `/domains` のトピック route も同じ経路で渡す。索引と content loader を Client bundle へ import せず、索引は `answerIndex` を含まない（[ADR-0002](./0002-api-authoritative-grading.md)）。
-4. 鮮度は Client の取得で保つ。画面のマウント時に取得し、統計系の画面は `study-activity` の無効化通知で再取得する。統計系の画面は取得結果をタブ内のメモリに一定時間保持し、画面へ戻ったときは前回のデータをすぐ表示して、保持期間を過ぎていれば表示したまま裏で取り直す。無効化通知を受けた保持データは、画面を離れている間でも古いものとして扱い、次の表示で取り直す。復習の queue は保持せず画面を開くたびに取得し、バッチ完了時だけ再取得して、解答ごとには差し替えない。復習のバッジと本文は同じ取得を共有する。loading・空・エラー・再試行は hook が持つ。取得状態は `lib/` の共通 hook に集約する。同じデータを複数の component が使う場合は、1つの取得結果を Context で共有する。データ取得ライブラリは導入しない。
+4. 鮮度は Client の取得で保つ。画面のマウント時に取得し、統計系の画面は `study-activity` の無効化通知で再取得する。統計系の画面は取得結果をタブ内のメモリに一定時間保持し、画面へ戻ったときは前回のデータをすぐ表示して、保持期間を過ぎていれば表示したまま裏で取り直す。裏の取り直しに失敗した場合は、表示中のデータを残したまま失敗と再試行を表示する。無効化通知を受けた保持データは、画面を離れている間でも古いものとして扱い、次の表示で取り直す。復習の queue は保持せず画面を開くたびに取得し、バッチ完了時だけ再取得して、解答ごとには差し替えない。復習のバッジと本文は同じ取得を共有する。loading・空・エラー・再試行は hook が持つ。取得状態は `lib/` の共通 hook に集約する。同じデータを複数の component が使う場合は、1つの取得結果を Context で共有する。データ取得ライブラリは導入しない。
 5. ADR-0013 から次を引き継ぐ。ユーザー固有のデータ（due 件数、学習統計、復習キュー、領域別の集計、学習分析）を Web の共有キャッシュに載せない。`cacheComponents`、`'use cache'`、ISR 用の Incremental Cache・再検証 Queue は使わない。同じリクエスト内で取得を共有する React の `cache()` は許可する。ブラウザ内の取得状態の保持は、ユーザー単位の状態であり共有キャッシュではない。
 
 ## 境界
@@ -44,7 +44,7 @@ Issue #220 の調査では、フレームワークの処理が約 8.5 ms を占�
 - 保持はタブ内のメモリだけに置き、`localStorage` などへ永続化しない。ページの再読み込みで消えるため、Access で別のユーザーに切り替えた後に前のユーザーのデータを表示しない。
 - ユーザー固有データを読まない画面（公開トップ `/`、教材一覧 `/learn`、教材・演習の content route）と4画面の静的な枠は、ビルド時の静的生成にしてよい。共通シェルの due バッジとストリークは、表示後に Client が取得する。
 - 実装は2段階に分ける。段階1で4画面を SSG＋CSR に切り替え、CPU 時間を前後比較する。段階2で `InternalApi`・Service Binding・`createServerApiClient` を撤去する。段階2は別の Issue で扱い、API Worker・デプロイ手順・ADR-0015 の状態変更を伴う。
-- 問題索引は `/review` の HTML / RSC に含まれ、Access が保護するページと同じ範囲で配信される。大きさは問題数に比例する（2026-11-06 時点の31問で HTML 約70 KB・RSC 約52 KB）。大きくなりすぎた場合は、配信方法をこの ADR の置き換えで見直す。
+- 問題索引は `/review` の HTML / RSC に含まれ、Access が保護するページと同じ範囲で配信される。大きさは問題数に比例する（現在の値は調査記録）。大きくなりすぎた場合は、配信方法をこの ADR の置き換えで見直す。
 - 4画面の HTML はユーザー固有データを含まないため、HTML の応答だけではデータ取得の失敗を検出できない。リリース時の smoke test は、4画面の HTML に加えて、4画面が使う API の GET を認証付きで確認する。
 
 ## 検証

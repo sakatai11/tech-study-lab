@@ -1,6 +1,6 @@
 'use client'
 
-import { LoadErrorCard, LoadingCard } from '@/components/ui/load-state'
+import { LoadErrorCard, LoadingCard, RefreshErrorNotice } from '@/components/ui/load-state'
 
 import { useAnalytics } from '../hooks/use-analytics'
 import { AnalyticsDashboard } from './analytics-dashboard'
@@ -22,5 +22,10 @@ export function AnalyticsUserContent() {
     )
   }
 
-  return <AnalyticsDashboard viewModel={analytics.data} />
+  return (
+    <div className="flex flex-col gap-5">
+      {analytics.refreshError ? <RefreshErrorNotice onRetry={analytics.reload} /> : null}
+      <AnalyticsDashboard viewModel={analytics.data} />
+    </div>
+  )
 }

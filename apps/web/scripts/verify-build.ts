@@ -24,9 +24,26 @@ const contentPaths = [
 ]
 const userShellPaths = ['/home', '/review', '/domains', '/analytics']
 const staticPaths = ['/', '/learn', '/quiz', ...userShellPaths, ...contentPaths]
-// ユーザー固有の API 応答にだけ現れるキー。静的な成果物に入っていれば、ビルド時に取得したことになる。
-const userDataPattern =
-  /\b(?:dueCount|dueAt|masteryRate|masteredQuestionCount|currentStreakDays|correctAnswerRate|occurredAt|retentionDistribution)\b/
+// ユーザー固有の API 応答のキー。静的な成果物に JSON のキー（直後に引用符と `:`）として
+// 入っていれば、ビルド時に取得したことになる。教材の本文にこれらの語が出ても、キーの形には
+// ならないので誤検出しない。
+const userDataKeys = [
+  'dueCount',
+  'dueAt',
+  'hasMore',
+  'masteryRate',
+  'masteredQuestionCount',
+  'totalQuestionCount',
+  'totalAnswerCount',
+  'correctAnswerRate',
+  'averageResponseTimeMs',
+  'thisWeekStudyTimeMs',
+  'currentStreakDays',
+  'retentionDistribution',
+  'answerCount',
+  'occurredAt',
+]
+const userDataPattern = new RegExp(`\\b(?:${userDataKeys.join('|')})(?:&quot;|\\\\?")\\s*:`)
 
 // SSG: every content param and the user screens' static shells are prerendered, and nothing else is.
 const renderedPaths = manifest.routes

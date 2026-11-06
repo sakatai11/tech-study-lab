@@ -24,7 +24,7 @@ const reviewErrorProps = {
 export function ReviewUserContent() {
   const queue = useReviewQueueContext()
 
-  if (queue.status === 'loading') return <LoadingCard label="復習キューを読み込んでいます" />
+  if (queue.status === 'loading') return <LoadingCard label="復習する問題を読み込んでいます" />
   // 表示できる問題が0件なのに次のバッチがあるのは、content との不整合である（design.md 5.3）。
   if (queue.status === 'error' || (queue.data.dueCount === 0 && queue.data.hasMore)) {
     return <LoadErrorCard {...reviewErrorProps} onRetry={queue.reload} />
