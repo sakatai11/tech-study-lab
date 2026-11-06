@@ -43,9 +43,9 @@ function goodResponse(url, kind, n) {
     url: url.replace(/\?_rsc=$/, ''),
     status: 200,
     contentType: kind === 'rsc' ? 'text/x-component' : 'text/html; charset=utf-8',
-    cacheControl: 'private, no-store',
+    cacheControl: 's-maxage=31536000, stale-while-revalidate',
     cfCacheStatus: 'DYNAMIC',
-    vinextCache: null,
+    vinextCache: 'HIT',
     mitigated: null,
     ray: `${n.toString(16).padStart(16, '0')}-NRT`,
     bytes: 1000,
@@ -143,37 +143,51 @@ const observeWith =
     return { events: { events, count: events.length } }
   }
 
-test('browser measurement and CI measurement share the same conditions [ADR-0016]', () => {
+test('browser and CI use the same measurement settings [ADR-0016] [ADR-0020]', () => {
   const source = readFileSync(
     new URL('./verification/route-stability.browser.js', import.meta.url),
     'utf8',
   )
   const value = (key) => source.match(new RegExp(`${key}: ([^,\\n]+),`))?.[1]
-  assert.deepEqual(
-    JSON.parse(source.match(/paths: (\[[^\]]*\])/)[1].replaceAll("'", '"')),
-    PERFORMANCE_CONDITIONS.paths,
-  )
+  for (const key of ['paths', 'rejectedEdgeCacheStatuses']) {
+    const list = source.match(new RegExp(`${key}: (\\[[^\\]]*\\])`))[1]
+    assert.deepEqual(JSON.parse(list.replaceAll("'", '"')), PERFORMANCE_CONDITIONS[key], key)
+  }
+  assert.equal(value('requiredVinextCache'), `'${PERFORMANCE_CONDITIONS.requiredVinextCache}'`)
   for (const key of ['warmups', 'samples', 'runs', 'runDeadlineMs', 'requestDeadlineMs'])
     assert.equal(Number(value(key)), PERFORMANCE_CONDITIONS[key], key)
   assert.equal(requestsPerRun(), 176)
   assert.equal(total, 528)
 })
 
-test('response checks reject redirects, challenges, cache hits and missing evidence [ADR-0016]', () => {
+test('response checks reject redirects, challenges and missing evidence [ADR-0016]', () => {
   const c = { path: '/home', kind: 'html' }
   const ok = goodResponse(`${origin}/home`, 'html', 1)
   assert.deepEqual(evaluateResponse(ok, c, origin), [])
   assert.deepEqual(evaluateResponse({ ...ok, status: 302 }, c, origin), ['status-302'])
   assert.deepEqual(evaluateResponse({ ...ok, url: `${origin}/` }, c, origin), ['route-mismatch'])
   assert.deepEqual(evaluateResponse({ ...ok, bytes: 0 }, c, origin), ['empty-body'])
-  assert.deepEqual(evaluateResponse({ ...ok, cacheControl: 'public' }, c, origin), [
-    'cache-control',
-  ])
-  assert.deepEqual(evaluateResponse({ ...ok, vinextCache: 'HIT' }, c, origin), ['cache-hit'])
   assert.deepEqual(evaluateResponse({ ...ok, mitigated: 'challenge' }, c, origin), ['challenge'])
   assert.deepEqual(evaluateResponse({ ...ok, ray: null }, c, origin), ['missing-cf-ray'])
   assert.deepEqual(evaluateResponse(ok, { path: '/home', kind: 'rsc' }, origin), ['content-type'])
   assert.equal(rayIdOf('8d9a0b1c2d3e4f50-NRT'), '8d9a0b1c2d3e4f50')
+})
+
+test('static shell hits pass, but edge cache responses and dynamic fallbacks fail [ADR-0020]', () => {
+  for (const kind of ['html', 'rsc']) {
+    const c = { path: '/home', kind }
+    const ok = goodResponse(`${origin}/home`, kind, 1)
+    assert.deepEqual(evaluateResponse(ok, c, origin), [])
+    for (const cfCacheStatus of ['HIT', 'STALE', 'UPDATING', 'REVALIDATED']) {
+      assert.deepEqual(evaluateResponse({ ...ok, cfCacheStatus }, c, origin), ['edge-cache'])
+    }
+    for (const vinextCache of [null, 'MISS']) {
+      assert.deepEqual(
+        evaluateResponse({ ...ok, cacheControl: 'private, no-store', vinextCache }, c, origin),
+        ['static-shell-miss'],
+      )
+    }
+  }
 })
 
 test('request failures preserve safe diagnostics and stop without retry [ADR-0016]', async (t) => {
@@ -258,7 +272,7 @@ test('measurement runs 528 sequential requests in rotated order and stops at the
   }
 })
 
-test('Web readiness waits for old executions and delayed logs before collecting all 528 requests [ADR-0016]', async () => {
+test('Web readiness waits for old executions and delayed logs before collecting all 528 requests [ADR-0016] [ADR-0020]', async () => {
   const state = {}
   const fake = fakeRequest()
   let queries = 0

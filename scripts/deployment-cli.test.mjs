@@ -270,7 +270,7 @@ fs.appendFileSync(${JSON.stringify(join(root, 'commands.jsonl'))}, JSON.stringif
               rays.push(ray);
               if (process.env.LATE === 'response' && rays.length === 40) return new Response(null,{status:302,headers:{Location:'https://fixture.cloudflareaccess.com/login'}});
               const rsc = options.headers?.RSC === '1';
-              return new Response(rsc ? '0:["$"]' : '<html>Learning</html>',{headers:{'Content-Type':rsc ? 'text/x-component' : 'text/html','Cache-Control':'private, no-store','cf-ray':ray + '-NRT'}});
+              return new Response(rsc ? '0:["$"]' : '<html>Learning</html>',{headers:{'Content-Type':rsc ? 'text/x-component' : 'text/html','Cache-Control':'s-maxage=31536000, stale-while-revalidate','x-vinext-cache':'HIT','cf-ray':ray + '-NRT'}});
             }
           }
           throw new Error('Unexpected fixture network request');
