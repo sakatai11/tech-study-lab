@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto'
 // 検証環境の連続測定の条件（ADR-0016）。scripts/verification/route-stability.browser.js と同じ値を保つ。
 // 値を変えると conditionsId が変わり、以前の結果との比較・本番昇格の証跡には使われなくなる。
 export const PERFORMANCE_CONDITIONS = Object.freeze({
-  schemaVersion: 1,
+  schemaVersion: 2,
   paths: ['/home', '/review', '/domains', '/analytics'],
   kinds: ['html', 'rsc'],
   warmups: 2,
@@ -14,6 +14,8 @@ export const PERFORMANCE_CONDITIONS = Object.freeze({
   requestDeadlineMs: 10_000,
   order: 'rotate eight cases by round; sequential GET; stop at first failure; no retry',
   cache: 'no-store',
+  requiredVinextCache: 'HIT',
+  rejectedEdgeCacheStatuses: ['HIT', 'STALE', 'UPDATING', 'REVALIDATED'],
   rsc: '?_rsc= with RSC: 1',
   auth: 'Cloudflare Access service token headers (CI); browser measurement uses the Access session cookie',
   client: 'Node.js fetch on GitHub-hosted runner; TTFB = response headers received',
@@ -67,8 +69,10 @@ export function evaluateResponse(response, c, origin) {
   if (!(c.kind === 'html' ? /text\/html/i : /text\/x-component/i).test(type))
     reasons.push('content-type')
   if (!(response.bytes > 0)) reasons.push('empty-body')
-  if (!/\bno-store\b/i.test(response.cacheControl ?? '')) reasons.push('cache-control')
-  if (response.vinextCache === 'HIT' || response.cfCacheStatus === 'HIT') reasons.push('cache-hit')
+  if (response.vinextCache !== PERFORMANCE_CONDITIONS.requiredVinextCache)
+    reasons.push('static-shell-miss')
+  if (PERFORMANCE_CONDITIONS.rejectedEdgeCacheStatuses.includes(response.cfCacheStatus))
+    reasons.push('edge-cache')
   if (response.mitigated === 'challenge') reasons.push('challenge')
   if (!rayIdOf(response.ray)) reasons.push('missing-cf-ray')
   return reasons

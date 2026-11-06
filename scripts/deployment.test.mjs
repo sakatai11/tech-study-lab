@@ -154,7 +154,7 @@ test('stale run and unverified production source fail before mutations', () => {
   assertFreshSource('production', 'a'.repeat(40), 'a'.repeat(40), tree, verified)
 })
 
-test('production refuses verification records without a matching performance proof [ADR-0016]', () => {
+test('production refuses verification records without a matching performance proof [ADR-0016] [ADR-0020]', () => {
   const production = (record) =>
     assertFreshSource('production', 'a'.repeat(40), 'a'.repeat(40), tree, record)
   const withProof = (change) => ({
@@ -165,7 +165,8 @@ test('production refuses verification records without a matching performance pro
   assert.throws(() => production({ ...verified, performance: undefined }), /no performance/)
   assert.throws(() => production(withProof({ passed: false })), /did not pass/)
   assert.throws(() => production(withProof({ cpu: { status: 'inconclusive' } })), /CPU log/)
-  assert.throws(() => production(withProof({ conditionsId: 'old-conditions' })), /conditions/)
+  // ADR-0016 の SSR 計測で使っていた識別子（Deploy 42244795974）。
+  assert.throws(() => production(withProof({ conditionsId: 'c274bff930912f96' })), /conditions/)
   assert.throws(() => production(withProof({ tree: 'c'.repeat(40) })), /source tree/)
   assert.throws(() => production(withProof({ webVersion: 'other' })), /Web version/)
   assert.throws(() => production(withProof({ runAttempt: '2' })), /attempt/)

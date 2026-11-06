@@ -1,23 +1,27 @@
 /* Workers Free の CPU 上限超過を再検証する連続測定（Issue #220）。
  * Cloudflare Access で認証済みの検証 Web /home を開き、DevTools Console へ全体を貼り付けて実行する。
  * GET のみ。Cookie / JWT / request headers / 応答本文は保存・出力しない。
- * 対象版を変えたら CONFIG.commit / webVersion を更新し、別の測定結果と混在させない。
- * CI の自動測定（scripts/performance-lib.mjs、ADR-0016）と同じ paths・件数・期限を保つ。値を変えるときは両方を揃える。
+ * 実行前に CONFIG.commit / webVersion / apiVersion を対象版に設定する。
+ * CI の自動測定（scripts/performance-lib.mjs、ADR-0020）と同じ測定条件を保つ。
  */
 ;(async () => {
   const CONFIG = {
-    phase: 'issue-220-current',
+    phase: 'static-shell',
     origin: 'https://tech-study-lab-web-test.sakai111893.workers.dev',
-    commit: '8d30bfd7df467d53a3dd551e5562d1b4b5ba7a80',
-    webVersion: '887ad6f6-8a35-44a5-8136-9a06f791e7dc',
-    apiVersion: 'a7c7d384-aa3f-4ca4-9fde-b94225578e2f',
+    commit: '',
+    webVersion: '',
+    apiVersion: '',
     paths: ['/home', '/review', '/domains', '/analytics'],
     warmups: 2,
     samples: 20,
     runs: 3,
     runDeadlineMs: 240000,
     requestDeadlineMs: 10000,
+    requiredVinextCache: 'HIT',
+    rejectedEdgeCacheStatuses: ['HIT', 'STALE', 'UPDATING', 'REVALIDATED'],
   }
+  if (!CONFIG.commit || !CONFIG.webVersion || !CONFIG.apiVersion)
+    throw new Error('CONFIG に測定対象の commit と Web/API version を設定する')
   const cases = CONFIG.paths.flatMap((path) => ['html', 'rsc'].map((kind) => ({ path, kind })))
   const perRun = cases.length * (CONFIG.warmups + CONFIG.samples)
   const panelId = 'tsl-route-stability-report'
@@ -68,6 +72,7 @@
         method: 'GET',
         credentials: 'include',
         cache: 'no-store',
+        redirect: 'manual',
         headers: c.kind === 'rsc' ? { RSC: '1' } : {},
         signal: controller.signal,
       })
@@ -87,19 +92,19 @@
       const sameRoute = final.origin === CONFIG.origin && final.pathname === c.path
       const validType =
         c.kind === 'html' ? /text\/html/i.test(ct ?? '') : /text\/x-component/i.test(ct ?? '')
-      const cacheHit =
-        response.headers.get('x-vinext-cache') === 'HIT' ||
-        response.headers.get('cf-cache-status') === 'HIT'
+      const cfCacheStatus = response.headers.get('cf-cache-status')
+      const vinextCache = response.headers.get('x-vinext-cache')
+      const challenged = response.headers.get('cf-mitigated') === 'challenge'
       return {
         status: response.status,
         sameRoute,
         contentType: ct,
         cacheControl: cc,
-        cfCacheStatus: response.headers.get('cf-cache-status'),
-        vinextCache: response.headers.get('x-vinext-cache'),
+        cfCacheStatus,
+        vinextCache,
         ray,
         colo: ray?.match(/-([A-Z]{3})$/)?.[1] ?? null,
-        challenged: response.headers.get('cf-mitigated') === 'challenge',
+        challenged,
         bytes: bytes.byteLength,
         fetchHeadersMs: headersAt - start,
         fetchCompleteMs: completeAt - start,
@@ -112,8 +117,10 @@
           sameRoute &&
           validType &&
           bytes.byteLength > 0 &&
-          /\bno-store\b/i.test(cc ?? '') &&
-          !cacheHit,
+          !challenged &&
+          /^([0-9a-f]+)(?:-[A-Z]{3})?$/.test(ray ?? '') &&
+          vinextCache === CONFIG.requiredVinextCache &&
+          !CONFIG.rejectedEdgeCacheStatuses.includes(cfCacheStatus),
       }
     })()
     const timeout = new Promise((_, reject) => {

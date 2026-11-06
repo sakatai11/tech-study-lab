@@ -294,12 +294,13 @@ verification の apply は smoke test の成功後、同じ job・同じ concurr
 
 ### 測定条件
 
-`scripts/verification/route-stability.browser.js`（#220 の手動測定）と同じ条件を使い、テストで値の一致を検査する。
+`scripts/verification/route-stability.browser.js`（#220 の手動測定）と同じ測定条件を使い、テストで値の一致を検査する。手動測定前に `CONFIG` の commit と Web/API version を対象環境の値に設定する。
 
 - 対象：`tech-study-lab-web-test` / `tech-study-lab-api-test` / `tech-study-lab-test`。`/home`・`/review`・`/domains`・`/analytics` × HTML/RSC の8組。
 - 件数：各組 warmup 2件＋本測定20件。1回176件を3回、計528件を逐次 GET する。ラウンドごとに組の順序をずらす。1回の上限 240 秒、1 request の上限 10 秒。
 - RSC は `?_rsc=` と `RSC: 1`。全 request を `cache: 'no-store'` で送る。
-- 合格条件：200、同一 origin/path（redirect は追わない）、期待する Content-Type、空でない本文、`Cache-Control: no-store`、`x-vinext-cache` / `cf-cache-status` が HIT でない、challenge でない、cf-ray がある。最初の異常でその回以降を止め、失敗 request を再試行しない。
+- 合格条件：200、同一 origin/path（redirect は追わない）、期待する Content-Type、空でない本文、challenge でない、有効な cf-ray がある。
+- 静的な枠の配信を示す `x-vinext-cache: HIT` を必須とする。応答の `Cache-Control` は記録する。`CF-Cache-Status` が `HIT`・`STALE`・`UPDATING`・`REVALIDATED` の応答は、エッジキャッシュの本文が返るため拒否する（[ADR-0020](./adr/0020-measure-static-shell-worker-executions.md)、[Cloudflare のキャッシュ応答](https://developers.cloudflare.com/cache/concepts/cache-responses/)）。最初の異常でその回以降を止め、失敗 request を再試行しない。
 
 **認証経路の差異**：CI は smoke test と同じ Access Service Token を各 request の header に付け、GitHub-hosted runner の Node.js `fetch` から送る。#220 の手動測定は人間のブラウザの Access cookie を使い、DevTools Console から送る。どちらも Access の検証・Service Binding・API の固定ユーザーの境界は同じだが、送信元の colo・回線・TTFB の測り方（CI は応答 header の受信時刻、ブラウザは Resource Timing）が異なる。そのため CI の応答時間をブラウザの値と直接比べない。CPU 時間は Cloudflare 側の値なので経路に依存しない。利用者のブラウザ Cookie はコピーしない。
 
@@ -307,7 +308,7 @@ verification の apply は smoke test の成功後、同じ job・同じ concurr
 
 ### 測定前の Web 実行版確認
 
-- 測定と同じ Access Service Token 付き GET で、検証環境の `/home` の HTML と RSC を取得する。Web から API への Service Binding を含む通常の画面経路を使う。
+- 測定と同じ Access Service Token 付き GET で、検証環境の `/home` の HTML と RSC を取得する。Web Worker がビルド済みの静的な枠を返す経路を使う。
 - 応答を測定と同じ基準で検証する。両方の `cf-ray` について、期待する Web version の正常な invocation が Workers Observability に 1 件ずつ揃えば実行版確認は成功となる。API version の確認は測定前後の配備情報と測定中の対象版のリソース上限検査までとする。
 - 確認は最大 5 分。ログが未着の場合は同じ Ray ID のログを 15 秒間隔で再取得する。旧版を検出した場合は次の間隔で HTML と RSC の両方を再取得する。上限到達、応答異常、ログ取得失敗などでは理由を記録して停止する。
 - 確認用の Ray ID は 528 件の測定・照合・CPU 分布に含めない。API のリソース上限検査は既存の測定時間帯と前後の余裕を対象とするため、時間帯が重なる確認リクエストに起因する上限超過も停止対象になる。切替確認後の測定で旧版が検出された場合は判定不能で停止する。
