@@ -29,16 +29,20 @@ const scriptEscapes: Record<string, string> = {
   '&': '\\u0026',
 }
 
-/** 教材の文が成果物に入るときの形。RSC は JSON 文字列、HTML は RSC をさらに JSON 文字列にしたもの。 */
+/**
+ * 教材の文が成果物に「文字列の値」として入るときの形。前後の引用符まで含めて一致させ、
+ * 同じ文字の並びを持つオブジェクトの表現（本物のユーザーデータ）を取り除かないようにする。
+ * RSC は JSON 文字列 `"…"`、HTML は RSC をさらに JSON 文字列にしたものなので `\"…\"` になる。
+ */
 function encodings(text: string): string[] {
-  const inRsc = JSON.stringify(text).slice(1, -1)
+  const inRsc = JSON.stringify(text)
   const inHtml = JSON.stringify(inRsc).slice(1, -1)
   const escaped = (value: string) => value.replace(/[<>&]/g, (char) => scriptEscapes[char] ?? char)
   return [...new Set([inRsc, inHtml, escaped(inRsc), escaped(inHtml)])]
 }
 
 /**
- * 教材の文が JSON の例としてキーを含む場合は、その文の部分だけを取り除いてから調べる。
+ * 教材の文が JSON の例としてキーを含む場合は、その文字列の値だけを取り除いてから調べる。
  * キーそのものを検査から外さないので、教材以外の場所に入った本物のユーザーデータは見逃さない。
  * 取り除けなかった教材の例は残るため、その場合は誤検出として失敗する（見逃す側には倒れない）。
  *

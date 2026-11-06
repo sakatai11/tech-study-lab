@@ -42,6 +42,14 @@ describe('findUserData [ADR-0019]', () => {
     expect(findUserData(inHtml(page), [lessonExample])).toContain('dueCount')
   })
 
+  it('keeps real user data whose serialization matches a lesson text exactly', () => {
+    const text = '{"dueCount":9}'
+    const page = { index: [{ prompt: text }], due: { dueCount: 9 } }
+
+    expect(findUserData(inRsc(page), [text])).toContain('dueCount')
+    expect(findUserData(inHtml(page), [text])).toContain('dueCount')
+  })
+
   it('fails safe when a lesson example appears in a form it cannot remove', () => {
     const changed = inRsc([{ prompt: lessonExample.replace('保存例', '別の例') }])
 
