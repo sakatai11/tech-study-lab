@@ -195,7 +195,7 @@ content / API から feature component へ至るまでのデータの流れを�
 - **Workers 制約**：Cloudflare Workers では `node:fs` のランタイム読みが使えない。教材・問題は**ランタイム fs 読みではなくビルド時インライン化**する。
 - frontmatter に `estimatedMinutes`（0より大きい整数）と問題（`questions[]`。スキーマは[コンテンツ規約](./content-guidelines.md)と同一の `{ id, type:'mcq', prompt, choices[], answerIndex, explanation }`）を置き、本文は Markdown 本体とする。
 - ビルド時に `gray-matter` でパースし、`packages/shared` の Zod（`schema/content`）で検証してから**型付きデータとしてインライン化**する。
-- 本文描画は `react-markdown` 等のレンダラを用いる（RSC で完結）。MDX は採用しない（ビルド設定と frontmatter 抽出が複雑化するため）。
+- 本文描画は `react-markdown` 等のレンダラを用いる（RSC で完結）。MDX は採用しない（ビルド設定と frontmatter 抽出が複雑化するため）。HTML を `dangerouslySetInnerHTML` で直接挿入しない。教材本文を含む表示は React の要素として描画し、XSS の経路を作らない（Biome の `noDangerouslySetInnerHtml` が `pnpm lint` で検出する）。
 - content 参照は `apps/web/src/lib/content.ts` に集約する。`getLessonContent(lessonId)`・`getLessonsByTopic(domain, topic)`・`getBundledQuestions()`・`getQuestionById(questionId)` を共通関数として用意し、初回表示の実行経路では `features/*/server` の Server loader だけが呼び出す。page は loader、mapper は引数で渡された Content data だけを参照し、`lib/content` を直接 import しない。ビルド・同期スクリプトと `lib/content` 自身のテストはこの制約の対象外とする。
 - `getBundledQuestions()` は `questionId` index を返せる形にする。各 feature で frontmatter 配列を直接走査しない。`/review` は問題本文をブラウザで結合するため、静的な page の loader がこれから `answerIndex` を除いた問題索引を作り、props で Client へ渡す（§5.3）。
 - **同じパース経路を `content/` → D1 seed/upsert スクリプトでも再利用**し、フロント表示と D1 配信を単一ソースから導く（[ADR-0006](./adr/0006-content-as-source-of-truth.md) の責務分離を維持）。
@@ -366,7 +366,7 @@ Quiz と Review の表示再利用は、feature VM同士を継承・交差させ
 
 - service は **HTTP を知らないドメインエラー**（`services/errors.ts` の `QuestionNotFoundError` 等）を throw する。
 - 個々のドメインエラーと HTTP ステータスの対応は、関係する ADR（問題未存在の 404 は ADR-0002、レート制限の 429 / 503 は ADR-0004）と [API 仕様カタログ](./api-spec.html) が持つ。
-- route 層の `app.onError` がドメインエラーを HTTP ステータスへ写像し、レスポンス形を `{ error: { code, message } }` に統一する。既知のドメインエラーは message を返す。未知のエラーは 500（`INTERNAL`）とし、詳細メッセージを外に漏らさず Workers Logs へ記録する（`console.error` はこの未処理エラーの出力に限る）。
+- route 層の `app.onError` がドメインエラーを HTTP ステータスへ写像し、レスポンス形を `{ error: { code, message } }` に統一する。既知のドメインエラーは message を返す。未知のエラーは 500（`INTERNAL`）とし、詳細メッセージを外に漏らさず Workers Logs へ記録する（`console.error` はこの未処理エラーの出力に限る）。レスポンスにはスタックトレース・SQL・内部の例外メッセージを含めない。
 - Hono や middleware が意図して throw した `HTTPException` は、例外が持つステータスとレスポンスを保持する。未知の例外として 500 に上書きしない。
 
 - `zValidator` の検証失敗（400）はデフォルト挙動のまま使う（MVP）。フロントは `requestJson`（§5.3）が `res.ok` で弾くため、エラーボディの形に依存しない。
