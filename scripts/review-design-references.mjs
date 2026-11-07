@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import {
   ENDPOINT,
   MODEL,
+  POLICY_SOURCES,
   QUESTION,
   QUESTION_VERSION,
   collectReferences,
@@ -63,7 +64,7 @@ export function reviewPlan(root, { base, head = 'HEAD', maxRequests = 30 }) {
     rows: [],
   }
   if (changedSources.length || changedTargets.length) {
-    const policyPaths = ['AGENTS.md', '.ai/review-guidelines.md', '.ai/rules']
+    const policyPaths = [...POLICY_SOURCES]
     const contextPaths = [...policyPaths, 'docs/design.md', 'docs/adr']
     // The existing collector reads local files. Refuse a checkout that differs from
     // the reviewed head, including untracked context that could affect ADR lookup.

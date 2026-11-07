@@ -74,7 +74,7 @@ Knowledge Graphの抽出対象・制限・更新方法は [architecture/README.m
 - Zod でスキーマ駆動バリデーション（`zValidator` ＋ フロント共有）
 - 依存境界（レイヤー間の import 許可）を dependency-cruiser（`.dependency-cruiser.cjs`）で機械検証
 - GitHub Actions で型チェック・lint（Biome＋依存境界）・test・build を **PR ゲート**化
-- AIハーネスの hook の動作と、Claude Code / Codex の構成整合（発見用リンク、Codex agent TOML、パス別ルールの参照）、ADR と検証テストの対応を `pnpm test:hooks` で機械検証し、同じ **PR ゲート**に含める。契約文書の文言そのものは検査しない
+- AIハーネスの hook の動作と、Claude Code / Codex の構成整合（発見用リンク、Codex agent TOML、廃止したパス別ルールの不在）、ADR と検証テストの対応を `pnpm test:hooks` で機械検証し、同じ **PR ゲート**に含める。契約文書の文言そのものは検査しない
 
 ## 4. 依存方向
 

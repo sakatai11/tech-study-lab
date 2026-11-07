@@ -4,7 +4,7 @@
 # 1. hook fixture / 共通スキルログ / `sync:agents --check` による hook と生成物の動作検証と、
 #    別モデル CLI レビューに渡す最新モデルの選択ロジックの検証。
 # 2. Claude Code と Codex の両ランタイムから同じ `.ai/` の一次ソースへ届くことの構成検査
-#    （発見用リンク、Codex agent TOML、パス別ルールの参照、権限迂回フラグの不在）。
+#    （発見用リンク、Codex agent TOML、廃止したパス別ルールの不在、テスト方針への入口、権限迂回フラグの不在）。
 # 3. weekly-retro レンダラーの出力検証。
 # 4. `docs/design.md` の章参照（`§N` / `design.md N.N` / `design.md#<見出しスラッグ>`）が実在する見出しへ
 #    解決されることの検査（scripts/test-design-chapter-refs.mjs）。
@@ -117,17 +117,18 @@ for toml in .codex/agents/*.toml; do
   [ -f ".ai/agents/$name.md" ] || fail "Codex agent TOML without .ai/agents/$name.md: $toml"
 done
 
-if [ -d .ai/rules ]; then
-  for rule in .ai/rules/*.md; do
-    [ -e "$rule" ] || continue
-    name=$(basename "$rule")
-    expect_link ".claude/rules/$name" "../../.ai/rules/$name"
-    expect_contains "path rule is reachable from AGENTS.md" ".ai/rules/$name" AGENTS.md
-  done
-fi
+# パス別ルールは廃止した（Issue #283）。規約は ADR・docs/ の一次ソースが持ち、
+# ランタイムが自動で読み込む複製を作らない。
+for retired in .ai/rules .claude/rules; do
+  if [ -e "$retired" ] || [ -L "$retired" ]; then
+    fail "retired path rules must not be recreated: $retired"
+  fi
+done
+expect_contains "testing policy is reachable from AGENTS.md" "docs/testing.md" AGENTS.md
+[ -f docs/testing.md ] || fail "testing policy referenced from AGENTS.md is missing: docs/testing.md"
 
 # 発見用ディレクトリに、一次ソースを持たない取り残しのリンクがないこと。
-for link in .claude/skills/* .agents/skills/* .claude/agents/* .claude/rules/*; do
+for link in .claude/skills/* .agents/skills/* .claude/agents/*; do
   [ -e "$link" ] || [ -L "$link" ] || continue
   [ -e "$link" ] || fail "stale discovery link: $link"
 done

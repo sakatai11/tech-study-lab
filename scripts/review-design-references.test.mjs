@@ -22,7 +22,7 @@ after(() => {
 })
 const adr = (number) => `docs/adr/${number}-example.md`
 const design = 'docs/design.md'
-const source = '.ai/rules/web.md'
+const source = 'docs/testing.md'
 
 function git(root, ...args) {
   return execFileSync('git', args, {
@@ -54,7 +54,6 @@ function repository() {
   write(root, adr('0002'), '# 判断\n他の規則。\n')
   write(root, 'AGENTS.md', '境界を守る（ADR-0001）。\n')
   write(root, source, '境界を守る（design.md 1）。\n')
-  write(root, '.ai/rules/api.md', '別の規則を守る（ADR-0002）。\n')
   write(root, '.ai/review-guidelines.md', '参照先の規則を守る（ADR-0001）。\n')
   write(root, '.gitignore', '.env.local\nnode_modules/\n')
   return { root, base: save(root) }
@@ -117,7 +116,14 @@ test('code-only changes and deleted policy files never cause unrelated API calls
   assert.deepEqual(plan.deletedSources, [source])
   await runReview(plan, { execute: true, fetchImpl })
   assert.equal(calls, 0)
-  write(root, '.ai/rules/local.md', 'No references.\n')
+  // Retired path rules are no longer policy sources, even when they carry references.
+  write(root, '.ai/rules/web.md', '境界を守る（design.md 1）。\n')
+  write(root, '.claude/rules/web.md', '境界を守る（ADR-0001）。\n')
+  save(root)
+  plan = reviewPlan(root, { base })
+  assert.deepEqual(plan.sources, [])
+  assert.deepEqual(plan.deletedSources, [source])
+  write(root, source, 'No references.\n')
   save(root)
   plan = reviewPlan(root, { base })
   assert.equal(
@@ -154,11 +160,15 @@ test('target-only changes reverse-select referring sources; design selection is 
     ['.ai/review-guidelines.md', 'AGENTS.md'],
   )
   assert.ok(plan.sources.every((item) => item.reasons.includes('referenced_document_changed')))
-  write(root, design, '# Design\n## 1. 方針\n境界を守る。\n## 2. 別の章\n別の規則を変更。\n')
-  save(root)
-  plan = reviewPlan(root, { base })
-  assert.ok(plan.sources.some((item) => item.file === source))
-  assert.ok(!plan.sources.some((item) => item.file === '.ai/rules/api.md'))
+  // A design-only change selects only policies that refer to design.md, not those citing ADRs.
+  const fresh = repository()
+  write(fresh.root, design, '# Design\n## 1. 方針\n境界を守る。\n## 2. 別の章\n別の規則を変更。\n')
+  save(fresh.root)
+  plan = reviewPlan(fresh.root, { base: fresh.base })
+  assert.deepEqual(
+    plan.sources.map((item) => item.file),
+    [source],
+  )
 })
 
 test('target rename/deletion and unresolved references stay visible instead of disappearing', () => {
@@ -187,8 +197,8 @@ for (const change of ['delete', 'rename']) {
       source,
       [
         '境界を守る（design.md 1）。',
-        `境界を守る（[設計](../../${design}#${'1-方針'})）。`,
-        `[設計](../../${design})`,
+        `境界を守る（[設計](design.md#${'1-方針'})）。`,
+        '[設計](design.md)',
         '境界を守る（ADR-0001）。',
       ].join('\n'),
     )
@@ -200,7 +210,7 @@ for (const change of ['delete', 'rename']) {
     const plan = reviewPlan(root, { base })
     assert.deepEqual(
       plan.sources.map((item) => item.file),
-      [source, 'AGENTS.md'],
+      ['AGENTS.md', source],
     )
     assert.equal(plan.rows.filter((row) => row.status === 'local_error').length, 3)
     assert.ok(
@@ -430,12 +440,18 @@ test('untracked or staged review context is refused, unrelated work is allowed, 
   const { root, base } = repository()
   write(root, source, '変更を守る（design.md 1）。\n')
   save(root)
-  write(root, '.ai/rules/new.md', '追加の規則\n')
+  write(root, adr('0004'), '# 追加の判断\n')
   assert.throws(() => reviewPlan(root, { base }), /review_context_dirty/)
-  rmSync(join(root, '.ai/rules/new.md'))
+  rmSync(join(root, adr('0004')))
+  // Untracked files outside the named policy sources do not widen the context.
+  write(root, '.ai/rules/new.md', '追加の規則（design.md 1）\n')
+  write(root, 'docs/deployment.md', '別の規約（ADR-0001）\n')
+  assert.equal(reviewPlan(root, { base }).sources.length, 1)
+  rmSync(join(root, '.ai/rules'), { recursive: true })
+  rmSync(join(root, 'docs/deployment.md'))
   write(root, '.git/info/exclude', '.DS_Store\n*.swp\n')
   write(root, 'docs/adr/.DS_Store', 'Ignored metadata\n')
-  write(root, '.ai/rules/.web.md.swp', 'Ignored editor metadata\n')
+  write(root, 'docs/.testing.md.swp', 'Ignored editor metadata\n')
   assert.equal(reviewPlan(root, { base }).sources.length, 1)
   // Ignored ADRs can still affect the collector's directory lookup and must be refused.
   write(root, '.git/info/exclude', `${adr('0003')}\n`)

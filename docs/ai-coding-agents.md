@@ -20,14 +20,12 @@
 ├── skills/<name>/SKILL.md          # 再利用可能な開発ワークフロー
 ├── agents/<name>.md                # サブエージェントの役割・制約
 ├── hooks/                          # 共通hook処理、fixture、中立定義
-├── rules/<name>.md                 # パス別ルール（paths frontmatter付き）
 └── runtime-compatibility.md        # Claude/Codexの実行差分（GitHub認証、サブエージェント、別モデルCLI）
 
 .claude/                            # Claude Code固有の発見・配線
 ├── skills -> ../.ai/skills
 ├── agents -> ../.ai/agents
 ├── hooks/                          # Claudeペイロードのアダプター
-├── rules/<name>.md -> ../../.ai/rules/<name>.md  # ファイル単位のリンク（自動読み込み入口）
 └── settings.json                   # 権限と生成済みhook配線
 
 .agents/                            # Codexのスキル発見入口
@@ -47,9 +45,8 @@
 | 共通エージェント指示 | `.ai/agents/` | `.claude/agents/` |
 | Claude/Codex共通hook処理 | `.ai/hooks/` | 設定JSONへ処理をインライン記述すること |
 | Claude/Codex入力の正規化 | `.claude/hooks/`、`.codex/hooks/` | 共通処理へ製品固有ペイロードを持ち込むこと |
-| パス別ルール | `.ai/rules/`（追加・削除時は `.claude/rules/<name>.md` のリンクと `AGENTS.md` の対応も同じ変更で追加・削除する） | `.claude/rules/` の実体ファイル |
 
-`.claude/skills/`、`.agents/skills/`、`.claude/agents/`、`.claude/rules/` は発見用のシンボリックリンクである。リンクを通常ファイルに置換したり、リンク経由で本文を複製・直接編集したりしない。
+`.claude/skills/`、`.agents/skills/`、`.claude/agents/` は発見用のシンボリックリンクである。リンクを通常ファイルに置換したり、リンク経由で本文を複製・直接編集したりしない。
 
 ## 4. Skills
 
@@ -123,7 +120,7 @@ pnpm test:hooks           # hook fixture、共通ログ、同期、両ランタ�
 `pnpm test:hooks`（`scripts/test-hooks.sh`）は次を検査する。
 
 1. **hookの動作検証**: Claude/Codexの代表入力fixtureを使い、TODO検出、Codexの明示スキル指定、Claude/Codexのライフサイクルログ、Codexの編集後整形アダプター、`pnpm sync:agents --check` による生成物の同期を確認する。別モデル CLI レビューで最新の Sol を選ぶスクリプト（`.ai/scripts/latest-codex-model.mjs`）の選択ロジックも検証する。
-2. **両ランタイムの構成整合**: `.ai/skills/*`・`.ai/agents/*.md`・`.ai/rules/*.md` ごとに `.claude/` と `.agents/` の発見用リンクがあり `.ai/` を指すこと、取り残しのリンクがないこと、`.ai/agents/<name>.md` と `.codex/agents/<name>.toml` が1対1で `name` が一致すること、パス別ルールが `AGENTS.md` から参照されていること、権限・Sandboxの迂回フラグがハーネスに含まれないことを確認する。
+2. **両ランタイムの構成整合**: `.ai/skills/*`・`.ai/agents/*.md` ごとに `.claude/` と `.agents/` の発見用リンクがあり `.ai/` を指すこと、取り残しのリンクがないこと、`.ai/agents/<name>.md` と `.codex/agents/<name>.toml` が1対1で `name` が一致すること、廃止したパス別ルール（`.ai/rules/`・`.claude/rules/`）が再作成されていないこと、`AGENTS.md` からテスト方針（`docs/testing.md`）へ辿れること、権限・Sandboxの迂回フラグがハーネスに含まれないことを確認する。
 3. **weekly-retro レンダラーの出力検証**と、**`docs/design.md` の章参照の解決検査**（`scripts/test-design-chapter-refs.mjs`）、**ADR の書式・検証テストとの対応・`ADR-NNNN` 参照の解決検査**（`scripts/test-adr-refs.mjs`）。
 
 契約文書の**文言**は検査しない。文言が存在してもモデルがそれに従う保証にはならず、改善のたびに期待値の更新を強いるためである。文書の内容はレビューで確認する。
@@ -146,7 +143,7 @@ git jev --base <baseCommit> --head <headCommit> --dry-run
 git jev --base <baseCommit> --head <headCommit> --execute --approved-plan <planHash>
 ```
 
-`--dry-run` が既定。対象は変更されたポリシーと、変更された設計文書・ADRを参照するポリシーである。参照先は文書単位で判定し、選んだ参照元の全参照を候補にする。削除・改名で未解決になった参照も残る。`planHash` はcommit・候補の本文と出典・送信条件・checkoutに対応し、実行時に再収集した内容との一致を検査する。参照元・参照先の作業コピーとheadの不一致、許可外の実パスは送信前に拒否される。
+`--dry-run` が既定。参照元にできるポリシーは `AGENTS.md`・`.ai/review-guidelines.md`・`docs/testing.md` の3つに限る。対象は変更されたポリシーと、変更された設計文書・ADRを参照するポリシーである。参照先は文書単位で判定し、選んだ参照元の全参照を候補にする。削除・改名で未解決になった参照も残る。`planHash` はcommit・候補の本文と出典・送信条件・checkoutに対応し、実行時に再収集した内容との一致を検査する。参照元・参照先の作業コピーとheadの不一致、許可外の実パスは送信前に拒否される。
 
 JevのCLIは `.env.local` を自動読み込みしない。APIの接続先はHTTPSの `api.typesafe.ai` で、継承したproxy・CAを使う。
 
@@ -174,11 +171,11 @@ JevのCLIは `.env.local` を自動読み込みしない。APIの接続先はHTT
 手動調査と固定fixtureの評価には直接指定CLIを使う。実行結果はGit対象外の `reports/` に保存できる。
 
 ```sh
-pnpm --silent design-ref:check --dry-run .ai/rules/web.md .ai/rules/shared.md
+pnpm --silent design-ref:check --dry-run AGENTS.md docs/testing.md
 
 # 以下は外部送信の許可がある場合だけ実行する
 mkdir -p reports
-pnpm --silent design-ref:check .ai/rules/web.md .ai/rules/shared.md > reports/design-references.json
+pnpm --silent design-ref:check AGENTS.md docs/testing.md > reports/design-references.json
 pnpm --silent design-ref:check --evaluate > reports/jev-evaluation.json
 ```
 
@@ -195,7 +192,7 @@ pnpm --silent design-ref:check --compare reports/jev-evaluation.json --human-tim
 ## 8. 恒久ルールと権限
 
 - 共通の開発規約、コマンド、検証手順は `AGENTS.md` に置く。
-- パス別ルールは `.ai/rules/` に置く。Claude Code は `.claude/rules/` のリンク経由で自動読み込みし、Codex は `AGENTS.md` の「パス別ルール」の対応から参照する。
+- 領域ごとの規約は、ADR・`docs/design.md`・`docs/testing.md`・各規約文書を一次ソースとし、`AGENTS.md` の「作業前に読む文書」から辿る。パス別ルール（`.ai/rules/`・`.claude/rules/`）は Issue #283 で廃止した。ランタイムが自動で読み込む規約の複製を作らない。
 - Claudeの `settings.json` にあるallow / denyはCodexの権限を変更しない。
 - Codex App / CLIはセッションのsandbox・approval設定と `AGENTS.md` に従う。`gh auth status` が成功した場合は認証済みの `gh` CLI を使える。失敗時はCodex Appの接続済みGitHubコネクタを使い、利用できなければ `auth-required` または `error` として明示的に扱う。
 
@@ -204,10 +201,9 @@ pnpm --silent design-ref:check --compare reports/jev-evaluation.json --human-tim
 | 変更内容 | 必須確認 |
 | --- | --- |
 | `.ai/skills/` または `.ai/agents/` | Claude/Codexのリンク切れ、対応するCodex agent TOML、`pnpm test:hooks` |
-| `.ai/rules/` | `.claude/rules/` のリンク切れ、`AGENTS.md` の「パス別ルール」の対応との一致 |
 | `.ai/hooks/`、`.claude/hooks/`、`.codex/hooks/` | `pnpm sync:agents --check` と `pnpm test:hooks` |
 | エージェント契約文書（`.ai/skills/`、`.ai/agents/`、`.ai/*.md`、`.ai/automations/`、`.ai/scripts/`、`.codex/agents/`、`.github/ISSUE_TEMPLATE/`、本書 `docs/ai-coding-agents.md`） | `pnpm test:hooks` |
 | `.claude/settings.json` のhook配線 | 手編集ではなく `pnpm sync:agents` 後の差分 |
 | `.codex/hooks.json` | 手編集ではなく `pnpm sync:agents` 後の差分、信頼済みCodex環境での必要時スモークテスト |
 
-リンク・TOML・パス別ルールの参照・迂回フラグなど、機械的に判定できる構成は `pnpm test:hooks` が CI で検査する。`skill-audit` は、その結果に加えて、参照の実在・絶対パス・権限の衝突・記述と実態の乖離など判断が必要な監査と、ローカルスキルログによる棚卸しを行う。AIハーネスを大きく変更した後や、定期的な棚卸しのときに実行する。
+リンク・TOML・廃止したパス別ルールの不在・迂回フラグなど、機械的に判定できる構成は `pnpm test:hooks` が CI で検査する。`skill-audit` は、その結果に加えて、参照の実在・絶対パス・権限の衝突・記述と実態の乖離など判断が必要な監査と、ローカルスキルログによる棚卸しを行う。AIハーネスを大きく変更した後や、定期的な棚卸しのときに実行する。

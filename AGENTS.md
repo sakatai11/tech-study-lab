@@ -10,19 +10,16 @@
 
 ### TDD 戦略
 
-すべての層を一律にテストファーストで実装せず、**契約先行の選択的 TDD**を採用する。
+すべての層を一律にテストファーストで実装せず、**契約先行の選択的 TDD**を採用する。層ごとの検証範囲と書き方は [`docs/testing.md`](./docs/testing.md) に従う。
 
-### パス別ルール
+### 作業前に読む文書
 
-変更・レビューするファイルの領域に対応する `.ai/rules/*.md` を、作業前に読む。Claude Code は `.claude/rules/` のリンク経由で `paths` frontmatter に従い自動読み込みするが、他のランタイムは自動では読まないため、次の対応で参照する。
+変更する領域に関係する ADR を [ADR 索引](./docs/adr/README.md) から選び、層と依存方向・データフローは `docs/design.md` で確かめてから着手する。領域ごとの入口は次のとおり。どの ADR と章を読むかの対応表は [`.ai/review-guidelines.md`](./.ai/review-guidelines.md) の「読む文書」が持つ。
 
-- `.ai/rules/api.md`: `apps/api/` 配下
-- `.ai/rules/web.md`: `apps/web/` 配下
-- `.ai/rules/shared.md`: `packages/shared/` 配下
-- `.ai/rules/content.md`: `content/` 配下
-- `.ai/rules/testing.md`: `apps/api` / `apps/web` / `packages/shared/src` の TypeScript、テストファイル、`vitest.config.*`
-
-対象パスの一次ソースは各ルールの `paths` frontmatter である。
+- `apps/api/`・`apps/web/`・`packages/shared/`: `docs/design.md` の依存方向（第4章）とデータフロー（第5章）
+- テスト: [`docs/testing.md`](./docs/testing.md)
+- `content/`: [`docs/content-guidelines.md`](./docs/content-guidelines.md) と `content-new` スキル
+- ビルド・デプロイ・migration: [`docs/deployment.md`](./docs/deployment.md) と `d1-migration` スキル
 
 ### レビュー規約
 

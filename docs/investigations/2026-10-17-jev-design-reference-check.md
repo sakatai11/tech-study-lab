@@ -4,7 +4,7 @@
 
 ## 対象と構成
 
-参照元は明示指定した `AGENTS.md`・`.ai/review-guidelines.md`・`.ai/rules/*.md`。対象は `docs/design.md` の章と `docs/adr/` のADR。パス・章番号・anchorの解決はコードで行い、解決した主張と参照先の意味だけをChoiceで判定する。既存の存在検査は保持する。アプリの実行経路や設計契約は変えない（ADR-0001の境界内）。Graph用のTOMLパーサーも変更しない。
+参照元は明示指定した `AGENTS.md`・`.ai/review-guidelines.md`・`.ai/rules/*.md`（PoC 当時。`.ai/rules/` は Issue #283 で廃止し、現在の参照元は [利用手順](../ai-coding-agents.md#71-jevによる設計参照の意味チェック) にある）。対象は `docs/design.md` の章と `docs/adr/` のADR。パス・章番号・anchorの解決はコードで行い、解決した主張と参照先の意味だけをChoiceで判定する。既存の存在検査は保持する。アプリの実行経路や設計契約は変えない（ADR-0001の境界内）。Graph用のTOMLパーサーも変更しない。
 
 - 実装: `scripts/check-design-references.mjs`、`scripts/design-references.mjs`
 - モデル: `jev-1.13.0`（可変aliasを使わない）
