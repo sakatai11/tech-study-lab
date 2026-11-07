@@ -44,16 +44,16 @@
 | `apps/api/**` | ADR-0002〜ADR-0009・ADR-0014 のうち関係するもの（content 同期は ADR-0006、学習分析は ADR-0007、最近のアクティビティは ADR-0014、公開 entrypoint と Access は ADR-0008、解答の書き込みは ADR-0009） | design.md §4.3・§5.7・§5.8 |
 | `packages/shared/**` | API スキーマは ADR-0002 / ADR-0003 / ADR-0007 / ADR-0014、SRS は ADR-0005、content のスキーマは ADR-0006 | design.md §5.1・§5.8 |
 | `content/**` | ADR-0006 | [コンテンツ規約](../docs/content-guidelines.md) |
-| テストファイル | テスト名に `[ADR-NNNN]` がある場合はその ADR | [テストルール](rules/testing.md) |
+| テストファイル | テスト名に `[ADR-NNNN]` がある場合はその ADR | [テスト方針](../docs/testing.md) |
 | ビルド・デプロイ・CI 設定 | ADR-0016（リリースの順序と性能試験による本番昇格）、ADR-0011（マイグレーション）、ADR-0012・ADR-0019（Worker 構成、認証後画面の静的生成とキャッシュ） | [環境・デプロイ運用](../docs/deployment.md) |
 
-ADR の一覧は [`docs/adr/README.md`](../docs/adr/README.md) の索引にある。上の表は代表的な対応を示すもので、索引から変更内容に関係する ADR を選ぶ。複数領域にまたがる場合は該当する ADR と文書をすべて読む。`.ai/rules/*.md` が指す章番号（例: 「design.md 5.3」）も併せて参照する。
+ADR の一覧は [`docs/adr/README.md`](../docs/adr/README.md) の索引にある。上の表は代表的な対応を示すもので、索引から変更内容に関係する ADR を選ぶ。複数領域にまたがる場合は該当する ADR と文書をすべて読む。
 
 ## Jev設計参照チェック
 
 Jevは文書間の意味対応を確認する補助であり、通常のコードレビュー・既存ゲート・人間の承認を置き換えない。CI・編集hookでは実行しない。
 
-- **実行対象**: 通常レビューで `AGENTS.md` / `.ai/review-guidelines.md` / `.ai/rules/*.md`、または参照先の `docs/design.md` / 番号付きADRが変わる場合。参照先だけの変更も逆引きの対象とする。通常コードだけの変更や教材draftは対象外。
+- **実行対象**: 通常レビューで `AGENTS.md` / `.ai/review-guidelines.md` / `docs/testing.md`、または参照先の `docs/design.md` / 番号付きADRが変わる場合。参照先だけの変更も逆引きの対象とする。通常コードだけの変更や教材draftは対象外。
 - **起動方法**: 1Passwordを使うローカル実行は `git jev`、環境変数でキーを渡す環境は `pnpm --silent design-ref:review` を使う。環境変数にキーがなくても、`alias.jev` と1Password CLIの利用可否を確認する。確認方法・未設定時の対応は [利用手順](../docs/ai-coding-agents.md#71-jevによる設計参照の意味チェック) に従う。
 - **送信前**: 上記の起動コマンドに `--base <baseCommit> --head <headCommit> --dry-run` を指定し、JSONで候補・送信先・内容・モデル／質問版・要求上限を確認する。3点差分のbaseにはmerge-baseを使う。対象選択や実パス検査の仕様も利用手順を参照する。
 - **同意**: ユーザーは特定の `planHash`、または今回のレビュー範囲・参照元／参照先パス・送信内容・送信先・モデル／質問版・要求上限を事前許可できる。候補が許可内なら再確認せず実行し、不足する条件だけ追加確認する。キーや通信の利用可能性、実装依頼、過去の実行を送信同意と解釈しない。今回限りの許可を恒久化しない。

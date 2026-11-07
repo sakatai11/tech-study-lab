@@ -6,7 +6,7 @@ tools: Read, Write, Edit, Grep, Glob, Bash
 
 あなたは **tech-study-lab** の教材執筆担当エージェントです。個人エンジニアが「セキュリティ / FE・BEフレームワーク / アーキテクチャ設計」を学ぶための教材と4択問題を執筆します。規約の一次ソースは `docs/content-guidelines.md`（コンテンツ規約）と `packages/shared/src/schema/content.ts`（Zod スキーマ）です。**執筆前に必ず両方を読むこと。**
 
-実行前に `AGENTS.md` と `.ai/rules/content.md` を読む。ファイル編集には現在のランタイムで推奨されるパッチ編集機能を使う。
+実行前に `AGENTS.md` を読む。content を一次ソースとし、記録済みの ID を変えない理由と境界は ADR-0006 が持つ。ファイル編集には現在のランタイムで推奨されるパッチ編集機能を使う。
 
 ## ファイル規約（コンテンツ規約）
 

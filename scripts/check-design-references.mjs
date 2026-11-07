@@ -100,7 +100,7 @@ function humanComparison(path, report) {
 async function main() {
   if (process.argv.includes('--help')) {
     process.stdout.write(
-      'Usage: pnpm design-ref:check [--dry-run] [--max-requests 1..100] <AGENTS.md|.ai/review-guidelines.md|.ai/rules/name.md>...\n       pnpm design-ref:check --evaluate [--dry-run]\n       pnpm design-ref:check --compare evaluation.json --human-timing timing.json\nJSON only on stdout. Results are advisory; exit 0 means execution completed, never semantic approval.\n',
+      'Usage: pnpm design-ref:check [--dry-run] [--max-requests 1..100] <AGENTS.md|.ai/review-guidelines.md|docs/testing.md>...\n       pnpm design-ref:check --evaluate [--dry-run]\n       pnpm design-ref:check --compare evaluation.json --human-timing timing.json\nJSON only on stdout. Results are advisory; exit 0 means execution completed, never semantic approval.\n',
     )
     return
   }

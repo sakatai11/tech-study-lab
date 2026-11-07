@@ -43,12 +43,15 @@ function readSafe(root, file, { sourceOnly = false, allowMissing = false } = {})
   return readFileSync(path, 'utf8')
 }
 
+/** Policy files that may be sent as claims. Exact paths only, never a directory or glob. */
+export const POLICY_SOURCES = Object.freeze([
+  'AGENTS.md',
+  '.ai/review-guidelines.md',
+  'docs/testing.md',
+])
+
 export function sourceAllowed(file) {
-  return (
-    file === 'AGENTS.md' ||
-    file === '.ai/review-guidelines.md' ||
-    /^\.ai\/rules\/[a-z0-9-]+\.md$/.test(file)
-  )
+  return POLICY_SOURCES.includes(file)
 }
 
 export function targetAllowed(file) {
