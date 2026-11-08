@@ -32,3 +32,4 @@
 - 作業ブランチは Conventional Branch 命名: `<種別>/issue-<番号>-<英語スラッグ>`（種別: `feature` / `fix` / `refactor` / `docs` / `test` / `chore`）。
 - 作業ブランチ → `develop` は PR を作成する（**マージは人間**）。`develop` から `main` へ反映する時期・方法は人間が判断する。
 - `gh pr merge` は使わない（マージは常に人間の判断）。
+- エージェントは `main` / `develop` へ直接 push しない。push するのは作業ブランチだけとする。

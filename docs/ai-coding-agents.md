@@ -129,7 +129,7 @@ pnpm test:hooks           # hook fixture、共通ログ、同期、両ランタ�
 
 ### 7.1 Jevによる設計参照の意味チェック
 
-Codex／Claude Codeは、1Passwordを使うローカル実行では `git jev`（ローカルGit設定の `alias.jev`）を使う。dry-run・helpでは1Passwordを呼ばず、`--execute` 時だけ `op run` で `TYPESAFE_API_KEY` を渡す。実行可否・送信同意・判定結果の扱いは [レビュー規約](../.ai/review-guidelines.md#jev設計参照チェック) に従う。
+Codex／Claude Codeは、1Passwordを使うローカル実行では `git jev`（ローカルGit設定の `alias.jev`）を使う。dry-run・helpでは1Passwordを呼ばず、`--execute` 時だけ `op run` で `TYPESAFE_API_KEY` を渡す。実行可否・送信判断・判定結果の扱いは [レビュー規約](../.ai/review-guidelines.md#jev設計参照チェック) に従う。
 
 環境変数にキーがない場合も、`git config --get alias.jev >/dev/null`（0: 設定済み、1: 未設定）と `op --version` で利用可否を確認する。未設定なら不足する設定を利用者に確認する。失敗時はCLI・権限・1Password連携の原因を切り分け、キー未登録と断定しない。
 
@@ -139,7 +139,7 @@ Codex／Claude Codeは、1Passwordを使うローカル実行では `git jev`（
 # レビュー対象をコミット後、送信候補をオフラインで確認する
 git jev --base <baseCommit> --head <headCommit> --dry-run
 
-# 送信許可を確認した候補のplanHashで実行する
+# dry-runで送信判断の条件を確認した候補のplanHashで実行する
 git jev --base <baseCommit> --head <headCommit> --execute --approved-plan <planHash>
 ```
 
@@ -152,7 +152,7 @@ JevのCLIは `.env.local` を自動読み込みしない。APIの接続先はHTT
 | 状態・理由 | 対処・確認先 |
 | --- | --- |
 | `no_affected_sources` / `no_references_in_selected_sources` | 対象外。削除した参照元は `deletedSources` に残る |
-| `approval_required` / `approved_plan_mismatch` | 許可範囲とdry-runを再確認 |
+| `approval_required` / `approved_plan_mismatch` | `--approved-plan` の値とdry-runを再確認 |
 | `review_context_dirty` / パス拒否 | 対象head・作業コピー・実パスを確認 |
 | 引数エラー（`unknown_option` など） / `git_failed` | 引数の誤りとGitの失敗を区別。後者は参照commitの取得状況・リポジトリを確認 |
 | `dependency_missing` | `pnpm install --frozen-lockfile` で依存を導入。dry-runは依存なしでも可能 |
@@ -160,13 +160,13 @@ JevのCLIは `.env.local` を自動読み込みしない。APIの接続先はHTT
 | `network_error` / `request_timeout` | proxy・CA・許可ホスト・通信状態を確認 |
 | `http_<status>` | API側の認証・制限・障害を確認 |
 | `invalid_json` / `invalid_response` | 応答形式不正。判定は取得できていない |
-| `request_budget_exhausted` / `context_budget_exceeded` | 要求／文脈予算超過。上限変更には同意範囲の確認が必要 |
+| `request_budget_exhausted` / `context_budget_exceeded` | 要求／文脈予算超過。既定上限を超える変更にはユーザーの確認が必要 |
 | `stopped_after_error` | 先行エラーで後続を未実施 |
 | `local_error` / `needs_confirmation` | 未解決参照、案内表・コード例・文書全体参照など。API送信せずローカルで確認 |
 
 終了コードは対象外・dry-run・実行完了が0、未承認・未実施・APIエラー・未解決参照が2。`completed` でも `needs_confirmation` は未送信で残る。対応するMarkdownはリポジトリのATX見出し、インラインリンク、章番号・ADR番号に限定される。
 
-通常の「このPRをレビューして」という依頼では、AIがdry-runを読み、送信許可がなければ「未承認のため未実施」と通常レビューの結果に記載する。今回の候補を覆う事前許可があれば実行し、出典・判定・元文書の確認結果を報告する。
+通常の「このPRをレビューして」という依頼では、AIがdry-runを読み、レビュー規約の送信判断の条件を満たせば実行して、出典・判定・元文書の確認結果を報告する。条件を満たさなければ、理由とともに「未実施」と通常レビューの結果に記載する。
 
 手動調査と固定fixtureの評価には直接指定CLIを使う。実行結果はGit対象外の `reports/` に保存できる。
 
