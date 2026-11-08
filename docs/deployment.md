@@ -1,6 +1,6 @@
 # 環境・デプロイ運用
 
-環境の定義、ローカル開発、本番への手動デプロイ、GitHub Actions によるリリースの運用手順。リリースの適用順序・失敗時の停止・性能試験を本番昇格の条件にする規則は [ADR-0016](./adr/0016-performance-gated-promotion.md)、マイグレーションを変更しない規則は [ADR-0011](./adr/0011-immutable-migrations.md)、content の二重反映は [ADR-0006](./adr/0006-content-as-source-of-truth.md)、本番の Access 境界は [ADR-0008](./adr/0008-production-access-boundary.md) が持つ。本書はそれらを満たすための具体的な手順を持つ。
+環境の定義、ローカル開発、本番への手動デプロイ、GitHub Actions によるリリースの運用手順。変更範囲に応じた反映・適用順序・失敗時の停止・性能試験による本番昇格は [ADR-0017](./adr/0017-change-scoped-releases.md)、マイグレーションを変更しない規則は [ADR-0011](./adr/0011-immutable-migrations.md)、content の二重反映は [ADR-0006](./adr/0006-content-as-source-of-truth.md)、本番の Access 境界は [ADR-0008](./adr/0008-production-access-boundary.md) が持つ。本書はそれらを満たすための具体的な手順を持つ。
 
 ## 環境定義
 
@@ -75,7 +75,7 @@ content から D1 への seed/upsert（ADR-0006）を `apps/api/scripts/sync-con
 
 ## 本番への手動デプロイ
 
-適用順序と失敗時の停止は [ADR-0016](./adr/0016-performance-gated-promotion.md) が持つ。
+適用順序と失敗時の停止は [ADR-0017](./adr/0017-change-scoped-releases.md) が持つ。
 
 初回のみ：`wrangler d1 create tech-study-lab` を実行し、発行された非秘密の `database_id` を `apps/api/wrangler.toml` に設定して Git 管理する。外部リソースの作成・更新を伴うため、実行前に対象アカウント・D1・Worker・入力値を確認し、明示的な承認を得る。`WEB_ORIGIN`・`ACCESS_ISSUER`・`ACCESS_AUDIENCE` の production 値はリポジトリや `.env` に保存しない。
 
@@ -136,31 +136,51 @@ content は「web のビルド時バンドル（設計文書 §5.1）」と「D1
 - **バックアップ**：教材・問題は Git にあるため、守る対象は D1 の動的データ（`answer_logs` / `srs_states` / `lesson_views`）のみ。当面は必要時に `wrangler d1 export` を手動実行し、マルチユーザー公開時に定期化（Cron 等）を検討する。
 - **観測**：rate limit / 永続書き込み（[ADR-0004](./adr/0004-persistent-write-rate-limit.md)）では、429・limiter failure・成功した永続書き込みごとに `event`・`endpoint`・`writeUnit` だけを含む PII-free の構造化 Worker log を出す。運用時は Workers Logs の event 別件数と D1 dashboard の `answer_logs` / `lesson_views` / `srs_states` の書き込み・容量メトリクスを同じ時間帯で突合する。`console.error` は未処理エラーの出力（設計文書 §5.7）に限る。Analytics Engine を含む外部監視は、既存のログと D1 メトリクスでは不足すると判断された場合に別 issue で検討する。
 
-## 通常 SSR・標準 SSG の実行確認
+## 標準 SSG の実行確認
 
-通常 SSR の認証後 route は、ユーザー固有の API データをリクエストごとに取得し、route error boundary が取得失敗を扱うことを確認する。教材・演習 route は `generateStaticParams` が全 content params を返し、Vinext の production build が標準 SSG を生成することを確認する。Client hook の API client は最初の送信まで遅延生成し、render / SSG 時のブラウザ専用設定への依存を避ける。
+認証後の4画面（`/home`・`/review`・`/domains`・`/analytics`）は、静的な枠と loading 状態だけをビルド時に生成し、ユーザー固有データはブラウザの Client hook が取得する（[ADR-0019](./adr/0019-csr-for-user-specific-screens.md)）。成果物にユーザー固有データが含まれないこと、取得失敗を hook のエラー状態が扱うことを確認する。教材・演習 route は `generateStaticParams` が全 content params を返し、Vinext の production build が標準 SSG を生成することを確認する。Client hook の API client は最初の送信まで遅延生成し、render / SSG 時のブラウザ専用設定への依存を避ける。
 
-- **成果物検証（CI）**：`pnpm build` の後に `pnpm --filter @tsl/web verify:build` を実行する。`dist/server/vinext-prerender.json` の rendered route が `/`・`/learn`・全 content params・`/404` と一致し、`/home`・`/review`・`/domains`・`/analytics` が prerender されていないこと、生成 HTML / RSC と公開 Client JS に `answerIndex` が含まれないこと、SSR の Worker entry と `API`（`InternalApi`）binding が生成 config に存在すること、内部 cache artifact が `run_worker_first` で Worker 経由になることを確認する。
-- **実行時検証（ローカル・検証環境）**：API を起動し、web を `build` + `start` で起動した状態で `pnpm --filter @tsl/web verify:ssg` を実行する（接続先は `WEB_VERIFY_BASE_URL`、既定 `http://localhost:3000`）。content route の HTML / RSC が `x-vinext-cache: HIT` で生成物と一致すること、SSR route が `no-store` で error boundary を返さないこと、別表記 URL と内部 cache artifact の直接取得が 404 になることを確認する。認証後 route は full GET に加えて `?_rsc` navigation も `text/x-component`・`no-store` の通常 SSR として完了することを確認する。
+- **成果物検証（CI）**：`pnpm build` の後に `pnpm --filter @tsl/web verify:build` を実行する。`dist/server/vinext-prerender.json` の rendered route が `/`・`/learn`・認証後の4画面・全 content params・`/404` と一致すること、生成 HTML / RSC と公開 Client JS に `answerIndex` が含まれないこと、4画面の HTML / RSC にユーザー固有データが含まれないこと、Worker entry と `API`（`InternalApi`）binding が生成 config に存在すること、内部 cache artifact が `run_worker_first` で Worker 経由になることを確認する。
+- **実行時検証（ローカル・検証環境）**：API を起動し、web を `build` + `start` で起動した状態で `pnpm --filter @tsl/web verify:ssg` を実行する（接続先は `WEB_VERIFY_BASE_URL`、既定 `http://localhost:3000`）。content route と認証後の4画面の HTML / RSC が `x-vinext-cache: HIT` で生成物と一致すること、4画面の HTML が error boundary を返さないこと、別表記 URL と内部 cache artifact の直接取得が 404 になることを確認する。4画面のデータ表示は、認証済みブラウザで手動確認する（ADR-0019）。
 
 構成確認では、`API` Service Binding が残り、`cacheComponents`、ISR 用の Incremental Cache、R2、KV、Durable Object Queue の有効 binding、Worker 自己参照 binding が存在しないこと、登録済み `DOQueueHandler` の `v1` 作成履歴と後続の `v2` 削除 migration を top-level で維持し検証用 env が継承しないこと、標準 script が OpenNext に依存しないことをテストで固定する。
 
 ## GitHub Actions による環境別リリース
 
-適用順序・失敗時の停止・性能試験による本番昇格の条件は [ADR-0016](./adr/0016-performance-gated-promotion.md)、content の同期を毎回実行する規則は [ADR-0006](./adr/0006-content-as-source-of-truth.md) が持つ。
+変更範囲の判定・適用順序・失敗時の停止・性能試験による本番昇格の条件は [ADR-0017](./adr/0017-change-scoped-releases.md)、content の同期を毎回実行する規則は [ADR-0006](./adr/0006-content-as-source-of-truth.md) が持つ。
+
+計画から適用までの排他と、失敗・中断後の再反映を判断する開始記録は [ADR-0018](./adr/0018-release-attempt-consistency.md) が持つ。
 
 - PR CI は既存の検査・build のみ。`develop` push は `verification`、`main` push は `production` を対象とし、手動実行もこの対応を固定する。GitHub Environments の許可ブランチはそれぞれ `develop` / `main` に限定する。
-- `prepare` job は Cloudflare token を持たず、対象 commit を固定して検査・環境別 build・SQL 生成・manifest 作成を完了する。manifest は環境、SHA、source tree、問題数、全ファイルの SHA-256、migration 一覧を含む。API は dry-run で生成した bundle、Web は生成 config と `dist` を反映用成果物として保存する。後続の `apply` job では再ビルドせず、同じ run の成果物を照合して利用する。
+- `changes` job は、先行リリース・ロールバックの終了後に各環境の最後の信頼できる成功記録と対象 commit を比較し、対象 Worker を決める。対象がなければ `prepare` / `apply` を省略する。未完了の開始記録があれば比較不能として両 Worker を対象にする。Cloudflare token は使用しない。
+- `prepare` job は Cloudflare token を持たず、対象 commit を固定して検査・対象 Worker の環境別 build・SQL 生成・manifest 作成を完了する。manifest は環境、SHA、source tree、Worker ごとのソース hash、対象 Worker、比較元の成功記録、問題数、全ファイルの SHA-256、migration 一覧を含む。対象 API の dry-run bundle、対象 Web の生成 config と `dist` を保存する。後続の `apply` job では再ビルドせず、同じ run の成果物を照合して利用する。
 - production も `prepare` 成功後に `apply` が自動開始し、人間の追加承認を待たず environment Secrets から Cloudflare token を取得する。両 environment の required reviewers・wait timer・custom deployment protection rules は設定せず、正確な許可ブランチを preflight で検査する。検証 / 本番の enable flag は明示設定されるまで無効とし、本番初回切替条件を満たす前に有効化しない。PR のマージは従来どおり人間が行う。
-- apply は **設定・manifest・鮮度・検証済み source の検査 → migration → content sync → API → API 確認 → Web → smoke test →（verification だけ）性能測定 → CPU ログ照合 → 成功記録** の順。どの段階でも失敗したら後続を停止する。production の事前検査は、同じ source tree の検証成功記録が性能試験に成功していることを確認する（「検証環境の性能試験」）。同じ環境の通常リリースと復旧は共通 concurrency group で直列化し、`cancel-in-progress: false` とする。
-- content sync の CI 経路は SQL 生成と remote 実行を分離し、manifest の SQL を固定した D1 / config に非対話で適用する。問題が空の CI リリースは書き込み動作確認ができないため拒否する。既存の手動 remote は対話 TTY 確認を維持する。冪等な同期は失敗した run が D1 だけを変更した場合の取りこぼしを避けるため、成功記録の content 差分に関わらず毎回実行する（差分は計画の情報として記録する）。Web は毎回同じ source から反映し、二重反映の片方だけを省略しない。
+- apply は **設定・manifest・鮮度・検証済み source の検査 → migration → content sync → API → API 確認 → Web → smoke test →（verification だけ）性能測定 → CPU ログ照合 → 成功記録** の順。対象外 Worker の更新だけを省略し、どの段階でも失敗したら後続を停止する。production は、配備対象ソースが一致する検証成功記録と性能証跡を確認する（「検証環境の性能試験」）。同じ環境の通常リリースと復旧は共通 concurrency group で直列化し、`cancel-in-progress: false` とする。
+- content sync の CI 経路は SQL 生成と remote 実行を分離し、manifest の SQL を固定した D1 / config に非対話で適用する。問題が空の CI リリースは書き込み動作確認ができないため拒否する。既存の手動 remote は対話 TTY 確認を維持する。冪等な同期は失敗した run が D1 だけを変更した場合の取りこぼしを避けるため、リリースを行う場合は content 差分に関わらず毎回実行する（差分は計画の情報として記録する）。content が変われば Web/API の両方を対象とし、二重反映を維持する。
 - Worker / DB の名前・ID・config、Web origin、公開 API URL、Service Binding、migration 履歴を対象環境と照合し、任意 CLI 引数による上書きを認めない。API の `WEB_ORIGIN` / `ACCESS_ISSUER` / `ACCESS_AUDIENCE` は environment Variables から毎回指定する。認証情報は environment Secrets にのみ保存し、Git・ログ・artifact に含めない。
-- 成功記録は GitHub Deployment に環境・SHA・tree・Worker version・run ID を保存する。本番候補は直近の正常 verification と source tree が一致することを必須とし、merge による SHA の違いを許容する。変更開始前に最新 branch SHA を再検査し、古い run が新しい反映を巻き戻すことを防ぐ。
+- 成功記録は GitHub Deployment に環境・SHA・tree・Worker version・run ID を保存する。本番候補は直近の正常 verification と配備対象ソースの一致を必須とし、SHA の違いと、除外対象だけの tree 差分を許容する。変更開始前に最新 branch SHA を再検査し、古い run が新しい反映を巻き戻すことを防ぐ。
 - smoke test は公開 `/` と `/health`、未認証の Access redirect、credentialed CORS preflight、CI 専用の Access Service Token を使う認証済み主要画面を検査する。Service Token の Client ID / Secret は environment Secrets に保存し、Web / API の Access Application でこの token に限定する Service Auth policy を運用者が設定する。token 失効時は検査を失敗させる。専用 verification では採点・閲覧記録の書き込みを確認し、production では GET と OPTIONS だけを実行する。Access policy / API 認証境界を自動で弱めない。
 - deploy 前後の実際の Worker version を記録する。通信エラー後の再実行は実状態・適用済み migration・冪等 upsert を確認して行い、失敗した操作をその場で無条件に再試行しない。本番 Worker rollback は対象 version ID と確認した現在の version ID を指定する手動 workflow とし、その実行操作を復旧の承認とする。environment での追加承認は設けず、復旧後は成功ソースの証明を無効にする。D1 の状態は戻らず、DB 復旧は別手順とする。
 - 実行手順、環境設定、artifact のアクセス・保持期間、失敗時の再実行・復旧方法は、本書の以下の節に定める。初回の環境設定・token 登録・Service Token の登録・更新は運用者が行う。
 
 PR は検査のみ、`develop` は検証環境、`main` は本番環境へ、品質検査・環境別ビルドの成功後に自動反映する。デプロイの追加承認は不要。GitHub Actions の workflow は、対象ブランチへ人間がマージしてから利用する。
+
+### 変更範囲とビルド対象
+
+判定の一次ソースは `scripts/deployment-changes.mjs`。ファイルのパス・モード・Git blob ID を Worker ごとに hash 化するため、削除・改名も検知する。PR の CI は base commit、自動 Deploy は環境ごとの最後の成功 commit と比較する。直前の push が失敗していても、その未反映分を含める。
+
+| 変更 | ビルド・更新する Worker |
+| --- | --- |
+| `apps/web/**` | Web |
+| `apps/api/**` | API |
+| `apps/api/src/client.ts`、`apps/api/package.json` | Web の実行時依存でもあるため両方 |
+| `packages/**`、`content/**`、共通依存・lockfile・TypeScript 基本設定 | 両方 |
+| リリース処理・性能検査・Deploy workflow、未知のパス | 両方 |
+| `docs/**`、README / AGENTS / CLAUDE、AI ハーネス、Knowledge Graph、テスト・Vitest 設定、CI workflow など明示した検査専用ファイル | 両方省略 |
+
+PR では型・lint・テスト・ハーネス検査を維持し、Worker ビルドと Web 成果物検査を条件付きで実行する。Knowledge Graph viewer のビルドもアプリ・viewer 関連の変更時に絞る。workflow 全体はパスで除外しない。
+
+成功記録なし・比較不能・ロールバック後・遠隔変更が未完了の場合は両方を対象とする。検証用の `apps/api/wrangler.test.jsonc` は API の実際の配備設定であり、テスト用ソースの除外には含めない。**Deploy の手動実行も両方を対象**とし、Git に表れない Variables/Secrets の更新や復旧後の再反映に使う。片方を省略するときは、apply の変更前にその稼働 version と比較元の記録の一致を確認する。不一致や計画後の成功記録の変更は停止し、全体を再実行する。手動更新で版がずれた場合は Deploy を手動実行する。
 
 ## 初回設定
 
@@ -240,27 +260,29 @@ token の値はチャット・Issue・PR・端末履歴へ貼らず、Cloudflare
 5. 人間がリリース PR を `main` へマージする。Deploy の prepare が plan と immutable artifact を生成する。
 6. prepare 成功後に apply が自動開始する。plan・manifest・環境・検証済みソースの照合が通ったら remote D1 / Worker を更新し、smoke test と成功記録まで実行する。失敗した場合は後続を停止する。
 
-本番候補は直近の成功した検証リリースと source tree が一致し、その記録が同じ測定条件の性能試験に成功している必要がある。性能試験を導入する前の成功記録は受け付けないため、導入後に最低1回は verification のリリースを完走させる。merge による SHA の差は許容するが、ソースが変わった場合は検証からやり直す。検証 Worker が手動反映や失敗途中の更新で記録と異なる場合も、本番は停止する。
+本番候補は直近の成功した検証リリースと配備対象ソースが一致し、その記録が同じ測定条件の性能試験に成功している必要がある。性能試験を導入する前の成功記録は受け付けないため、導入後に最低1回は verification のリリースを完走させる。SHA の差や除外対象だけの変更は許容するが、配備対象ソースが変わった場合は検証からやり直す。検証 Worker が手動反映や失敗途中の更新で記録と異なる場合も、本番は停止する。
 
 ## 実行順序と記録
 
-prepare は Cloudflare の変更権限を持たず、locked dependencies、品質検査、SQL 生成、環境別 Web build / 成果物検査、API dry-run bundle を実行する。SHA・tree・全ファイルの SHA-256 を manifest に含める。API config / bundle / migration、Web `dist`、生成 SQL は同じ run / attempt の artifact に保存する。
+prepare は Cloudflare の変更権限を持たず、locked dependencies、品質検査、SQL 生成と、対象 Worker の build / 成果物検査を実行する。SHA・tree・反映計画・全ファイルの SHA-256 を manifest に含める。対象 Worker の成果物、API config / migration、生成 SQL は同じ run / attempt の artifact に保存する。
 
-apply は対象環境の Secrets を使用し、manifest・設定・最新 branch SHA・検証ソース、実アカウントの workers.dev subdomain、現在の API に対する Service Token 認証を変更前に検査する。次に **migration → content sync → API deploy → API health → Web upload → smoke test →（verification だけ）性能測定 → CPU ログ照合 → 成功記録**を行う。Web upload は再ビルドせず prepare の receipt・全ファイル hash を照合する。content sync は冪等なため毎回実行する（失敗 run が D1 だけを更新した後に content が戻っても取りこぼさない）。content 差分は計画に情報として表示する。問題が空のリリースは拒否する。
+apply は対象環境の Secrets を使用し、manifest・設定・最新 branch SHA・検証ソース、比較元の成功記録、省略する Worker の実 version、実アカウントの workers.dev subdomain、現在の API に対する Service Token 認証を変更前に検査する。次に **migration → content sync → API deploy → API health → Web upload → smoke test →（verification だけ）性能測定 → CPU ログ照合 → 成功記録**を行い、対象外 Worker の更新だけを省略する。Web upload は再ビルドせず prepare の receipt・全ファイル hash を照合する。content sync は冪等なため毎回実行する（失敗 run が D1 だけを更新した後に content が戻っても取りこぼさない）。content 差分は計画に情報として表示する。問題が空のリリースは拒否する。
 
-同一環境の deploy / rollback は `deploy-verification` / `deploy-production` concurrency group を共有する。性能測定と CPU ログ照合は apply job の中で行うため、測定中に通常フローの別デプロイや rollback は始まらない。変更開始済みの run は新しい push でキャンセルしない。変更開始前に branch が進んでいた場合は古い run を拒否する。
+同一環境の deploy / rollback は `deploy-verification` / `deploy-production` concurrency group を共有する。Deploy は workflow 全体で排他を取り、`changes` の計画から `prepare`、`apply`、成功記録まで保持する。apply job に同じ排他を重ねない。ビルド中や性能測定中も、後続の計画や rollback は待機する。変更開始済みの run は新しい push でキャンセルしない。変更開始前に branch が進んでいた場合は古い run を拒否する。
+
+apply は事前検査の後、D1・Worker を変更する前に GitHub Deployment へ `tsl-attempt` を保存し、`in_progress` とする。ロールバックも Worker の変更前に同じ開始記録を残す。保存できなければ遠隔変更を行わない。後続の `tsl-release` 成功記録がない開始記録は、失敗・中断後も比較元を無効にする。ソースが過去の成功版へ戻っていても、次回は全体を準備し直して migration/content sync・両 Worker の配備・検査を行う。通常のドキュメント更新で未完了の開始記録がなければ、ビルド・配備・D1 同期を省略できる。
 
 結果の確認先:
 
 - Actions の Job Summary：plan、処理段階、反映前後の Worker version、成功 / 失敗。
 - `deployment-result-<run>-<attempt>` artifact：認証情報を除いた `result.json`。保持 30 日。
-- GitHub Deployment：全ステップ成功時だけ作成する `tsl-release` 記録（環境・SHA・tree・content tree・version・run ID / attempt。verification は性能試験の証跡を含む）。
+- GitHub Deployment：変更開始前の `tsl-attempt` 記録（環境・SHA・run ID / attempt）と、全ステップ成功時だけ作成する `tsl-release` 記録（環境・SHA・tree・content tree・version・run ID / attempt。verification は性能試験の証跡を含む）。
 - `performance-<run>-<attempt>` artifact（verification だけ）：性能試験の `performance.json`。保持 90 日。「検証環境の性能試験」を参照。
 - `release-<run>-<attempt>` artifact：ビルド成果物・SQL・manifest。保持 3 日。認証情報は含めないが、サーバー成果物・解答データを含む。ダウンロードには GitHub 認証と artifact のアクセス権が必要であり、公開 Web assets へ転用しない。永続的な秘密の保存先にはしない。
 
 ## 検証環境の性能試験
 
-本番昇格の条件にする規則は [ADR-0016](./adr/0016-performance-gated-promotion.md) が持つ。ここでは実行の順序・判定・結果の見方を定める。測定条件と判定のコードは `scripts/performance-lib.mjs`、CI の取得・照合は `scripts/performance.mjs` にある。
+本番昇格の条件にする規則は [ADR-0017](./adr/0017-change-scoped-releases.md) が持つ。ここでは実行の順序・判定・結果の見方を定める。測定条件と判定のコードは `scripts/performance-lib.mjs`、CI の取得・照合は `scripts/performance.mjs` にある。
 
 ### 実行順序
 
@@ -272,12 +294,13 @@ verification の apply は smoke test の成功後、同じ job・同じ concurr
 
 ### 測定条件
 
-`scripts/verification/route-stability.browser.js`（#220 の手動測定）と同じ条件を使い、テストで値の一致を検査する。
+`scripts/verification/route-stability.browser.js`（#220 の手動測定）と同じ測定条件を使い、テストで値の一致を検査する。手動測定前に `CONFIG` の commit と Web/API version を対象環境の値に設定する。
 
 - 対象：`tech-study-lab-web-test` / `tech-study-lab-api-test` / `tech-study-lab-test`。`/home`・`/review`・`/domains`・`/analytics` × HTML/RSC の8組。
 - 件数：各組 warmup 2件＋本測定20件。1回176件を3回、計528件を逐次 GET する。ラウンドごとに組の順序をずらす。1回の上限 240 秒、1 request の上限 10 秒。
 - RSC は `?_rsc=` と `RSC: 1`。全 request を `cache: 'no-store'` で送る。
-- 合格条件：200、同一 origin/path（redirect は追わない）、期待する Content-Type、空でない本文、`Cache-Control: no-store`、`x-vinext-cache` / `cf-cache-status` が HIT でない、challenge でない、cf-ray がある。最初の異常でその回以降を止め、失敗 request を再試行しない。
+- 合格条件：200、同一 origin/path（redirect は追わない）、期待する Content-Type、空でない本文、challenge でない、有効な cf-ray がある。
+- 静的な枠の配信を示す `x-vinext-cache: HIT` を必須とする。応答の `Cache-Control` は記録する。`CF-Cache-Status` が `HIT`・`STALE`・`UPDATING`・`REVALIDATED` の応答は、エッジキャッシュの本文が返るため拒否する（[ADR-0020](./adr/0020-measure-static-shell-worker-executions.md)、[Cloudflare のキャッシュ応答](https://developers.cloudflare.com/cache/concepts/cache-responses/)）。最初の異常でその回以降を止め、失敗 request を再試行しない。
 
 **認証経路の差異**：CI は smoke test と同じ Access Service Token を各 request の header に付け、GitHub-hosted runner の Node.js `fetch` から送る。#220 の手動測定は人間のブラウザの Access cookie を使い、DevTools Console から送る。どちらも Access の検証・Service Binding・API の固定ユーザーの境界は同じだが、送信元の colo・回線・TTFB の測り方（CI は応答 header の受信時刻、ブラウザは Resource Timing）が異なる。そのため CI の応答時間をブラウザの値と直接比べない。CPU 時間は Cloudflare 側の値なので経路に依存しない。利用者のブラウザ Cookie はコピーしない。
 
@@ -285,7 +308,7 @@ verification の apply は smoke test の成功後、同じ job・同じ concurr
 
 ### 測定前の Web 実行版確認
 
-- 測定と同じ Access Service Token 付き GET で、検証環境の `/home` の HTML と RSC を取得する。Web から API への Service Binding を含む通常の画面経路を使う。
+- 測定と同じ Access Service Token 付き GET で、検証環境の `/home` の HTML と RSC を取得する。Web Worker がビルド済みの静的な枠を返す経路を使う。
 - 応答を測定と同じ基準で検証する。両方の `cf-ray` について、期待する Web version の正常な invocation が Workers Observability に 1 件ずつ揃えば実行版確認は成功となる。API version の確認は測定前後の配備情報と測定中の対象版のリソース上限検査までとする。
 - 確認は最大 5 分。ログが未着の場合は同じ Ray ID のログを 15 秒間隔で再取得する。旧版を検出した場合は次の間隔で HTML と RSC の両方を再取得する。上限到達、応答異常、ログ取得失敗などでは理由を記録して停止する。
 - 確認用の Ray ID は 528 件の測定・照合・CPU 分布に含めない。API のリソース上限検査は既存の測定時間帯と前後の余裕を対象とするため、時間帯が重なる確認リクエストに起因する上限超過も停止対象になる。切替確認後の測定で旧版が検出された場合は判定不能で停止する。
@@ -320,7 +343,7 @@ HTTP 200 だけでは CPU 上限による強制終了を検出できないため
 
 production の事前検査は、D1・Worker を変更する前に次をすべて確認する。満たさなければ停止する。
 
-- 直近の verification 成功記録の source tree が本番候補と一致する。
+- 直近の verification 成功記録の commit/tree が Git と一致し、その commit と本番候補の配備対象ソースが両 Worker とも一致する。除外対象だけの tree 差分は許容する。
 - その記録が性能試験の証跡を持ち、`passed: true`、CPU ログ照合が成功、`conditionsId` が現在のコードの値と一致する。
 - 証跡の tree・Web/API version・run ID / attempt が、同じ成功記録の値と一致する。
 - 記録の Web/API version が、検証環境で稼働中の version と一致する（手動反映や失敗した後続 run による差し替えを拒否する）。

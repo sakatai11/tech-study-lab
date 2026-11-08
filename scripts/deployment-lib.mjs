@@ -52,7 +52,7 @@ export function assertDeploymentProtection(environment, config, policies) {
   )
 }
 
-export function assertFreshSource(environment, sha, latestSha, tree, verification) {
+export function assertFreshSource(environment, sha, latestSha, tree, verification, sources) {
   assert.match(sha, /^[a-f0-9]{40}$/)
   assert.equal(
     sha,
@@ -60,11 +60,19 @@ export function assertFreshSource(environment, sha, latestSha, tree, verificatio
     'branch advanced; start a new run instead of deploying stale artifacts',
   )
   if (environment === 'production') {
-    assert.equal(
-      verification?.tree,
-      tree,
-      'production source must match the latest successful verification',
-    )
+    if (sources) {
+      for (const worker of ['api', 'web']) assert.match(sources.candidate[worker], /^[a-f0-9]{64}$/)
+      assert.deepEqual(
+        sources.candidate,
+        sources.verified,
+        'production source must match the latest successful verification',
+      )
+    } else
+      assert.equal(
+        verification?.tree,
+        tree,
+        'production source must match the latest successful verification',
+      )
     assertPerformanceProof(verification)
   }
 }
@@ -194,12 +202,16 @@ export async function github(path, { method = 'GET', body, env = process.env } =
   return response.status === 204 ? null : response.json()
 }
 
+/** Find a trusted success, stopping at a newer unfinished mutation or successful rollback. */
 export async function lastRelease(environment, api = github) {
   for (let page = 1; ; page++) {
     const deployments = await api(
       `deployments?environment=${environment}&per_page=100&page=${page}`,
     )
     for (const deployment of deployments) {
+      // A remote mutation may have completed even if its run never recorded success.
+      // A newer successful release supersedes this marker by appearing first.
+      if (deployment.payload?.kind === 'tsl-attempt') return null
       if (!['tsl-release', 'tsl-rollback'].includes(deployment.payload?.kind)) continue
       const statuses = await api(`deployments/${deployment.id}/statuses?per_page=100`)
       if (!statuses.some(({ state }) => state === 'success')) continue
@@ -211,7 +223,8 @@ export async function lastRelease(environment, api = github) {
   }
 }
 
-export async function recordRelease(environment, sha, payload, api = github) {
+/** Persist a deployment and its state without invalidating older records automatically. */
+async function recordDeployment(environment, sha, payload, state, api) {
   const deployment = await api('deployments', {
     method: 'POST',
     body: {
@@ -228,9 +241,19 @@ export async function recordRelease(environment, sha, payload, api = github) {
   await api(`deployments/${deployment.id}/statuses`, {
     method: 'POST',
     body: {
-      state: 'success',
+      state,
       auto_inactive: false,
       log_url: `https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`,
     },
   })
+}
+
+/** Invalidate the remote-state baseline before any D1/Worker mutation (ADR-0018). */
+export async function recordReleaseAttempt(environment, sha, metadata, api = github) {
+  await recordDeployment(environment, sha, { ...metadata, kind: 'tsl-attempt' }, 'in_progress', api)
+}
+
+/** Publish a success only after every required release/rollback stage has passed. */
+export async function recordRelease(environment, sha, payload, api = github) {
+  await recordDeployment(environment, sha, payload, 'success', api)
 }

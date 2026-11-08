@@ -26,3 +26,8 @@ export type DashboardViewModel = {
   heatmap: AnalyticsHeatmapResponse
   activity: DashboardActivityViewModel[]
 }
+
+/** /home が1回の取得で表示するデータ。due 件数だけは取得に失敗しても画面を出す。 */
+export type DashboardScreenViewModel = DashboardViewModel & {
+  due: DashboardDueViewModel | null
+}

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 
 import { getLessonRouteParams, getQuizRouteParams, getTopicRouteParams } from '../src/lib/content'
 
-// Run after build and start, with the local API serving SSR routes:
+// Run after build and start. The user screens are static shells; their data is fetched in the browser (ADR-0019):
 // pnpm --filter @tsl/web verify:ssg
 const root = new URL('../', import.meta.url)
 const baseUrl = process.env.WEB_VERIFY_BASE_URL ?? 'http://localhost:3000'
@@ -21,16 +21,12 @@ const contentPaths = [
   ),
   ...getQuizRouteParams().map(({ lesson }) => `/quiz/${lesson}`),
 ]
-const staticPaths = ['/', '/learn', '/quiz', ...contentPaths]
-const ssrPaths = ['/home', '/review', '/domains', '/analytics']
+const userShellPaths = ['/home', '/review', '/domains', '/analytics']
+const staticPaths = ['/', '/learn', '/quiz', ...userShellPaths, ...contentPaths]
 const renderedPaths = manifest.routes
   .filter(({ status }) => status === 'rendered')
   .map(({ route, path }) => path ?? route)
 assert.deepEqual(new Set(renderedPaths), new Set([...staticPaths, '/404']))
-
-for (const pathname of ssrPaths) {
-  assert(manifest.routes.some((route) => route.route === pathname && route.status === 'skipped'))
-}
 
 const report: Array<Record<string, unknown>> = []
 for (const pathname of staticPaths) {
@@ -59,34 +55,6 @@ for (const pathname of staticPaths) {
       sha256: digest(body),
     })
   }
-}
-
-for (const pathname of ssrPaths) {
-  const response = await fetch(`${baseUrl}${pathname}`)
-  assert.equal(response.status, 200, pathname)
-  assert(response.headers.get('cache-control')?.includes('no-store'), pathname)
-  assert.notEqual(response.headers.get('x-vinext-cache'), 'HIT', pathname)
-  const html = await response.text()
-  assert(!/<h1[^>]*>[^<]*読み込めませんでした/.test(html), `${pathname} returned an error boundary`)
-  report.push({
-    pathname,
-    status: response.status,
-    cacheControl: response.headers.get('cache-control'),
-  })
-
-  // Client navigation requests the same route as RSC; it must also be rendered per request.
-  const rsc = await fetch(`${baseUrl}${pathname}?_rsc`, { headers: { RSC: '1' } })
-  assert.equal(rsc.status, 200, `${pathname} rsc`)
-  assert(rsc.headers.get('content-type')?.includes('text/x-component'), `${pathname} rsc`)
-  assert(rsc.headers.get('cache-control')?.includes('no-store'), `${pathname} rsc`)
-  assert.notEqual(rsc.headers.get('x-vinext-cache'), 'HIT', `${pathname} rsc`)
-  await rsc.body?.cancel()
-  report.push({
-    pathname,
-    kind: 'rsc',
-    status: rsc.status,
-    cacheControl: rsc.headers.get('cache-control'),
-  })
 }
 
 for (const entry of readdirSync(new URL('dist/client/', root), {

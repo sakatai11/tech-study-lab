@@ -6,12 +6,14 @@ import { join } from 'node:path'
 import { after, test } from 'node:test'
 import {
   MODEL,
+  POLICY_SOURCES,
   QUESTION,
   QUESTION_VERSION,
   collectReferences,
   digest,
   evaluateMetrics,
   judgeReference,
+  sourceAllowed,
   validateResponse,
 } from './design-references.mjs'
 import { headingSections } from './markdown-headings.mjs'
@@ -91,47 +93,91 @@ test('wrong relative paths cannot resolve by basename; source symlinks cannot re
     `[設計](elsewhere/${designAnchor('1-方針')}) と [ADR-0001](elsewhere/${adrPath()})。\n`,
   )
   assert.ok(collectReferences(root, ['AGENTS.md']).every((ref) => ref.status === 'local_error'))
-  mkdirSync(join(root, '.ai/rules'), { recursive: true })
   const outsideRoot = mkdtempSync(join(tmpdir(), 'design-refs-outside-'))
   temporaryRoots.push(outsideRoot)
   const outsideFile = join(outsideRoot, 'example.md')
   writeFileSync(outsideFile, 'External fixture content must never be read.\n')
-  symlinkSync(outsideFile, join(root, '.ai/rules/example.md'))
-  assert.throws(() => collectReferences(root, ['.ai/rules/example.md']), /path_outside_repository/)
+  symlinkSync(outsideFile, join(root, 'docs/testing.md'))
+  assert.throws(() => collectReferences(root, ['docs/testing.md']), /path_outside_repository/)
 })
 
 test('source aliases cannot redirect allowed names or parent directories to disallowed repository content', () => {
   const root = repository()
-  mkdirSync(join(root, '.ai/rules'), { recursive: true })
   mkdirSync(join(root, 'internal'), { recursive: true })
   writeFileSync(join(root, 'internal/unrelated.md'), 'Unrelated context\nClaim (design.md 1).\n')
-  symlinkSync(join(root, 'internal/unrelated.md'), join(root, '.ai/rules/example.md'))
-  assert.throws(() => collectReferences(root, ['.ai/rules/example.md']), /source_not_allowed/)
+  symlinkSync(join(root, 'internal/unrelated.md'), join(root, 'docs/testing.md'))
+  assert.throws(() => collectReferences(root, ['docs/testing.md']), /source_not_allowed/)
 
   const parentAliasRoot = repository()
-  mkdirSync(join(parentAliasRoot, '.ai'), { recursive: true })
   mkdirSync(join(parentAliasRoot, 'internal'), { recursive: true })
-  writeFileSync(join(parentAliasRoot, 'internal/example.md'), 'Claim (design.md 1).\n')
-  symlinkSync(join(parentAliasRoot, 'internal'), join(parentAliasRoot, '.ai/rules'), 'dir')
+  writeFileSync(join(parentAliasRoot, 'internal/review-guidelines.md'), 'Claim (design.md 1).\n')
+  symlinkSync(join(parentAliasRoot, 'internal'), join(parentAliasRoot, '.ai'), 'dir')
   assert.throws(
-    () => collectReferences(parentAliasRoot, ['.ai/rules/example.md']),
+    () => collectReferences(parentAliasRoot, ['.ai/review-guidelines.md']),
     /source_not_allowed/,
   )
 })
 
 test('source aliases to allowed policy files and aliased repository roots remain supported', () => {
   const root = repository()
-  mkdirSync(join(root, '.ai/rules'), { recursive: true })
   writeFileSync(join(root, 'AGENTS.md'), 'Claim (design.md 1).\n')
-  symlinkSync(join(root, 'AGENTS.md'), join(root, '.ai/rules/example.md'))
+  symlinkSync(join(root, 'AGENTS.md'), join(root, 'docs/testing.md'))
   const aliasParent = mkdtempSync(join(tmpdir(), 'design-refs-root-alias-'))
   temporaryRoots.push(aliasParent)
   const rootAlias = join(aliasParent, 'repository')
   symlinkSync(root, rootAlias, 'dir')
-  const refs = collectReferences(rootAlias, ['.ai/rules/example.md'])
+  const refs = collectReferences(rootAlias, ['docs/testing.md'])
   assert.equal(refs.length, 1)
   assert.equal(refs[0].status, 'resolved')
-  assert.equal(refs[0].source.file, '.ai/rules/example.md')
+  assert.equal(refs[0].source.file, 'docs/testing.md')
+})
+
+test('only the three named policy files are sources; retired rules and other docs are refused', () => {
+  assert.deepEqual(POLICY_SOURCES, ['AGENTS.md', '.ai/review-guidelines.md', 'docs/testing.md'])
+  for (const file of POLICY_SOURCES) assert.ok(sourceAllowed(file), file)
+  for (const file of [
+    '.ai/rules/web.md',
+    '.claude/rules/testing.md',
+    'docs/deployment.md',
+    'docs/content-guidelines.md',
+    'docs/design.md',
+    'docs/testing/extra.md',
+    'docs/testing.md.bak',
+    './docs/testing.md',
+    'apps/web/AGENTS.md',
+  ])
+    assert.ok(!sourceAllowed(file), file)
+
+  const root = repository()
+  mkdirSync(join(root, '.ai/rules'), { recursive: true })
+  writeFileSync(join(root, '.ai/rules/web.md'), 'Claim (design.md 1).\n')
+  writeFileSync(join(root, 'docs/deployment.md'), 'Claim (design.md 1).\n')
+  for (const file of ['.ai/rules/web.md', 'docs/deployment.md'])
+    assert.throws(() => collectReferences(root, [file]), /source_not_allowed/)
+})
+
+test('the testing policy extracts chapter, link and ADR references relative to docs/', () => {
+  const root = repository()
+  writeFileSync(
+    join(root, 'docs/testing.md'),
+    [
+      '層と依存方向は design.md 1 で確認する。',
+      `[設計](${['design.md', '1-方針'].join('#')}) に従う。`,
+      `判断は [ADR-0001](./${adrPath().replace('docs/', '')}) が持つ。`,
+      `誤った相対パス [ADR-0001](../${adrPath().replace('docs/', '')}) は解決しない。`,
+    ].join('\n'),
+  )
+  const refs = collectReferences(root, ['docs/testing.md'])
+  assert.deepEqual(
+    refs.map((ref) => [ref.source.line, ref.status, ref.target?.file ?? null]),
+    [
+      [1, 'resolved', 'docs/design.md'],
+      [2, 'resolved', 'docs/design.md'],
+      [3, 'resolved', adrPath()],
+      [4, 'local_error', null],
+    ],
+  )
+  assert.equal(refs[0].target.section, refs[1].target.section)
 })
 
 test('unresolved references stay local errors, including anchors and ADR file names', () => {

@@ -7,15 +7,14 @@ import { Card } from '@/components/ui/card'
 import { MaterialSymbol } from '@/components/ui/material-symbol'
 import { TermCrumb } from '@/components/ui/term-crumb'
 
-import { loadDashboardStatic } from '../load-dashboard'
-import { DashboardDueCard } from './dashboard-due-card'
-import { DashboardUserContent } from './dashboard-user-content'
+import { DashboardUserSections } from '../../client/components/dashboard-user-sections'
+import { loadDashboardStatic, loadLessonTitles } from '../load-dashboard'
 
 function revealStyle(index: number): CSSProperties {
   return { '--reveal-index': index } as CSSProperties
 }
 
-export async function DashboardPageContent() {
+export function DashboardPageContent() {
   const {
     continueHref,
     continueTitle,
@@ -23,7 +22,6 @@ export async function DashboardPageContent() {
     continueQuestionCount,
     learnHref,
   } = loadDashboardStatic()
-  const [dueCard, userContent] = await Promise.all([DashboardDueCard(), DashboardUserContent()])
 
   return (
     <div className="flex flex-col gap-5">
@@ -39,11 +37,7 @@ export async function DashboardPageContent() {
         </div>
       </section>
 
-      <section aria-label="今日の復習" className="grid grid-cols-1 gap-3">
-        {dueCard}
-      </section>
-
-      {userContent}
+      <DashboardUserSections lessonTitles={loadLessonTitles()} />
 
       {learnHref ? (
         <Card className="reveal border-green p-5 sm:p-6" style={revealStyle(2)}>

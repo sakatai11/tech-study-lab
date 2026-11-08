@@ -1,12 +1,6 @@
 import 'server-only'
 
-import { AnalyticsDashboard } from '@/features/analytics/server/components/analytics-dashboard'
-import { loadAnalytics } from '@/features/analytics/server/load-analytics'
-
-// データ待ちの後に描く範囲を、API の値を使う部分だけに絞る（Issue #220）。
-async function AnalyticsData() {
-  return <AnalyticsDashboard viewModel={await loadAnalytics()} />
-}
+import { AnalyticsUserContent } from '@/features/analytics/client/components/analytics-user-content'
 
 export function AnalyticsPageContent() {
   return (
@@ -22,7 +16,7 @@ export function AnalyticsPageContent() {
           解答ログとSRSの状態から、学習の進み方と弱点を確認しましょう。
         </p>
       </header>
-      <AnalyticsData />
+      <AnalyticsUserContent />
     </div>
   )
 }

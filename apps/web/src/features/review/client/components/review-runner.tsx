@@ -1,15 +1,21 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-
 import { QuizInteractive } from '@/features/quiz/client/components/quiz-interactive'
 
 import type { ReviewViewModel } from '../../view-model'
 import { ReviewIntro } from './review-intro'
 
-export function ReviewRunner({ viewModel }: { viewModel: ReviewViewModel }) {
-  const router = useRouter()
-
+/**
+ * 次のバッチがある場合の完了操作でだけ queue を取得し直す（ADR-0019）。
+ * batchKey が変わると QuizInteractive を作り直し、解答結果と画面フェーズを intro へ戻す。
+ */
+export function ReviewRunner({
+  onNextBatch,
+  viewModel,
+}: {
+  onNextBatch: () => void
+  viewModel: ReviewViewModel
+}) {
   return (
     <QuizInteractive
       key={viewModel.batchKey}
@@ -20,7 +26,7 @@ export function ReviewRunner({ viewModel }: { viewModel: ReviewViewModel }) {
       introStartLabel="復習を開始"
       onComplete={() => {
         if (viewModel.hasMore) {
-          router.refresh()
+          onNextBatch()
         }
       }}
       questions={viewModel.questions}

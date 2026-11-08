@@ -149,25 +149,41 @@
       "sha256": "50f66ca79a874f0ce3835b931a6dae53f09b76fbc5576b26b8c0e5697f520ceb",
       "lines": 36
     },
-    "apps/web/src/features/analytics/server/load-analytics.ts": {
-      "sha256": "4a30a948f79b69e445ff412bd2c00a051b71e91c78f5cb2a0a27670de3d8f165",
-      "lines": 23
+    "apps/web/src/features/analytics/client/hooks/use-analytics.ts": {
+      "sha256": "2f6aa1a09ee1199ad14c2553d7c99393c0f90a7fada1513e0dbfdb56e105f936",
+      "lines": 36
     },
     "apps/web/src/features/dashboard/api/dashboard-api.ts": {
       "sha256": "db6c97781e3dce622876549de9734662cc0358601a4b053558ca16ba035ceaa3",
       "lines": 51
     },
+    "apps/web/src/features/dashboard/client/hooks/use-dashboard.ts": {
+      "sha256": "de652512eb62a0805e59824305c1a8a912535d48b4f0de555a50e01d87c060a7",
+      "lines": 48
+    },
+    "apps/web/src/features/dashboard/client/hooks/use-due-count.ts": {
+      "sha256": "b65d754e3e07452d4a562c15a23882dae30abb6cb0f5d65a18e2f1ccce139e2b",
+      "lines": 58
+    },
+    "apps/web/src/features/dashboard/client/hooks/use-streak-days.ts": {
+      "sha256": "c12ce9b6e9ce93b81965c6c7eb6257d33719f549389d8d49e250e4510e4067c9",
+      "lines": 42
+    },
     "apps/web/src/features/dashboard/server/load-dashboard.ts": {
-      "sha256": "4f9a82af0d5d5e74d507fd2ea86e105982939c1aab70513ae4f1d33b69f85501",
-      "lines": 99
+      "sha256": "3b683dc8472c48e4c83b289b2aca0e4421b5eb9be1dbc59c8906173e9c912e47",
+      "lines": 75
     },
     "apps/web/src/features/domains/api/domains-api.ts": {
       "sha256": "6967faf45f63a8855c49f3aaa4fae38aab875e56083452cb92c9b093868c130b",
       "lines": 13
     },
+    "apps/web/src/features/domains/client/hooks/use-domains.ts": {
+      "sha256": "2bd099f1b588731f27d4933b8f863787345d5d3de621b0c0db0b9775b8466d9f",
+      "lines": 30
+    },
     "apps/web/src/features/domains/server/load-domains.ts": {
-      "sha256": "f1e109b745afa7a8791eb47db4bfe224fd4eb3f11f411db30ecc33d6b1536e56",
-      "lines": 20
+      "sha256": "c623b543321e316122c8910f434ce67994345bd1aeec7cae149b5bcedcfdc4b2",
+      "lines": 19
     },
     "apps/web/src/features/lesson/api/lesson-api.ts": {
       "sha256": "5880c018357fb923eaf56a70c53b5bb3509f230a4201bec886034d73822b691b",
@@ -189,6 +205,10 @@
       "sha256": "ba8c3e5cad13dfeba4b803d187d7dc3b6852f80e8fadb32ad4ee13dd2209ab2b",
       "lines": 21
     },
+    "apps/web/src/features/quiz/client/hooks/use-answer-submit.ts": {
+      "sha256": "dbc4165cb7cf0d5a110a48e86c20ab04b3d8a6502763e60bbeb1a6ff62bed25b",
+      "lines": 67
+    },
     "apps/web/src/features/quiz/server/load-catalog.ts": {
       "sha256": "2a06c1ae033983c4f5e40732a4dc1d1afc459a1de116f66e2eed29d64e7565b3",
       "lines": 22
@@ -201,9 +221,13 @@
       "sha256": "729e793e847375ecd5f48014bb47f31d8a386b5c2eee15870ac65ea097b10347",
       "lines": 13
     },
-    "apps/web/src/features/review/server/load-review.ts": {
-      "sha256": "1dfd093b5358b0ed37982f1843b068d618b564dca64682bca3c0cfc9dcb06e67",
-      "lines": 26
+    "apps/web/src/features/review/client/hooks/use-review-queue.ts": {
+      "sha256": "151434f0df71a03bb994febf1f755fefe8b3b5c9b23f7c9555452c6adba13a2f",
+      "lines": 34
+    },
+    "apps/web/src/features/review/server/load-review-index.ts": {
+      "sha256": "8e7fee1d87f2d08a317649b6665bdea608839ed919613b9db01c96234f5af31a",
+      "lines": 19
     },
     "apps/web/src/lib/api.ts": {
       "sha256": "bb10e5805d474ed493df19302643710e85d371c954cfee1513226b3ea0579334",
@@ -636,13 +660,13 @@
       "symbols": []
     },
     {
-      "id": "apps/web/src/features/analytics/server/load-analytics.ts",
+      "id": "apps/web/src/features/analytics/client/hooks/use-analytics.ts",
       "kind": "module",
       "source": {
-        "file": "apps/web/src/features/analytics/server/load-analytics.ts",
+        "file": "apps/web/src/features/analytics/client/hooks/use-analytics.ts",
         "line": 1
       },
-      "layer": "web-loader",
+      "layer": "web-hook",
       "symbols": []
     },
     {
@@ -653,6 +677,36 @@
         "line": 1
       },
       "layer": "web-api",
+      "symbols": []
+    },
+    {
+      "id": "apps/web/src/features/dashboard/client/hooks/use-dashboard.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/web/src/features/dashboard/client/hooks/use-dashboard.ts",
+        "line": 1
+      },
+      "layer": "web-hook",
+      "symbols": []
+    },
+    {
+      "id": "apps/web/src/features/dashboard/client/hooks/use-due-count.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/web/src/features/dashboard/client/hooks/use-due-count.ts",
+        "line": 1
+      },
+      "layer": "web-hook",
+      "symbols": []
+    },
+    {
+      "id": "apps/web/src/features/dashboard/client/hooks/use-streak-days.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/web/src/features/dashboard/client/hooks/use-streak-days.ts",
+        "line": 1
+      },
+      "layer": "web-hook",
       "symbols": []
     },
     {
@@ -673,6 +727,16 @@
         "line": 1
       },
       "layer": "web-api",
+      "symbols": []
+    },
+    {
+      "id": "apps/web/src/features/domains/client/hooks/use-domains.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/web/src/features/domains/client/hooks/use-domains.ts",
+        "line": 1
+      },
+      "layer": "web-hook",
       "symbols": []
     },
     {
@@ -736,6 +800,16 @@
       "symbols": []
     },
     {
+      "id": "apps/web/src/features/quiz/client/hooks/use-answer-submit.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/web/src/features/quiz/client/hooks/use-answer-submit.ts",
+        "line": 1
+      },
+      "layer": "web-hook",
+      "symbols": []
+    },
+    {
       "id": "apps/web/src/features/quiz/server/load-catalog.ts",
       "kind": "module",
       "source": {
@@ -766,10 +840,20 @@
       "symbols": []
     },
     {
-      "id": "apps/web/src/features/review/server/load-review.ts",
+      "id": "apps/web/src/features/review/client/hooks/use-review-queue.ts",
       "kind": "module",
       "source": {
-        "file": "apps/web/src/features/review/server/load-review.ts",
+        "file": "apps/web/src/features/review/client/hooks/use-review-queue.ts",
+        "line": 1
+      },
+      "layer": "web-hook",
+      "symbols": []
+    },
+    {
+      "id": "apps/web/src/features/review/server/load-review-index.ts",
+      "kind": "module",
+      "source": {
+        "file": "apps/web/src/features/review/server/load-review-index.ts",
         "line": 1
       },
       "layer": "web-loader",
@@ -4035,14 +4119,25 @@
       "typeOnly": false
     },
     {
-      "from": "apps/web/src/features/analytics/server/load-analytics.ts",
+      "from": "apps/web/src/features/analytics/client/hooks/use-analytics.ts",
       "relation": "imports",
       "to": "apps/web/src/features/analytics/api/analytics-api.ts",
       "source": {
-        "file": "apps/web/src/features/analytics/server/load-analytics.ts",
-        "line": 5
+        "file": "apps/web/src/features/analytics/client/hooks/use-analytics.ts",
+        "line": 10
       },
-      "specifier": "../api/analytics-api",
+      "specifier": "../../api/analytics-api",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/analytics/client/hooks/use-analytics.ts",
+      "relation": "imports",
+      "to": "apps/web/src/lib/api.ts",
+      "source": {
+        "file": "apps/web/src/features/analytics/client/hooks/use-analytics.ts",
+        "line": 3
+      },
+      "specifier": "@/lib/api",
       "typeOnly": false
     },
     {
@@ -4185,6 +4280,92 @@
       "typeOnly": false
     },
     {
+      "from": "apps/web/src/features/dashboard/client/hooks/use-dashboard.ts",
+      "relation": "imports",
+      "to": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+      "source": {
+        "file": "apps/web/src/features/dashboard/client/hooks/use-dashboard.ts",
+        "line": 12
+      },
+      "specifier": "../../api/dashboard-api",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/dashboard/client/hooks/use-dashboard.ts",
+      "relation": "imports",
+      "to": "apps/web/src/lib/api.ts",
+      "source": {
+        "file": "apps/web/src/features/dashboard/client/hooks/use-dashboard.ts",
+        "line": 5
+      },
+      "specifier": "@/lib/api",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/dashboard/client/hooks/use-due-count.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#DueCountResponse",
+      "source": {
+        "file": "apps/web/src/features/dashboard/client/hooks/use-due-count.ts",
+        "line": 5
+      }
+    },
+    {
+      "from": "apps/web/src/features/dashboard/client/hooks/use-due-count.ts",
+      "relation": "imports",
+      "to": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+      "source": {
+        "file": "apps/web/src/features/dashboard/client/hooks/use-due-count.ts",
+        "line": 9
+      },
+      "specifier": "../../api/dashboard-api",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/dashboard/client/hooks/use-due-count.ts",
+      "relation": "imports",
+      "to": "apps/web/src/lib/api.ts",
+      "source": {
+        "file": "apps/web/src/features/dashboard/client/hooks/use-due-count.ts",
+        "line": 7
+      },
+      "specifier": "@/lib/api",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/dashboard/client/hooks/use-due-count.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/web/src/features/dashboard/client/hooks/use-due-count.ts",
+        "line": 5
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": true
+    },
+    {
+      "from": "apps/web/src/features/dashboard/client/hooks/use-streak-days.ts",
+      "relation": "imports",
+      "to": "apps/web/src/features/dashboard/api/dashboard-api.ts",
+      "source": {
+        "file": "apps/web/src/features/dashboard/client/hooks/use-streak-days.ts",
+        "line": 8
+      },
+      "specifier": "../../api/dashboard-api",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/dashboard/client/hooks/use-streak-days.ts",
+      "relation": "imports",
+      "to": "apps/web/src/lib/api.ts",
+      "source": {
+        "file": "apps/web/src/features/dashboard/client/hooks/use-streak-days.ts",
+        "line": 5
+      },
+      "specifier": "@/lib/api",
+      "typeOnly": false
+    },
+    {
       "from": "apps/web/src/features/dashboard/server/load-dashboard.ts",
       "relation": "imports-symbol",
       "to": "symbol:packages/shared/src/schema/content.ts#DOMAIN_LABELS",
@@ -4201,17 +4382,6 @@
         "file": "apps/web/src/features/dashboard/server/load-dashboard.ts",
         "line": 3
       }
-    },
-    {
-      "from": "apps/web/src/features/dashboard/server/load-dashboard.ts",
-      "relation": "imports",
-      "to": "apps/web/src/features/dashboard/api/dashboard-api.ts",
-      "source": {
-        "file": "apps/web/src/features/dashboard/server/load-dashboard.ts",
-        "line": 8
-      },
-      "specifier": "../api/dashboard-api",
-      "typeOnly": false
     },
     {
       "from": "apps/web/src/features/dashboard/server/load-dashboard.ts",
@@ -4274,6 +4444,28 @@
       "typeOnly": false
     },
     {
+      "from": "apps/web/src/features/domains/client/hooks/use-domains.ts",
+      "relation": "imports",
+      "to": "apps/web/src/features/domains/api/domains-api.ts",
+      "source": {
+        "file": "apps/web/src/features/domains/client/hooks/use-domains.ts",
+        "line": 12
+      },
+      "specifier": "../../api/domains-api",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/domains/client/hooks/use-domains.ts",
+      "relation": "imports",
+      "to": "apps/web/src/lib/api.ts",
+      "source": {
+        "file": "apps/web/src/features/domains/client/hooks/use-domains.ts",
+        "line": 5
+      },
+      "specifier": "@/lib/api",
+      "typeOnly": false
+    },
+    {
       "from": "apps/web/src/features/domains/server/load-domains.ts",
       "relation": "imports-symbol",
       "to": "symbol:packages/shared/src/schema/content.ts#domainKeySchema",
@@ -4281,17 +4473,6 @@
         "file": "apps/web/src/features/domains/server/load-domains.ts",
         "line": 3
       }
-    },
-    {
-      "from": "apps/web/src/features/domains/server/load-domains.ts",
-      "relation": "imports",
-      "to": "apps/web/src/features/domains/api/domains-api.ts",
-      "source": {
-        "file": "apps/web/src/features/domains/server/load-domains.ts",
-        "line": 8
-      },
-      "specifier": "../api/domains-api",
-      "typeOnly": false
     },
     {
       "from": "apps/web/src/features/domains/server/load-domains.ts",
@@ -4479,6 +4660,48 @@
       "typeOnly": false
     },
     {
+      "from": "apps/web/src/features/quiz/client/hooks/use-answer-submit.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/api.ts#AnswerRequest",
+      "source": {
+        "file": "apps/web/src/features/quiz/client/hooks/use-answer-submit.ts",
+        "line": 3
+      }
+    },
+    {
+      "from": "apps/web/src/features/quiz/client/hooks/use-answer-submit.ts",
+      "relation": "imports",
+      "to": "apps/web/src/features/quiz/api/quiz-api.ts",
+      "source": {
+        "file": "apps/web/src/features/quiz/client/hooks/use-answer-submit.ts",
+        "line": 9
+      },
+      "specifier": "../../api/quiz-api",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/quiz/client/hooks/use-answer-submit.ts",
+      "relation": "imports",
+      "to": "apps/web/src/lib/api.ts",
+      "source": {
+        "file": "apps/web/src/features/quiz/client/hooks/use-answer-submit.ts",
+        "line": 6
+      },
+      "specifier": "@/lib/api",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/quiz/client/hooks/use-answer-submit.ts",
+      "relation": "imports",
+      "to": "packages/shared/src/index.ts",
+      "source": {
+        "file": "apps/web/src/features/quiz/client/hooks/use-answer-submit.ts",
+        "line": 3
+      },
+      "specifier": "@tsl/shared",
+      "typeOnly": true
+    },
+    {
       "from": "apps/web/src/features/quiz/server/load-catalog.ts",
       "relation": "imports-symbol",
       "to": "symbol:packages/shared/src/schema/content.ts#domainKeySchema",
@@ -4548,14 +4771,25 @@
       "typeOnly": false
     },
     {
-      "from": "apps/web/src/features/review/server/load-review.ts",
+      "from": "apps/web/src/features/review/client/hooks/use-review-queue.ts",
       "relation": "imports",
       "to": "apps/web/src/features/review/api/review-api.ts",
       "source": {
-        "file": "apps/web/src/features/review/server/load-review.ts",
+        "file": "apps/web/src/features/review/client/hooks/use-review-queue.ts",
         "line": 8
       },
-      "specifier": "../api/review-api",
+      "specifier": "../../api/review-api",
+      "typeOnly": false
+    },
+    {
+      "from": "apps/web/src/features/review/client/hooks/use-review-queue.ts",
+      "relation": "imports",
+      "to": "apps/web/src/lib/api.ts",
+      "source": {
+        "file": "apps/web/src/features/review/client/hooks/use-review-queue.ts",
+        "line": 5
+      },
+      "specifier": "@/lib/api",
       "typeOnly": false
     },
     {

@@ -14,6 +14,8 @@
 ## 問題形式
 
 - 初期は **4択（多肢選択）に統一**。自動採点でき、解答ログが構造化され、SRSが即動く。
+- 4択は執筆の方針である。[content schema](../packages/shared/src/schema/content.ts) が受け付ける選択肢の数（2〜6件）と、`answerIndex` が選択肢の範囲内にあることは実行時の契約であり、4択をスキーマで強制しない。
+- `explanation` は全問に書く。誤答の後に理由を読めることが学習の中核になる。
 - 記述式・コード問題は `question.type` フィールドで**後から追加できる拡張ポイント**として確保する。
 
 ## frontmatter の項目
@@ -27,7 +29,7 @@
 - `estimatedMinutes`: 0 より大きい整数。教材を1回閲覧したときの学習時間を、分で近似するための値
 - `questions[]`: `{ id, type: 'mcq', prompt, choices[], answerIndex, explanation }`（1件以上）
 
-本文（教材）は frontmatter の外に Markdown で書く。トピックの `index.md` の frontmatter は「表示名（ラベル）の持ち場所」に従う。
+本文（教材）は frontmatter の外に素の Markdown で書く。MDX の記法や JSX は使わない（描画の方式は design.md §5.1）。トピックの `index.md` の frontmatter は「表示名（ラベル）の持ち場所」に従う。
 
 ## ID と URL
 

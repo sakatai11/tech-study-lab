@@ -1,6 +1,6 @@
 # 0013: ユーザー固有のデータを Web の共有キャッシュに載せない
 
-- 状態: Accepted
+- 状態: Superseded by [ADR-0019](./0019-csr-for-user-specific-screens.md)
 - 日付: 2026-10-14
 - 関連: Issue #242（`docs/design.md` の旧 8.3 節から移行）
 

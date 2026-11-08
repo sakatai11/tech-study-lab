@@ -1,3 +1,14 @@
+import type { McqQuestion } from '@tsl/shared'
+
+/**
+ * 復習で queue の ID と結合する問題本文。ビルド時に静的な page から Client へ渡すため、
+ * 正解（answerIndex）を含めない（ADR-0002、ADR-0019）。
+ */
+export type ReviewQuestionIndexEntry = Pick<
+  McqQuestion,
+  'id' | 'prompt' | 'choices' | 'explanation'
+>
+
 export type ReviewPreviewViewModel = {
   overdueDays: number
   questionId: string

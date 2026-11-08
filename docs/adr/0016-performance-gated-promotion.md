@@ -1,6 +1,6 @@
 # 0016: 本番へ昇格できるのは、性能試験まで成功した検証環境と同じ source tree だけにする
 
-- 状態: Accepted
+- 状態: Superseded by [ADR-0017](./0017-change-scoped-releases.md)
 - 日付: 2026-10-31
 - 関連: Issue #270（[ADR-0010](./0010-deploy-order.md) を置き換え）、Issue #262、Issue #220
 

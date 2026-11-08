@@ -503,65 +503,70 @@
           <li>
             解答ログ・SRS・due queue・各種集計（ダッシュボード統計・<code>/domains</code>
             の習得率・<code>/analytics</code> の集計）などの動的データだけを Hono
-            API に集約し、フロントからは <code>hc</code> の型安全RPCで呼ぶ。集計系ページも
-            RSC で、初回表示に必要な集計値を Server loader から読む（教材本文ページのみ
-            API 不要）。
+            API に集約し、フロントからは <code>hc</code> の型安全RPCで呼ぶ。集計系ページ
+            （<code>/home</code>・<code>/review</code>・<code>/domains</code>・<code>/analytics</code>）は、静的な枠と
+            loading 状態をビルド時に生成し、ユーザー固有の値はマウント後に Client hook がブラウザから取得する
+            （ADR-0019。教材本文ページは API 不要）。
           </li>
           <li>
             演習・復習は 1 ルート内でクライアント状態遷移（<code>intro →
-            exercise → result</code>）を持つ（別 URL に切らない）。初回データ
-            （問題・解説、<code>/review</code> は due queue）は Server loader で
-            ViewModel 化して props 渡しする。Client Component は画面フェーズ・現在問題・<code
+            exercise → result</code>）を持つ（別 URL に切らない）。演習の初回データ
+            （問題・解説）は Server loader で ViewModel 化して props 渡しする。<code>/review</code> は、
+            正解を除いた問題索引を静的な page から props で受け取り、due queue を Client hook が取得して
+            結合する。Client Component は画面フェーズ・現在問題・<code
               >wrongOnly</code
             >・キーボード操作を、Client hook は
             <code>submitting</code>・送信エラー・API 由来の解答結果を state
             に持つ。
           </li>
           <li>
-            web と API は<strong>別 Worker</strong>（ADR-0012）。Server loader からは Service Binding
-            （<code>env.API</code>）で内部呼び出し、Client hook からは API
-            Worker の公開 URL で呼ぶ。どちらの経路でも
-            <code>hc&lt;AppType&gt;</code> の型は同一。
+            web と API は<strong>別 Worker</strong>（ADR-0012）。ユーザー固有データの取得も
+            mutation も、Client hook から API Worker の公開 URL で呼ぶ（ADR-0019）。Service Binding
+            （<code>env.API</code>）の経路は呼び出し元がなくなり、ADR-0019 の段階2で撤去する。
+            <code>hc&lt;AppType&gt;</code> の型はどの経路でも同一。
           </li>
           <li>
-            初回表示は Server loader で ViewModel 化して props 渡し、Client
-            Component はその VM をそのまま描画に使う（state に複製しない）。Client
-            hook は mutation と、それに伴う <code>submitting</code>・送信エラー・API
-            由来の結果だけを持つ。
+            content 由来の初回データは Server loader で ViewModel 化して props で渡し、Client
+            Component はその VM をそのまま描画に使う（state に複製しない）。ユーザー固有データは
+            Client hook が取得し、同 feature の mapper で ViewModel 化する。取得状態（loading・エラー・再試行）は
+            <code>lib/use-client-query.ts</code> の共通 hook が持ち、mutation の hook は
+            <code>submitting</code>・送信エラー・API 由来の結果だけを持つ。
           </li>
           <li>
-            due queue の再取得は Client 側で content join
-            をやり直すのではなく、<code>router.refresh()</code> で Server
-            Component を再実行し、Server loader が新しい VM を作り直す。
+            due queue の再取得は、バッチ完了時に Client hook が行い、props で受け取った問題索引と
+            結合し直す。解答ごとには取り直さない（バッチの途中で問題が差し替わるため）。統計系の画面は、
+            解答・閲覧の記録後に <code>study-activity</code> の無効化通知で取り直す。
+            <code>router.refresh()</code> は鮮度の回復に使わない。
           </li>
           <li>
             正誤判定は API（サーバー）が権威。VM は選択肢と解説のみを持ち、正解
             （<code>answerIndex</code>）を含めない。
           </li>
           <li>
-            <code>cacheComponents</code> は使わない（ADR-0013）。<code>/</code> は API・Service Binding・
+            <code>cacheComponents</code> は使わない（ADR-0019）。<code>/</code> は API・Service Binding・
             ユーザー固有 hook を読まない静的な公開トップです。<code>/home</code>・<code>/review</code>・<code>/domains</code>・
-            <code>/analytics</code> は <code>dynamic = 'force-dynamic'</code> の通常 SSR で、Server loader の取得が
-            完了してからページ全体を返します（Suspense による streaming・fallback は使わない）。
-            <code>/home</code> は <code>DashboardDueCard</code> と本体を同一 SSR 内で並列取得し、
-            <code>/review</code> は <code>ReviewDueBadge</code> と <code>ReviewUserContent</code> を同じ
-            <code>loadReviewOnce</code> から取得します。<code>ReviewUserContent</code> は joined 表示件数と
-            <code>hasMore</code> に応じて route error boundary、空キュー、または1件以上の場合だけ
-            <code>ReviewRunner</code> を選ぶ。<code>/domains</code> は <code>loadDomains</code> で4領域カードを取得し、
-            取得失敗は専用の route error boundary で扱う。
+            <code>/analytics</code> は <code>force-dynamic</code> を付けず、静的な枠と loading 状態だけをビルド時に生成します。
+            <code>/home</code> は1つの hook（<code>useDashboard</code>）が due 件数・統計・ヒートマップ・最近のアクティビティを
+            並列に取得し、状態を画面単位で1組にします（due 件数だけの失敗では画面を出す）。
+            <code>/review</code> は <code>ReviewQueueProvider</code> が queue を1回取得し、<code>ReviewDueBadge</code> と
+            <code>ReviewUserContent</code> が同じ結果を参照します。<code>ReviewUserContent</code> は joined 表示件数と
+            <code>hasMore</code> に応じてエラー表示、空キュー、または1件以上の場合だけ <code>ReviewRunner</code> を選ぶ。
+            <code>/domains</code> は <code>useDomains</code>、<code>/analytics</code> は <code>useAnalytics</code> で取得し、
+            取得失敗は各画面のエラー表示と再試行で扱う。
           </li>
         </ul>
         <div class="note">
-          <strong>通常 SSR・標準 SSG の方針</strong><br />
+          <strong>標準 SSG とブラウザでの取得の方針</strong><br />
           <code>/home</code> の due 件数・ダッシュボード統計・<code>/review</code> の queue・<code>/domains</code>・
           <code>/analytics</code> の集計は API が <code>user_id</code> を権威的に注入する一方、web の共有キャッシュキーには
           含まれません。したがって <code>cacheComponents</code>・<code>'use cache'</code>・<code>cacheLife</code>・
-          <code>cacheTag</code>・<code>revalidateTag</code> は使わず、これらの route は
-          リクエストごとの通常 SSR とします（応答は <code>no-store</code>）。リクエスト内の取得共有は React の
-          <code>cache()</code> だけを使います。解答後は <code>router.refresh()</code> で Server loader を再実行します。
+          <code>cacheTag</code>・<code>revalidateTag</code> は使わず、これらの値を静的な成果物に含めません。
+          4画面は静的な枠と loading 状態だけをプリレンダリングし、値はマウント後にブラウザで取得します。
+          統計系の3画面は取得結果をタブ内メモリに60秒保持し、戻ったときは前回のデータをすぐ表示します
+          （永続化しない。解答・閲覧の記録で古いものとして扱う）。復習の queue は保持しません。
           <code>/learn/...</code> と <code>/quiz/...</code> は <code>generateStaticParams</code> で全 content params を
-          列挙する標準 SSG とし、Vinext の prerender で生成した HTML / RSC を静的 asset として配信します
-          （design.md §5.1、ADR-0013、<a href="./deployment.md">環境・デプロイ運用</a>）。
+          列挙する標準 SSG です。どちらも Vinext の prerender で生成した HTML / RSC を静的 asset として配信します
+          （design.md §5.1・§5.3、ADR-0019、<a href="./deployment.md">環境・デプロイ運用</a>）。
         </div>
         <div class="note">
           <strong>公開・Access 境界</strong><br />
@@ -570,13 +575,13 @@
         </div>
         <div class="note">
           <strong>検証結果と残る制約</strong><br />
-          Web は Vinext（Vite + <code>@cloudflare/vite-plugin</code>）で build し、content route は
-          build 時の HTML / RSC を <code>ASSETS</code> から配信、認証後 route は通常 SSR です。
-          CI は <code>pnpm build</code> 後の <code>verify:build</code> で prerender manifest と
-          content params の一致、正解データの非漏洩、内部 cache artifact の Worker 経由配信を検査します。
-          実行時の配信内容・SSR・404 境界は <code>build</code> + <code>start</code> 上の
-          <code>verify:ssg</code> で確認します。
-          詳細は <a href="./deployment.md">環境・デプロイ運用</a>の「通常 SSR・標準 SSG の実行確認」を参照してください。
+          Web は Vinext（Vite + <code>@cloudflare/vite-plugin</code>）で build し、content route と認証後4画面の静的な枠は
+          build 時の HTML / RSC を <code>ASSETS</code> から配信します。
+          CI は <code>pnpm build</code> 後の <code>verify:build</code> で、prerender manifest と
+          content params・認証後4画面の一致、正解データとユーザー固有データの非混入、内部 cache artifact の Worker 経由配信を検査します。
+          実行時の静的配信と 404 境界は <code>build</code> + <code>start</code> 上の
+          <code>verify:ssg</code> で確認します。4画面のデータ表示は、認証済みブラウザで確認します。
+          詳細は <a href="./deployment.md">環境・デプロイ運用</a>の「標準 SSG の実行確認」を参照してください。
         </div>
         <div class="note">
           ディレクトリ名だけで実行場所は決まりません。<code
@@ -613,12 +618,12 @@
           </li>
           <li>
             <code>client/hooks</code> は Browser API client を生成して同 feature
-            の API adapter に渡し、<code>server</code>・content
-            loader・mapper・ViewModel を保持しない。
+            の API adapter に渡し、取得結果を同 feature の mapper で ViewModel 化する。<code>server</code>・content
+            loader を利用せず、ViewModel を複製保持しない。
           </li>
           <li>
-            Server loader だけが content loader を利用し、取得・join・mapper
-            呼び出しを経て ViewModel を返す。
+            Server loader だけが content loader を利用し、content 由来の取得・join・mapper
+            呼び出しを経て ViewModel を返す。ユーザー固有データは取得しない。
           </li>
           <li>
             feature 間の再利用は <code>features/shared</code> の小さい純粋変換か、公開された
@@ -655,11 +660,11 @@ flowchart LR
 
   top["/\n公開・静的 product top\nAPI / Service Binding なし"]:::public
   cta["ログインして学習を始める CTA"]:::public
-  home["/home\ndashboard\n通常 SSR"]:::user
-  due["DashboardDueCard\n非キャッシュ user data"]:::dynamic
-  review["/review\n通常 SSR"]:::user
-  domains["/domains\n4領域カード\n通常 SSR"]:::user
-  domainProgress["loadDomains\n非キャッシュ user data\nroute error boundary"]:::dynamic
+  home["/home\ndashboard\n静的な枠（SSG）"]:::user
+  due["useDashboard\nブラウザで取得する user data"]:::dynamic
+  review["/review\n静的な枠（SSG）"]:::user
+  domains["/domains\n4領域カード\n静的な枠（SSG）"]:::user
+  domainProgress["useDomains\nブラウザで取得する user data\nエラー表示と再試行"]:::dynamic
   learning["/learn/...・/quiz/...\n標準 SSG（content prerender）"]:::user
 
   top --&gt; cta --&gt; home
@@ -701,10 +706,13 @@ flowchart LR
             <tr>
               <td>review queue DTO と content question を join する</td>
               <td>
-                <code>features/review/server</code> +
-                <code>features/review/mapper.ts</code>
+                <code>features/review/client/hooks</code> +
+                <code>features/review/mapper.ts</code>（問題索引は <code>features/review/server</code> が作り props で渡す）
               </td>
-              <td>review 画面の表示要件に合わせた ViewModel 化だから。</td>
+              <td>
+                review 画面の表示要件に合わせた ViewModel 化だから。queue はブラウザで取得するので、
+                結合も Client で行う。
+              </td>
             </tr>
             <tr>
               <td><code>client.review.queue.$get()</code> を呼ぶ</td>
@@ -730,7 +738,7 @@ flowchart LR
             <span class="callout-title">採用する考え方</span>
             <p>
               <code>app</code> は薄い controller、<code>features/*/server</code>
-              は Server 専用 loader、<code>mapper</code>
+              は content 由来の Server 専用 loader、<code>features/*/client/hooks</code> はユーザー固有データの取得、<code>mapper</code>
               は純粋変換として分ける。
             </p>
           </div>
@@ -789,12 +797,12 @@ flowchart LR
         <h3>復習ページ初回表示</h3>
         <div class="diagram">
           <p>
-            通常 SSR として、非キャッシュの Server Component が
-            API から due queue のIDとSRSメタを受け、本文・解説を content index へ join します。
+            静的な page がビルド時に、正解を除いた問題索引を props で Client へ渡します。マウント後に
+            <code>ReviewQueueProvider</code> が API から due queue のIDとSRSメタを取得し、問題索引と結合します。
             <code>ReviewUserContent</code> は joined 表示件数と <code>hasMore</code> を判定し、
             0件かつ <code>hasMore: true</code> は content 整合性エラー、0件かつ
             <code>hasMore: false</code> は空キューカード、1件以上は
-            <code>ReviewRunner</code> を選び、取得完了後にページ全体を返します。
+            <code>ReviewRunner</code> を選びます。取得中は loading 状態を表示します。
           </p>
           <div class="diagram-toolbar" aria-label="復習ページ初回表示の図操作">
             <button type="button" data-zoom-action="in">拡大</button>
@@ -808,33 +816,34 @@ flowchart LR
   classDef client fill:#fff7ed,stroke:#fdba74,color:#1f2328;
   classDef content fill:#f6f8fa,stroke:#d1d5db,color:#1f2328;
 
-  subgraph server["Server / RSC"]
-    page["app/review/page.tsx\nforce-dynamic 通常 SSR"]:::server
-    userContent["ReviewUserContent\n非キャッシュ・user 固有\n0/true: error boundary\n0/false: empty queue\n1+: ReviewRunner"]:::server
-    serverLoader["features/review/server\nloadReview"]:::server
-    rpcWrapper["features/review/api\nfetchReviewQueue"]:::server
-    contentIndex["apps/web/src/lib/content.ts\nquestion_idを本文・解説へjoin"]:::content
-    mapper["features/review/mapper.ts\nReviewViewModel化"]:::server
+  subgraph server["Server / RSC（ビルド時）"]
+    page["app/review/page.tsx\n静的な枠と loading 状態"]:::server
+    contentIndex["features/review/server\nloadReviewQuestionIndex\n正解を除いた問題索引"]:::content
+  end
+
+  subgraph client["Client（マウント後）"]
+    provider["ReviewQueueProvider\nuseReviewQueue\nバッジと本文で1回の取得を共有"]:::client
+    rpcWrapper["features/review/api\nfetchReviewQueue"]:::client
+    mapper["features/review/mapper.ts\n索引と結合して ReviewViewModel 化"]:::client
+    userContent["ReviewUserContent\nloading / error\n0/true: 整合性エラー\n0/false: empty queue\n1+: ReviewRunner"]:::client
   end
 
   subgraph api["Hono API / D1"]
     endpoint["GET /review/queue\ndue question_id + SRS meta"]:::api
     service["services/ + dal/\nDrizzle / D1"]:::api
-    dto["ReviewQueueResponse\nserializable response"]:::api
   end
 
-  runner["ReviewRunner\nviewModel props（state に複製しない）"]:::client
-
-  page --&gt;|await| userContent --&gt;|calls| serverLoader --&gt;|uses wrapper| rpcWrapper --&gt;|"hc $get（Service Binding）"| endpoint
-  endpoint -->|query| service -->|returns| dto
-  dto -->|join by question_id| contentIndex -->|map| mapper -->|props| runner</pre>
+  page --&gt;|"props（索引）"| provider
+  contentIndex --&gt; page
+  provider --&gt;|uses wrapper| rpcWrapper --&gt;|"hc $get（公開URL）"| endpoint --&gt;|query| service
+  rpcWrapper --&gt;|ReviewQueueResponse| mapper --&gt; userContent</pre>
           <div class="note">
             <strong>件数の意味</strong><br />
-            <code>ReviewViewModel.dueCount</code> は、このバッチで content と join できて実際に表示できる問題の件数です。
+            <code>ReviewViewModel.dueCount</code> は、このバッチで問題索引と join できて実際に表示できる問題の件数です。
             ダッシュボードの due 件数は、content join や 20件のバッチ上限を適用しない
             <code>srs_states</code> の生の due-state 件数です。復習用の content と保存済み state がずれた場合でも、
-            空表示のまま進行不能にしないため、joined 0件・<code>hasMore: true</code> は route error boundary に渡します。
-            エラー画面は通信失敗とこの不整合の両方を案内し、再読み込みに加えてホームへ戻れます。
+            空表示のまま進行不能にしないため、joined 0件・<code>hasMore: true</code> はエラー表示にします。
+            エラー表示は通信失敗とこの不整合の両方を案内し、再読み込みに加えてホームへ戻れます。
           </div>
         </div>
 
@@ -886,9 +895,10 @@ flowchart LR
         <pre><code>apps/web/src/app/
 ├── _components/               # 共通 shell と feature の合成（route にならない）
 ├── page.tsx                   # / 公開トップ（静的・APIなし）
-├── home/page.tsx              # /home dashboard（通常 SSR）
-├── domains/                   # /domains スキルツリー（通常 SSR）
-├── review/                    # /review（通常 SSR）
+├── home/page.tsx              # /home dashboard（静的な枠 + ブラウザで取得）
+├── domains/                   # /domains スキルツリー（静的な枠 + ブラウザで取得）
+├── review/                    # /review（静的な枠 + ブラウザで取得）
+├── analytics/                 # /analytics（静的な枠 + ブラウザで取得）
 ├── learn/[domain]/[topic]/... # 標準 SSG（content prerender）
 └── quiz/[lesson]/             # 標準 SSG + Client state</code></pre>
         <pre><code>features/quiz/
@@ -914,7 +924,7 @@ flowchart LR
               <td><code>apps/web/src/app</code></td>
               <td>
                 App Router の page / layout / error。Server loader
-                を呼び、ViewModel を component に渡す薄い入口。
+                を呼び、content 由来の ViewModel を component に渡す薄い入口。
               </td>
               <td>DTO変換、APIレスポンス処理、複雑なUI state。</td>
             </tr>
@@ -944,21 +954,20 @@ flowchart LR
               <td><code>apps/web/src/features/*/client/hooks</code></td>
               <td>
                 Client 専用。Browser API client
-                の生成、mutation と、それに伴う
-                <code>submitting</code>・error・API 由来の結果 state を扱う。
+                の生成、ユーザー固有データの取得と mapper による ViewModel 化（<code>lib/use-client-query.ts</code> 経由）、
+                mutation と、それに伴う <code>submitting</code>・error・API 由来の結果 state を扱う。
               </td>
               <td>
-                初回取得の必須データ形成、ViewModel の複製保持、画面フェーズなどの表示操作
+                content loader の利用、ViewModel の複製保持、画面フェーズなどの表示操作
                 state、<code>server</code> の import。
               </td>
             </tr>
             <tr>
               <td><code>apps/web/src/features/*/server</code></td>
               <td>
-                Server loader と必要な Server Component。初回取得、content/API DTO
-                の取得、join、mapper 呼び出し、ViewModel
+                Server loader と必要な Server Component。content 由来の初回取得、join、mapper 呼び出し、ViewModel
                 生成。初回表示経路で content loader を利用できる唯一の feature
-                層。<code>import 'server-only'</code> で境界を強制する。
+                層で、ユーザー固有データは取得しない。<code>import 'server-only'</code> で境界を強制する。
               </td>
               <td>Client Component からの import、ブラウザ専用API。</td>
             </tr>
@@ -1025,6 +1034,7 @@ flowchart LR
                 <code>res.ok</code>・<code>res.json()</code> の共通処理。
                 <code>api-server.ts</code>（<code>server-only</code>）：<code>createServerApiClient</code>（本番は
                 <code>cloudflare:workers</code> の Service Binding の fetch、binding 未設定の非 production は URL フォールバック）。
+                呼び出し元がなくなったため、ADR-0019 の段階2で撤去する。
               </td>
               <td>
                 endpoint 固有の path・method・引数・Zod 検証、ViewModel
@@ -1035,7 +1045,7 @@ flowchart LR
               <td><code>apps/web/src/lib/content.ts</code></td>
               <td>
                 ビルド時バンドル済み content の参照口。lesson と question index
-                を提供する。
+                を提供する。<code>lib/use-client-query.ts</code> はユーザー固有データの取得状態とタブ内保持を持つ共通 hook。
               </td>
               <td>feature 固有 ViewModel への変換。</td>
             </tr>
@@ -1108,67 +1118,88 @@ export function lessonContentToViewModel(content: BundledLesson): LessonViewMode
 }</code></pre>
 
         <div class="example-title">
-          <h3>復習ページ: 初回は Server、操作後は Client</h3>
-          <span class="tag">server loader + client hook</span>
+          <h3>復習ページ: 枠と問題索引は静的、queue はブラウザで取得</h3>
+          <span class="tag">static page + client hook</span>
         </div>
         <pre
           data-code-title="apps/web/src/features/review/api/review-api.ts"
         ><code class="language-ts">// apps/web/src/features/review/api/review-api.ts
 import { type ReviewQueueResponse, reviewQueueResponseSchema } from '@tsl/shared';
-import { type ApiClient, requestJson } from '@/lib/api';
+import { type ApiClient, parseApiResponse, requestJson } from '@/lib/api';
 
-// requestJson の戻り値を共有 Zod で parse してから返す
+// Server / Client 共用の endpoint アダプター。応答は共有 Zod で検証する
 export async function fetchReviewQueue(client: ApiClient): Promise&lt;ReviewQueueResponse&gt; {
   const response = await requestJson(
     () =&gt; client.review.queue.$get(),
-    'Failed to fetch review queue',
+    '復習キューの取得に失敗しました。',
   );
-  return reviewQueueResponseSchema.parse(response);
+  return parseApiResponse(client, reviewQueueResponseSchema, response);
 }</code></pre>
 
         <pre
-          data-code-title="apps/web/src/features/review/server/load-review.ts"
-        ><code class="language-ts">// apps/web/src/features/review/server/load-review.ts
+          data-code-title="apps/web/src/features/review/server/load-review-index.ts"
+        ><code class="language-ts">// apps/web/src/features/review/server/load-review-index.ts
 import 'server-only';
 
-import { cache } from 'react';
-
-import { createServerApiClient } from '@/lib/api-server';
 import { getBundledQuestions } from '@/lib/content';
-import { fetchReviewQueue } from '../api/review-api';
-import { reviewQueueToViewModel } from '../mapper';
-import type { ReviewViewModel } from '../view-model';
+import type { ReviewQuestionIndexEntry } from '../view-model';
 
-// export しない。畳み込み前の loader を外から選べると、取り違えても型で気づけない
-async function loadReview(now?: number): Promise&lt;ReviewViewModel&gt; {
-  const dto = await fetchReviewQueue(await createServerApiClient());
-  return reviewQueueToViewModel(dto, getBundledQuestions(), now ?? Date.now()); // join はサーバー側のみ
-}
+// ビルド時に一度だけ作り、静的な page から props で Client へ渡す。正解（answerIndex）を含めない
+export function loadReviewQuestionIndex(): ReviewQuestionIndexEntry[] {
+  return [...getBundledQuestions().values()].map(({ id, prompt, choices, explanation }) =&gt; ({
+    id,
+    prompt,
+    choices: [...choices],
+    explanation,
+  }));
+}</code></pre>
 
-// この feature の唯一の loader 入口。due バッジと本文が
-// 同じ queue を読むため、リクエスト内で1回に畳む（畳まないと件数と中身が食い違いうる）。
-// React の cache() はリクエストスコープであり、user_id を含められない共有キャッシュではない。
-export const loadReviewOnce = cache((): Promise&lt;ReviewViewModel&gt; =&gt; loadReview());</code></pre>
+        <pre
+          data-code-title="apps/web/src/features/review/client/hooks/use-review-queue.ts"
+        ><code class="language-ts">// apps/web/src/features/review/client/hooks/use-review-queue.ts
+'use client';
+
+import { useCallback, useMemo } from 'react';
+import { createBrowserApiClient } from '@/lib/api';
+import { type ClientQueryResult, useClientQuery } from '@/lib/use-client-query';
+import { fetchReviewQueue } from '../../api/review-api';
+import { reviewQueueToViewModel } from '../../mapper';
+import type { ReviewQuestionIndexEntry, ReviewViewModel } from '../../view-model';
+
+// 解答ごとの無効化通知では取り直さない（バッチの途中で問題が差し替わるため）。
+// 再取得はバッチ完了時の reload だけ。タブ内にも保持しない
+export function useReviewQueue(
+  index: readonly ReviewQuestionIndexEntry[],
+): ClientQueryResult&lt;ReviewViewModel&gt; {
+  const questions = useMemo(() =&gt; new Map(index.map((entry) =&gt; [entry.id, entry])), [index]);
+  const load = useCallback(
+    async () =&gt;
+      reviewQueueToViewModel(await fetchReviewQueue(createBrowserApiClient()), questions, Date.now()),
+    [questions],
+  );
+  return useClientQuery(load);
+}</code></pre>
 
         <pre
           data-code-title="apps/web/src/app/review/page.tsx"
-        ><code class="language-tsx">// apps/web/src/app/review/page.tsx — 通常 SSR
-import { ReviewDueBadge } from '@/features/review/server/components/review-due-badge';
+        ><code class="language-tsx">// apps/web/src/app/review/page.tsx — 静的な枠（force-dynamic なし）
+import { ReviewDueBadge } from '@/features/review/client/components/review-due-badge';
+import { ReviewQueueProvider } from '@/features/review/client/components/review-queue-provider';
+import { ReviewUserContent } from '@/features/review/client/components/review-user-content';
 import { ReviewPageShell } from '@/features/review/server/components/review-page-shell';
-import { ReviewUserContent } from '@/features/review/server/components/review-user-content';
+import { loadReviewQuestionIndex } from '@/features/review/server/load-review-index';
 import { AppShell } from '../_components/app-shell';
 
-// ユーザー固有 queue をリクエストごとに取得し、共有キャッシュへ載せない（ADR-0013）。
-export const dynamic = 'force-dynamic';
-
-export default async function ReviewPage() {
-  // どちらも loadReviewOnce() を呼ぶ。React の cache() で queue の API 読み取りを
-  // リクエスト内1回に畳み、通常 SSR は両方の完了を待ってページ全体を返す。
-  const [dueBadge, userContent] = await Promise.all([ReviewDueBadge(), ReviewUserContent()]);
-
+// 静的な枠と loading 状態だけをビルド時に生成し、due queue はブラウザで取得する（ADR-0019）。
+// バッジと本文は ReviewQueueProvider の1回の取得を共有する
+export default function ReviewPage() {
   return (
     &lt;AppShell currentNavigation="review"&gt;
-      &lt;ReviewPageShell dueBadge={dueBadge}&gt;{userContent}&lt;/ReviewPageShell&gt;
+      &lt;ReviewQueueProvider index={loadReviewQuestionIndex()}&gt;
+        &lt;ReviewPageShell dueBadge={&lt;ReviewDueBadge /&gt;}&gt;
+          &lt;ReviewUserContent /&gt;
+        &lt;/ReviewPageShell&gt;
+      &lt;/ReviewQueueProvider&gt;
     &lt;/AppShell&gt;
   );
 }</code></pre>
@@ -1230,44 +1261,30 @@ export function useAnswerSubmit() {
         ><code class="language-tsx">// apps/web/src/features/review/client/components/review-runner.tsx
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useAnswerSubmit } from '../hooks/use-answer-submit';
+import { QuizInteractive } from '@/features/quiz/client/components/quiz-interactive';
 import type { ReviewViewModel } from '../../view-model';
+import { ReviewIntro } from './review-intro';
 
-type Props = {
+// 次のバッチがある場合の完了操作でだけ queue を取り直す（onNextBatch = reload）。
+// batchKey が変わると QuizInteractive を作り直し、解答結果と画面フェーズを intro へ戻す
+export function ReviewRunner({
+  onNextBatch,
+  viewModel,
+}: {
+  onNextBatch: () =&gt; void;
   viewModel: ReviewViewModel;
-};
-
-export function ReviewRunner({ viewModel }: Props) {
-  const router = useRouter();
-  const { results, error, submitting, submitAnswer, resetAnswers } = useAnswerSubmit();
-
-  const handleAllAnswered = () =&gt; {
-    resetAnswers();
-    router.refresh(); // Server loader を再実行し、次の due queue を props で受け直す
-  };
-
-  if (error) {
-    return (
-      &lt;ErrorDisplay
-        error={error}
-        retry={() =&gt; {
-          resetAnswers();
-          router.refresh();
-        }}
-      /&gt;
-    );
-  }
-
+}) {
   return (
-    &lt;QuizRenderer
-      viewModel={viewModel}
-      results={results}
-      submitting={submitting}
-      onAnswer={submitAnswer}
-      onAttemptStart={resetAnswers}
-      onWrongOnlyStart={resetAnswers}
-      onComplete={handleAllAnswered}
+    &lt;QuizInteractive
+      key={viewModel.batchKey}
+      questions={viewModel.questions}
+      explanations={viewModel.explanations}
+      hasMore={viewModel.hasMore}
+      introContent={&lt;ReviewIntro dueCount={viewModel.dueCount} previews={viewModel.previews} /&gt;}
+      onComplete={() =&gt; {
+        if (viewModel.hasMore) onNextBatch();
+      }}
+      // 以下、タイトルや結果導線の props は省略
     /&gt;
   );
 }</code></pre>
@@ -1280,6 +1297,7 @@ export function ReviewRunner({ viewModel }: Props) {
           data-code-title="避ける例: apps/web/src/app/review/page.tsx"
         ><code class="language-tsx">// apps/web/src/app/review/page.tsx
 // 避ける: page が API DTO、content join、sort、ViewModel 形状を知っている。
+// さらに Server でユーザー固有データを取得するので、静的な枠にできない（ADR-0019）。
 export default async function ReviewPage() {
   const client = await createServerApiClient();
   const res = await client.review.queue.$get();
@@ -1298,10 +1316,9 @@ export default async function ReviewPage() {
 }</code></pre>
         <div class="note">
           この例では page が Hono RPC、レスポンス処理、content join、ViewModel
-          形状をすべて知っています。変更影響が page に漏れるため、<code
-            >features/review/server</code
-          >
-          と <code>features/review/mapper.ts</code> へ分けます。
+          形状をすべて知っています。変更影響が page に漏れるため、取得は
+          <code>features/review/client/hooks</code>、問題索引は <code>features/review/server</code>、
+          結合は <code>features/review/mapper.ts</code> へ分けます。
         </div>
       </section>
 
@@ -1323,15 +1340,14 @@ export default async function ReviewPage() {
           <code>apps/web</code>（Vinext）と <code>apps/api</code>（Hono）は
           <strong>別 Worker</strong> としてデプロイします。Next.js の Route
           Handler 上に Hono を載せる同居構成は採用しません（wrangler
-          設定の所有権・デプロイ独立性・ADR-0013 のキャッシュ方針の前提を維持するため）。呼び出し元によって経路が変わりますが、
-          <code>hc&lt;AppType&gt;</code> の型安全RPCは両経路で同一です。
+          設定の所有権・デプロイ独立性・ADR-0019 のキャッシュ方針の前提を維持するため）。
+          <code>hc&lt;AppType&gt;</code> の型安全RPCはどの経路でも同一です。
         </p>
         <div class="diagram">
           <p>
-            Server loader は Service Binding
-            による内部呼び出し（公衆インターネット非経由・CORS 不要）、Client
-            hook は公開 URL（当面は <code>cors()</code>
-            で許可、将来はルート割当で同一オリジン化）です。
+            ユーザー固有データの取得も mutation も、Client hook が公開 URL（当面は <code>cors()</code>
+            で許可、将来はルート割当で同一オリジン化）で呼びます（ADR-0019）。Service Binding による内部呼び出しは
+            呼び出し元がなくなり、段階2で撤去します（図の点線）。
           </p>
           <div class="diagram-toolbar" aria-label="Worker構成と接続の図操作">
             <button type="button" data-zoom-action="in">拡大</button>
@@ -1348,7 +1364,7 @@ flowchart LR
     loader["Server loader\ncreateServerApiClient"]:::server
   end
 
-  browser["Client hook（ブラウザ）\ncreateBrowserApiClient"]:::client
+  browser["Client hook（ブラウザ）\ncreateBrowserApiClient\n4画面の取得と mutation"]:::client
 
   subgraph apiWorker["api Worker（Hono）"]
     routes["routes + zValidator"]:::api
@@ -1356,7 +1372,7 @@ flowchart LR
 
   d1[("D1")]:::api
 
-  loader -->|"Service Binding env.API.fetch\n内部呼び出し・CORS不要"| routes
+  loader -.->|"Service Binding env.API.fetch\n呼び出し元なし（段階2で撤去）"| routes
   browser -->|"公開URL\n（将来: /api/* ルート割当で同一オリジン化）"| routes
   routes --> d1</pre>
         </div>
@@ -1366,7 +1382,8 @@ flowchart LR
 import 'server-only';
 import { env } from 'cloudflare:workers';
 
-// Server loader 用: 本番は Service Binding 必須、production 以外で binding がない場合だけ URL へフォールバック
+// 呼び出し元はなくなった（ADR-0019 の段階2で撤去）。本番は Service Binding 必須、
+// production 以外で binding がない場合だけ URL へフォールバック
 export async function createServerApiClient(): Promise&lt;ApiClient&gt; {
   const { API: api }: { API?: Fetcher } = env;
   if (api) {
@@ -1380,8 +1397,8 @@ export async function createServerApiClient(): Promise&lt;ApiClient&gt; {
 }
 
 // apps/web/src/lib/api.ts
-// Client hook 用: env から解決した公開 baseURL。生成は初回送信まで遅らせる
-// （render 時に呼ぶと prerender でも評価され、未設定時に throw する）。
+// Client hook 用: env から解決した公開 baseURL。4画面の取得と mutation の両方で使う。
+// 生成はマウント後・初回送信まで遅らせる（render 時に呼ぶと prerender でも評価され、未設定時に throw する）。
 export function createBrowserApiClient(): ApiClient {
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 

@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 import { parse as parseJsonc } from 'jsonc-parser'
 import { parse as parseToml } from 'smol-toml'
 
+import { gitTree, releasePlan, validatePlan, workerSources } from './deployment-changes.mjs'
 import {
   assertDeploymentProtection,
   assertFreshSource,
@@ -17,6 +18,7 @@ import {
   github,
   lastRelease,
   recordRelease,
+  recordReleaseAttempt,
   runRelease,
   validateManifest,
 } from './deployment-lib.mjs'
@@ -67,6 +69,7 @@ function context(environment) {
     sha,
     tree: git('rev-parse', 'HEAD^{tree}'),
     contentTree: git('rev-parse', 'HEAD:content'),
+    sources: workerSources(sha, root),
     ...deploymentUrls(target, process.env.DEPLOY_ACCOUNT_SUBDOMAIN),
   }
 }
@@ -79,6 +82,8 @@ function summary(text) {
 async function prepare(environment) {
   const ctx = context(environment)
   const { target, sha, tree, contentTree, apiUrl, webUrl } = ctx
+  const plan = JSON.parse(process.env.DEPLOY_PLAN_JSON)
+  validatePlan(plan, sha, ctx.sources)
   rmSync(release, { recursive: true, force: true })
   mkdirSync(resolve(release, 'api'), { recursive: true })
   const api = readConfig(target.apiConfig)
@@ -92,33 +97,41 @@ async function prepare(environment) {
     resolve(release, 'content'),
     String(timestamp),
   ])
-  run(
-    [
-      '--filter',
-      '@tsl/web',
-      'exec',
-      'node',
-      'scripts/deploy.mjs',
-      target.webTarget,
-      '--prepare-only',
-    ],
-    { NEXT_PUBLIC_API_BASE_URL: apiUrl },
-  )
-  run(['--filter', '@tsl/web', 'verify:build'])
-  const web = readJson(resolve(root, 'apps/web/dist/server/wrangler.json'))
+  if (plan.workers.web) {
+    run(
+      [
+        '--filter',
+        '@tsl/web',
+        'exec',
+        'node',
+        'scripts/deploy.mjs',
+        target.webTarget,
+        '--prepare-only',
+      ],
+      { NEXT_PUBLIC_API_BASE_URL: apiUrl },
+    )
+    run(['--filter', '@tsl/web', 'verify:build'])
+  }
+  const sourceWeb = readConfig('apps/web/wrangler.jsonc')
+  const { env: environments, ...baseWeb } = sourceWeb
+  const web = plan.workers.web
+    ? readJson(resolve(root, 'apps/web/dist/server/wrangler.json'))
+    : { ...baseWeb, ...(target.webTarget === 'edge' ? environments.edge : {}) }
   assertTargetConfig(target, api, web)
-  run([
-    '--filter',
-    '@tsl/api',
-    'exec',
-    'wrangler',
-    'deploy',
-    '--config',
-    resolve(root, target.apiConfig),
-    '--dry-run',
-    '--outdir',
-    resolve(release, 'api'),
-  ])
+  writeJson(resolve(release, 'web-config.json'), web)
+  if (plan.workers.api)
+    run([
+      '--filter',
+      '@tsl/api',
+      'exec',
+      'wrangler',
+      'deploy',
+      '--config',
+      resolve(root, target.apiConfig),
+      '--dry-run',
+      '--outdir',
+      resolve(release, 'api'),
+    ])
   cpSync(resolve(root, 'apps/api/drizzle/migrations'), resolve(release, 'api/migrations'), {
     recursive: true,
   })
@@ -130,7 +143,8 @@ async function prepare(environment) {
     vars: {},
     d1_databases: api.d1_databases.map((db) => ({ ...db, migrations_dir: 'migrations' })),
   })
-  cpSync(resolve(root, 'apps/web/dist'), resolve(release, 'web'), { recursive: true })
+  if (plan.workers.web)
+    cpSync(resolve(root, 'apps/web/dist'), resolve(release, 'web'), { recursive: true })
   const content = readJson(resolve(release, 'content/summary.json'))
   const previous = await lastRelease(environment)
   const manifest = createManifest(release, {
@@ -138,6 +152,7 @@ async function prepare(environment) {
     sha,
     tree,
     contentTree,
+    plan,
     runId: process.env.GITHUB_RUN_ID,
     apiUrl,
     webUrl,
@@ -150,7 +165,7 @@ async function prepare(environment) {
   })
   writeJson(resolve(release, 'manifest.json'), manifest)
   summary(
-    `## Release plan: ${environment}\n\nCommit: \`${sha}\`\n\nSource tree: \`${tree}\`\n\nWorkers: \`${target.api}\` → \`${target.web}\`\n\nD1: \`${target.database}\` (${target.databaseId})\n\nQuestions: ${manifest.questionCount}; content changed since last success: ${manifest.contentChanged} (D1 sync runs on every release)\n\nSQL SHA-256: \`${manifest.files['content/sync.sql']}\`\n\nMigration files (Wrangler applies only pending files):\n${manifest.migrations.map((name) => `- \`${name}\``).join('\n')}\n\nFull hashes are in manifest.json. Apply automatically uses these exact artifacts after preflight checks. No remote writes have run.`,
+    `## Release plan: ${environment}\n\nCommit: \`${sha}\`\n\nSource tree: \`${tree}\`\n\nBuild/upload: API=${plan.workers.api}, Web=${plan.workers.web}; baseline=${plan.baseline?.sha ?? 'none'}\n\nWorkers: \`${target.api}\` → \`${target.web}\`\n\nD1: \`${target.database}\` (${target.databaseId})\n\nQuestions: ${manifest.questionCount}; content changed since last success: ${manifest.contentChanged} (D1 sync runs on every release)\n\nSQL SHA-256: \`${manifest.files['content/sync.sql']}\`\n\nMigration files (Wrangler applies only pending files):\n${manifest.migrations.map((name) => `- \`${name}\``).join('\n')}\n\nFull hashes are in manifest.json. Apply automatically uses these exact artifacts after preflight checks. No remote writes have run.`,
   )
 }
 
@@ -223,7 +238,12 @@ async function fresh(ctx) {
   const branch = await github(`git/ref/heads/${ctx.target.branch}`)
   const verified =
     ctx.target.environment === 'production' ? await lastRelease('verification') : null
-  assertFreshSource(ctx.target.environment, ctx.sha, branch.object.sha, ctx.tree, verified)
+  let sources
+  if (verified) {
+    assert.equal(gitTree(verified.sha, root), verified.tree, 'verification commit/tree mismatch')
+    sources = { candidate: ctx.sources, verified: workerSources(verified.sha, root) }
+  }
+  assertFreshSource(ctx.target.environment, ctx.sha, branch.object.sha, ctx.tree, verified, sources)
   if (verified) {
     const verification = getTarget('verification')
     assert.equal(
@@ -268,6 +288,7 @@ async function apply(environment) {
     await runRelease(environment, {
       preflight: stage('preflight', async () => {
         validateManifest(release, manifest, environment, sha)
+        validatePlan(manifest.plan, sha, ctx.sources)
         assert.equal(
           manifest.runId,
           process.env.GITHUB_RUN_ID,
@@ -294,15 +315,16 @@ async function apply(environment) {
         assertTargetConfig(
           target,
           readJson(apiConfig),
-          readJson(resolve(release, 'web/server/wrangler.json')),
+          readJson(resolve(release, 'web-config.json')),
         )
         assert.equal(readJson(apiConfig).main, 'index.js')
         assert.equal(readJson(apiConfig).no_bundle, true)
-        assert.equal(readJson(resolve(release, 'web/server/wrangler.json')).main, 'index.js')
-        assert.equal(
-          readJson(resolve(release, 'web/server/wrangler.json')).assets?.directory,
-          '../client',
-        )
+        if (manifest.plan.workers.web) {
+          const web = readJson(resolve(release, 'web/server/wrangler.json'))
+          assertTargetConfig(target, readJson(apiConfig), web)
+          assert.equal(web.main, 'index.js')
+          assert.equal(web.assets?.directory, '../client')
+        }
         const database = await cloudflare(target, `d1/database/${target.databaseId}`)
         assert.equal(database.name, target.database, 'remote D1 name mismatch')
         await fresh(ctx)
@@ -315,8 +337,38 @@ async function apply(environment) {
           baseline = (await lastRelease(environment))?.performance ?? null
         result.before.api = await currentVersion(target, target.api)
         result.before.web = await currentVersion(target, target.web)
-        rmSync(resolve(root, 'apps/web/dist'), { recursive: true, force: true })
-        cpSync(resolve(release, 'web'), resolve(root, 'apps/web/dist'), { recursive: true })
+        const previous = await lastRelease(environment)
+        if (manifest.plan.baseline) {
+          assert.deepEqual(
+            manifest.plan.baseline,
+            previous && {
+              sha: previous.sha,
+              apiVersion: previous.apiVersion,
+              webVersion: previous.webVersion,
+            },
+            'release baseline changed; prepare a new plan',
+          )
+        }
+        const expected = releasePlan(sha, previous, { cwd: root })
+        for (const worker of ['api', 'web']) {
+          if (manifest.plan.workers[worker]) continue
+          assert.equal(expected.workers[worker], false, `cannot skip changed ${worker} source`)
+          assert.equal(
+            result.before[worker],
+            previous?.[`${worker}Version`],
+            `skipped ${worker} version changed; run a full manual deployment`,
+          )
+        }
+        result.after = { ...result.before }
+        result.workers = manifest.plan.workers
+        if (manifest.plan.workers.web) {
+          rmSync(resolve(root, 'apps/web/dist'), { recursive: true, force: true })
+          cpSync(resolve(release, 'web'), resolve(root, 'apps/web/dist'), { recursive: true })
+        }
+        await recordReleaseAttempt(environment, sha, {
+          runId: process.env.GITHUB_RUN_ID,
+          runAttempt,
+        })
       }),
       migrations: stage('migrations', async () =>
         wrangler('d1', 'migrations', 'apply', target.database, '--remote', '--config', apiConfig),
@@ -335,6 +387,7 @@ async function apply(environment) {
         )
       }),
       api: stage('api', async () => {
+        if (!manifest.plan.workers.api) return
         wrangler(
           'deploy',
           '--config',
@@ -353,6 +406,7 @@ async function apply(environment) {
       }),
       apiHealth: stage('apiHealth', async () => checkApiHealth(apiUrl)),
       web: stage('web', async () => {
+        if (!manifest.plan.workers.web) return
         run(
           [
             '--filter',
@@ -457,6 +511,10 @@ async function rollback(environment, worker, version, expected) {
     'live version changed since rollback request',
   )
   await cloudflare(target, `workers/scripts/${target[worker]}/versions/${version}`)
+  await recordReleaseAttempt(environment, ctx.sha, {
+    runId: process.env.GITHUB_RUN_ID,
+    runAttempt: process.env.GITHUB_RUN_ATTEMPT ?? '1',
+  })
   run([
     '--filter',
     '@tsl/api',

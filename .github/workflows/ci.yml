@@ -27,6 +27,13 @@ jobs:
       - name: Enable Corepack
         run: corepack enable
 
+      - name: Detect Worker build scope
+        id: changes
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          FORCE_FULL: ${{ github.event_name == 'workflow_dispatch' }}
+        run: node scripts/deployment-changes.mjs
+
       - name: Get pnpm store directory
         id: pnpm-store
         run: echo "dir=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
@@ -76,13 +83,20 @@ jobs:
         run: pnpm architecture:test
 
       - name: Verify Knowledge Graph viewer
+        if: steps.changes.outputs.viewer == 'true'
         run: |
           npm --prefix architecture/viewer ci
           npm --prefix architecture/viewer run build
           npm --prefix architecture/viewer run test:sites
 
-      - name: Build
-        run: pnpm build
+      - name: Build API Worker
+        if: steps.changes.outputs.api == 'true'
+        run: pnpm --filter @tsl/api build
+
+      - name: Build Web Worker
+        if: steps.changes.outputs.web == 'true'
+        run: pnpm --filter @tsl/web build
 
       - name: Verify web build artifacts (SSG / SSR / asset boundaries)
+        if: steps.changes.outputs.web == 'true'
         run: pnpm --filter @tsl/web verify:build

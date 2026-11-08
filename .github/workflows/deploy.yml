@@ -8,12 +8,45 @@ on:
 permissions:
   contents: read
 
+# Plan only after a preceding release/rollback has finished, including no-op plans.
+concurrency:
+  group: deploy-${{ github.ref_name == 'main' && 'production' || 'verification' }}
+  cancel-in-progress: false
+
 jobs:
-  prepare:
-    name: Validate and prepare immutable release
+  changes:
+    name: Detect changes since last successful release
     if: >-
       (github.ref == 'refs/heads/develop' && vars.VERIFICATION_DEPLOY_ENABLED == 'true') ||
       (github.ref == 'refs/heads/main' && vars.PRODUCTION_DEPLOY_ENABLED == 'true')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: read
+    outputs:
+      deploy: ${{ steps.scope.outputs.deploy }}
+      plan: ${{ steps.scope.outputs.plan }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - name: Plan Worker builds without Cloudflare credentials
+        id: scope
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          DEPLOY_ENVIRONMENT: ${{ github.ref_name == 'main' && 'production' || 'verification' }}
+          FORCE_FULL: ${{ github.event_name == 'workflow_dispatch' }}
+        run: node scripts/deployment-plan.mjs "$DEPLOY_ENVIRONMENT"
+
+  prepare:
+    name: Validate and prepare immutable release
+    needs: changes
+    if: needs.changes.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -22,6 +55,7 @@ jobs:
     env:
       DEPLOY_ENVIRONMENT: ${{ github.ref_name == 'main' && 'production' || 'verification' }}
       DEPLOY_ACCOUNT_SUBDOMAIN: ${{ vars.DEPLOY_ACCOUNT_SUBDOMAIN }}
+      DEPLOY_PLAN_JSON: ${{ needs.changes.outputs.plan }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
@@ -67,9 +101,6 @@ jobs:
     timeout-minutes: 60
     environment:
       name: ${{ github.ref_name == 'main' && 'production' || 'verification' }}
-    concurrency:
-      group: deploy-${{ github.ref_name == 'main' && 'production' || 'verification' }}
-      cancel-in-progress: false
     permissions:
       contents: read
       actions: read
