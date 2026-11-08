@@ -40,7 +40,7 @@ describe('user-specific data [ADR-0013]', () => {
   })
 })
 
-describe('mutations [ADR-0012]', () => {
+describe('mutations [ADR-0012] [ADR-0021]', () => {
   it('sends writes through the Hono API instead of Server Actions', () => {
     const serverActions = sourceFiles()
       .filter(({ text }) => /^\s*['"]use server['"]/m.test(text))

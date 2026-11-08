@@ -517,7 +517,7 @@ describe('core API endpoints', () => {
     })
   })
 
-  it('keeps the domains route behind Access and maps repository failures to 500 [ADR-0008]', async () => {
+  it('keeps the domains route behind Access and maps repository failures to 500 [ADR-0008] [ADR-0021]', async () => {
     const publicResponse = await createPublicApiApp().fetch(
       new Request('https://api.example.com/domains'),
       {
@@ -544,7 +544,7 @@ describe('core API endpoints', () => {
     })
   })
 
-  it('allows an Access-verified public write and rejects unauthorized writes before D1 changes [ADR-0008]', async () => {
+  it('allows an Access-verified public write and rejects unauthorized writes before D1 changes [ADR-0008] [ADR-0021]', async () => {
     const app = createPublicApiApp(async () => undefined, { rateLimiters: allowingRateLimiters })
     const bindings = {
       ...env,
@@ -590,7 +590,7 @@ describe('core API endpoints', () => {
     })
   })
 
-  it('rejects an unauthorized non-loopback write through the default public Worker before D1 changes [ADR-0008]', async () => {
+  it('rejects an unauthorized non-loopback write through the default public Worker before D1 changes [ADR-0008] [ADR-0021]', async () => {
     const response = await SELF.fetch('https://api.test/answers', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },

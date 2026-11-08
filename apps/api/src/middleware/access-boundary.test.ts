@@ -21,7 +21,7 @@ function createApp(verifier: AccessTokenVerifier) {
     .get('/private', (c) => c.json({ userContextReached: true }))
 }
 
-describe('createAccessBoundary [ADR-0008]', () => {
+describe('createAccessBoundary [ADR-0008] [ADR-0021]', () => {
   it('allows a non-loopback request only after the injected verifier accepts its Access JWT', async () => {
     const verifier = vi.fn<AccessTokenVerifier>().mockResolvedValue(undefined)
     const response = await createApp(verifier).request(
@@ -126,7 +126,7 @@ describe('createAccessBoundary [ADR-0008]', () => {
   )
 })
 
-describe('verifyAccessToken [ADR-0008]', () => {
+describe('verifyAccessToken [ADR-0008] [ADR-0021]', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
   })

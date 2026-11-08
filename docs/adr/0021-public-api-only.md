@@ -21,12 +21,17 @@ ADR-0019 で認証後4画面を SSG＋CSR にしたため、Web Server loader �
 ## 境界
 
 - Access の構成変更、同一オリジン化は対象外。同一オリジン化や Server Actions が必要になった場合は判断を見直す。
+- Cloudflare Access の application・policy・hostname の設定値と、Access の edge で CORS preflight が通ることの実機確認は運用の手順が扱う（Issue #35）。設定値は環境ごとの変数として与え、リポジトリに保存しない。
+- 将来アプリ内に認証を導入する場合は、この ADR と ADR-0003 を置き換える。
 - ADR-0019 の SSG＋CSR とユーザー固有データのキャッシュ規則は維持する。性能試験は ADR-0020 の静的な枠の配信条件と invocation log 照合を使う。ADR-0019 にある「性能測定の条件は変えない」は ADR-0020 で補正済みである。
 - Web を旧 binding 付き version に戻す場合は、先に API の `InternalApi` を復元する。API の削除後に binding 付き Web だけを戻さない。
 
 ## 検証
 
 - [index.test.ts](../../apps/api/src/index.test.ts): 公開 entrypoint の認証・CORS・health の境界を維持する。
+- [access-boundary.test.ts](../../apps/api/src/middleware/access-boundary.test.ts): 決定2の JWT の署名・issuer 完全一致・audience、固定の 401、loopback での検証省略条件を検証する。
+- [core-endpoints.integration.test.ts](../../apps/api/src/core-endpoints.integration.test.ts): 決定2の Access を通らない公開 entrypoint の書き込みを、D1 の変更前に拒否する。
+- [rendering-boundaries.test.ts](../../apps/web/src/app/rendering-boundaries.test.ts): 決定1の書き込みを Hono API に一本化し、Web に Server Actions がないことを検証する。
 - [api.test.ts](../../apps/web/src/lib/api.test.ts): cookie を付けた通信と共有 Zod による応答検証。
 - [cloudflare-config.test.ts](../../apps/web/scripts/cloudflare-config.test.ts): Web の Service Binding がないこと。
 - [architecture.test.mjs](../../scripts/architecture.test.mjs): binding・内部 entrypoint の再導入を拒否する。
