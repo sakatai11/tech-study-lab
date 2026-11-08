@@ -19,10 +19,9 @@ function CodeBlock({ 'data-language': language = 'text', ...props }: CodeBlockPr
 
 function ScrollableTable(props: ComponentProps<'table'>) {
   return (
-    // biome-ignore lint/a11y/noNoninteractiveTabindex: 横にはみ出す表をキーボードでスクロールするため（axe scrollable-region-focusable）
-    <section aria-label="表" className="table-scroll" tabIndex={0}>
+    <div className="table-scroll">
       <table {...props} />
-    </section>
+    </div>
   )
 }
 
