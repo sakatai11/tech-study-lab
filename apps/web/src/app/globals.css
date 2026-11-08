@@ -233,6 +233,7 @@
   }
 
   .term-badge {
+    flex-shrink: 0;
     border: 1px solid rgb(63 185 80 / 45%);
     border-radius: 0.3125rem;
     background: rgb(63 185 80 / 15%);
@@ -244,11 +245,14 @@
   }
 
   .term-title {
+    min-width: 0;
+    overflow-wrap: anywhere;
     color: #8b949e;
     font-size: 0.6875rem;
   }
 
   .term-meta {
+    flex-shrink: 0;
     margin-left: auto;
     color: #8b949e;
     font-size: 0.65625rem;
