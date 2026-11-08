@@ -40,7 +40,7 @@ Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runt
 ### 外部送信
 
 - 別モデルCLIレビューには、ホストと**別の提供元**のCLIを使う（Claude Codeホストでは Codex CLI、CodexホストではClaude CLI）。コマンド、モデル指定、read-only 実行、認証、Keychain wrapper は `.ai/runtime-compatibility.md` に従う。
-- private な内容を外部CLIへ送る前に、送信先と、送る内容（差分の範囲、ブリーフ、CLIに読ませるファイル）を具体的に示して、ユーザーの明示同意を得る。同じ実行の中で、送信先と範囲が同じ再レビューに限り、同意を再利用できる。
+- 別モデルCLIレビューの外部送信は、ユーザーへの個別確認なしで実行する。送信先は上記のCLIに限り、送る内容は対象のコミット済み差分、ブリーフ、CLIに読ませるリポジトリ内のファイルに限る。シークレットや機密ファイルは含めない。この範囲を超える送信が必要になったら、止めてユーザーに判断を求める。送信先と範囲は最終報告に記載する。
 - 権限や Sandbox の迂回フラグを使わない。
 
 ## 進め方の目安
@@ -50,9 +50,9 @@ Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runt
 3. **実装**: 新しいロジック、特にSRSと純粋関数にはテストを書く（`docs/testing.md`）。`content/` を変更する場合は `content-new` スキルに従う。
 4. **品質ゲート**: 後述のゲートを通してからコミットする。
 5. **独立レビュー**: Jevはレビュー規約の「Jev設計参照チェック」に従い、結果または未実施理由を `designReferenceReview` として引き継ぐ。`reviewer` に、Issue番号と `.ai/review-guidelines.md` の「レビュー範囲」が求める項目（`targetFeature` / `inScopeFiles` / `acceptanceCriteria` / `outOfScopePolicy` / `committedRange`）を渡す。`committedRange` は `<effectiveBase>...HEAD` の全累積差分とする（`effectiveBase` = `git merge-base origin/develop HEAD`）。
-6. **別モデルCLIレビュー**: 後述の方針で必要な場合だけ、同意を取得してからオーケストレーター自身が直接実行する。出力は自分で読み、`.ai/review-guidelines.md` の分類と重要度で判定する。
+6. **別モデルCLIレビュー**: 後述の方針で必要な場合だけ、オーケストレーター自身が直接実行する。出力は自分で読み、`.ai/review-guidelines.md` の分類と重要度で判定する。
 7. **修正と再レビュー**: 対象範囲内の must-fix / should-fix を修正し、ゲートを再度通してコミットする。修正した差分と指摘の解消状況を再レビューさせる。修正後に新しく追加してよい指摘は、修正が起こした回帰、受け入れ条件の未達、重大なセキュリティ・データ破壊だけに限る。
-8. **PR**: push とPR作成はユーザーの承認を得てから行う。ベースは `develop`、本文は `.github/pull_request_template.md` に従う。既存PRがあれば作り直さない。
+8. **PR**: ゲートとレビューを通過したら、ユーザーへの個別確認なしで作業ブランチを push し、PRを作成する。`main` / `develop` へは直接 push しない。ベースは `develop`、本文は `.github/pull_request_template.md` に従う。既存PRがあれば作り直さない。
 
 ## 品質ゲート
 
