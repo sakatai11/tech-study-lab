@@ -1,7 +1,6 @@
 import 'server-only'
 
 import Link from 'next/link'
-import ReactMarkdown from 'react-markdown'
 
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
@@ -10,6 +9,7 @@ import { TermCrumb } from '@/components/ui/term-crumb'
 
 import { LessonViewRecorder } from '../../client/components/lesson-view-recorder'
 import type { LessonViewModel } from '../../view-model'
+import { MarkdownTree } from './markdown-tree'
 
 export function LessonDisplay({ viewModel }: { viewModel: LessonViewModel }) {
   return (
@@ -36,7 +36,7 @@ export function LessonDisplay({ viewModel }: { viewModel: LessonViewModel }) {
 
       <Card className="p-5 sm:p-8">
         <div className="markdown-body max-w-3xl text-pretty text-ink-2">
-          <ReactMarkdown>{viewModel.markdownBody}</ReactMarkdown>
+          <MarkdownTree tree={viewModel.body} />
         </div>
       </Card>
 

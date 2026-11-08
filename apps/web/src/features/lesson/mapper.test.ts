@@ -1,8 +1,11 @@
+import type { Root } from 'hast'
 import { describe, expect, it } from 'vitest'
 
 import type { BundledLesson, BundledTopic } from '@tsl/shared'
 
 import { lessonContentToViewModel, topicContentToViewModel } from './mapper'
+
+const tree: Root = { type: 'root', children: [] }
 
 const topic: BundledTopic = {
   topic: 'xss',
@@ -34,17 +37,17 @@ const lesson: BundledLesson = {
 
 describe('lesson view model mappers', () => {
   it('maps topic overview and ordered lesson summaries', () => {
-    expect(topicContentToViewModel(topic, [lesson], 'security')).toEqual({
+    expect(topicContentToViewModel(topic, [lesson], 'security', tree)).toEqual({
       domain: 'security',
       topic: 'xss',
       title: 'XSS',
-      overviewMarkdown: '概要',
+      overview: tree,
       lessons: [{ id: 'security-xss-01', title: '安全な表示', questionCount: 1 }],
     })
   })
 
   it('maps lesson content without answer keys or explanations', () => {
-    const viewModel = lessonContentToViewModel(lesson)
+    const viewModel = lessonContentToViewModel(lesson, tree)
 
     expect(viewModel).toEqual({
       domain: 'security',
@@ -52,7 +55,7 @@ describe('lesson view model mappers', () => {
       id: 'security-xss-01',
       title: '安全な表示',
       estimatedMinutes: 18,
-      markdownBody: '# 本文',
+      body: tree,
       questions: [
         {
           id: 'security-xss-01-q1',

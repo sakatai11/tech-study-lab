@@ -1,8 +1,10 @@
 import 'server-only'
 
 import type { BundledLesson, BundledTopic, McqQuestion } from '@tsl/shared'
+import type { Root } from 'hast'
 
 import { bundledContent } from './generated-content'
+import { lessonMarkdownTrees, topicMarkdownTrees } from './generated-markdown'
 
 const lessonsById = new Map(
   bundledContent.lessons.map((lesson) => [lesson.lessonId, lesson] as const),
@@ -14,6 +16,23 @@ const questionsById = new Map(
 /** lesson の Markdown と検証済み frontmatter を返す。bundle されていなければ undefined。 */
 export function getLessonContent(lessonId: string): BundledLesson | undefined {
   return lessonsById.get(lessonId)
+}
+
+function parseMarkdownTree(serialized: string | undefined, key: string): Root {
+  if (serialized === undefined) {
+    throw new Error(`compiled Markdown is missing: ${key}; run pnpm content:generate`)
+  }
+  return JSON.parse(serialized) as Root
+}
+
+/** lesson 本文のビルド時変換済み HAST を返す。 */
+export function getLessonMarkdownTree(lessonId: string): Root {
+  return parseMarkdownTree(lessonMarkdownTrees[lessonId], lessonId)
+}
+
+/** topic 概要のビルド時変換済み HAST を返す。 */
+export function getTopicMarkdownTree(topic: BundledTopic): Root {
+  return parseMarkdownTree(topicMarkdownTrees[topic.relativePath], topic.relativePath)
 }
 
 /** topic 配下の lesson を、安定した lessonId 順で返す。 */

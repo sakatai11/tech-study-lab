@@ -5,6 +5,15 @@ async function rebuild(sources: ParsedContentSourceFile[]) {
   vi.resetModules()
   const bundledContent = createContentBundle(sources)
   vi.doMock('@/lib/generated-content', () => ({ bundledContent }))
+  const emptyTree = JSON.stringify({ type: 'root', children: [] })
+  vi.doMock('@/lib/generated-markdown', () => ({
+    lessonMarkdownTrees: Object.fromEntries(
+      bundledContent.lessons.map(({ lessonId }) => [lessonId, emptyTree]),
+    ),
+    topicMarkdownTrees: Object.fromEntries(
+      bundledContent.topics.map(({ relativePath }) => [relativePath, emptyTree]),
+    ),
+  }))
   const [catalog, topic, lesson] = await Promise.all([
     import('./load-catalog'),
     import('./load-topic'),

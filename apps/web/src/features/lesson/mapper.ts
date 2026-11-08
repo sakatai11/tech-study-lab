@@ -1,5 +1,6 @@
 import type { BundledLesson, BundledTopic, DomainKey } from '@tsl/shared'
 import { DOMAIN_LABELS, domainKeySchema } from '@tsl/shared'
+import type { Root } from 'hast'
 
 import type { LessonCatalogViewModel, LessonViewModel, TopicViewModel } from './view-model'
 
@@ -33,12 +34,13 @@ export function topicContentToViewModel(
   topic: BundledTopic,
   lessons: BundledLesson[],
   domain: DomainKey,
+  overview: Root,
 ): TopicViewModel {
   return {
     domain,
     topic: topic.topic,
     title: topic.title,
-    overviewMarkdown: topic.body,
+    overview,
     lessons: lessons.map((lesson) => ({
       id: lesson.lessonId,
       title: lesson.title,
@@ -47,14 +49,14 @@ export function topicContentToViewModel(
   }
 }
 
-export function lessonContentToViewModel(content: BundledLesson): LessonViewModel {
+export function lessonContentToViewModel(content: BundledLesson, body: Root): LessonViewModel {
   return {
     domain: content.domain,
     topic: content.topic,
     id: content.lessonId,
     title: content.title,
     estimatedMinutes: content.estimatedMinutes,
-    markdownBody: content.body,
+    body,
     questions: content.questions.map(({ id, prompt, choices }) => ({
       id,
       prompt,

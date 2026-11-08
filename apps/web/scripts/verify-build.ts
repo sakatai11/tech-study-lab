@@ -8,6 +8,7 @@ import {
   getQuizRouteParams,
   getTopicRouteParams,
 } from '../src/lib/content'
+import { findHighlighterArtifact } from './highlighter-check'
 import { findUserData } from './user-data-check'
 
 // Run after build without a server (CI).
@@ -85,6 +86,17 @@ for (const entry of readdirSync(new URL('dist/client/', root), {
   if (!entry.endsWith('.js')) continue
   assert(!answerIndexPattern.test(read(`dist/client/${entry}`).toString()), entry)
 }
+// Markdown is compiled by content:generate: no highlighter or WASM may ship to the Worker or the browser.
+for (const directory of ['dist/server/', 'dist/client/']) {
+  for (const entry of readdirSync(new URL(directory, root), {
+    recursive: true,
+    encoding: 'utf8',
+  })) {
+    const found = findHighlighterArtifact(entry, () => read(`${directory}${entry}`).toString())
+    assert(!found, found)
+  }
+}
+
 const privateIndex = JSON.parse(
   read('dist/client/_vinext/static-cache/index.json').toString(),
 ) as Record<string, { kind: string }>
