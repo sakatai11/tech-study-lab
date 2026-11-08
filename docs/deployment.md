@@ -1,6 +1,6 @@
 # 環境・デプロイ運用
 
-環境の定義、ローカル開発、本番への手動デプロイ、GitHub Actions によるリリースの運用手順。変更範囲に応じた反映・適用順序・失敗時の停止・性能試験による本番昇格は [ADR-0017](./adr/0017-change-scoped-releases.md)、マイグレーションを変更しない規則は [ADR-0011](./adr/0011-immutable-migrations.md)、content の二重反映は [ADR-0006](./adr/0006-content-as-source-of-truth.md)、本番の Access 境界は [ADR-0008](./adr/0008-production-access-boundary.md) が持つ。本書はそれらを満たすための具体的な手順を持つ。
+環境の定義、ローカル開発、本番への手動デプロイ、GitHub Actions によるリリースの運用手順。変更範囲に応じた反映・適用順序・失敗時の停止・性能試験による本番昇格は [ADR-0017](./adr/0017-change-scoped-releases.md)、マイグレーションを変更しない規則は [ADR-0011](./adr/0011-immutable-migrations.md)、content の二重反映は [ADR-0006](./adr/0006-content-as-source-of-truth.md)、本番の Access 境界は [ADR-0021](./adr/0021-public-api-only.md) が持つ。本書はそれらを満たすための具体的な手順を持つ。
 
 ## 環境定義
 
@@ -8,13 +8,13 @@
 
 本番切替前の実環境確認には、隔離された検証環境（Issue #218 で作成）を使う。Web は `tech-study-lab-web-test`（`apps/web/wrangler.jsonc` の `env.edge`）、API は `tech-study-lab-api-test`（`apps/api/wrangler.test.jsonc`）、D1 は `tech-study-lab-test` とし、本番の Worker・route・Origin・学習記録は変更しない。D1 へは同じ commit の migration と content から生成した問題キャッシュ・固定ユーザーだけを投入し、解答・閲覧記録は検証用 D1 に保存する。本番データの複製はしない。これは PR ごとの自動 preview 環境ではない。
 
-検証用 Worker と D1 の名称はフレームワークに依存しない `-test` に統一する。D1 は既存 DB の改名をサポートしないため、`tech-study-lab-test` を新規作成し、既存の検証用 D1 `tech-study-lab-vinext` のスキーマ・データ・migration 履歴を export/import して移行する。移行先の ID を検証用 API config へ設定し、テーブルごとの件数と migration 履歴の一致を確認してから接続先を切り替える。旧検証用 D1 は復旧用に保持し、本番 D1 からの複製は行わない。Worker 名はダッシュボードで改名し、公開 URL・Service Binding・Access application の対象 hostname・API の `WEB_ORIGIN`・Client bundle の API URL を新名称に揃える。設定変更だけでは既存の Cloudflare リソースは変更されない。
+検証用 Worker と D1 の名称はフレームワークに依存しない `-test` に統一する。D1 は既存 DB の改名をサポートしないため、`tech-study-lab-test` を新規作成し、既存の検証用 D1 `tech-study-lab-vinext` のスキーマ・データ・migration 履歴を export/import して移行する。移行先の ID を検証用 API config へ設定し、テーブルごとの件数と migration 履歴の一致を確認してから接続先を切り替える。旧検証用 D1 は復旧用に保持し、本番 D1 からの複製は行わない。Worker 名はダッシュボードで改名し、公開 URL・Access application の対象 hostname・API の `WEB_ORIGIN`・Client bundle の API URL を新名称に揃える。設定変更だけでは既存の Cloudflare リソースは変更されない。
 
-| 環境 | Web Worker 名 | API Service Binding | build / deploy |
+| 環境 | Web Worker 名 | API Worker 名 | build / deploy |
 | --- | --- | --- | --- |
-| local | `tech-study-lab-web`（ローカル実行のみ） | `tech-study-lab-api#InternalApi`（ローカル `wrangler dev`） | `dev` / `build` + `start` |
-| 検証（edge） | `tech-study-lab-web-test` | `tech-study-lab-api-test#InternalApi` | `deploy:edge`（`CLOUDFLARE_ENV=edge` で build） |
-| production | `tech-study-lab-web` | `tech-study-lab-api#InternalApi` | `deploy`（`CLOUDFLARE_ENV` なしで build） |
+| local | `tech-study-lab-web`（ローカル実行のみ） | `tech-study-lab-api`（ローカル `wrangler dev`） | `dev` / `build` + `start` |
+| 検証（edge） | `tech-study-lab-web-test` | `tech-study-lab-api-test` | `deploy:edge`（`CLOUDFLARE_ENV=edge` で build） |
+| production | `tech-study-lab-web` | `tech-study-lab-api` | `deploy`（`CLOUDFLARE_ENV` なしで build） |
 
 ## 環境変数・バインディング一覧
 
@@ -25,12 +25,10 @@
 | `DB` | D1 バインディング（api） | dal（Drizzle） | `wrangler dev` のローカル D1 | `apps/api/wrangler.toml` の `d1_databases`（要実 ID。「本番への手動デプロイ」） |
 | `ANSWERS_RATE_LIMITER` | Rate Limiting バインディング（api） | `POST /answers` の永続書き込みガード（[ADR-0004](./adr/0004-persistent-write-rate-limit.md)） | `apps/api/wrangler.toml` の `[[ratelimits]]`（`namespace_id = "11301"`、60 回 / 60 秒） | local と同じ top-level `[[ratelimits]]` を API Worker へデプロイ |
 | `LESSON_VIEWS_RATE_LIMITER` | Rate Limiting バインディング（api） | `POST /lesson-views` の永続書き込みガード（[ADR-0004](./adr/0004-persistent-write-rate-limit.md)） | `apps/api/wrangler.toml` の `[[ratelimits]]`（`namespace_id = "11302"`、30 回 / 60 秒） | local と同じ top-level `[[ratelimits]]` を API Worker へデプロイ |
-| `WEB_ORIGIN` | var（api） | CORS 許可オリジン（ADR-0012） | `http://localhost:3000` | API deploy 時に `--var WEB_ORIGIN:<web-public-url>` として明示指定 |
-| `ACCESS_ISSUER` | var（api） | Cloudflare Access JWT の issuer 検証（ADR-0008） | 未設定（両 Access 設定なし＋loopback URL のみ bypass） | API deploy 時に `--var ACCESS_ISSUER:<access-issuer>` として明示指定 |
-| `ACCESS_AUDIENCE` | var（api） | Cloudflare Access JWT の audience 検証（ADR-0008） | 未設定（両 Access 設定なし＋loopback URL のみ bypass） | API deploy 時に `--var ACCESS_AUDIENCE:<access-audience>` として明示指定 |
-| `API` | Service Binding（web） | Server loader（ADR-0012） | `apps/web/wrangler.jsonc` と同じ宣言。ローカル `wrangler dev` の API へ接続 | `services: [{ binding: "API", service: "tech-study-lab-api", entrypoint: "InternalApi" }]` |
-| `API_BASE_URL` | env（web / Server 専用） | production 以外で `API` binding が未設定の場合のフォールバック（ADR-0012） | `http://localhost:8787` | 設定しない（Service Binding必須。欠落時はfail-fast） |
-| `NEXT_PUBLIC_API_BASE_URL` | ビルド時 env（web / Client） | Client hook（ADR-0012） | `http://localhost:8787` | web の deploy 時に対象 API Worker の公開 URL `https://<API Worker 名>.<account subdomain>.workers.dev` を環境変数として明示指定。deploy は URL を解析し、ホスト名の Worker 名がデプロイ先の API（production は `tech-study-lab-api`、検証は `tech-study-lab-api-test`）と一致しない URL、http、path 付き URL を拒否する。custom domain へ移行する場合は、先に本表と deploy の検査を更新する |
+| `WEB_ORIGIN` | var（api） | CORS 許可オリジン（ADR-0021） | `http://localhost:3000` | API deploy 時に `--var WEB_ORIGIN:<web-public-url>` として明示指定 |
+| `ACCESS_ISSUER` | var（api） | Cloudflare Access JWT の issuer 検証（ADR-0021） | 未設定（両 Access 設定なし＋loopback URL のみ bypass） | API deploy 時に `--var ACCESS_ISSUER:<access-issuer>` として明示指定 |
+| `ACCESS_AUDIENCE` | var（api） | Cloudflare Access JWT の audience 検証（ADR-0021） | 未設定（両 Access 設定なし＋loopback URL のみ bypass） | API deploy 時に `--var ACCESS_AUDIENCE:<access-audience>` として明示指定 |
+| `NEXT_PUBLIC_API_BASE_URL` | ビルド時 env（web / Client） | Client hook（ADR-0021） | `http://localhost:8787` | web の deploy 時に対象 API Worker の公開 URL `https://<API Worker 名>.<account subdomain>.workers.dev` を環境変数として明示指定。deploy は URL を解析し、ホスト名の Worker 名がデプロイ先の API（production は `tech-study-lab-api`、検証は `tech-study-lab-api-test`）と一致しない URL、http、path 付き URL を拒否する。custom domain へ移行する場合は、先に本表と deploy の検査を更新する |
 
 ## ローカル開発
 
@@ -40,9 +38,9 @@
 4. `pnpm --filter @tsl/api db:seed:dev`（任意。固定ユーザーの解答ログ・SRS 状態を開発用データへ再投入。「content の同期と開発用 seed」）
 5. `pnpm --filter @tsl/api dev`（`:8787`）と `pnpm --filter @tsl/web dev`（`:3000`）を並走
 
-web の `dev` は Vinext（Vite）で起動し、`@cloudflare/vite-plugin` が RSC/SSR を workerd 上で実行する。`apps/web/wrangler.jsonc` の `API` Service Binding は dev registry 経由でローカルの API Worker に接続する。production build をローカルで確認するときは `pnpm --filter @tsl/web build` の後に `start`（生成された `dist/server/wrangler.json` を `wrangler dev` で `:3000` に起動）を使う。`preview` は両者を続けて実行する。いずれもブラウザの Origin は `http://localhost:3000` であり、API の既定 `WEB_ORIGIN` と一致する。2 つの `wrangler dev` を同時に起動して inspector port が衝突する場合は、片方に `--inspector-port` を指定する。
+web の `dev` は Vinext（Vite）で起動し、`@cloudflare/vite-plugin` が RSC/SSR を workerd 上で実行する。ブラウザが `http://localhost:8787` の API Worker を直接呼ぶ。production build をローカルで確認するときは `pnpm --filter @tsl/web build` の後に `start`（生成された `dist/server/wrangler.json` を `wrangler dev` で `:3000` に起動）を使う。`preview` は両者を続けて実行する。いずれもブラウザの Origin は `http://localhost:3000` であり、API の既定 `WEB_ORIGIN` と一致する。2 つの `wrangler dev` を同時に起動して inspector port が衝突する場合は、片方に `--inspector-port` を指定する。
 
-Cloudflare の型は `pnpm --filter @tsl/web cf-typegen` で `apps/web/wrangler.jsonc` から生成する。生成物は Git 管理せず、Server 側で使う binding の型は `lib/api-server.ts` で必要な分だけ宣言する。
+Cloudflare の型は `pnpm --filter @tsl/web cf-typegen` で `apps/web/wrangler.jsonc` から生成する。生成物は Git 管理しない。Web は API 用の Service Binding を持たない（ADR-0021）。
 
 ## content の同期と開発用 seed
 
@@ -71,7 +69,15 @@ content から D1 への seed/upsert（ADR-0006）を `apps/api/scripts/sync-con
 - この境界は Issue #35 の Cloudflare Access application / policy / `ACCESS_ISSUER` / `ACCESS_AUDIENCE` の本番設定に依存する。値は非秘密 binding として環境に設定し、リポジトリや `.env` へ保存しない。Issue #35 では API Worker に Access を適用する公開 hostname または custom domain を用意し、ブラウザの `POST` を含む CORS preflight が Access edge で遮断されず Worker の CORS 応答へ到達するか、同等の Access 側応答を返すことをデプロイ前に確認する。Access dashboard の具体的な設定値はここで固定せず、この結果を実機で検証する。
 - browser の `credentials: 'include'` は Access application cookie が web と API の両方へ適切に送られる構成を前提とする。cross-site cookie 設定と両立しない組み合わせを避け、可能なら同一 site（例: `web.example.com` と `api.example.com`）または同一 origin の API route を採る。異なる site を使う場合も、実際の Access cookie 属性とブラウザの credentialed CORS 制約を本番 hostname で検証してから公開する。
 
-認証方式の信頼境界、公開トップから `/home` へのログイン導線、ブラウザ API と Service Binding のシークエンス図は、補助資料として [`docs/authentication-architecture.html`](./authentication-architecture.html) に整理する。信頼境界の一次ソースは ADR-0008 であり、補助資料は実装状況と通信順序を参照しやすい形へ再構成したものとする。
+認証方式の信頼境界、公開トップから `/home` へのログイン導線、静的な枠の配信とブラウザ API のシークエンス図は、補助資料として [`docs/authentication-architecture.html`](./authentication-architecture.html) に整理する。信頼境界の一次ソースは ADR-0021 であり、補助資料は実装状況と通信順序を参照しやすい形へ再構成したものとする。
+
+## Service Binding 撤去時の移行順序（Issue #293）
+
+[ADR-0021](./adr/0021-public-api-only.md) に従い、稼働 Web の Service Binding を先に外し、解除を確認してから API の `InternalApi` を削除する。検証・本番の各環境で個別に行う。手動反映でも、以下の通常順序へ進む前に binding のない Web を配備する。失敗した場合は API を更新しない。
+
+自動 apply は API 更新を含む場合に稼働 Web の settings を読み、service binding があれば `detachWebApi` 段階で準備済み Web を先に upload する。binding が残る、settings を確認できない、Web を省略する計画の場合は停止する。解除済みなら通常順序とする。失敗後の再実行も稼働設定から判定し、開始記録と成功記録は ADR-0018 に従う。
+
+API 削除後に旧 Web へ rollback する場合は、先に `InternalApi` を持つ API version を復元する。binding 付き Web だけを戻さない。
 
 ## 本番への手動デプロイ
 
@@ -84,11 +90,11 @@ content から D1 への seed/upsert（ADR-0006）を `apps/api/scripts/sync-con
 1. **マイグレーション適用**：`pnpm --filter @tsl/api exec wrangler d1 migrations apply tech-study-lab --remote`
 2. **content sync**：`pnpm --filter @tsl/api content:sync:remote`（`content/` → D1 upsert。「content の同期と開発用 seed」）
 3. **api デプロイ**：`pnpm --filter @tsl/api run deploy --var WEB_ORIGIN:<web-public-url> --var ACCESS_ISSUER:<access-issuer> --var ACCESS_AUDIENCE:<access-audience>`。3 値は**毎回すべて**この deploy 実行時だけ明示指定し、Git や `.env` には保存しない。値を省いた bare deploy は禁止する。Wrangler がローカルまたは不完全な vars へ置き換えると、Access は fail closed となり、CORS も失敗し得る。`pnpm deploy` は pnpm 自身のコマンドと衝突するため、package script は必ず `run deploy` で起動し、引数前に追加の `--` を置かない。
-4. **web デプロイ**：`NEXT_PUBLIC_API_BASE_URL=<api-public-url> pnpm --filter @tsl/web run deploy` を実行する。このコマンドは `CLOUDFLARE_ENV` を外して Vinext の production build を行い、生成された `dist/server/wrangler.json` の Worker 名 `tech-study-lab-web`、`API` Service Binding `tech-study-lab-api#InternalApi`、`DOQueueHandler` の `v1`/`v2` migration 履歴を検査してから、その生成 config を明示して `wrangler deploy` する。`NEXT_PUBLIC_API_BASE_URL` は build 時に Client bundle へ埋め込まれるため、本番 API の公開 URL を毎回指定する。ブラウザが別環境の API へ解答を送らないよう、URL の Worker 名がデプロイ先の API と一致することを build 前に検査する（「環境変数・バインディング一覧」）。通常の手動反映は build と upload を続けて実行する。追加引数は `--dry-run` と、「GitHub Actions による環境別リリース」の成果物分離用の `--prepare-only` / `--upload-only`（同時指定不可）に限定し、CLI による Worker 名・config・env の上書きを防ぐ。
+4. **web デプロイ**：`NEXT_PUBLIC_API_BASE_URL=<api-public-url> pnpm --filter @tsl/web run deploy` を実行する。このコマンドは `CLOUDFLARE_ENV` を外して Vinext の production build を行い、生成された `dist/server/wrangler.json` の Worker 名 `tech-study-lab-web`、Service Binding がないこと、`DOQueueHandler` の `v1`/`v2` migration 履歴を検査してから、その生成 config を明示して `wrangler deploy` する。`NEXT_PUBLIC_API_BASE_URL` は build 時に Client bundle へ埋め込まれるため、本番 API の公開 URL を毎回指定する。ブラウザが別環境の API へ解答を送らないよう、URL の Worker 名がデプロイ先の API と一致することを build 前に検査する（「環境変数・バインディング一覧」）。通常の手動反映は build と upload を続けて実行する。追加引数は `--dry-run` と、「GitHub Actions による環境別リリース」の成果物分離用の `--prepare-only` / `--upload-only`（同時指定不可）に限定し、CLI による Worker 名・config・env の上書きを防ぐ。
 
 順序の根拠：**スキーマ → データ → API → 画面** の順なら、各ステップの完了時点で稼働中の旧バージョンが壊れない（マイグレーションが追加中心の後方互換であることが前提。ADR-0011）。
 
-検証環境への web デプロイは `NEXT_PUBLIC_API_BASE_URL=<verification-api-public-url> pnpm --filter @tsl/web run deploy:edge` で行う。`CLOUDFLARE_ENV=edge` で build し、生成 config が Worker 名 `tech-study-lab-web-test`、`API` Service Binding `tech-study-lab-api-test#InternalApi`、空の `migrations`、`workers_dev: true`、`preview_urls: false` であることを検査する。production と検証環境のどちらの deploy も、相手の環境向けに生成された config を Wrangler 起動前に拒否する。設定選択は build 時に行い、deploy 時の環境変数だけで接続先が切り替わると扱わない。`deploy:edge` は本番デプロイ手順に含めない。
+検証環境への web デプロイは `NEXT_PUBLIC_API_BASE_URL=<verification-api-public-url> pnpm --filter @tsl/web run deploy:edge` で行う。`CLOUDFLARE_ENV=edge` で build し、生成 config が Worker 名 `tech-study-lab-web-test`、Service Binding がないこと、空の `migrations`、`workers_dev: true`、`preview_urls: false` であることを検査する。production と検証環境のどちらの deploy も、相手の環境向けに生成された config を Wrangler 起動前に拒否する。設定選択は build 時に行い、deploy 時の環境変数だけで接続先が切り替わると扱わない。`deploy:edge` は本番デプロイ手順に含めない。
 
 検証用 hostname でも公開 `/` と Access で保護する `/home`・`/learn`・`/quiz`・`/review`・`/domains`・`/analytics` の境界を適用する。検証用 API は専用 Access application で保護し、`OPTIONS` は API の credentialed CORS 応答へ転送する。API の deploy と検証 D1 の操作には `apps/api/wrangler.test.jsonc` を明示指定する。API の `WEB_ORIGIN`・`ACCESS_ISSUER`・`ACCESS_AUDIENCE` はデプロイごとに明示指定し、Git や `.env` に保存しない。外部リソース作成、remote D1 への migration/content SQL 実行、Worker/Access 更新は、対象アカウント・検証用リソース・入力値・SQL を確認した承認を得てから行う。実施結果と再実行手順は [Vinext 検証記録](./investigations/2026-10-04-vinext-migration.md) に記録する。
 
@@ -140,10 +146,10 @@ content は「web のビルド時バンドル（設計文書 §5.1）」と「D1
 
 認証後の4画面（`/home`・`/review`・`/domains`・`/analytics`）は、静的な枠と loading 状態だけをビルド時に生成し、ユーザー固有データはブラウザの Client hook が取得する（[ADR-0019](./adr/0019-csr-for-user-specific-screens.md)）。成果物にユーザー固有データが含まれないこと、取得失敗を hook のエラー状態が扱うことを確認する。教材・演習 route は `generateStaticParams` が全 content params を返し、Vinext の production build が標準 SSG を生成することを確認する。Client hook の API client は最初の送信まで遅延生成し、render / SSG 時のブラウザ専用設定への依存を避ける。
 
-- **成果物検証（CI）**：`pnpm build` の後に `pnpm --filter @tsl/web verify:build` を実行する。`dist/server/vinext-prerender.json` の rendered route が `/`・`/learn`・認証後の4画面・全 content params・`/404` と一致すること、生成 HTML / RSC と公開 Client JS に `answerIndex` が含まれないこと、4画面の HTML / RSC にユーザー固有データが含まれないこと、Worker entry と `API`（`InternalApi`）binding が生成 config に存在すること、内部 cache artifact が `run_worker_first` で Worker 経由になることを確認する。
+- **成果物検証（CI）**：`pnpm build` の後に `pnpm --filter @tsl/web verify:build` を実行する。`dist/server/vinext-prerender.json` の rendered route が `/`・`/learn`・認証後の4画面・全 content params・`/404` と一致すること、生成 HTML / RSC と公開 Client JS に `answerIndex` が含まれないこと、4画面の HTML / RSC にユーザー固有データが含まれないこと、Worker entry が存在し、生成 config に Service Binding がないこと、内部 cache artifact が `run_worker_first` で Worker 経由になることを確認する。
 - **実行時検証（ローカル・検証環境）**：API を起動し、web を `build` + `start` で起動した状態で `pnpm --filter @tsl/web verify:ssg` を実行する（接続先は `WEB_VERIFY_BASE_URL`、既定 `http://localhost:3000`）。content route と認証後の4画面の HTML / RSC が `x-vinext-cache: HIT` で生成物と一致すること、4画面の HTML が error boundary を返さないこと、別表記 URL と内部 cache artifact の直接取得が 404 になることを確認する。4画面のデータ表示は、認証済みブラウザで手動確認する（ADR-0019）。
 
-構成確認では、`API` Service Binding が残り、`cacheComponents`、ISR 用の Incremental Cache、R2、KV、Durable Object Queue の有効 binding、Worker 自己参照 binding が存在しないこと、登録済み `DOQueueHandler` の `v1` 作成履歴と後続の `v2` 削除 migration を top-level で維持し検証用 env が継承しないこと、標準 script が OpenNext に依存しないことをテストで固定する。
+構成確認では、Service Binding が存在せず、`cacheComponents`、ISR 用の Incremental Cache、R2、KV、Durable Object Queue の有効 binding、Worker 自己参照 binding が存在しないこと、登録済み `DOQueueHandler` の `v1` 作成履歴と後続の `v2` 削除 migration を top-level で維持し検証用 env が継承しないこと、標準 script が OpenNext に依存しないことをテストで固定する。
 
 ## GitHub Actions による環境別リリース
 
@@ -157,7 +163,7 @@ content は「web のビルド時バンドル（設計文書 §5.1）」と「D1
 - production も `prepare` 成功後に `apply` が自動開始し、人間の追加承認を待たず environment Secrets から Cloudflare token を取得する。両 environment の required reviewers・wait timer・custom deployment protection rules は設定せず、正確な許可ブランチを preflight で検査する。検証 / 本番の enable flag は明示設定されるまで無効とし、本番初回切替条件を満たす前に有効化しない。PR のマージは従来どおり人間が行う。
 - apply は **設定・manifest・鮮度・検証済み source の検査 → migration → content sync → API → API 確認 → Web → smoke test →（verification だけ）性能測定 → CPU ログ照合 → 成功記録** の順。対象外 Worker の更新だけを省略し、どの段階でも失敗したら後続を停止する。production は、配備対象ソースが一致する検証成功記録と性能証跡を確認する（「検証環境の性能試験」）。同じ環境の通常リリースと復旧は共通 concurrency group で直列化し、`cancel-in-progress: false` とする。
 - content sync の CI 経路は SQL 生成と remote 実行を分離し、manifest の SQL を固定した D1 / config に非対話で適用する。問題が空の CI リリースは書き込み動作確認ができないため拒否する。既存の手動 remote は対話 TTY 確認を維持する。冪等な同期は失敗した run が D1 だけを変更した場合の取りこぼしを避けるため、リリースを行う場合は content 差分に関わらず毎回実行する（差分は計画の情報として記録する）。content が変われば Web/API の両方を対象とし、二重反映を維持する。
-- Worker / DB の名前・ID・config、Web origin、公開 API URL、Service Binding、migration 履歴を対象環境と照合し、任意 CLI 引数による上書きを認めない。API の `WEB_ORIGIN` / `ACCESS_ISSUER` / `ACCESS_AUDIENCE` は environment Variables から毎回指定する。認証情報は environment Secrets にのみ保存し、Git・ログ・artifact に含めない。
+- Worker / DB の名前・ID・config、Web origin、公開 API URL、Service Binding の不在、migration 履歴を対象環境と照合し、任意 CLI 引数による上書きを認めない。API の `WEB_ORIGIN` / `ACCESS_ISSUER` / `ACCESS_AUDIENCE` は environment Variables から毎回指定する。認証情報は environment Secrets にのみ保存し、Git・ログ・artifact に含めない。
 - 成功記録は GitHub Deployment に環境・SHA・tree・Worker version・run ID を保存する。本番候補は直近の正常 verification と配備対象ソースの一致を必須とし、SHA の違いと、除外対象だけの tree 差分を許容する。変更開始前に最新 branch SHA を再検査し、古い run が新しい反映を巻き戻すことを防ぐ。
 - smoke test は公開 `/` と `/health`、未認証の Access redirect、credentialed CORS preflight、CI 専用の Access Service Token を使う認証済み主要画面を検査する。Service Token の Client ID / Secret は environment Secrets に保存し、Web / API の Access Application でこの token に限定する Service Auth policy を運用者が設定する。token 失効時は検査を失敗させる。専用 verification では採点・閲覧記録の書き込みを確認し、production では GET と OPTIONS だけを実行する。Access policy / API 認証境界を自動で弱めない。
 - deploy 前後の実際の Worker version を記録する。通信エラー後の再実行は実状態・適用済み migration・冪等 upsert を確認して行い、失敗した操作をその場で無条件に再試行しない。本番 Worker rollback は対象 version ID と確認した現在の version ID を指定する手動 workflow とし、その実行操作を復旧の承認とする。environment での追加承認は設けず、復旧後は成功ソースの証明を無効にする。D1 の状態は戻らず、DB 復旧は別手順とする。
@@ -266,7 +272,7 @@ token の値はチャット・Issue・PR・端末履歴へ貼らず、Cloudflare
 
 prepare は Cloudflare の変更権限を持たず、locked dependencies、品質検査、SQL 生成と、対象 Worker の build / 成果物検査を実行する。SHA・tree・反映計画・全ファイルの SHA-256 を manifest に含める。対象 Worker の成果物、API config / migration、生成 SQL は同じ run / attempt の artifact に保存する。
 
-apply は対象環境の Secrets を使用し、manifest・設定・最新 branch SHA・検証ソース、比較元の成功記録、省略する Worker の実 version、実アカウントの workers.dev subdomain、現在の API に対する Service Token 認証を変更前に検査する。次に **migration → content sync → API deploy → API health → Web upload → smoke test →（verification だけ）性能測定 → CPU ログ照合 → 成功記録**を行い、対象外 Worker の更新だけを省略する。Web upload は再ビルドせず prepare の receipt・全ファイル hash を照合する。content sync は冪等なため毎回実行する（失敗 run が D1 だけを更新した後に content が戻っても取りこぼさない）。content 差分は計画に情報として表示する。問題が空のリリースは拒否する。
+apply は対象環境の Secrets を使用し、manifest・設定・最新 branch SHA・検証ソース、比較元の成功記録、省略する Worker の実 version、実アカウントの workers.dev subdomain、現在の API に対する Service Token 認証を変更前に検査する。次に **migration → content sync → binding 解除（必要時のみ Web を先行 upload）→ API deploy → API health → Web upload → smoke test →（verification だけ）性能測定 → CPU ログ照合 → 成功記録**を行い、対象外 Worker の更新だけを省略する。Web upload は再ビルドせず prepare の receipt・全ファイル hash を照合する。content sync は冪等なため毎回実行する（失敗 run が D1 だけを更新した後に content が戻っても取りこぼさない）。content 差分は計画に情報として表示する。問題が空のリリースは拒否する。
 
 同一環境の deploy / rollback は `deploy-verification` / `deploy-production` concurrency group を共有する。Deploy は workflow 全体で排他を取り、`changes` の計画から `prepare`、`apply`、成功記録まで保持する。apply job に同じ排他を重ねない。ビルド中や性能測定中も、後続の計画や rollback は待機する。変更開始済みの run は新しい push でキャンセルしない。変更開始前に branch が進んでいた場合は古い run を拒否する。
 
@@ -302,7 +308,7 @@ verification の apply は smoke test の成功後、同じ job・同じ concurr
 - 合格条件：200、同一 origin/path（redirect は追わない）、期待する Content-Type、空でない本文、challenge でない、有効な cf-ray がある。
 - 静的な枠の配信を示す `x-vinext-cache: HIT` を必須とする。応答の `Cache-Control` は記録する。`CF-Cache-Status` が `HIT`・`STALE`・`UPDATING`・`REVALIDATED` の応答は、エッジキャッシュの本文が返るため拒否する（[ADR-0020](./adr/0020-measure-static-shell-worker-executions.md)、[Cloudflare のキャッシュ応答](https://developers.cloudflare.com/cache/concepts/cache-responses/)）。最初の異常でその回以降を止め、失敗 request を再試行しない。
 
-**認証経路の差異**：CI は smoke test と同じ Access Service Token を各 request の header に付け、GitHub-hosted runner の Node.js `fetch` から送る。#220 の手動測定は人間のブラウザの Access cookie を使い、DevTools Console から送る。どちらも Access の検証・Service Binding・API の固定ユーザーの境界は同じだが、送信元の colo・回線・TTFB の測り方（CI は応答 header の受信時刻、ブラウザは Resource Timing）が異なる。そのため CI の応答時間をブラウザの値と直接比べない。CPU 時間は Cloudflare 側の値なので経路に依存しない。利用者のブラウザ Cookie はコピーしない。
+**認証経路の差異**：CI は smoke test と同じ Access Service Token を各 request の header に付け、GitHub-hosted runner の Node.js `fetch` から送る。#220 の手動測定は人間のブラウザの Access cookie を使い、DevTools Console から送る。どちらも Web の静的な枠の配信を測り、API は固定ユーザーを使うが、送信元の colo・回線・TTFB の測り方（CI は応答 header の受信時刻、ブラウザは Resource Timing）が異なる。そのため CI の応答時間をブラウザの値と直接比べない。CPU 時間は Cloudflare 側の値なので経路に依存しない。利用者のブラウザ Cookie はコピーしない。
 
 **fixture**：検証用 D1 の固定ユーザー（`user-local-001`）を使う。測定前に有効な問題数・解答ログ・SRS 状態・期限切れ SRS・閲覧記録の件数だけを D1 から読み、結果に記録する。smoke test が毎回 1件ずつ解答と閲覧を書き込むため件数は少しずつ増え、SRS の期限も日付とともに変わる。この差は比較の条件として扱う（「警告と比較」）。測定は GET だけで、本番データの複製・更新はしない。画面要素・データ・アクセシビリティを削って速くしない。
 

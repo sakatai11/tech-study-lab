@@ -9,7 +9,7 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-describe('createBrowserApiClient [ADR-0012]', () => {
+describe('createBrowserApiClient [ADR-0012] [ADR-0021]', () => {
   it('includes credentials so the Cloudflare Access application cookie reaches the public API', async () => {
     vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', 'https://api.example.com')
     const browserFetch = vi
@@ -41,14 +41,11 @@ describe('requestJson', () => {
   })
 })
 
-describe('parseApiResponse for browser clients [ADR-0015]', () => {
+describe('parseApiResponse for browser clients [ADR-0015] [ADR-0021]', () => {
   it('validates browser responses against the shared schema', () => {
-    vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', 'https://api.example.com')
-    const client = createBrowserApiClient()
-
-    expect(parseApiResponse(client, dueCountResponseSchema, { dueCount: 3 })).toEqual({
+    expect(parseApiResponse(dueCountResponseSchema, { dueCount: 3 })).toEqual({
       dueCount: 3,
     })
-    expect(() => parseApiResponse(client, dueCountResponseSchema, { dueCount: -1 })).toThrow()
+    expect(() => parseApiResponse(dueCountResponseSchema, { dueCount: -1 })).toThrow()
   })
 })

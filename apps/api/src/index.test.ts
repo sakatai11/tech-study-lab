@@ -6,10 +6,6 @@ import type { AppEnv } from './env'
 import { apiErrorHandler, createPublicApiApp } from './index'
 import type { AccessTokenVerifier } from './middleware/access-boundary'
 
-vi.mock('cloudflare:workers', () => ({
-  WorkerEntrypoint: class {},
-}))
-
 describe('apiErrorHandler', () => {
   afterEach(() => {
     vi.restoreAllMocks()
@@ -45,7 +41,7 @@ describe('apiErrorHandler', () => {
   })
 })
 
-describe('public API entrypoint [ADR-0008]', () => {
+describe('public API entrypoint [ADR-0008] [ADR-0021]', () => {
   it('keeps health public and completes CORS preflight before Access or user context', async () => {
     const verifier = vi.fn<AccessTokenVerifier>()
     const app = createPublicApiApp(verifier)

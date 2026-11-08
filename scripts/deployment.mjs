@@ -284,6 +284,26 @@ async function apply(environment) {
     result.completed.push(name)
     writeJson(resolve(root, '.deploy/result.json'), result)
   }
+  const hasWebServiceBinding = async () => {
+    const settings = await cloudflare(target, `workers/scripts/${target.web}/settings`)
+    assert(Array.isArray(settings.bindings), 'Web bindings could not be verified')
+    return settings.bindings.some((binding) => binding.type === 'service')
+  }
+  const uploadWeb = async () => {
+    run(
+      [
+        '--filter',
+        '@tsl/web',
+        'exec',
+        'node',
+        'scripts/deploy.mjs',
+        target.webTarget,
+        '--upload-only',
+      ],
+      { NEXT_PUBLIC_API_BASE_URL: apiUrl },
+    )
+    result.after.web = await currentVersion(target, target.web)
+  }
   try {
     await runRelease(environment, {
       preflight: stage('preflight', async () => {
@@ -337,6 +357,14 @@ async function apply(environment) {
           baseline = (await lastRelease(environment))?.performance ?? null
         result.before.api = await currentVersion(target, target.api)
         result.before.web = await currentVersion(target, target.web)
+        // Removing an entrypoint while a live consumer still binds it is rejected by Cloudflare.
+        // Check actual bindings even during recovery, when the source baseline is invalidated.
+        result.detachWebApi = manifest.plan.workers.api && (await hasWebServiceBinding())
+        if (result.detachWebApi)
+          assert(
+            manifest.plan.workers.web,
+            'bound Web must be deployed before removing InternalApi',
+          )
         const previous = await lastRelease(environment)
         if (manifest.plan.baseline) {
           assert.deepEqual(
@@ -386,6 +414,11 @@ async function apply(environment) {
           '--yes',
         )
       }),
+      detachWebApi: stage('detachWebApi', async () => {
+        if (!result.detachWebApi) return
+        await uploadWeb()
+        assert(!(await hasWebServiceBinding()), 'Web Service Binding remains after upload')
+      }),
       api: stage('api', async () => {
         if (!manifest.plan.workers.api) return
         wrangler(
@@ -406,20 +439,8 @@ async function apply(environment) {
       }),
       apiHealth: stage('apiHealth', async () => checkApiHealth(apiUrl)),
       web: stage('web', async () => {
-        if (!manifest.plan.workers.web) return
-        run(
-          [
-            '--filter',
-            '@tsl/web',
-            'exec',
-            'node',
-            'scripts/deploy.mjs',
-            target.webTarget,
-            '--upload-only',
-          ],
-          { NEXT_PUBLIC_API_BASE_URL: apiUrl },
-        )
-        result.after.web = await currentVersion(target, target.web)
+        if (!manifest.plan.workers.web || result.detachWebApi) return
+        await uploadWeb()
       }),
       smoke: stage('smoke', async () =>
         smokeTest(target, ctx, readJson(resolve(release, 'content/summary.json'))),

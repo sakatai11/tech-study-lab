@@ -42,7 +42,7 @@ const productionMigrations = [
 describe('Web Worker configuration', () => {
   const config = readJsonc(new URL('../wrangler.jsonc', import.meta.url))
 
-  it('deploys the Vinext Worker as the production web Worker [ADR-0012]', () => {
+  it('deploys the Vinext Worker as the production web Worker [ADR-0012] [ADR-0021]', () => {
     expect(config.name).toBe('tech-study-lab-web')
     expect(config.main).toBe('vinext/server/fetch-handler')
     expect(config.compatibility_flags).toEqual([
@@ -50,13 +50,7 @@ describe('Web Worker configuration', () => {
       'global_fetch_strictly_public',
       'enable_weak_ref',
     ])
-    expect(config.services).toEqual([
-      {
-        binding: 'API',
-        service: 'tech-study-lab-api',
-        entrypoint: 'InternalApi',
-      },
-    ])
+    expect(config.services ?? []).toEqual([])
   })
 
   it('keeps the registered Durable Object migration history', () => {
@@ -68,7 +62,7 @@ describe('Web Worker configuration', () => {
     expect(config.durable_objects).toBeUndefined()
     expect(config.r2_buckets).toBeUndefined()
     expect(config.kv_namespaces).toBeUndefined()
-    expect(config.services).not.toContainEqual(
+    expect(config.services ?? []).not.toContainEqual(
       expect.objectContaining({ binding: 'WORKER_SELF_REFERENCE' }),
     )
   })
@@ -85,13 +79,7 @@ describe('Web Worker configuration', () => {
     const edge = config.env?.edge
 
     expect(edge?.name).toBe('tech-study-lab-web-test')
-    expect(edge?.services).toEqual([
-      {
-        binding: 'API',
-        service: 'tech-study-lab-api-test',
-        entrypoint: 'InternalApi',
-      },
-    ])
+    expect(edge?.services ?? []).toEqual([])
     // Wrangler inherits top-level migrations, so the edge Worker must opt out explicitly.
     expect(edge?.migrations).toEqual([])
     expect(edge?.observability).toEqual({

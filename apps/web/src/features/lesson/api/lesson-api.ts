@@ -16,5 +16,5 @@ export async function recordLessonView(
     '教材の閲覧記録に失敗しました。',
   )
 
-  return parseApiResponse(client, lessonViewResponseSchema, response)
+  return parseApiResponse(lessonViewResponseSchema, response)
 }

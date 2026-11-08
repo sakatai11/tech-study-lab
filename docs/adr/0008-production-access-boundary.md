@@ -1,6 +1,6 @@
 # 0008: 本番の公開 API は Worker 内で Cloudflare Access の JWT を検証する
 
-- 状態: Accepted
+- 状態: Superseded by [ADR-0021](./0021-public-api-only.md)
 - 日付: 2026-10-14
 - 関連: Issue #242（`docs/design.md` の旧 3.1 節「本番アクセス境界」・旧 7.2 節「公開・認証境界」から移行）。元の判断は Issue #112
 

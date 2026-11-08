@@ -63,7 +63,7 @@ for (const pathname of staticPaths) {
   }
 }
 
-// SSR: the Worker bundle exists and serves the API through the named Service Binding.
+// The Worker serves built static shells without an API Service Binding (ADR-0021).
 const wranglerConfig = JSON.parse(read('dist/server/wrangler.json').toString()) as {
   main?: string
   services?: Array<{ binding: string; entrypoint?: string }>
@@ -75,12 +75,7 @@ const wranglerConfig = JSON.parse(read('dist/server/wrangler.json').toString()) 
 }
 assert(wranglerConfig.main, 'generated Worker entry is missing')
 read(`dist/server/${wranglerConfig.main}`)
-assert(
-  wranglerConfig.services?.some(
-    ({ binding, entrypoint }) => binding === 'API' && entrypoint === 'InternalApi',
-  ),
-  'API Service Binding is missing',
-)
+assert.deepEqual(wranglerConfig.services ?? [], [], 'Web Service Bindings are forbidden')
 
 // Public assets must not expose answers, and private cache artifacts must go through the Worker.
 for (const entry of readdirSync(new URL('dist/client/', root), {

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="tech-study-lab の Cloudflare Access 認証、API JWT 検証、Service Binding による内部通信を説明する技術ドキュメント"
+      content="tech-study-lab の Cloudflare Access 認証、API JWT 検証、ブラウザからの公開 API 通信を説明する技術ドキュメント"
     />
     <title>tech-study-lab 認証アーキテクチャ</title>
     <style>
@@ -761,17 +761,16 @@
         <h1>認証を「入口」ではなく、信頼経路として設計する</h1>
         <p class="hero-lead">
           tech-study-lab の単一ユーザーMVPでは、Cloudflare Accessが利用者を認証し、API
-          WorkerがJWTを再検証します。Server loaderは公開HTTPを通らず、privateなService
-          Bindingを使います。この文書は、その責務分担と通信順序を1枚で追えるようにまとめたものです。
+          WorkerがJWTを再検証します。ブラウザが公開APIを呼び、Web Workerは静的な枠を配信します。この文書は、その責務分担と通信順序を1枚で追えるようにまとめたものです。
         </p>
         <div class="hero-meta" aria-label="ドキュメント情報">
           <span class="chip">status: target architecture</span>
-          <span class="chip">updated: 2026-08-14</span>
+          <span class="chip">updated: 2026-11-08</span>
           <span class="chip">scope: single-user MVP</span>
-          <span class="chip">primary source: ADR-0008 / ADR-0003 / ADR-0012</span>
+          <span class="chip">primary source: ADR-0021 / ADR-0003 / ADR-0019</span>
         </div>
         <nav class="document-nav" aria-label="関連ドキュメント">
-          <a href="./adr/0008-production-access-boundary.md">ADR-0008（一次ソース）</a>
+          <a href="./adr/0021-public-api-only.md">ADR-0021（一次ソース）</a>
           <a href="./frontend-architecture.html">フロントエンド</a>
           <a href="./backend-architecture.html">バックエンド</a>
           <a href="./api-spec.html">API仕様</a>
@@ -823,9 +822,9 @@
               </p>
             </article>
             <article class="principle data">
-              <h3>内部通信は公開HTTPと分離する</h3>
+              <h3>API通信は公開entrypointに一本化する</h3>
               <p>
-                Web WorkerのServer loaderはnamed <code>InternalApi</code> Service Bindingを使用します。内部経路を偽装可能なHTTPヘッダーで表現しません。
+                ユーザー固有データの取得・書き込みはブラウザが公開APIを呼びます。Web Workerは静的な枠を配信します（ADR-0021）。
               </p>
             </article>
           </div>
@@ -847,12 +846,12 @@
             <article class="trust-node web">
               <span class="node-id">WEB.02</span>
               <h3>Web Worker</h3>
-              <p>公開トップと認証後画面を描画し、Server loaderからprivate bindingを呼びます。</p>
+              <p>ビルド済みの公開トップと認証後画面の静的な枠を配信します。</p>
             </article>
             <article class="trust-node api">
               <span class="node-id">API.03</span>
               <h3>API Worker</h3>
-              <p>公開経路ではJWTを検証し、内部経路ではnamed entrypointの能力を信頼します。</p>
+              <p>すべてのユーザー向けAPIでJWTを検証し、userContextを通してD1へアクセスします。</p>
             </article>
             <article class="trust-node data">
               <span class="node-id">DATA.04</span>
@@ -877,7 +876,6 @@ flowchart LR
     A["Cloudflare Access\n認証 + Policy"]
     W["Web Worker\n/ と /home"]
     P["API Worker\npublic entrypoint"]
-    I["API Worker\nInternalApi entrypoint"]
     D[("D1\nuser data")]
 
     U -->|"公開 GET /"| W
@@ -885,9 +883,7 @@ flowchart LR
     A -->|"認証成功後 /home"| W
     U -->|"credentialed browser API"| A
     A -->|"Cf-Access-Jwt-Assertion"| P
-    W -->|"named Service Binding"| I
     P -->|"verified userContext"| D
-    I -->|"trusted userContext"| D
 
     classDef edge fill:#f0edff,stroke:#6d4aff,color:#162033,stroke-width:2px;
     classDef web fill:#e6f7f9,stroke:#007c91,color:#162033,stroke-width:2px;
@@ -895,7 +891,7 @@ flowchart LR
     classDef data fill:#fff1e5,stroke:#a34b00,color:#162033,stroke-width:2px;
     class A edge;
     class U,W web;
-    class P,I api;
+    class P api;
     class D data;
               </pre>
             </div>
@@ -906,7 +902,7 @@ flowchart LR
           <p class="section-label">03 / Sequence diagrams</p>
           <h2>通信を4つのシーケンスで追う</h2>
           <p class="section-lead">
-            画面ログイン、ブラウザAPI、Server loader、拒否経路は同じ認証処理ではありません。混同を避けるため別々に示します。
+            画面ログイン、ブラウザAPI、静的な枠の配信、拒否経路は同じ認証処理ではありません。混同を避けるため別々に示します。
           </p>
 
           <div class="sequence-grid">
@@ -1003,7 +999,7 @@ sequenceDiagram
             <article>
               <div class="diagram">
                 <div class="diagram-header">
-                  <span class="diagram-title">sequence-03-server-loader.mmd</span>
+                  <span class="diagram-title">sequence-03-static-shell.mmd</span>
                   <div class="diagram-tools" aria-label="図の拡大縮小">
                     <button type="button" data-zoom-action="out" aria-label="縮小">−</button>
                     <button type="button" data-zoom-action="reset" aria-label="等倍">1:1</button>
@@ -1015,30 +1011,25 @@ sequenceDiagram
 sequenceDiagram
     autonumber
     actor User as 認証済み利用者
-    participant Web as Web Worker /home or /review
-    participant Loader as Server loader
-    participant Binding as API Service Binding
-    participant Internal as InternalApi entrypoint
-    participant Context as userContext
-    participant D1 as D1
-
-    User->>Web: GET /home または /review
-    Web->>Loader: RSCを実行
-    Loader->>Binding: env.API.fetch(request)
-    Note over Binding,Internal: public Internetを通らない<br/>entrypoint: InternalApi
-    Binding->>Internal: private invocation
-    Internal->>Context: shared user routesへ委譲
-    Context->>Context: FIXED_USER_IDを注入
-    Context->>D1: due-count / review queue取得
-    D1-->>Loader: typed Hono response
-    Loader-->>User: Suspense領域をstream
+    participant Web as Web Worker
+    participant Assets as ASSETS
+    participant Browser as Client hook
+    participant API as 公開API / Access
+    User->>Web: GET /home または /review（Access認証後）
+    Web->>Assets: ビルド済み HTML / RSC
+    Assets-->>User: 静的な枠と loading 状態
+    User->>Browser: マウント
+    Browser->>API: credentials include で取得
+    Note over API: CORS → JWT検証 → userContext → routes
+    API-->>Browser: ユーザー固有データ
+    Browser->>Browser: 共有Zod検証 → ViewModel → 描画
                   </pre>
                 </div>
               </div>
               <div class="sequence-note">
                 <strong>3</strong>
                 <p>
-                  内部呼び出しはJWTや秘密ヘッダーを作りません。Service Binding自体がCloudflare上の能力であり、named entrypointを公開HTTPから分離します。
+                  Web Worker は API を呼びません。ブラウザからの読み取りも書き込みと同じ Access 検証を通ります（ADR-0019・ADR-0021）。
                 </p>
               </div>
             </article>
@@ -1085,7 +1076,7 @@ sequenceDiagram
           <p class="section-label">04 / Route policy</p>
           <h2>経路ごとの認証ルール</h2>
           <p class="section-lead">
-            「アプリ全体を一律に保護」ではなく、公開トップ、認証後画面、公開API、内部API、health、ローカル開発を明示的に分けます。
+            「アプリ全体を一律に保護」ではなく、公開トップ、認証後画面、公開API、health、ローカル開発を明示的に分けます。
           </p>
           <div class="table-wrap">
             <table>
@@ -1110,7 +1101,7 @@ sequenceDiagram
                   <td><code>GET /home</code>・<code>/review</code>等</td>
                   <td class="route-access">ACCESS</td>
                   <td>Cloudflare Access session + Policy</td>
-                  <td>Server loaderから取得</td>
+                  <td>ブラウザがマウント後に取得</td>
                   <td><code>/home</code>はIssue #127</td>
                 </tr>
                 <tr>
@@ -1122,8 +1113,8 @@ sequenceDiagram
                 </tr>
                 <tr>
                   <td><code>GET /dashboard/due-count</code>等</td>
-                  <td class="route-internal">INTERNAL</td>
-                  <td>named Service Binding <code>InternalApi</code></td>
+                  <td class="route-access">ACCESS + JWT</td>
+                  <td>edge認証 + API WorkerでJWT検証</td>
                   <td>読み取りあり</td>
                   <td>PR #126</td>
                 </tr>
@@ -1249,12 +1240,6 @@ sequenceDiagram
                   <td>いいえ</td>
                 </tr>
                 <tr>
-                  <td><code>API</code></td>
-                  <td>Web Service Binding</td>
-                  <td>Server loader → <code>InternalApi</code></td>
-                  <td>Cloudflare capability</td>
-                </tr>
-                <tr>
                   <td>Access Application / Policy</td>
                   <td>Cloudflare Zero Trust</td>
                   <td>利用者・hostname・session・preflightの制御</td>
@@ -1266,15 +1251,12 @@ sequenceDiagram
 
           <div class="config-grid" style="margin-top: 16px">
             <article class="panel">
-              <h3>Service Binding</h3>
-              <p>Web WorkerはAPI Workerのnamed entrypointを指定します。</p>
-              <pre class="code-block">{
-  "services": [{
-    "binding": "API",
-    "service": "tech-study-lab-api",
-    "entrypoint": "InternalApi"
-  }]
-}</pre>
+              <h3>ブラウザ API client</h3>
+              <p>公開 URL を使い、Access cookie を送信します。</p>
+              <pre class="code-block">createClient(apiBaseUrl, {
+  fetch: (input, init) =&gt;
+    fetch(input, { ...init, credentials: 'include' })
+})</pre>
             </article>
             <article class="panel">
               <h3>固定401契約</h3>
@@ -1296,9 +1278,9 @@ sequenceDiagram
           <h2>採用した方式と採用しなかった方式</h2>
           <div class="decision-grid">
             <article class="decision adopted">
-              <h3>採用: Access + API JWT検証 + Service Binding</h3>
+              <h3>採用: Access + API JWT検証 + ブラウザAPI通信</h3>
               <p>
-                利用者認証、originでの検証、内部Worker通信を別々の仕組みで保証します。アプリ独自の認証UIを持たず、公開HTTPと内部経路を明確に分離できます。
+                利用者認証をAccess、公開APIの検証をAPI Workerが担います。アプリ独自の認証UIを持たず、読み取り・書き込みに同じ境界を適用します（ADR-0021）。
               </p>
             </article>
             <article class="decision rejected">
@@ -1343,10 +1325,10 @@ sequenceDiagram
                   <td>API Worker vars・JWT検証</td>
                 </tr>
                 <tr>
-                  <td>Server loaderがfail-fast</td>
-                  <td>本番Service Binding未設定</td>
-                  <td>公開URLへfallbackしない</td>
-                  <td>Web Worker <code>API</code> binding</td>
+                  <td>API client生成が失敗</td>
+                  <td>production buildの公開API URL未設定</td>
+                  <td>別環境のAPIへ送らない</td>
+                  <td><code>NEXT_PUBLIC_API_BASE_URL</code></td>
                 </tr>
                 <tr>
                   <td>localhostのみ認証なしで成功</td>
@@ -1369,7 +1351,7 @@ sequenceDiagram
             <article class="issue">
               <span class="issue-number">ISSUE #112 / PR #126</span>
               <h3>APIアクセス境界</h3>
-              <p>JWT検証、固定401、loopback限定、InternalApi、credentials。コード実装とテスト。</p>
+              <p>JWT検証、固定401、loopback限定、credentials。Issue #293で内部API経路を撤去（ADR-0021）。</p>
             </article>
             <article class="issue">
               <span class="issue-number">ISSUE #127</span>
@@ -1388,7 +1370,7 @@ sequenceDiagram
       <footer>
         <p>
           このHTMLは認証方式の読み取り用補助資料です。仕様判断が競合する場合は
-          <a href="./adr/0008-production-access-boundary.md">ADR-0008</a>・<a href="./adr/0003-server-injected-user-id.md">ADR-0003</a>・<a href="./adr/0012-separate-web-and-api-workers.md">ADR-0012</a> を優先します。
+          <a href="./adr/0021-public-api-only.md">ADR-0021</a>・<a href="./adr/0003-server-injected-user-id.md">ADR-0003</a>・<a href="./adr/0019-csr-for-user-specific-screens.md">ADR-0019</a> を優先します。
         </p>
       </footer>
     </div>

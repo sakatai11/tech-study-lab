@@ -2,12 +2,12 @@
   "version": 2,
   "sources": {
     ".dependency-cruiser.cjs": {
-      "sha256": "9463ee8faf4c3047e3dc4dd1aa1b71db912b4d5d3c95d4b6b66816a9886b7236",
-      "lines": 281
+      "sha256": "bf45e7fefcf7bf5701e59386031ff7d3d60fe9be7b24edee0f6fd201dc9c77fd",
+      "lines": 277
     },
     "apps/api/src/app.ts": {
-      "sha256": "f36bca1e73b2d2e56c20f7c59e4575edbd43a2dff068900fb80ed5a243ea0ae8",
-      "lines": 101
+      "sha256": "00a8be2e471615672fda5835c7fbc2f174164eeb109ed01a790392323d843adf",
+      "lines": 94
     },
     "apps/api/src/client.ts": {
       "sha256": "7b19181656a919764e930a1893f1735061fa225a98420c9d4b4e17176ac3e0c7",
@@ -58,12 +58,8 @@
       "lines": 6
     },
     "apps/api/src/index.ts": {
-      "sha256": "cc6672ef3ad105d9cd5fd3787977d37857ecf1652da187a4a92f0dfdd68534f8",
-      "lines": 5
-    },
-    "apps/api/src/internal-api.ts": {
-      "sha256": "d970557be8b840287d40093ea4c0eecb5153b651ac3652e4044c4273c3bd5c1f",
-      "lines": 14
+      "sha256": "37503daf1d0282ecaeaa99794a61c0166dcbc3606fd88cfdf770b3ec2485cebf",
+      "lines": 4
     },
     "apps/api/src/middleware/access-boundary.ts": {
       "sha256": "163cdc1932a9213343ee0b6a959547466dd3be4ea8514d660d54725720eaeeea",
@@ -146,7 +142,7 @@
       "lines": 30
     },
     "apps/web/src/features/analytics/api/analytics-api.ts": {
-      "sha256": "50f66ca79a874f0ce3835b931a6dae53f09b76fbc5576b26b8c0e5697f520ceb",
+      "sha256": "d4f4f896d5676996c17441d9d3d967f473229d59d8e7edf85d8c7a858aef0845",
       "lines": 36
     },
     "apps/web/src/features/analytics/client/hooks/use-analytics.ts": {
@@ -154,7 +150,7 @@
       "lines": 36
     },
     "apps/web/src/features/dashboard/api/dashboard-api.ts": {
-      "sha256": "db6c97781e3dce622876549de9734662cc0358601a4b053558ca16ba035ceaa3",
+      "sha256": "0a2e7ef14794b014057da93cf3a7407ce3d08ad077000e7d727ec1b65814e97f",
       "lines": 51
     },
     "apps/web/src/features/dashboard/client/hooks/use-dashboard.ts": {
@@ -174,7 +170,7 @@
       "lines": 75
     },
     "apps/web/src/features/domains/api/domains-api.ts": {
-      "sha256": "6967faf45f63a8855c49f3aaa4fae38aab875e56083452cb92c9b093868c130b",
+      "sha256": "f07ef05b1095e41849655a03f148d79b2008d77b95ccde17c86b0284953172da",
       "lines": 13
     },
     "apps/web/src/features/domains/client/hooks/use-domains.ts": {
@@ -186,7 +182,7 @@
       "lines": 19
     },
     "apps/web/src/features/lesson/api/lesson-api.ts": {
-      "sha256": "5880c018357fb923eaf56a70c53b5bb3509f230a4201bec886034d73822b691b",
+      "sha256": "1f194503294fd19641d7ff80d4800d2dac2904a91dd2f357eba5b7b154e187e9",
       "lines": 21
     },
     "apps/web/src/features/lesson/server/load-catalog.ts": {
@@ -202,7 +198,7 @@
       "lines": 25
     },
     "apps/web/src/features/quiz/api/quiz-api.ts": {
-      "sha256": "ba8c3e5cad13dfeba4b803d187d7dc3b6852f80e8fadb32ad4ee13dd2209ab2b",
+      "sha256": "cc7807ba2dea1668f68d47f9f3889a104fbac2afc5e5033d4f345a589e75ed0b",
       "lines": 21
     },
     "apps/web/src/features/quiz/client/hooks/use-answer-submit.ts": {
@@ -218,7 +214,7 @@
       "lines": 26
     },
     "apps/web/src/features/review/api/review-api.ts": {
-      "sha256": "729e793e847375ecd5f48014bb47f31d8a386b5c2eee15870ac65ea097b10347",
+      "sha256": "089f10de747074a86ab6184aeaa8ba22d841ff1bbd25ed25ff1150ffc7ba717f",
       "lines": 13
     },
     "apps/web/src/features/review/client/hooks/use-review-queue.ts": {
@@ -230,12 +226,12 @@
       "lines": 19
     },
     "apps/web/src/lib/api.ts": {
-      "sha256": "bb10e5805d474ed493df19302643710e85d371c954cfee1513226b3ea0579334",
-      "lines": 52
+      "sha256": "80b7a526a96f0f1bf96ff479165e22a4f5edfc0459393f1389505192f40d7a36",
+      "lines": 39
     },
     "apps/web/wrangler.jsonc": {
-      "sha256": "f3c8614b961f48da4e5a4014a05737b5f5d71a5126a1e1a8860be24f5b646152",
-      "lines": 35
+      "sha256": "5f7f321ac1861d5595712cac79820bb1edd7ed0a15f1f9864a55b550b51c9d18",
+      "lines": 31
     },
     "packages/shared/src/content-parser.ts": {
       "sha256": "d64e767b7f296f0768b5e1a0474d46c720889db2b68576615a0097b8a189be44",
@@ -408,16 +404,6 @@
       "kind": "module",
       "source": {
         "file": "apps/api/src/index.ts",
-        "line": 1
-      },
-      "layer": "api-app",
-      "symbols": []
-    },
-    {
-      "id": "apps/api/src/internal-api.ts",
-      "kind": "module",
-      "source": {
-        "file": "apps/api/src/internal-api.ts",
         "line": 1
       },
       "layer": "api-app",
@@ -971,7 +957,7 @@
       "kind": "http-endpoint",
       "source": {
         "file": "apps/api/src/app.ts",
-        "line": 89
+        "line": 82
       },
       "layer": "api-app",
       "method": "GET",
@@ -2976,39 +2962,6 @@
       "typeOnly": true
     },
     {
-      "from": "apps/api/src/index.ts",
-      "relation": "imports",
-      "to": "apps/api/src/internal-api.ts",
-      "source": {
-        "file": "apps/api/src/index.ts",
-        "line": 4
-      },
-      "specifier": "./internal-api",
-      "typeOnly": false
-    },
-    {
-      "from": "apps/api/src/internal-api.ts",
-      "relation": "imports",
-      "to": "apps/api/src/app.ts",
-      "source": {
-        "file": "apps/api/src/internal-api.ts",
-        "line": 3
-      },
-      "specifier": "./app",
-      "typeOnly": false
-    },
-    {
-      "from": "apps/api/src/internal-api.ts",
-      "relation": "imports",
-      "to": "apps/api/src/env.ts",
-      "source": {
-        "file": "apps/api/src/internal-api.ts",
-        "line": 4
-      },
-      "specifier": "./env",
-      "typeOnly": true
-    },
-    {
       "from": "apps/api/src/middleware/access-boundary.ts",
       "relation": "imports",
       "to": "apps/api/src/env.ts",
@@ -4804,18 +4757,6 @@
       "typeOnly": false
     },
     {
-      "from": "apps/web/wrangler.jsonc",
-      "relation": "binds-service",
-      "to": "apps/api/src/internal-api.ts",
-      "source": {
-        "file": "apps/web/wrangler.jsonc",
-        "line": 9
-      },
-      "binding": "API",
-      "service": "tech-study-lab-api",
-      "entrypoint": "InternalApi"
-    },
-    {
       "from": "endpoint:GET /activity/recent",
       "relation": "implements",
       "to": "apps/api/src/routes/activity.ts",
@@ -4884,7 +4825,7 @@
       "to": "apps/api/src/app.ts",
       "source": {
         "file": "apps/api/src/app.ts",
-        "line": 89
+        "line": 82
       }
     },
     {
@@ -5540,77 +5481,77 @@
       "name": "web-ui-no-lower-layers",
       "source": {
         "file": ".dependency-cruiser.cjs",
-        "line": 73
+        "line": 69
       }
     },
     {
       "name": "web-no-cross-feature-internals",
       "source": {
         "file": ".dependency-cruiser.cjs",
-        "line": 88
+        "line": 84
       }
     },
     {
       "name": "web-server-no-client-hooks",
       "source": {
         "file": ".dependency-cruiser.cjs",
-        "line": 105
+        "line": 101
       }
     },
     {
       "name": "web-shared-pure-transform-only",
       "source": {
         "file": ".dependency-cruiser.cjs",
-        "line": 113
+        "line": 109
       }
     },
     {
       "name": "web-components-root-no-lower-layers",
       "source": {
         "file": ".dependency-cruiser.cjs",
-        "line": 123
+        "line": 119
       }
     },
     {
       "name": "web-lib-no-app-or-features",
       "source": {
         "file": ".dependency-cruiser.cjs",
-        "line": 140
+        "line": 136
       }
     },
     {
       "name": "api-service-no-http-db-framework",
       "source": {
         "file": ".dependency-cruiser.cjs",
-        "line": 154
+        "line": 150
       }
     },
     {
       "name": "api-dal-no-http",
       "source": {
         "file": ".dependency-cruiser.cjs",
-        "line": 169
+        "line": 165
       }
     },
     {
       "name": "api-dal-services-type-only",
       "source": {
         "file": ".dependency-cruiser.cjs",
-        "line": 177
+        "line": 173
       }
     },
     {
       "name": "api-middleware-no-routes-services-dal",
       "source": {
         "file": ".dependency-cruiser.cjs",
-        "line": 189
+        "line": 185
       }
     },
     {
       "name": "api-content-sync-shared-only",
       "source": {
         "file": ".dependency-cruiser.cjs",
-        "line": 199
+        "line": 195
       }
     }
   ]

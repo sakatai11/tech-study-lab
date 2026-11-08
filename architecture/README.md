@@ -51,7 +51,6 @@ Graphの語彙定義。node kind・relation・`layer` は**構文とパス規約
 | `implements` | `http-endpoint` | `module` | endpointを実装するroute module |
 | `calls-endpoint` | `module` | `http-endpoint` | Web の Hono client による endpoint 呼び出し |
 | `derives-schema` | `type` | `db-table` / `contract-schema` | `typeof` による実行時宣言からの型由来 |
-| `binds-service` | `module` | `module` | Worker設定のservice binding |
 | `binds-database` | `module` | `worker-binding` | Worker設定のD1 binding |
 
 ここでいうsymbol kindは `db-table` / `contract-schema` / `deps-type` / `type` / `function` / `constant` を指す。`imports-symbol` は import binding の存在だけを表し、呼び出しや実行を意味しない。実行経路の証明にはコードと型を確認する。
@@ -112,7 +111,7 @@ Graphは設計契約の本文を持たないのと同様に、契約への**参�
 - API routeは `new Hono().get(...).post(...)` の連鎖、app側は名前付きimportしたroute（factory呼び出しを含む）の静的文字列mountを対象とする。ローカルroot `/` のwrapperは透過として扱う。変数に代入したHonoへの後付け登録、動的path、入れ子mount、aliasされたHono、`on`/`all`、条件別登録は対象外。root appに直接登録された `/health` 等の静的handlerは含むが、public/internal entrypointのendpoint差は区別しない。動的pathや非rootローカルmountは検出できた範囲でエラーにする。
 - Web endpoint呼び出しはプロパティ/文字列indexの連鎖と `$get` 等を対象とする。動的indexや実行時URLは解析しない。未一致の呼び出しはedgeを作らないため、完全性は既存型チェック・レビューで確認する。
 - Web設定はTypeScriptのJSONC parserで解析する。API TOMLは専用ライブラリを追加せず、rootの1行文字列 `name`/`main` と `[[d1_databases]]` の1行文字列を投影する限定parser。その他のsectionは無視する。環境別override、inline table、複数行文字列は未対応で、root設定に対する検証のみ。
-- API bindingのservice名、`InternalApi` export先、WorkerEntrypoint継承、DB bindingを検査する。production制御フローや認証の正しさ、実際のCloudflare接続は保証しない。local URL fallback・browser公開URLは許容されるため、HTTPの一律禁止検査は行わない。
+- Web の全環境で Service Binding がないこと、API の内部 entrypoint が再導入されていないこと、DB binding を検査する（ADR-0021）。production制御フローや認証の正しさ、実際のCloudflare接続は保証しない。ブラウザは API の公開 URL を使う。
 - ファイル走査は明示ソースrootだけで、ディレクトリ走査時にsymlinkを追わず、`.env`・`.dev.vars`・認証ファイルは読み込まない。
 
 コード変更後は検証とレビューを済ませ、`extract` → `check` でsnapshotを更新する。snapshot再生成だけで不正な設計変更を承認したことにはならない。
