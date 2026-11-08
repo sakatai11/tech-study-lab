@@ -1,4 +1,5 @@
 import type { DomainKey } from '@tsl/shared'
+import type { Root } from 'hast'
 
 export type CatalogTopicViewModel = {
   topic: string
@@ -25,7 +26,7 @@ export type TopicViewModel = {
   domain: DomainKey
   topic: string
   title: string
-  overviewMarkdown: string
+  overview: Root
   lessons: LessonSummaryViewModel[]
 }
 
@@ -41,6 +42,6 @@ export type LessonViewModel = {
   id: string
   title: string
   estimatedMinutes: number
-  markdownBody: string
+  body: Root
   questions: LessonQuestionViewModel[]
 }

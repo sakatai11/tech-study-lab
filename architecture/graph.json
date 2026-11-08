@@ -190,12 +190,12 @@
       "lines": 28
     },
     "apps/web/src/features/lesson/server/load-lesson.ts": {
-      "sha256": "afeeacc1703912e8a84b34a977783f98161278c474c270cdcb1454b7fc33b625",
+      "sha256": "51f2a15f26f59afbb03bebcd7ea4cb5f1b916adf551a71318a8eb4ce1f085962",
       "lines": 26
     },
     "apps/web/src/features/lesson/server/load-topic.ts": {
-      "sha256": "181a2372dae0fedfa07bfd015f6dcb2a295c8bd4b554ee02f5eb7d3064c7f96e",
-      "lines": 25
+      "sha256": "2a917b62ecfdded0cefea7e4e8125513f2f0669fcd948706548c6dd5047818a1",
+      "lines": 35
     },
     "apps/web/src/features/quiz/api/quiz-api.ts": {
       "sha256": "cc7807ba2dea1668f68d47f9f3889a104fbac2afc5e5033d4f345a589e75ed0b",

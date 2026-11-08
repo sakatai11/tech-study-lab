@@ -53,7 +53,7 @@ Web（`apps/web`）の見た目・表示文言・画面の振る舞いの規約�
   - 意味の対応（同じ意味には同じアイコン）：教材・レッスン `menu_book`、演習 `contract_edit`、復習（SRS） `event_repeat`、分析 `bar_chart`、学習領域の一覧 `category`、領域 `security`（security）/ `code`（frontend）/ `dns`（backend）/ `account_tree`（architecture）、正解 `check_circle`、誤答 `cancel`、準備中 `schedule`、ストリーク `local_fire_department`、学習時間 `timer`、習得済み `verified`、解答数・解答の記録 `edit_note`、反応時間 `speed`。`account_tree` はアーキテクチャ領域専用とする。
   - ターミナル表現（ロゴの `>_`、ターミナルパンくず、`>_ grading...`、テストランナーの `PASS` / `FAIL`、`keycap`）は文字のまま残し、アイコンに置き換えない。
 - チャンキーボタン（`btn-green` / `btn-blue` / `btn-ghost`）：ベタ塗り＋下エッジ（`box-shadow: 0 4px 0 <shade>`）、`:active` で 4px 沈む。green＝主アクション、ghost＝副アクション。
-- `term-win`：ターミナルウィンドウ。ヘッダーは **`>_` プロンプトバッジ＋mono タイトル＋右端メタ情報**（例 `80×24`・`exit 0`・`utf-8 · tsx`）。教材のコードブロック、演習結果のテストレポート、スキルツリーで使用。
+- `term-win`：ターミナルウィンドウ。ヘッダーは **`>_` プロンプトバッジ＋mono タイトル＋右端メタ情報**（例 `80×24`・`exit 0`・`utf-8 · tsx`）。教材のコードブロック、演習結果のテストレポート、スキルツリーで使用。教材のコードブロックはタイトルにフェンスの言語名（指定なしは `text`）、右端メタに `utf-8` を表示する。シンタックスハイライトは `content:generate` の時点で Shiki の `github-dark-default` により確定させ、Worker・ブラウザへハイライタを送らない。教材の表は横スクロール可能なラッパーで包み、見出し行の背景に `--well` を使う。
 - `keycap`：問題 ID・選択肢番号のキーキャップ表現。選択肢番号はキー操作と同じ `1`〜`4` を表示し、読み上げ名の「N番」と一致させる。キー操作の案内は PC 幅だけに表示する。
 - ツリー行：スキルツリーは `devpath tree` コマンド出力風のディレクトリツリー（罫線文字 `├─ └─`）。各行は button（min-height 44px）、done＝緑✓ / current＝青▶＋ブロックバー＋START / locked＝減光🔒。ツリーは未実装のため、上記のアイコン方針の例外として記号のまま残す。状態記号を Material Symbols（候補：`check_circle` / `play_arrow` / `lock`）に置き換えるかはツリー実装時に決める。
 - ターミナルパンくず：各画面の先頭に `~/devpath $ <コマンド>`（緑プロンプト＋点滅カーソル）。

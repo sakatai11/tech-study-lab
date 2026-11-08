@@ -1,7 +1,6 @@
 import 'server-only'
 
 import Link from 'next/link'
-import ReactMarkdown from 'react-markdown'
 
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
@@ -9,6 +8,7 @@ import { MaterialSymbol } from '@/components/ui/material-symbol'
 import { TermCrumb } from '@/components/ui/term-crumb'
 
 import type { TopicViewModel } from '../../view-model'
+import { MarkdownTree } from './markdown-tree'
 
 export function TopicDisplay({ viewModel }: { viewModel: TopicViewModel }) {
   return (
@@ -22,7 +22,7 @@ export function TopicDisplay({ viewModel }: { viewModel: TopicViewModel }) {
           {viewModel.title}
         </h1>
         <div className="markdown-body mt-4 max-w-3xl text-pretty text-ink-2">
-          <ReactMarkdown>{viewModel.overviewMarkdown}</ReactMarkdown>
+          <MarkdownTree tree={viewModel.overview} />
         </div>
       </header>
 

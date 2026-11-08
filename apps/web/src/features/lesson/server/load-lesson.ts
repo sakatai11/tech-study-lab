@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { getLessonContent, getLessonRouteParams } from '@/lib/content'
+import { getLessonContent, getLessonMarkdownTree, getLessonRouteParams } from '@/lib/content'
 
 import { lessonContentToViewModel } from '../mapper'
 import type { LessonViewModel } from '../view-model'
@@ -16,7 +16,7 @@ export function loadLesson(
     return undefined
   }
 
-  return lessonContentToViewModel(content)
+  return lessonContentToViewModel(content, getLessonMarkdownTree(lessonId))
 }
 
 /** `generateStaticParams` に渡す route params。page から lib/content を直接読まないための委譲。 */

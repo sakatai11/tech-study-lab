@@ -85,6 +85,19 @@ for (const entry of readdirSync(new URL('dist/client/', root), {
   if (!entry.endsWith('.js')) continue
   assert(!answerIndexPattern.test(read(`dist/client/${entry}`).toString()), entry)
 }
+// Markdown is compiled by content:generate: no highlighter may ship to the Worker or the browser.
+const highlighterPattern = /createHighlighter|vscode-textmate|oniguruma|shiki/i
+for (const directory of ['dist/server/', 'dist/client/']) {
+  for (const entry of readdirSync(new URL(directory, root), {
+    recursive: true,
+    encoding: 'utf8',
+  })) {
+    if (entry.endsWith('.wasm') || entry.endsWith('.js')) {
+      assert(!highlighterPattern.test(read(`${directory}${entry}`).toString()), entry)
+    }
+  }
+}
+
 const privateIndex = JSON.parse(
   read('dist/client/_vinext/static-cache/index.json').toString(),
 ) as Record<string, { kind: string }>
