@@ -19,7 +19,7 @@ export async function fetchDueCount(client: ApiClient): Promise<DueCountResponse
     '復習件数の取得に失敗しました。',
   )
 
-  return parseApiResponse(client, dueCountResponseSchema, response)
+  return parseApiResponse(dueCountResponseSchema, response)
 }
 
 export async function fetchDashboardSummary(client: ApiClient): Promise<AnalyticsSummaryResponse> {
@@ -28,7 +28,7 @@ export async function fetchDashboardSummary(client: ApiClient): Promise<Analytic
     '学習サマリーの取得に失敗しました。',
   )
 
-  return parseApiResponse(client, analyticsSummaryResponseSchema, response)
+  return parseApiResponse(analyticsSummaryResponseSchema, response)
 }
 
 export async function fetchDashboardHeatmap(client: ApiClient): Promise<AnalyticsHeatmapResponse> {
@@ -37,7 +37,7 @@ export async function fetchDashboardHeatmap(client: ApiClient): Promise<Analytic
     '学習コントリビューションの取得に失敗しました。',
   )
 
-  return parseApiResponse(client, analyticsHeatmapResponseSchema, response)
+  return parseApiResponse(analyticsHeatmapResponseSchema, response)
 }
 
 export async function fetchRecentActivity(client: ApiClient): Promise<RecentActivityResponse> {
@@ -46,5 +46,5 @@ export async function fetchRecentActivity(client: ApiClient): Promise<RecentActi
     '最近のアクティビティの取得に失敗しました。',
   )
 
-  return parseApiResponse(client, recentActivityResponseSchema, response)
+  return parseApiResponse(recentActivityResponseSchema, response)
 }

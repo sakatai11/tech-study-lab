@@ -520,10 +520,9 @@
             に持つ。
           </li>
           <li>
-            web と API は<strong>別 Worker</strong>（ADR-0012）。ユーザー固有データの取得も
-            mutation も、Client hook から API Worker の公開 URL で呼ぶ（ADR-0019）。Service Binding
-            （<code>env.API</code>）の経路は呼び出し元がなくなり、ADR-0019 の段階2で撤去する。
-            <code>hc&lt;AppType&gt;</code> の型はどの経路でも同一。
+            web と API は<strong>別 Worker</strong>（ADR-0021）。ユーザー固有データの取得も
+            mutation も、Client hook から API Worker の公開 URL で呼ぶ（ADR-0019・ADR-0021）。
+            <code>hc&lt;AppType&gt;</code> で型を共有し、応答は共有 Zod で検証する。
           </li>
           <li>
             content 由来の初回データは Server loader で ViewModel 化して props で渡し、Client
@@ -1027,14 +1026,12 @@ flowchart LR
               </td>
             </tr>
             <tr>
-              <td><code>apps/web/src/lib/api.ts</code>・<code>apps/web/src/lib/api-server.ts</code></td>
+              <td><code>apps/web/src/lib/api.ts</code></td>
               <td>
                 <code>api.ts</code>：<code>createBrowserApiClient</code>（公開 URL）の Hono client
                 生成と、<code>requestJson</code> による
                 <code>res.ok</code>・<code>res.json()</code> の共通処理。
-                <code>api-server.ts</code>（<code>server-only</code>）：<code>createServerApiClient</code>（本番は
-                <code>cloudflare:workers</code> の Service Binding の fetch、binding 未設定の非 production は URL フォールバック）。
-                呼び出し元がなくなったため、ADR-0019 の段階2で撤去する。
+                <code>parseApiResponse</code> による共有 Zod の応答検証。
               </td>
               <td>
                 endpoint 固有の path・method・引数・Zod 検証、ViewModel
@@ -1299,7 +1296,8 @@ export function ReviewRunner({
 // 避ける: page が API DTO、content join、sort、ViewModel 形状を知っている。
 // さらに Server でユーザー固有データを取得するので、静的な枠にできない（ADR-0019）。
 export default async function ReviewPage() {
-  const client = await createServerApiClient();
+  // Server から公開 API を呼ぶことも禁止（ADR-0019・ADR-0021）。
+  const client = createClient(process.env.NEXT_PUBLIC_API_BASE_URL!);
   const res = await client.review.queue.$get();
   const dto = await res.json();
   const questions = getBundledQuestions();
@@ -1335,19 +1333,18 @@ export default async function ReviewPage() {
           を受け取ります。
         </p>
 
-        <h3>Worker 構成と接続（ADR-0012・design.md §5.3）</h3>
+        <h3>Worker 構成と接続（ADR-0021・design.md §5.3）</h3>
         <p>
           <code>apps/web</code>（Vinext）と <code>apps/api</code>（Hono）は
           <strong>別 Worker</strong> としてデプロイします。Next.js の Route
           Handler 上に Hono を載せる同居構成は採用しません（wrangler
           設定の所有権・デプロイ独立性・ADR-0019 のキャッシュ方針の前提を維持するため）。
-          <code>hc&lt;AppType&gt;</code> の型安全RPCはどの経路でも同一です。
+          <code>hc&lt;AppType&gt;</code> の型安全RPCをブラウザで使います。
         </p>
         <div class="diagram">
           <p>
             ユーザー固有データの取得も mutation も、Client hook が公開 URL（当面は <code>cors()</code>
-            で許可、将来はルート割当で同一オリジン化）で呼びます（ADR-0019）。Service Binding による内部呼び出しは
-            呼び出し元がなくなり、段階2で撤去します（図の点線）。
+            で許可、将来はルート割当で同一オリジン化）で呼びます（ADR-0021）。Web Worker は API を呼びません。
           </p>
           <div class="diagram-toolbar" aria-label="Worker構成と接続の図操作">
             <button type="button" data-zoom-action="in">拡大</button>
@@ -1361,7 +1358,7 @@ flowchart LR
   classDef api fill:#ecfdf5,stroke:#86efac,color:#1f2328;
 
   subgraph webWorker["web Worker（Vinext / Next.js 互換）"]
-    loader["Server loader\ncreateServerApiClient"]:::server
+    loader["ビルド済み HTML / RSC\n静的な枠と content"]:::server
   end
 
   browser["Client hook（ブラウザ）\ncreateBrowserApiClient\n4画面の取得と mutation"]:::client
@@ -1372,31 +1369,13 @@ flowchart LR
 
   d1[("D1")]:::api
 
-  loader -.->|"Service Binding env.API.fetch\n呼び出し元なし（段階2で撤去）"| routes
+  loader -->|"静的な枠と props"| browser
   browser -->|"公開URL\n（将来: /api/* ルート割当で同一オリジン化）"| routes
   routes --> d1</pre>
         </div>
         <pre
-          data-code-title="apps/web/src/lib/api-server.ts / api.ts"
-        ><code class="language-ts">// apps/web/src/lib/api-server.ts（Client bundle へ入れない Server 専用）
-import 'server-only';
-import { env } from 'cloudflare:workers';
-
-// 呼び出し元はなくなった（ADR-0019 の段階2で撤去）。本番は Service Binding 必須、
-// production 以外で binding がない場合だけ URL へフォールバック
-export async function createServerApiClient(): Promise&lt;ApiClient&gt; {
-  const { API: api }: { API?: Fetcher } = env;
-  if (api) {
-    // ホスト名はダミー（Service Binding はパスのみ使用）
-    return createClient('https://api.internal', { fetch: api.fetch.bind(api) });
-  }
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('Cloudflare API service binding (API) is not configured.'); // 本番は fail-fast
-  }
-  return createClient(process.env.API_BASE_URL ?? 'http://localhost:8787');
-}
-
-// apps/web/src/lib/api.ts
+          data-code-title="apps/web/src/lib/api.ts"
+        ><code class="language-ts">// apps/web/src/lib/api.ts
 // Client hook 用: env から解決した公開 baseURL。4画面の取得と mutation の両方で使う。
 // 生成はマウント後・初回送信まで遅らせる（render 時に呼ぶと prerender でも評価され、未設定時に throw する）。
 export function createBrowserApiClient(): ApiClient {
@@ -1406,17 +1385,13 @@ export function createBrowserApiClient(): ApiClient {
     throw new Error('NEXT_PUBLIC_API_BASE_URL is required in production');
   }
 
-  return createClient(apiBaseUrl ?? 'http://localhost:8787');
+  return createClient(apiBaseUrl ?? 'http://localhost:8787', {
+    fetch: (input, init) =&gt; fetch(input, { ...init, credentials: 'include' }),
+  });
 }</code></pre>
         <div class="note">
-          web 側の wrangler 設定に
-          <code
-            >"services": [{ "binding": "API", "service": "&lt;API Worker
-            名&gt;" }]</code
-          >
-          を宣言します。<code>apps/api/src/client.ts</code> のファクトリは
-          <code>hc</code> の第2引数（<code>fetch</code>
-          オプション等）を受け渡せる形に拡張します。
+          Web の wrangler 設定とビルド成果物には Service Binding を持たせません。
+          API は公開 entrypoint で Access の JWT を検証し、ブラウザは応答を共有 Zod で検証します（ADR-0021）。
         </div>
       </section>
     </main>

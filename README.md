@@ -13,7 +13,7 @@
 - **機械で守るガードレール**：TypeScript strict、Zod、Biome、dependency-cruiser による依存境界の検証、エージェント契約の検査をすべて CI の PR ゲートに入れています。
 - **Knowledge Graph による影響範囲の特定**：コードと設定から構造グラフを抽出します。エージェントは全文検索の前にグラフで影響範囲を絞り込みます。
 - **Claude Code と Codex の両対応**：スキル・エージェント定義・hooks を `.ai/` に一元化し、どちらのランタイムからも同じワークフローを使えます。
-- **Cloudflare 構成**：Web と Hono API を別々の Worker としてデプロイし、Service Binding と型安全 RPC（`hc`）でつないでいます。Web の開発・ビルド・デプロイ手順は Next.js 互換の Vinext に統一し、本番 Web Worker も Vinext へ移行します。初回切替の条件と手順は [環境・デプロイ運用](./docs/deployment.md#本番-web-の-vinext-切替issue-221) にまとめています。
+- **Cloudflare 構成**：Web と Hono API を別々の Worker としてデプロイし、ブラウザから公開 API を型安全 RPC（`hc`）で呼び出します。Web の開発・ビルド・デプロイ手順は Next.js 互換の Vinext に統一し、本番 Web Worker も Vinext へ移行します。初回切替の条件と手順は [環境・デプロイ運用](./docs/deployment.md#本番-web-の-vinext-切替issue-221) にまとめています。
 
 ## 主な機能
 
@@ -58,7 +58,7 @@ SRS は問題単位で管理しており、弱点を1問ごとに追跡できま
 ![アーキテクチャ図](./docs/images/readme/architecture.png)
 
 - web と api は**別の Worker** です。API は自分の wrangler 設定と D1 マイグレーションを単独で管理し、Next.js のビルドとは独立してデプロイできます。
-- サーバー側の読み込みは Service Binding を通るため、公衆インターネットを経由しません。解答・閲覧記録の送信と復習件数の取得は、ブラウザから api Worker を直接呼び出します。この呼び出しは Cloudflare Access で保護し、Worker 内でも JWT を検証します。
+- 認証後4画面はビルド済みの静的な枠を配信し、ユーザー固有データの読み取り・解答・閲覧記録の送信はブラウザから api Worker を直接呼び出します。Cloudflare Access で保護し、Worker 内でも JWT を検証します（ADR-0019・ADR-0021）。Web Worker から API を呼ぶ Service Binding はありません。
 - 教材・問題は Git 管理の Markdown です。画面表示用にビルドへ取り込み、採点用に D1 へ同期します。
 - 型とスキーマは `packages/shared` に集約し、フロントエンド・API・DB で共有しています。
 
@@ -115,7 +115,7 @@ flowchart LR
 | `pnpm architecture:check` | Knowledge Graph のスナップショットがコードと一致しているか（develop 向け PR のみ） |
 | `pnpm architecture:test` | Knowledge Graph の抽出・検証ロジックのテスト（develop 向け PR のみ） |
 | `pnpm build` | web（Vinext production build）/ api のビルド |
-| `pnpm --filter @tsl/web verify:build` | SSG の生成物（認証後4画面の静的な枠を含む）、Service Binding、公開成果物への正解データとユーザー固有データの混入を検査 |
+| `pnpm --filter @tsl/web verify:build` | SSG の生成物（認証後4画面の静的な枠を含む）、Service Binding の不在、公開成果物への正解データとユーザー固有データの混入を検査 |
 
 ## リポジトリ構成
 

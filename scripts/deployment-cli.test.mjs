@@ -22,8 +22,21 @@ import { conditionsId } from './performance-lib.mjs'
 const source = fileURLToPath(new URL('../', import.meta.url))
 const verification = getTarget('verification')
 
-test('actual apply CLI records attempts before mutations and refuses invalid releases [ADR-0006] [ADR-0010] [ADR-0016] [ADR-0017] [ADR-0018]', () => {
+test('actual apply CLI records attempts before mutations and refuses invalid releases [ADR-0006] [ADR-0010] [ADR-0016] [ADR-0017] [ADR-0018] [ADR-0012] [ADR-0021]', () => {
   const scenarios = [
+    { environment: 'verification', legacyBinding: true },
+    { environment: 'production', legacyBinding: true },
+    {
+      environment: 'verification',
+      legacyBinding: true,
+      scope: 'api',
+      failure: 'bound-web-skipped',
+    },
+    { environment: 'verification', legacyBinding: true, failure: 'binding-read' },
+    { environment: 'verification', legacyBinding: true, failure: 'binding-shape' },
+    { environment: 'verification', legacyBinding: true, failure: 'binding-confirm' },
+    { environment: 'verification', legacyBinding: true, failure: 'binding-still-present' },
+    { environment: 'verification', legacyBinding: true, failure: 'web-upload' },
     { environment: 'verification', command: 'rollback' },
     { environment: 'production', command: 'rollback' },
     { environment: 'verification', command: 'rollback', failure: 'attempt-status' },
@@ -68,6 +81,7 @@ test('actual apply CLI records attempts before mutations and refuses invalid rel
   ]
   for (const {
     environment,
+    legacyBinding,
     failure,
     previousContent,
     late,
@@ -157,7 +171,6 @@ test('actual apply CLI records attempts before mutations and refuses invalid rel
       json('.deploy/release/web/server/wrangler.json', {
         name: target.web,
         main: 'index.js',
-        services: [{ binding: 'API', service: target.api, entrypoint: 'InternalApi' }],
         assets: { directory: '../client' },
         migrations:
           environment === 'production'
@@ -203,14 +216,18 @@ test('actual apply CLI records attempts before mutations and refuses invalid rel
 const fs = require('node:fs'), assert = require('node:assert/strict');
 assert(fs.readFileSync(${JSON.stringify(join(root, 'records.jsonl'))}, 'utf8').includes('"kind":"tsl-attempt"'));
 assert(fs.readFileSync(${JSON.stringify(join(root, 'statuses.jsonl'))}, 'utf8').includes('"state":"in_progress"'));
+if (process.argv.includes('scripts/deploy.mjs')) {
+  fs.writeFileSync(${JSON.stringify(join(root, 'web-uploaded'))}, '1');
+}
 fs.appendFileSync(${JSON.stringify(join(root, 'commands.jsonl'))}, JSON.stringify(process.argv.slice(2)) + '\\n');
+if (process.argv.includes('scripts/deploy.mjs') && process.env.FAILURE === 'web-upload') process.exit(1);
 `,
       )
       chmodSync(join(root, 'bin/pnpm'), 0o755)
       writeFileSync(
         join(root, 'network.mjs'),
         `
-        import { appendFileSync } from 'node:fs';
+        import { appendFileSync, existsSync } from 'node:fs';
         const target = ${JSON.stringify(target)};
         const rays = [];
         const verificationTree = ${JSON.stringify(sourceDelta ? baseTree : tree)};
@@ -243,6 +260,12 @@ fs.appendFileSync(${JSON.stringify(join(root, 'commands.jsonl'))}, JSON.stringif
             if (path.endsWith('/deployments/2/statuses')) return Response.json([{state:'success'}]);
           }
           if (url.startsWith('https://api.cloudflare.com/client/v4/accounts/' + target.account + '/')) {
+            if (path.endsWith('/workers/scripts/' + target.web + '/settings')) {
+              if (process.env.FAILURE === 'binding-read' || (process.env.FAILURE === 'binding-confirm' && existsSync(${JSON.stringify(join(root, 'web-uploaded'))}))) return new Response(null,{status:403});
+              if (process.env.FAILURE === 'binding-shape') return Response.json({success:true,result:{}});
+              const bound = process.env.LEGACY_BINDING && (!existsSync(${JSON.stringify(join(root, 'web-uploaded'))}) || process.env.FAILURE === 'binding-still-present');
+              return Response.json({success:true,result:{bindings:bound ? [{type:'service',name:'API',service:target.api,entrypoint:'InternalApi'}] : [{type:'assets',name:'ASSETS'}]}});
+            }
             if (path.endsWith('/workers/subdomain')) return Response.json({success:true,result:{subdomain:'fixture'}});
             if (path.endsWith('/d1/database/' + target.databaseId + '/query')) return Response.json({success:true,result:[{results:[{activeQuestions:1,answerLogs:2,srsStates:1,dueSrs:1,lessonViews:1}]}]});
             if (path.endsWith('/workers/observability/telemetry/query')) {
@@ -299,6 +322,7 @@ fs.appendFileSync(${JSON.stringify(join(root, 'commands.jsonl'))}, JSON.stringif
           env: {
             PATH: `${join(root, 'bin')}:${process.env.PATH}`,
             FAILURE: failure ?? '',
+            LEGACY_BINDING: legacyBinding ? '1' : '',
             LATE: late ?? '',
             PREVIOUS_CONTENT: previousContent ? '1' : '',
             GITHUB_REF: `refs/heads/${target.branch}`,
@@ -349,7 +373,16 @@ fs.appendFileSync(${JSON.stringify(join(root, 'commands.jsonl'))}, JSON.stringif
       }
       const operation = JSON.parse(readFileSync(join(root, '.deploy/result.json'), 'utf8'))
       if (late) {
-        const done = ['preflight', 'migrations', 'sync', 'api', 'apiHealth', 'web', 'smoke']
+        const done = [
+          'preflight',
+          'migrations',
+          'sync',
+          'detachWebApi',
+          'api',
+          'apiHealth',
+          'web',
+          'smoke',
+        ]
         const stopsInPerformance = ['response', 'readiness-query'].includes(late)
         assert.deepEqual(operation.completed, stopsInPerformance ? done : [...done, 'performance'])
         assert.equal(operation.stage, stopsInPerformance ? 'performance' : 'cpuLogs')
@@ -371,12 +404,26 @@ fs.appendFileSync(${JSON.stringify(join(root, 'commands.jsonl'))}, JSON.stringif
         }
         assert(!JSON.stringify(report).includes('fixture-secret'))
         assert(!JSON.stringify(report).includes('Learning'))
+      } else if (['binding-still-present', 'web-upload', 'binding-confirm'].includes(failure)) {
+        assert.equal(result.status, 1, result.stderr)
+        assert.equal(operation.stage, 'detachWebApi')
+        const commands = readFileSync(join(root, 'commands.jsonl'), 'utf8')
+          .trim()
+          .split('\n')
+          .map(JSON.parse)
+        assert.equal(commands.length, 3, 'only migration, sync, and Web upload may run')
+        assert(commands[2].includes('scripts/deploy.mjs'))
+        assert.deepEqual(
+          records().map(({ payload }) => payload.kind),
+          ['tsl-attempt'],
+        )
       } else if (failure) {
         assert.equal(result.status, 1, `${failure}: ${result.stderr}`)
         const reason = {
           'skipped-version': `skipped ${scope === 'api' ? 'web' : 'api'} version changed`,
           'baseline-changed': 'release baseline changed',
           'unsafe-skip': 'cannot skip changed web source',
+          'bound-web-skipped': 'bound Web must be deployed before removing InternalApi',
           'source-mismatch': 'production source must match',
         }[failure]
         if (reason) assert(result.stderr.includes(reason), result.stderr)
@@ -396,13 +443,22 @@ fs.appendFileSync(${JSON.stringify(join(root, 'commands.jsonl'))}, JSON.stringif
           [
             ['d1', 'migrations'],
             ['d1', 'execute'],
-            ...(scope !== 'web' ? [['deploy', '--config']] : []),
-            ...(scope !== 'api' ? [['node', 'scripts/deploy.mjs']] : []),
+            ...(legacyBinding
+              ? [
+                  ['node', 'scripts/deploy.mjs'],
+                  ['deploy', '--config'],
+                ]
+              : [
+                  ...(scope !== 'web' ? [['deploy', '--config']] : []),
+                  ...(scope !== 'api' ? [['node', 'scripts/deploy.mjs']] : []),
+                ]),
           ],
         )
         assert(commands[1].includes(join(release, 'content/sync.sql')))
-        if (scope !== 'web') assert(commands[2].includes(join(release, 'api/wrangler.json')))
-        if (scope !== 'api') assert(commands.at(-1).includes('--upload-only'))
+        if (scope !== 'web')
+          assert(commands[legacyBinding ? 3 : 2].includes(join(release, 'api/wrangler.json')))
+        if (scope !== 'api')
+          assert(commands[legacyBinding ? 2 : commands.length - 1].includes('--upload-only'))
         assert(!commands.some((args) => args.includes('build')))
         const [attempt, record] = records()
         assert.equal(attempt.payload.kind, 'tsl-attempt')

@@ -64,13 +64,6 @@ function createUserRoutes({ rateLimiters }: ApiAppOptions = {}) {
     .route('/activity', activityRoute)
 }
 
-export function createInternalApiApp(options?: ApiAppOptions) {
-  return new Hono<AppEnv>()
-    .onError(apiErrorHandler)
-    .use('*', userContext)
-    .route('/', createUserRoutes(options))
-}
-
 export function createPublicApiApp(
   accessTokenVerifier?: AccessTokenVerifier,
   options?: ApiAppOptions,

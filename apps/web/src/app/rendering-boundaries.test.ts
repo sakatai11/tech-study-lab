@@ -23,7 +23,6 @@ describe('user-specific routes [ADR-0019]', () => {
 
   it('fetches user-specific data only from the browser, not from Server modules', () => {
     const serverFetches = sourceFiles()
-      .filter(({ path }) => !path.startsWith('lib/api-server'))
       .filter(({ text }) => /createServerApiClient|lib\/api-server/.test(text))
       .map(({ path }) => path)
 

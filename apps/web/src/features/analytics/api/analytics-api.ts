@@ -15,7 +15,7 @@ export async function fetchAnalyticsSummary(client: ApiClient): Promise<Analytic
     () => client.analytics.summary.$get({ query: analyticsRequestSchema.parse({}) }),
     '学習サマリーの取得に失敗しました。',
   )
-  return parseApiResponse(client, analyticsSummaryResponseSchema, response)
+  return parseApiResponse(analyticsSummaryResponseSchema, response)
 }
 
 export async function fetchAnalyticsWeekly(client: ApiClient): Promise<AnalyticsWeeklyResponse> {
@@ -23,7 +23,7 @@ export async function fetchAnalyticsWeekly(client: ApiClient): Promise<Analytics
     () => client.analytics.weekly.$get({ query: analyticsRequestSchema.parse({}) }),
     '週間アクティビティの取得に失敗しました。',
   )
-  return parseApiResponse(client, analyticsWeeklyResponseSchema, response)
+  return parseApiResponse(analyticsWeeklyResponseSchema, response)
 }
 
 export async function fetchAnalyticsMistakes(client: ApiClient): Promise<MistakesResponse> {
@@ -31,5 +31,5 @@ export async function fetchAnalyticsMistakes(client: ApiClient): Promise<Mistake
     () => client.analytics.mistakes.$get({ query: analyticsRequestSchema.parse({}) }),
     '誤答ランキングの取得に失敗しました。',
   )
-  return parseApiResponse(client, mistakesResponseSchema, response)
+  return parseApiResponse(mistakesResponseSchema, response)
 }

@@ -86,7 +86,7 @@ pnpm workspaces による monorepo とする。`apps/web` は画面、`apps/api`
 
 - フロント ⇔ API は Hono の `hc`（型安全RPC）で接続。
 - Drizzle スキーマと Zod スキーマを `packages/shared` に集約し、フロント・API・DBで単一ソース化する。
-- `apps/web` と `apps/api` は別の Worker としてデプロイし、ブラウザは API Worker の公開 URL で API を呼ぶ。ユーザー固有データの取得も書き込みも、この経路で Hono API を通す（[ADR-0012](./adr/0012-separate-web-and-api-workers.md)、[ADR-0019](./adr/0019-csr-for-user-specific-screens.md)）。Web Worker の Service Binding（`InternalApi`）は読み取りに使わない。呼び出し元がなくなるため、[ADR-0019](./adr/0019-csr-for-user-specific-screens.md) の段階2で撤去する。公開 entrypoint の検証の順序は [ADR-0008](./adr/0008-production-access-boundary.md)、`user_id` の決定は [ADR-0003](./adr/0003-server-injected-user-id.md) が持つ。
+- `apps/web` と `apps/api` は別の Worker としてデプロイし、ブラウザは API Worker の公開 URL で API を呼ぶ。ユーザー固有データの取得も書き込みも、この経路で Hono API を通す（[ADR-0021](./adr/0021-public-api-only.md)、[ADR-0019](./adr/0019-csr-for-user-specific-screens.md)）。Web Worker は API 用の Service Binding を持たない。公開 entrypoint の検証の順序は [ADR-0021](./adr/0021-public-api-only.md)、`user_id` の決定は [ADR-0003](./adr/0003-server-injected-user-id.md) が持つ。
 
 ### 4.2 フロントエンドの層と import 境界
 
@@ -106,12 +106,12 @@ pnpm workspaces による monorepo とする。`apps/web` は画面、`apps/api`
 | 層 | 責務 | import してよいもの | 禁止する依存・処理 |
 | --- | --- | --- | --- |
 | `app/**/page.tsx`・`layout.tsx` | URL、metadata、layout、route params、`notFound()`、loader 呼び出し、feature component への props 渡し | `features/*/server`、`features/*/client/components`、全画面共通 component、`components/ui` | `lib/content`、feature の `api`・`mapper`・`client/hooks` の直接利用、DTO の join・sort・filter、feature 固有 UI の実装 |
-| `app/_components/**` | `/` を除くすべての認証後ルート（`/home` とユーザー向け学習ルート。ADR-0008）が共有する shell と、feature の表示部品を props 契約で合成する composition layer。shell の組み立てと、そのために必要な loader 呼び出しに徹する。private folder であり route を持たない | `features/*/server`、`features/*/client/components`、全画面共通 component、`components/ui` | `lib/content`、feature の `api`・`mapper`・`client/hooks` の直接利用、DTO の join・sort・filter、feature 固有 UI の実装、1 ページ専用のデータ合成（→ `features/<page-feature>/server`）。公開トップ `/` はこの層を使わない |
-| `features/*/client/components` | Client Component。ViewModel の表示、画面フェーズ・現在問題・`wrongOnly`・キーボード操作などの表示操作 state | 同 feature の `client/hooks`・`view-model`、`components/ui`、props 契約が公開された再利用 component | `server`、`lib/api-server`、content loader、API client の直接利用、DTO 変換 |
-| `features/*/client/hooks` | Browser API client の生成、ユーザー固有データの初回取得・再取得（`lib/` の共通取得 hook 経由）、mutation と、それに伴う loading・空・`error`・`submitting`・API 由来の結果 state。取得結果は同 feature の mapper で ViewModel 化する。共通シェルのユーザー固有バッジもマウント後の取得を扱う（§5.3） | 同 feature の `api`・`mapper`・`view-model`、`lib` の横断インフラ、共有 DTO 型 | `server`、`lib/api-server`、content loader、ViewModel の複製保持、画面レイアウト |
-| `features/*/server` | Server loaderと必要なServer Component。content 由来の初回データ取得、複数データの join、mapper 呼び出し、ViewModel の返却。ユーザー固有データは取得しない | 同 feature の `api`・`mapper`・`view-model`、`lib/api`・`lib/api-server`・`lib/content`、Server専用ライブラリ、**子として描画するための** `client/components`（props 契約経由の合成。ロジックの取り込みではない） | `client/hooks`（mutation・通信 state ロジックの取り込み）、ブラウザ専用 API、Client state の複製 |
+| `app/_components/**` | `/` を除くすべての認証後ルート（`/home` とユーザー向け学習ルート。ADR-0021）が共有する shell と、feature の表示部品を props 契約で合成する composition layer。shell の組み立てと、そのために必要な loader 呼び出しに徹する。private folder であり route を持たない | `features/*/server`、`features/*/client/components`、全画面共通 component、`components/ui` | `lib/content`、feature の `api`・`mapper`・`client/hooks` の直接利用、DTO の join・sort・filter、feature 固有 UI の実装、1 ページ専用のデータ合成（→ `features/<page-feature>/server`）。公開トップ `/` はこの層を使わない |
+| `features/*/client/components` | Client Component。ViewModel の表示、画面フェーズ・現在問題・`wrongOnly`・キーボード操作などの表示操作 state | 同 feature の `client/hooks`・`view-model`、`components/ui`、props 契約が公開された再利用 component | `server`、content loader、API client の直接利用、DTO 変換 |
+| `features/*/client/hooks` | Browser API client の生成、ユーザー固有データの初回取得・再取得（`lib/` の共通取得 hook 経由）、mutation と、それに伴う loading・空・`error`・`submitting`・API 由来の結果 state。取得結果は同 feature の mapper で ViewModel 化する。共通シェルのユーザー固有バッジもマウント後の取得を扱う（§5.3） | 同 feature の `api`・`mapper`・`view-model`、`lib` の横断インフラ、共有 DTO 型 | `server`、content loader、ViewModel の複製保持、画面レイアウト |
+| `features/*/server` | Server loaderと必要なServer Component。content 由来の初回データ取得、複数データの join、mapper 呼び出し、ViewModel の返却。ユーザー固有データは取得しない | 同 feature の `mapper`・`view-model`、`lib/content`、Server専用ライブラリ、**子として描画するための** `client/components`（props 契約経由の合成。ロジックの取り込みではない） | `client/hooks`（mutation・通信 state ロジックの取り込み）、ブラウザ専用 API、Client state の複製 |
 | `features/*/mapper` | Content data / DTO から ViewModel への純粋変換 | 共有入力型、同 feature の `view-model`、`features/shared` の小さい純粋変換 | fetch、content loader、API client、React state、副作用 |
-| `features/*/api` | endpoint 固有の `hc` path・method・引数、共有 Zod による入出力検証（Service Binding の応答は再検証しない。ADR-0015）、機能固有のエラーメッセージ | `ApiClient` 型・`requestJson`・`parseApiResponse`（`lib/api`）、共有 DTO / Zod | API client の生成、ViewModel 化、UI state、Server / Browser 固有 API |
+| `features/*/api` | endpoint 固有の `hc` path・method・引数、共有 Zod による入出力検証、機能固有のエラーメッセージ | `ApiClient` 型・`requestJson`・`parseApiResponse`（`lib/api`）、共有 DTO / Zod | API client の生成、ViewModel 化、UI state、Server / Browser 固有 API |
 | `components`（root） | 全画面共通のレイアウト shell・テーマ切替 | `components/ui`・`lib/cn`・React | feature 内部層（`server`/`client`/`api`/`mapper`）・content・API への直接アクセス |
 | `features/shared` | feature 横断の小さい純粋変換と、表示の一貫性を保つ小さい対応表（例：領域→アイコン名の `domainIcons`）のみ | 共有 DTO・Content data 型、`components/ui` の型（type-only import） | 共通 ViewModel・loader・hook の保持、fetch・副作用、React への依存 |
 | `components/ui` | feature 非依存の汎用表示部品 | `lib/cn`、React、スタイル関連ライブラリ | `app`・`features`・content・API への依存 |
@@ -275,7 +275,7 @@ content 由来の初回データは Server loader が形成し、page から表�
 
 - 公開トップ・教材・集計画面の静的な枠はビルド時にRSCで描画し、認証後の4画面のユーザー固有部分と、演習・復習の操作部分はClient Componentとする。レイアウト／ヘッダーはServerとする。画面ごとの初回データは本節の表、演習の状態管理は §5.5。
 - Server専用のfeatureには `import 'server-only'`、Client入口には `'use client'` を置き、ディレクトリ名だけに境界の強制を任せない。依存規則は §4.2。
-- Server Actionsは採用しない（[ADR-0012](./adr/0012-separate-web-and-api-workers.md)）。ユーザー固有データの取得も mutation も、Client hookからHono APIを呼ぶ。API契約とuser_id注入点を単一に保ち、HonoとCloudflareを学ぶ目的に沿わせる。重いフォームなど別の要求が生じた場合に再検討する。
+- Server Actionsは採用しない（[ADR-0021](./adr/0021-public-api-only.md)）。ユーザー固有データの取得も mutation も、Client hookからHono APIを呼ぶ。API契約とuser_id注入点を単一に保ち、HonoとCloudflareを学ぶ目的に沿わせる。重いフォームなど別の要求が生じた場合に再検討する。
 - ユーザー固有データの再取得は Client hook が行い、`router.refresh()` は鮮度の回復に使わない。取得状態（loading・空・エラー・再試行）は `lib/` の共通取得 hook に集約し、同じデータを複数の component が使う場合は1つの取得結果を Context で共有する。データ取得ライブラリは導入しない（[ADR-0019](./adr/0019-csr-for-user-specific-screens.md)）。API adapterへキャッシュ方針を持ち込まない。
 
 #### 標準 SSG とブラウザでの取得
@@ -289,18 +289,17 @@ content 由来の初回データは Server loader が形成し、page から表�
 - due件数・統計・review queue・domains／analytics集計には共有キャッシュを使わない。APIが注入するuser_idをwebの共有キャッシュキーに含められず、ユーザー間の混入が起こり得るためである。
 - Reactの `cache()` によるリクエスト内の取得共有は許可する。ユーザー横断の共有キャッシュとは区別する。ブラウザ内の取得状態の保持はユーザー単位であり、共有キャッシュではない。
 - 解答後は `study-activity` の無効化通知でClient hookが再取得し、鮮度を回復する。統計系の画面（ホーム・領域・分析）は取得結果をタブ内のメモリに保持し（`STATISTICS_MAX_AGE_MS`）、画面へ戻ったときは前回のデータをすぐ表示して、期限切れか無効化済みなら表示したまま裏で取り直す。復習の queue は保持しない。復習のバッチ完了時の条件は §5.3。bfcache やタブ復帰時の再取得は対象外とする。
-- web Worker は静的 asset 配信に必要な最小構成だけを使う。API Service Binding は読み取りに使わず、[ADR-0019](./adr/0019-csr-for-user-specific-screens.md) の段階2で撤去する。content route と認証後4画面の静的な枠のビルド時 HTML / RSC は Vinext の `prerender` と `@vinext/cloudflare` の `staticAssetsAdapter` で `ASSETS` binding から配信し、内部 cache artifact（`/_vinext/static-cache/*`）は `assets.run_worker_first` で Worker へ通して外部からの直接取得を防ぐ。ISR 用の Incremental Cache、R2、KV、Durable Object Queue の有効 binding、Worker 自己参照 binding は持たない。OpenNext 時代に登録した Durable Object の履歴を設定に残す理由は [記録](./investigations/2026-10-14-opennext-durable-object-history.md) にある。
+- web Worker は静的 asset 配信に必要な最小構成だけを使う。API 用の Service Binding は持たない（[ADR-0021](./adr/0021-public-api-only.md)）。content route と認証後4画面の静的な枠のビルド時 HTML / RSC は Vinext の `prerender` と `@vinext/cloudflare` の `staticAssetsAdapter` で `ASSETS` binding から配信し、内部 cache artifact（`/_vinext/static-cache/*`）は `assets.run_worker_first` で Worker へ通して外部からの直接取得を防ぐ。ISR 用の Incremental Cache、R2、KV、Durable Object Queue の有効 binding、Worker 自己参照 binding は持たない。OpenNext 時代に登録した Durable Object の履歴を設定に残す理由は [記録](./investigations/2026-10-14-opennext-durable-object-history.md) にある。
 
 #### API client
 
-`credentials` と CORS の規則は [ADR-0012](./adr/0012-separate-web-and-api-workers.md)、ユーザー固有データの読み取りを公開 URL に統一する判断は [ADR-0019](./adr/0019-csr-for-user-specific-screens.md) が持つ。
+`credentials` と CORS の規則は [ADR-0021](./adr/0021-public-api-only.md)、ユーザー固有データの読み取りを公開 URL に統一する判断は [ADR-0019](./adr/0019-csr-for-user-specific-screens.md) が持つ。
 
-- `apps/api` が `AppType` をエクスポート → `apps/web` は `hc<AppType>` で型安全クライアントを生成（既存 `apps/api/src/client.ts` のファクトリを利用。Service Binding の fetch を渡せるよう、ファクトリは `hc` の第2引数（`fetch` オプション等）を受け取れる形に拡張する）。
-- `apps/web/src/lib/api.ts` に**API 共通基盤を集約**する。クライアント生成と共通レスポンス処理は同じ小さな責務群であり、原則ファイルを分けない。例外として、Workers runtime の `cloudflare:workers` を参照する Server 用生成は Client bundle へ入れられないため、`import 'server-only'` を置いた `apps/web/src/lib/api-server.ts` に分ける。baseURL は env（Workers バインディング / 環境変数）から解決し、ハードコードしない。
-  - `createServerApiClient`（`lib/api-server.ts`）：Server loader 用。ユーザー固有データには使わず、呼び出し元がなくなるため [ADR-0019](./adr/0019-csr-for-user-specific-screens.md) の段階2で撤去する。それまでは、本番は Service Binding（`cloudflare:workers` の `env.API.fetch` を `hc` のカスタム `fetch` に渡す）を必須とし、binding 欠落は fail-fast する。production 以外で binding がない場合だけ env の URL にフォールバックする。
+- `apps/api` が `AppType` をエクスポート → `apps/web` は `hc<AppType>` で型安全クライアントを生成（`apps/api/src/client.ts` のファクトリを利用し、cookie を付ける fetch を渡す）。
+- `apps/web/src/lib/api.ts` に**API 共通基盤を集約**する。ブラウザ用クライアント生成と共通レスポンス処理を持つ。API の baseURL は build 時の環境変数から解決する。
   - `createBrowserApiClient`：Client hook 用。env から解決した API Worker の公開 baseURL を使い、Cloudflare Access application cookie を API ドメインへ送るため `credentials: 'include'` を常に指定する。
-- feature の `api/` は呼び出し側から `ApiClient` を受け取り、`hc` の path・method・引数、共有 Zod による入出力検証、機能固有のエラーメッセージを薄く閉じ込める。Server loader と Client hook の両方から使うため、client 生成、`server-only`、cookies、headers、秘密情報など環境専用処理を入れない。
-- `res.ok` チェックと `res.json()` 変換は `apps/web/src/lib/api.ts` の `requestJson` に共通化する。応答の検証は同じファイルの `parseApiResponse` を通し、Service Binding から作った Server 用 client の応答だけは Zod で再検証しない（ADR-0015）。ブラウザ用 client と URL フォールバックの client は検証する。
+- feature の `api/` は呼び出し側から `ApiClient` を受け取り、`hc` の path・method・引数、共有 Zod による入出力検証、機能固有のエラーメッセージを薄く閉じ込める。通信方式や画面の責務と分離し、client 生成、`server-only`、cookies、headers、秘密情報など環境専用処理を入れない。
+- `res.ok` チェックと `res.json()` 変換は `apps/web/src/lib/api.ts` の `requestJson` に共通化する。応答の検証は同じファイルの `parseApiResponse` を通し、すべての応答を共有 Zod で検証する（ADR-0021）。
 - `hc` の path 呼び出し自体は文字列パスの汎用 fetch に置き換えない。`client.review.queue.$get()` のような endpoint ごとの wrapper を残すことで、Hono RPC の型推論を維持する。
 - 初回表示に必要な `GET /dashboard/due-count`・`GET /review/queue` などのユーザー固有データは Client hook が呼び、mapper で ViewModel に整形して feature component へ渡す。loading・空・エラーの状態は hook が持つ。
 - ユーザー操作後の `POST /answers` は Client hook から呼ぶ。`GET /review/queue` の再取得は、バッチ完了時に Client hook が行う。
@@ -315,8 +314,8 @@ content 由来の初回データは Server loader が形成し、page から表�
 - **Content data / DTO は shared**（複数パッケージで共有、単一ソース）。
 - **ViewModel は `apps/web/src/features` 配下**（表示都合なので web 固有）。
 - **mapper は feature 単位で配置**。同じ DTO / content data を複数 feature で使う場合も、ViewModel 全体の mapper は各 feature に置く。重複した小さい純粋変換だけを `apps/web/src/features/shared` に逃がす。
-- **`apps/web/src/features/*/api` は endpoint アダプター**。呼び出し側から `ApiClient` を受け取り、`hc` の path・method・引数、共有 Zod による入出力検証（Service Binding の応答の扱いは ADR-0015）、機能固有のエラーメッセージを薄く閉じ込める。`res.ok` チェック・`res.json()` は `apps/web/src/lib/api.ts` の共通関数に寄せる。client 生成・ViewModel 化・UI state はここに入れない。ファイル名は `<feature>-api.ts` に統一する。
-- **`apps/web/src/features/*/server` は Server 専用**。page / Server Component から呼ばれる loader が content data や API DTO を mapper に通して ViewModel を返す。feature 固有の Server Component が必要なら `server/components` に置く。配下のファイルには `import 'server-only'` を置く。loader のファイル名は `load-<対象>.ts` とする。
+- **`apps/web/src/features/*/api` は endpoint アダプター**。呼び出し側から `ApiClient` を受け取り、`hc` の path・method・引数、共有 Zod による入出力検証、機能固有のエラーメッセージを薄く閉じ込める。`res.ok` チェック・`res.json()` は `apps/web/src/lib/api.ts` の共通関数に寄せる。client 生成・ViewModel 化・UI state はここに入れない。ファイル名は `<feature>-api.ts` に統一する。
+- **`apps/web/src/features/*/server` は Server 専用**。page / Server Component から呼ばれる loader が content data を mapper に通して ViewModel を返す。feature 固有の Server Component が必要なら `server/components` に置く。配下のファイルには `import 'server-only'` を置く。loader のファイル名は `load-<対象>.ts` とする。
 - **`apps/web/src/features/*/client/hooks` は Client 専用**。Browser API client を生成し、ユーザー操作後の mutation と、それに伴う `submitting`・`error`・API 由来の結果 state を扱う。共通シェルの due バッジとストリークに限り、マウント後の取得も扱う（§5.3）。Server data の再取得は行わない。初期 ViewModel は component が immutable な props として参照し、hook へ複製しない。
 - **`apps/web/src/features/*/client/components` は Client Component**。画面フェーズ・現在問題・`wrongOnly`・キーボード操作を保持し、hook が返す通信状態と結果を表示へ反映する。content loader・API client・DTO には直接触れない。
 - **`apps/web/src/features/shared` は小さい純粋変換と表示の対応表だけ**。`contentQuestionToQuizQuestion` のように `/quiz/[lesson]` と `/review` の両方で同じ表示用 question 形へ変換する helper や、`/learn` と領域カードで同じ領域を同じアイコンで示す `domainIcons` のような定数の対応表はここへ置く。ViewModel 全体・loader・hook は共有しない。

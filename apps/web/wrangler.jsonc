@@ -6,7 +6,6 @@
   "name": "tech-study-lab-web",
   "compatibility_date": "2025-01-09",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public", "enable_weak_ref"],
-  "services": [{ "binding": "API", "service": "tech-study-lab-api", "entrypoint": "InternalApi" }],
   // OpenNext 時代に本番 Worker へ登録した DOQueueHandler の作成・削除履歴。外部履歴なので削除しない。
   "migrations": [
     { "tag": "v1", "new_sqlite_classes": ["DOQueueHandler"] },
@@ -24,9 +23,6 @@
       "name": "tech-study-lab-web-test",
       "workers_dev": true,
       "preview_urls": false,
-      "services": [
-        { "binding": "API", "service": "tech-study-lab-api-test", "entrypoint": "InternalApi" }
-      ],
       "migrations": [],
       "observability": { "enabled": true, "head_sampling_rate": 1 }
     }
