@@ -245,7 +245,7 @@ feature component
 
 Server loader は content 由来の初回データの取得と Mapper 呼び出しを統括する。認証後の4画面のユーザー固有データは、Client hook が取得して Mapper で ViewModel 化する（[ADR-0019](./adr/0019-csr-for-user-specific-screens.md)）。Client hook はユーザー操作後の通信も統括するが、ViewModel の複製保持は行わない。共通シェルの due バッジとストリークも、静的成果物へ含められないため、マウント後に Client hook で取得する（§5.3）。page は App Router 固有の関心事と、loader または feature component の呼び出しに限定し、feature component が表示を担当する。
 
-- **Content data**：`content/` の Markdown + frontmatter をビルド時にパース・検証した型付きデータ。教材本文・問題本文・解説の主経路。
+- **Content data**：`content/` の Markdown + frontmatter をビルド時にパース・検証した型付きデータ。`packages/shared` の Zod スキーマ（`schema/content`、§5.1）から型推論する。教材本文・問題本文・解説の主経路。
 - **DTO**：API レスポンス型。`packages/shared` の Zod スキーマ（§5.1）から型推論、AppType に含まれる。due queue・answer 結果・集計値など動的データの契約。
 - **Mapper**：`content/API data -> ViewModel` 形の純粋関数。content 構造や API 仕様変更の影響は**ここで吸収**。複数ページで同じデータを使う場合、mapper も共有。
 - **ViewModel**：web 固有の表示形態。「page で即座に使える形」に正規化済み（selector・filter・sort 済み）の**純データ**。`loading`・`error` は VM に含めず、Client hook の返り値として別に扱う。
