@@ -37,7 +37,10 @@ describe('LessonDisplay', () => {
     const table = screen.getByRole('table')
     expect(within(table).getByRole('columnheader', { name: '意味' })).toBeTruthy()
     expect(within(table).getByRole('cell', { name: '401' })).toBeTruthy()
-    expect(table.parentElement?.classList.contains('table-scroll')).toBe(true)
+    const wrapper = screen.getByRole('region', { name: '表' })
+    expect(wrapper.classList.contains('table-scroll')).toBe(true)
+    expect(wrapper.tabIndex).toBe(0)
+    expect(table.parentElement).toBe(wrapper)
   })
 
   it('renders a fenced block in term-win with its language and highlighted tokens', async () => {
