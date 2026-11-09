@@ -61,8 +61,45 @@ printf '%s\n' \
   'printf "%s\n" "$MOCK_GIT_REF"' > "$mock_bin/git"
 chmod +x "$mock_bin/git"
 
+export MOCK_REAL_NODE="$(command -v node)"
+printf '%s\n' '#!/bin/sh' 'exec "$MOCK_REAL_NODE" "$@"' > "$mock_bin/node"
+chmod +x "$mock_bin/node"
+export MOCK_CLAUDE_PREFLIGHT="$test_dir/claude-preflight.sh"
+cat > "$MOCK_CLAUDE_PREFLIGHT" <<'MOCK_PREFLIGHT'
+# CLI の設定再適用後に選ばれた認証方式を返す。
+mock_auth_status() {
+  if [ "${MOCK_REQUIRE_CLEAN_AUTH:-0}" = 1 ]; then
+    [ -z "${ANTHROPIC_API_KEY:-}${ANTHROPIC_AUTH_TOKEN:-}${ANTHROPIC_BASE_URL:-}" ] || exit 90
+    [ -z "${CLAUDE_CODE_USE_BEDROCK:-}${CLAUDE_CODE_USE_VERTEX:-}${CLAUDE_CODE_USE_FOUNDRY:-}" ] || exit 91
+  fi
+  _first= _second= _third= _settings_seen=0
+  for _arg in "$@"; do
+    _first=$_second; _second=$_third; _third=$_arg
+    if [ "$_arg" = "${MOCK_EXPECT_SETTINGS:-unset}" ]; then _settings_seen=1; fi
+  done
+  if [ "$_first" != auth ] || [ "$_second" != status ] || [ "$_third" != --json ]; then
+    return 0
+  fi
+  if [ "${MOCK_EXPECT_SETTINGS+x}" = x ]; then [ "$_settings_seen" = 1 ] || exit 92; fi
+  # 認証確認がレビュー用の標準入力を消費しないことも検証する。
+  if IFS= read -r _unexpected_input; then exit 93; fi
+  case ${MOCK_AUTH_MODE:-oauth} in
+    oauth) printf '%s\n' '{"loggedIn":true,"authMethod":"oauth_token","apiProvider":"firstParty"}' ;;
+    api_key) printf '%s\n' '{"loggedIn":true,"authMethod":"api_key","apiProvider":"firstParty"}' ;;
+    cloud) printf '%s\n' '{"loggedIn":true,"authMethod":"oauth_token","apiProvider":"bedrock"}' ;;
+    signed_out) printf '%s\n' '{"loggedIn":false,"authMethod":"oauth_token","apiProvider":"firstParty"}' ;;
+    malformed) printf '%s\n' "$MOCK_OP_SECRET" ;;
+    nonzero) printf '%s\n' '{"loggedIn":true,"authMethod":"oauth_token","apiProvider":"firstParty"}'; exit 1 ;;
+  esac
+  exit 0
+}
+MOCK_PREFLIGHT
+
 printf '%s\n' \
   '#!/bin/sh' \
+  '. "$MOCK_CLAUDE_PREFLIGHT"' \
+  'mock_auth_status "$@"' \
+  'if [ "${1:-}" = --settings ]; then shift 2; fi' \
   '[ "$CLAUDE_CODE_OAUTH_TOKEN" = "$MOCK_OP_SECRET" ] || exit 70' \
   '[ "${OP_SERVICE_ACCOUNT_TOKEN+x}" != x ] || exit 74' \
   '[ "$#" -eq 2 ] || exit 71' \
@@ -139,6 +176,54 @@ if grep -F "$fake_secret" "$output_file" >/dev/null; then
   printf '%s\n' "Claude review wrapper leaked the token" >&2
   exit 1
 fi
+
+# 継承した API キー・別プロバイダー指定を専用 OAuth より優先させない。
+if ! MOCK_REQUIRE_CLEAN_AUTH=1 \
+  ANTHROPIC_API_KEY="$fake_secret" ANTHROPIC_AUTH_TOKEN=unrelated-token \
+  ANTHROPIC_BASE_URL=https://unrelated.invalid \
+  CLAUDE_CODE_USE_BEDROCK=1 CLAUDE_CODE_USE_VERTEX=1 CLAUDE_CODE_USE_FOUNDRY=1 \
+  PATH="$mock_bin:/usr/bin:/bin" \
+  "$review_wrapper" auth status > "$output_file" 2>&1; then
+  printf '%s\n' 'competing credentials reached the Claude CLI' >&2
+  exit 1
+fi
+
+# 設定からの API キー再注入や、認証確認自体の失敗ではレビューを開始しない。
+for auth_mode in api_key cloud signed_out malformed nonzero; do
+  if MOCK_AUTH_MODE="$auth_mode" PATH="$mock_bin:/usr/bin:/bin" \
+    /bin/sh -x "$review_wrapper" auth status > "$output_file" 2>&1; then
+    printf '%s\n' 'non-OAuth or failed preflight did not stop Claude' >&2
+    exit 1
+  fi
+  grep -F 'error: Claude review requires' "$output_file" >/dev/null
+  if grep -F 'mock Claude invocation passed' "$output_file" >/dev/null ||
+    grep -F "$fake_secret" "$output_file" >/dev/null; then
+    printf '%s\n' 'preflight failure started Claude or exposed raw output' >&2
+    exit 1
+  fi
+done
+
+# 呼び出し時の設定オプションも認証確認へ渡す。
+fixture_settings='{"env":{"API_TIMEOUT_MS":"1000"}}'
+if ! MOCK_EXPECT_SETTINGS="$fixture_settings" PATH="$mock_bin:/usr/bin:/bin" \
+  "$review_wrapper" --settings "$fixture_settings" auth status > "$output_file" 2>&1; then
+  printf '%s\n' 'settings were not included in the authentication preflight' >&2
+  exit 1
+fi
+if MOCK_AUTH_MODE=api_key MOCK_EXPECT_SETTINGS="$fixture_settings" \
+  PATH="$mock_bin:/usr/bin:/bin" \
+  "$review_wrapper" --settings "$fixture_settings" auth status > "$output_file" 2>&1; then
+  printf '%s\n' 'settings reinjection bypassed the OAuth check' >&2
+  exit 1
+fi
+
+# 他のオプションの値を認証モードの切り替えと誤認した場合も停止する。
+if PATH="$mock_bin:/usr/bin:/bin" \
+  "$review_wrapper" --system-prompt --safe-mode auth status > "$output_file" 2>&1; then
+  printf '%s\n' 'ambiguous mode option bypassed the authentication check' >&2
+  exit 1
+fi
+grep -F 'error: Claude review requires' "$output_file" >/dev/null
 
 # 参照先は Git 設定から読み、環境変数で明示された参照先を優先する。
 if ! AI_CLAUDE_CODE_OAUTH_TOKEN_REF= \
@@ -217,6 +302,8 @@ fi
 # レビュー引数と標準入力（diff）がそのまま Claude に渡る。
 cat > "$mock_bin/claude" <<'MOCK_CLAUDE'
 #!/bin/sh
+. "$MOCK_CLAUDE_PREFLIGHT"
+mock_auth_status "$@"
 [ "$CLAUDE_CODE_OAUTH_TOKEN" = "$MOCK_OP_SECRET" ] || exit 70
 [ "${OP_SERVICE_ACCOUNT_TOKEN+x}" != x ] || exit 75
 [ "$#" -eq 4 ] || exit 71
