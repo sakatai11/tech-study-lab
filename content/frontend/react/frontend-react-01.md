@@ -107,7 +107,7 @@ export function Counter() {
 
 初学者がよくつまずくのが、`setCount` を呼んだ直後も変数 `count` は変わらない、という点です。
 
-```tsx
+```tsx bad
 function handleClick() {
   setCount(count + 1)
   setCount(count + 1)
@@ -120,7 +120,7 @@ function handleClick() {
 
 直前の state をもとに更新したいときは、**更新関数**を渡します。
 
-```tsx
+```tsx good
 function handleClick() {
   setCount((c) => c + 1)
   setCount((c) => c + 1)
@@ -153,7 +153,8 @@ function addGood(text: string) {
 setUser({ ...user, name: '新しい名前' })
 ```
 
-配列では `push` / `splice` / `sort` のような元の配列を変える操作ではなく、スプレッド構文、`filter`、`map`、`toSorted` など新しい配列を返す操作を使います。ネストが深い場合は、変更する経路すべてで新しいオブジェクトを作る必要があります。
+> [!TIP]
+> 配列では `push` / `splice` / `sort` のような元の配列を変える操作ではなく、スプレッド構文、`filter`、`map`、`toSorted` など新しい配列を返す操作を使います。ネストが深い場合は、変更する経路すべてで新しいオブジェクトを作る必要があります。
 
 ## リストの key
 
@@ -211,7 +212,8 @@ const fullName = firstName + ' ' + lastName
 
 前者は、一度古い `fullName` で描画されたあと、effect で state を更新して再度レンダリングされるので、余計な描画と不整合の可能性を生みます。計算できるものは、レンダー中に計算します。計算が重い場合のみ `useMemo` を検討します。
 
-また、ボタンクリックに対する処理のように、特定のユーザー操作が原因の処理は、effect ではなくイベントハンドラに書くのが適切です。
+> [!TIP]
+> また、ボタンクリックに対する処理のように、特定のユーザー操作が原因の処理は、effect ではなくイベントハンドラに書くのが適切です。
 
 ## まとめ
 

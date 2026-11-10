@@ -87,7 +87,7 @@ XSS が「データをブラウザが HTML や JavaScript として解釈する�
 
 次のコードは、ユーザーが入力した名前とパスワードでログインを判定します。
 
-```ts
+```ts bad
 // 危険な例: 入力を文字列連結で SQL に埋め込んでいる
 const sql =
   "SELECT * FROM users WHERE name = '" + name + "' AND password = '" + password + "'"
@@ -117,7 +117,7 @@ SQL では `AND` が `OR` より先に評価されます。そのため `OR '1'=
 
 認証回避だけではありません。検索機能のように結果を画面へ表示する処理では、`UNION` を使って別のテーブルの内容を結果に混ぜる攻撃が考えられます。
 
-```ts
+```ts bad
 // 危険な例: キーワード検索
 const sql = `SELECT title, body FROM articles WHERE title LIKE '%${keyword}%'`
 ```
@@ -130,7 +130,7 @@ const sql = `SELECT title, body FROM articles WHERE title LIKE '%${keyword}%'`
 
 Cloudflare D1 の例です。
 
-```ts
+```ts good
 const email = url.searchParams.get('email')
 
 // 安全な例: ? と bind() で値を分離する
@@ -142,21 +142,22 @@ const user = await env.DB
 
 node-postgres（`pg`）のような一般的なドライバでも考え方は同じです。
 
-```ts
+```ts good
 // 安全な例: $1 に値を渡す
 const result = await pool.query('SELECT id, name FROM users WHERE email = $1', [email])
 ```
 
 この方式では、SQL 文の構造はデータベース側で先に確定します。後から渡された値は常に「値」として扱われるため、`' OR '1'='1` を渡しても、それは単なる文字列として比較されるだけです。ログインの例も、次のように書き直すことで防げます。
 
-```ts
+```ts good
 const user = await env.DB
   .prepare('SELECT id FROM users WHERE name = ? AND password_hash = ?')
   .bind(name, passwordHash)
   .first()
 ```
 
-(パスワードを平文で比較する設計自体も避けるべきですが、ここでは SQL の構築方法に焦点を当てています。)
+> [!NOTE]
+> (パスワードを平文で比較する設計自体も避けるべきですが、ここでは SQL の構築方法に焦点を当てています。)
 
 ## エスケープの自作やブラックリストに頼らない
 
@@ -166,20 +167,21 @@ const user = await env.DB
 - 大文字小文字の違い、コメント構文、エンコーディングの違いなどで、ブラックリストは回避されやすい。
 - 数値として埋め込む場所では、引用符が不要なため、引用符のエスケープが意味を持たない。
 
-「危険な文字を取り除く」のではなく、「入力が構文として解釈される余地を作らない」ことが正しい方向です。
+> [!TIP]
+> 「危険な文字を取り除く」のではなく、「入力が構文として解釈される余地を作らない」ことが正しい方向です。
 
 ## プレースホルダにできない箇所: 許可リストで対処する
 
 プレースホルダは値の位置にしか使えません。テーブル名、列名、`ORDER BY` の列名や昇順・降順といった識別子・キーワードは、通常プレースホルダにできません。ここで入力を連結すると、再び脆弱になります。
 
-```ts
+```ts bad
 // 危険な例: sort をそのまま連結
 const sql = `SELECT id, title FROM articles ORDER BY ${sort}`
 ```
 
 この場合は、アプリ側で許可する値を固定し、一致したものだけを使う**許可リスト**方式にします。
 
-```ts
+```ts good
 const SORTABLE_COLUMNS = {
   title: 'title',
   created: 'created_at',
@@ -201,19 +203,20 @@ const { results } = await env.DB
 
 ORM やクエリビルダの通常の API は、値をパラメータとして扱うため、安全な既定になっています。
 
-```ts
+```ts good
 // ORM の通常 API の例（Drizzle）。値はパラメータ化される
 const rows = await db.select().from(users).where(eq(users.email, email))
 ```
 
 しかし、ORM には生 SQL を直接書ける機能があり、そこに入力を連結すると、ORM を使っていても脆弱になります。
 
-```ts
+```ts bad
 // 危険な例: 生 SQL に入力を連結している
 const rows = await db.all(sql.raw(`SELECT * FROM users WHERE email = '${email}'`))
 ```
 
-生 SQL を使う場合も、そのライブラリが用意している値の渡し方（プレースホルダ指定や、式の中の値を自動でパラメータ化するタグ付きテンプレートなど）を使います。たとえば Drizzle の `sql` テンプレートは、`${}` に渡した値をパラメータとして扱いますが、`sql.raw()` は文字列をそのまま SQL に埋め込むので、入力には使えません。「ORM を使っているから安心」ではなく、「**入力が SQL 文字列に連結される箇所がないか**」を確認する習慣が大切です。
+> [!WARNING]
+> 生 SQL を使う場合も、そのライブラリが用意している値の渡し方（プレースホルダ指定や、式の中の値を自動でパラメータ化するタグ付きテンプレートなど）を使います。たとえば Drizzle の `sql` テンプレートは、`${}` に渡した値をパラメータとして扱いますが、`sql.raw()` は文字列をそのまま SQL に埋め込むので、入力には使えません。「ORM を使っているから安心」ではなく、「**入力が SQL 文字列に連結される箇所がないか**」を確認する習慣が大切です。
 
 ## 多層防御
 

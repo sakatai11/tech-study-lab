@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { BundledLesson, BundledTopic } from '@tsl/shared'
 
-import { lessonContentToViewModel, topicContentToViewModel } from './mapper'
+import { lessonContentToViewModel, lessonTocFromBody, topicContentToViewModel } from './mapper'
 
 const tree: Root = { type: 'root', children: [] }
 
@@ -56,6 +56,7 @@ describe('lesson view model mappers', () => {
       title: '安全な表示',
       estimatedMinutes: 18,
       body: tree,
+      toc: [],
       questions: [
         {
           id: 'security-xss-01-q1',
@@ -66,5 +67,76 @@ describe('lesson view model mappers', () => {
     })
     expect(viewModel.questions[0]).not.toHaveProperty('answerIndex')
     expect(viewModel.questions[0]).not.toHaveProperty('explanation')
+  })
+
+  it('builds the table of contents from top-level h2 headings in order', () => {
+    const body: Root = {
+      type: 'root',
+      children: [
+        {
+          type: 'element',
+          tagName: 'h1',
+          properties: {},
+          children: [{ type: 'text', value: '題' }],
+        },
+        {
+          type: 'element',
+          tagName: 'h2',
+          properties: { id: 'section-1' },
+          children: [
+            { type: 'text', value: 'ログイン時に ' },
+            {
+              type: 'element',
+              tagName: 'code',
+              properties: {},
+              children: [{ type: 'text', value: 'sid' }],
+            },
+            { type: 'text', value: ' を再生成する ' },
+          ],
+        },
+        { type: 'text', value: '\n' },
+        {
+          type: 'element',
+          tagName: 'div',
+          properties: { dataCallout: 'note' },
+          children: [
+            {
+              type: 'element',
+              tagName: 'h2',
+              properties: { id: 'nested' },
+              children: [{ type: 'text', value: '入れ子' }],
+            },
+          ],
+        },
+        {
+          type: 'element',
+          tagName: 'h2',
+          properties: { id: 'section-2' },
+          children: [{ type: 'text', value: 'まとめ' }],
+        },
+      ],
+    }
+
+    expect(lessonTocFromBody(body)).toEqual([
+      { id: 'section-1', title: 'ログイン時に sid を再生成する' },
+      { id: 'section-2', title: 'まとめ' },
+    ])
+  })
+
+  it('skips h2 headings without an id or text', () => {
+    const body: Root = {
+      type: 'root',
+      children: [
+        {
+          type: 'element',
+          tagName: 'h2',
+          properties: {},
+          children: [{ type: 'text', value: 'A' }],
+        },
+        { type: 'element', tagName: 'h2', properties: { id: 'section-2' }, children: [] },
+      ],
+    }
+
+    expect(lessonTocFromBody(body)).toEqual([])
   })
 })

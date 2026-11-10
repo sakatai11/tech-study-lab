@@ -27,6 +27,10 @@ export const materialSymbolNames = [
   'verified',
   'edit_note',
   'speed',
+  'info',
+  'lightbulb',
+  'warning',
+  'report',
 ] as const
 
 export type MaterialSymbolName = (typeof materialSymbolNames)[number]

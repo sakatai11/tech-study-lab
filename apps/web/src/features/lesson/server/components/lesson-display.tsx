@@ -6,12 +6,40 @@ import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { MaterialSymbol } from '@/components/ui/material-symbol'
 import { TermCrumb } from '@/components/ui/term-crumb'
+import { cn } from '@/lib/cn'
 
 import { LessonViewRecorder } from '../../client/components/lesson-view-recorder'
-import type { LessonViewModel } from '../../view-model'
+import type { LessonTocItemViewModel, LessonViewModel } from '../../view-model'
 import { MarkdownTree } from './markdown-tree'
 
+/** 節が2つ以上あるときだけ出す。PC 幅だけに表示し、SP では出さない（docs/design-system.md）。 */
+function LessonToc({ items }: { items: LessonTocItemViewModel[] }) {
+  return (
+    <nav
+      aria-labelledby="lesson-toc-title"
+      className="lesson-toc hidden rounded-2xl border-2 border-border bg-surface p-4 lg:block xl:sticky xl:top-5 xl:col-start-2 xl:row-start-1"
+    >
+      <p className="mb-2 mt-0 px-2 text-sm font-black text-ink" id="lesson-toc-title">
+        目次
+      </p>
+      <ol className="m-0 flex list-none flex-col gap-1 p-0">
+        {items.map((item) => (
+          <li key={item.id}>
+            <a
+              className="block rounded-lg px-2 py-1.5 text-sm font-semibold leading-snug text-ink-2 hover:bg-well hover:text-ink"
+              href={`#${item.id}`}
+            >
+              {item.title}
+            </a>
+          </li>
+        ))}
+      </ol>
+    </nav>
+  )
+}
+
 export function LessonDisplay({ viewModel }: { viewModel: LessonViewModel }) {
+  const hasToc = viewModel.toc.length >= 2
   return (
     <article className="flex flex-col gap-5">
       <LessonViewRecorder lessonId={viewModel.id} />
@@ -34,11 +62,19 @@ export function LessonDisplay({ viewModel }: { viewModel: LessonViewModel }) {
         </div>
       </header>
 
-      <Card className="p-5 sm:p-8">
-        <div className="markdown-body max-w-3xl text-pretty text-ink-2">
-          <MarkdownTree tree={viewModel.body} />
-        </div>
-      </Card>
+      <div
+        className={cn(
+          'flex flex-col gap-5',
+          hasToc && 'xl:grid xl:grid-cols-[minmax(0,1fr)_13rem] xl:items-start',
+        )}
+      >
+        {hasToc ? <LessonToc items={viewModel.toc} /> : null}
+        <Card className="min-w-0 p-5 sm:p-8 xl:col-start-1 xl:row-start-1">
+          <div className="markdown-body max-w-3xl text-pretty text-ink-2">
+            <MarkdownTree tree={viewModel.body} />
+          </div>
+        </Card>
+      </div>
 
       <footer className="flex flex-wrap items-center justify-between gap-3">
         <Link
