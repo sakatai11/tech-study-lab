@@ -36,6 +36,12 @@ export type LessonQuestionViewModel = {
   choices: string[]
 }
 
+/** 本文の h2 への目次項目。`id` は h2 の id（ビルド時に振る）。 */
+export type LessonTocItemViewModel = {
+  id: string
+  title: string
+}
+
 export type LessonViewModel = {
   domain: DomainKey
   topic: string
@@ -43,5 +49,6 @@ export type LessonViewModel = {
   title: string
   estimatedMinutes: number
   body: Root
+  toc: LessonTocItemViewModel[]
   questions: LessonQuestionViewModel[]
 }
