@@ -12,12 +12,15 @@ import { LessonViewRecorder } from '../../client/components/lesson-view-recorder
 import type { LessonTocItemViewModel, LessonViewModel } from '../../view-model'
 import { MarkdownTree } from './markdown-tree'
 
-/** 節が2つ以上あるときだけ出す。PC 幅だけに表示し、SP では出さない（docs/design-system.md）。 */
+/**
+ * 節が2つ以上あるときだけ出す。PC 幅だけに表示し、SP では出さない（docs/design-system.md）。
+ * 追従する xl 以上ではビューポートに収め、長いときは目次内をスクロールさせる。
+ */
 function LessonToc({ items }: { items: LessonTocItemViewModel[] }) {
   return (
     <nav
       aria-labelledby="lesson-toc-title"
-      className="lesson-toc hidden rounded-2xl border-2 border-border bg-surface p-4 lg:block xl:sticky xl:top-5 xl:col-start-2 xl:row-start-1"
+      className="lesson-toc hidden rounded-2xl border-2 border-border bg-surface p-4 lg:block xl:sticky xl:top-5 xl:col-start-2 xl:row-start-1 xl:max-h-[calc(100dvh-2.5rem)] xl:overflow-y-auto"
     >
       <p className="mb-2 mt-0 px-2 text-sm font-black text-ink" id="lesson-toc-title">
         目次

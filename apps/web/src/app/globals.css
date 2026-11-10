@@ -329,6 +329,44 @@
     padding-left: 1.5rem;
   }
 
+  /* preflight の list-style: none を本文内だけ戻し、行頭記号と番号を出す。 */
+  .markdown-body ul {
+    list-style: disc;
+  }
+
+  .markdown-body ol {
+    list-style: decimal;
+  }
+
+  .markdown-body li > ul {
+    list-style-type: circle;
+  }
+
+  /* GFM のタスクリストはチェックボックスが行頭を示すので、記号を重ねない。 */
+  .markdown-body .contains-task-list {
+    list-style: none;
+  }
+
+  /* callout でない引用。callout（全周の枠・色付きの地・アイコン）と分けるため、左の罫線と字下げで示す。 */
+  .markdown-body blockquote {
+    margin: 1.25rem 0;
+    border-left: 4px solid var(--border-hi);
+    padding: 0.125rem 0 0.125rem 1rem;
+    color: var(--mute);
+  }
+
+  .markdown-body blockquote > p {
+    margin: 0.5rem 0;
+  }
+
+  .markdown-body blockquote > :first-child {
+    margin-top: 0;
+  }
+
+  .markdown-body blockquote > :last-child {
+    margin-bottom: 0;
+  }
+
   .markdown-body li + li {
     margin-top: 0.4rem;
   }
