@@ -267,7 +267,8 @@
     margin-left: 0;
   }
 
-  /* 教材の悪い例・良い例。term-win のヘッダーは両テーマとも暗色なので固定色を使う。 */
+  /* 教材の悪い例・良い例。term-win のヘッダーは両テーマとも暗色なので固定色を使う。
+     地の色を重ねると FAIL の文字が AA（4.5:1）を下回るため、ヘッダーの地の上に枠付きの文字だけを置く。 */
   .term-verdict {
     border: 1px solid currentColor;
     border-radius: 0.3125rem;
@@ -279,12 +280,10 @@
   }
 
   .term-verdict[data-verdict="fail"] {
-    background: rgb(248 81 73 / 15%);
     color: #f85149;
   }
 
   .term-verdict[data-verdict="pass"] {
-    background: rgb(63 185 80 / 15%);
     color: #3fb950;
   }
 

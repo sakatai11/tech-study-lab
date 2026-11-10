@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { MaterialSymbol } from '@/components/ui/material-symbol'
 import { TermCrumb } from '@/components/ui/term-crumb'
+import { cn } from '@/lib/cn'
 
 import { LessonViewRecorder } from '../../client/components/lesson-view-recorder'
 import type { LessonTocItemViewModel, LessonViewModel } from '../../view-model'
@@ -38,6 +39,7 @@ function LessonToc({ items }: { items: LessonTocItemViewModel[] }) {
 }
 
 export function LessonDisplay({ viewModel }: { viewModel: LessonViewModel }) {
+  const hasToc = viewModel.toc.length >= 2
   return (
     <article className="flex flex-col gap-5">
       <LessonViewRecorder lessonId={viewModel.id} />
@@ -60,8 +62,13 @@ export function LessonDisplay({ viewModel }: { viewModel: LessonViewModel }) {
         </div>
       </header>
 
-      <div className="flex flex-col gap-5 xl:grid xl:grid-cols-[minmax(0,1fr)_13rem] xl:items-start">
-        {viewModel.toc.length >= 2 ? <LessonToc items={viewModel.toc} /> : null}
+      <div
+        className={cn(
+          'flex flex-col gap-5',
+          hasToc && 'xl:grid xl:grid-cols-[minmax(0,1fr)_13rem] xl:items-start',
+        )}
+      >
+        {hasToc ? <LessonToc items={viewModel.toc} /> : null}
         <Card className="min-w-0 p-5 sm:p-8 xl:col-start-1 xl:row-start-1">
           <div className="markdown-body max-w-3xl text-pretty text-ink-2">
             <MarkdownTree tree={viewModel.body} />
