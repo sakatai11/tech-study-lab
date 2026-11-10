@@ -342,8 +342,8 @@
     list-style-type: circle;
   }
 
-  /* GFM のタスクリストはチェックボックスが行頭を示すので、記号を重ねない。 */
-  .markdown-body .contains-task-list {
+  /* GFM のタスク項目はチェックボックスが行頭を示すので、記号を重ねない（同じリストの通常項目は記号を残す）。 */
+  .markdown-body .task-list-item {
     list-style: none;
   }
 
