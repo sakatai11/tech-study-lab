@@ -55,6 +55,33 @@ describe('compileMarkdown', () => {
   })
 
   it.each([
+    ...CALLOUT_TYPES.map((type) => [`\\[!${type.toUpperCase()}]`, `[!${type.toUpperCase()}]`]),
+    ['[\\!NOTE]', '[!NOTE]'],
+    ['[!NOTE\\]', '[!NOTE]'],
+    ['&#91;!NOTE]', '[!NOTE]'],
+    ['&lbrack;!TIP]', '[!TIP]'],
+    ['\\[!WARN]', '[!WARN]'],
+    ['\\[!NOTE] 同じ行の本文', '[!NOTE] 同じ行の本文'],
+  ])('keeps an escaped marker %s as text in an ordinary blockquote', async (marker, literal) => {
+    const tree = await compileMarkdown(`> ${marker}\n> 本文\n`)
+
+    const blockquote = elements([tree]).find((element) => element.tagName === 'blockquote')
+    expect(blockquote).toBeTruthy()
+    expect(text(blockquote as Element)).toContain(`${literal}\n本文`)
+    expect(elements([tree]).some((element) => element.properties.dataCallout)).toBe(false)
+  })
+
+  it('still turns a literal marker into a callout when an escaped one appears elsewhere', async () => {
+    const tree = await compileMarkdown('> \\[!NOTE]\n> 記法の例\n\n> [!NOTE]\n> 本物の補足\n')
+
+    const callouts = elements([tree]).filter((element) => element.properties.dataCallout)
+    expect(callouts.map((element) => element.properties.dataCallout)).toEqual(['note'])
+    expect(text(callouts[0] as Element)).toContain('本物の補足')
+    const blockquote = elements([tree]).find((element) => element.tagName === 'blockquote')
+    expect(text(blockquote as Element)).toContain('[!NOTE]\n記法の例')
+  })
+
+  it.each([
     ['an unknown callout type', '> [!WARN]\n> 本文\n', /unknown callout type \[!WARN\]/],
     ['text on the marker line', '> [!NOTE] 本文\n', /must be on its own line/],
     ['an empty callout', '> [!CAUTION]\n', /has no content/],

@@ -1,4 +1,4 @@
-import type { Element, ElementContent, Root, RootContent } from 'hast'
+import type { Element, ElementContent, Root, RootContent, Text } from 'hast'
 import { defaultUrlTransform } from 'react-markdown'
 import rehypePrettyCode from 'rehype-pretty-code'
 import remarkGfm from 'remark-gfm'
@@ -45,7 +45,13 @@ function isBlank(node: ElementContent): boolean {
   return node.type === 'text' && node.value.trim() === ''
 }
 
-function convertCallout(blockquote: Element): void {
+// パース後のテキストでは `\[!NOTE]` や `&#91;!NOTE]` も `[!NOTE]` になるため、原文に記法どおり書かれているかで見分ける。
+function isWrittenLiterally(node: Text, marker: string, source: string): boolean {
+  const offset = node.position?.start.offset
+  return offset !== undefined && source.startsWith(marker, offset)
+}
+
+function convertCallout(blockquote: Element, source: string): void {
   const paragraph = blockquote.children.find((child) => child.type === 'element')
   if (paragraph?.type !== 'element' || paragraph.tagName !== 'p') return
   const first = paragraph.children[0]
@@ -54,6 +60,8 @@ function convertCallout(blockquote: Element): void {
   if (!match) return
 
   const [marker, name = '', rest = ''] = match
+  // エスケープしたマーカーは callout にせず、文字のまま通常の引用に残す。
+  if (!isWrittenLiterally(first, `[!${name}]`, source)) return
   const type = name.toLowerCase()
   if (!(CALLOUT_TYPES as readonly string[]).includes(type)) {
     throw new Error(`unknown callout type [!${name}]; use one of ${CALLOUT_TYPES.join(', ')}`)
@@ -77,10 +85,12 @@ function convertCallout(blockquote: Element): void {
 
 // GitHub の alert 記法（> [!NOTE] など）を callout の要素に変換する。誤記はビルドで失敗させる。
 function rehypeCallouts() {
-  return (tree: Root) =>
+  return (tree: Root, file: { value: unknown }) => {
+    const source = typeof file.value === 'string' ? file.value : ''
     visitElements(tree.children, (element) => {
-      if (element.tagName === 'blockquote') convertCallout(element)
+      if (element.tagName === 'blockquote') convertCallout(element, source)
     })
+  }
 }
 
 function codeMetaWords(element: Element): string[] {
@@ -133,7 +143,8 @@ const processor = unified()
 
 /** Markdown をハイライト済み HAST へ変換する。Shiki を Worker に載せないよう、ビルド時にだけ呼ぶ。 */
 export async function compileMarkdown(markdown: string): Promise<Root> {
-  return (await processor.run(processor.parse(markdown))) as Root
+  // callout の判定で原文を参照するため、原文をファイルとして渡す。
+  return (await processor.run(processor.parse(markdown), markdown)) as Root
 }
 
 /** 成果物を小さく決定的に保つため、位置情報を除いて直列化する。 */
