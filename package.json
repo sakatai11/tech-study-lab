@@ -34,6 +34,12 @@
     "design-ref:review": "node scripts/review-design-references.mjs",
     "design-ref:test": "node --test scripts/design-references.test.mjs scripts/review-design-references.test.mjs"
   },
+  "pnpm": {
+    "overrides": {
+      "vitest>vite": "6.4.6",
+      "vite-node>vite": "6.4.6"
+    }
+  },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
     "dependency-cruiser": "18.1.0",
