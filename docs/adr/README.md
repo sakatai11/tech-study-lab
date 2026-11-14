@@ -46,16 +46,17 @@
 | [ADR-0005](./0005-srs-review-rules.md) | SRS の更新入口と復習キューの規則 | Accepted |
 | [ADR-0006](./0006-content-as-source-of-truth.md) | 教材・問題は content を一次ソースとし、D1 は配信・集計用のキャッシュにする | Accepted |
 | [ADR-0007](./0007-analytics-aggregation-boundaries.md) | 学習分析の集計境界を UTC で固定する | Accepted |
-| [ADR-0008](./0008-production-access-boundary.md) | 本番の公開 API は Worker 内で Cloudflare Access の JWT を検証する | Accepted |
+| [ADR-0008](./0008-production-access-boundary.md) | 本番の公開 API は Worker 内で Cloudflare Access の JWT を検証する | Superseded by ADR-0021 |
 | [ADR-0009](./0009-srs-write-integrity.md) | 解答ログと SRS 状態を原子的に書き込み、競合は version で検出する | Accepted |
 | [ADR-0010](./0010-deploy-order.md) | リリースはスキーマ → データ → API → 画面の順に適用する | Superseded by ADR-0016 |
 | [ADR-0011](./0011-immutable-migrations.md) | 取り込み済みのマイグレーションは変更せず、追加で直す | Accepted |
-| [ADR-0012](./0012-separate-web-and-api-workers.md) | Web と API を別の Worker にし、書き込みは Hono API を通す | Accepted |
+| [ADR-0012](./0012-separate-web-and-api-workers.md) | Web と API を別の Worker にし、書き込みは Hono API を通す | Superseded by ADR-0021 |
 | [ADR-0013](./0013-no-shared-cache-for-user-data.md) | ユーザー固有のデータを Web の共有キャッシュに載せない | Superseded by ADR-0019 |
 | [ADR-0014](./0014-recent-activity-derived-from-logs.md) | 最近のアクティビティは保存済みのログから導出する | Accepted |
-| [ADR-0015](./0015-trust-service-binding-responses.md) | Service Binding 経由の API 応答は Server loader で Zod 再検証しない | Accepted |
+| [ADR-0015](./0015-trust-service-binding-responses.md) | Service Binding 経由の API 応答は Server loader で Zod 再検証しない | Deprecated |
 | [ADR-0016](./0016-performance-gated-promotion.md) | 本番へ昇格できるのは、性能試験まで成功した検証環境と同じ source tree だけにする | Superseded by ADR-0017 |
 | [ADR-0017](./0017-change-scoped-releases.md) | デプロイに影響する変更だけを、Worker ごとに反映する | Accepted |
 | [ADR-0018](./0018-release-attempt-consistency.md) | 変更処理の開始から成功までを記録し、省略判定を環境の状態に合わせる | Accepted |
 | [ADR-0019](./0019-csr-for-user-specific-screens.md) | 認証後の4画面は、静的な枠をビルド時に生成し、ユーザー固有データをブラウザで取得・描画する | Accepted |
 | [ADR-0020](./0020-measure-static-shell-worker-executions.md) | 性能試験は Web Worker を経由した静的な枠の配信を測る | Accepted |
+| [ADR-0021](./0021-public-api-only.md) | Web の API 通信をブラウザからの公開 entrypoint に一本化する | Accepted |

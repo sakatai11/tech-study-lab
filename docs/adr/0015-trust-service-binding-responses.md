@@ -1,6 +1,6 @@
 # 0015: Service Binding 経由の API 応答は Server loader で Zod 再検証しない
 
-- 状態: Accepted
+- 状態: Deprecated
 - 日付: 2026-10-22
 - 関連: Issue #220
 
@@ -34,5 +34,5 @@ Server loader は、名前付き Service Binding で同じリリースの API Wo
 
 ## 検証
 
-- [api-server.test.ts](../../apps/web/src/lib/api-server.test.ts): Service Binding の client だけ応答の再検証を省き、URL フォールバックの client は検証する
+- ADR-0021 で対象経路を撤去したため、Server client の検証テストは削除した。
 - [api.test.ts](../../apps/web/src/lib/api.test.ts): ブラウザ用の client は応答を共有スキーマで検証し、違反を例外にする

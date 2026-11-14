@@ -20,13 +20,6 @@ const packageJson = JSON.parse(
 }
 const productionConfig = {
   name: 'tech-study-lab-web',
-  services: [
-    {
-      binding: 'API',
-      service: 'tech-study-lab-api',
-      entrypoint: 'InternalApi',
-    },
-  ],
   migrations: [
     { tag: 'v1', new_sqlite_classes: ['DOQueueHandler'] },
     { tag: 'v2', deleted_classes: ['DOQueueHandler'] },
@@ -34,13 +27,6 @@ const productionConfig = {
 }
 const edgeConfig = {
   name: 'tech-study-lab-web-test',
-  services: [
-    {
-      binding: 'API',
-      service: 'tech-study-lab-api-test',
-      entrypoint: 'InternalApi',
-    },
-  ],
   migrations: [],
   workers_dev: true,
   preview_urls: false,
@@ -257,9 +243,11 @@ describe('Web deploy command', () => {
       script: 'deploy:edge' as const,
       config: {
         ...edgeConfig,
-        services: [...edgeConfig.services, { binding: 'OTHER', service: 'tech-study-lab-api' }],
+        services: [
+          { binding: 'API', service: 'tech-study-lab-api-test', entrypoint: 'InternalApi' },
+        ],
       },
-      reason: 'extra binding',
+      reason: 'obsolete API binding [ADR-0021]',
     },
     {
       script: 'deploy:edge' as const,

@@ -8,5 +8,5 @@ export async function fetchReviewQueue(client: ApiClient): Promise<ReviewQueueRe
     '復習キューの取得に失敗しました。',
   )
 
-  return parseApiResponse(client, reviewQueueResponseSchema, response)
+  return parseApiResponse(reviewQueueResponseSchema, response)
 }

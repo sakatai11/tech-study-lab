@@ -1057,7 +1057,7 @@ import { dashboardRoute } from './routes/dashboard';
 
 const app = new Hono&lt;AppEnv&gt;();
 
-// CORS はブラウザ経路（ADR-0012）用。Service Binding 経由には関与しない
+// API は公開 HTTP のみ。CORS → Access → userContext の順で処理する（ADR-0021）
 app.use('*', async (c, next) =&gt; cors({ origin: c.env.WEB_ORIGIN })(c, next));
 app.use('*', userContext);
 

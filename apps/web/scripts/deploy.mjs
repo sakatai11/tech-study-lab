@@ -115,9 +115,7 @@ try {
 
     if (
       config?.name !== target.name ||
-      !sameJson(config.services, [
-        { binding: 'API', service: target.apiService, entrypoint: 'InternalApi' },
-      ]) ||
+      !sameJson(config.services, []) ||
       !sameJson(config.migrations, target.migrations) ||
       (target.workersDev !== undefined && config.workers_dev !== target.workersDev) ||
       (target.previewUrls !== undefined && config.preview_urls !== target.previewUrls)

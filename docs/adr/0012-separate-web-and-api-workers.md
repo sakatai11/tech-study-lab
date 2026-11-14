@@ -1,6 +1,6 @@
 # 0012: Web と API を別の Worker にし、書き込みは Hono API を通す
 
-- 状態: Accepted
+- 状態: Superseded by [ADR-0021](./0021-public-api-only.md)
 - 日付: 2026-10-14
 - 関連: Issue #242（`docs/design.md` の旧 3.1 節・旧 8.3 節・旧 8.4 節から移行）
 
@@ -23,8 +23,8 @@ Web（Next.js 互換）と API（Hono）は、Next.js の Route Handler に Hono
 
 ## 検証
 
-- [cloudflare-config.test.ts](../../apps/web/scripts/cloudflare-config.test.ts): Web Worker が API Worker の `InternalApi` を Service Binding で参照する
-- [api-server.test.ts](../../apps/web/src/lib/api-server.test.ts): Server loader の API client は binding を使い、本番で binding がなければ失敗し、本番以外でだけ URL に切り替える
+- [cloudflare-config.test.ts](../../apps/web/scripts/cloudflare-config.test.ts): ADR-0021 による撤去後は Web Worker に Service Binding がないことを確認する
+- [deployment-cli.test.mjs](../../scripts/deployment-cli.test.mjs): ADR-0021 による撤去後は、稼働 binding の解除を API 更新より先に確認する
 - [api.test.ts](../../apps/web/src/lib/api.test.ts): ブラウザ用の API client が `credentials: 'include'` を付ける
 - [index.test.ts](../../apps/api/src/index.test.ts): CORS は `WEB_ORIGIN` だけに credentialed な許可を返す
 - [rendering-boundaries.test.ts](../../apps/web/src/app/rendering-boundaries.test.ts): Web のソースに Server Actions がない

@@ -11,7 +11,7 @@ import srsVersionMigration from '../drizzle/migrations/0001_add_srs_version.sql?
 import questionMetadataMigration from '../drizzle/migrations/0002_nasty_guardsmen.sql?raw'
 
 import { FIXED_USER_ID } from './fixed-user'
-import { createInternalApiApp } from './index'
+import { createPublicApiApp } from './index'
 import type { PlatformRateLimiter } from './persistent-write-rate-limit'
 
 declare module 'cloudflare:test' {
@@ -35,9 +35,18 @@ const allowingLimiter: PlatformRateLimiter = {
 }
 
 async function fetchAnalytics(path: string): Promise<Response> {
-  return createInternalApiApp({
+  return createPublicApiApp(async () => undefined, {
     rateLimiters: { answers: allowingLimiter, lessonViews: allowingLimiter },
-  }).fetch(new Request(`https://api.internal${path}`), env)
+  }).fetch(
+    new Request(`https://api.example.com${path}`, {
+      headers: { 'Cf-Access-Jwt-Assertion': 'valid-token' },
+    }),
+    {
+      ...env,
+      ACCESS_ISSUER: 'https://team.cloudflareaccess.com',
+      ACCESS_AUDIENCE: 'access-audience',
+    },
+  )
 }
 
 describe('analytics API [ADR-0007]', () => {

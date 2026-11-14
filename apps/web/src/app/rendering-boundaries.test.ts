@@ -23,7 +23,6 @@ describe('user-specific routes [ADR-0019]', () => {
 
   it('fetches user-specific data only from the browser, not from Server modules', () => {
     const serverFetches = sourceFiles()
-      .filter(({ path }) => !path.startsWith('lib/api-server'))
       .filter(({ text }) => /createServerApiClient|lib\/api-server/.test(text))
       .map(({ path }) => path)
 
@@ -41,7 +40,7 @@ describe('user-specific data [ADR-0013]', () => {
   })
 })
 
-describe('mutations [ADR-0012]', () => {
+describe('mutations [ADR-0012] [ADR-0021]', () => {
   it('sends writes through the Hono API instead of Server Actions', () => {
     const serverActions = sourceFiles()
       .filter(({ text }) => /^\s*['"]use server['"]/m.test(text))

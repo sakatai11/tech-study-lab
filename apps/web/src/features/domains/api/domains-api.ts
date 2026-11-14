@@ -8,5 +8,5 @@ export async function fetchDomains(client: ApiClient): Promise<DomainsResponse> 
     '領域別進捗の取得に失敗しました。',
   )
 
-  return parseApiResponse(client, domainsResponseSchema, response)
+  return parseApiResponse(domainsResponseSchema, response)
 }

@@ -18,7 +18,6 @@ const relationSpec = {
   implements: { domain: ['http-endpoint'], range: ['module'] },
   'calls-endpoint': { domain: ['module'], range: ['http-endpoint'] },
   'derives-schema': { domain: ['type'], range: ['db-table', 'contract-schema'] },
-  'binds-service': { domain: ['module'], range: ['module'] },
   'binds-database': { domain: ['module'], range: ['worker-binding'] },
 }
 const fixedFiles = ['apps/api/wrangler.toml', 'apps/web/wrangler.jsonc', '.dependency-cruiser.cjs']
@@ -374,48 +373,21 @@ export function extract(sources) {
     sources['apps/web/wrangler.jsonc'],
   )
   if (config.error) throw new Error('Invalid Web JSONC')
-  const binding = config.config.services?.filter((item) => item.binding === 'API')
-  if (
-    binding?.length !== 1 ||
-    binding[0].service !== api.name ||
-    binding[0].entrypoint !== 'InternalApi'
-  )
-    throw new Error('API Service binding mismatch')
-  const entry = parsed.get(`apps/api/${api.main}`)
-  const exported = entry?.statements.some(
-    (statement) =>
-      ts.isExportDeclaration(statement) &&
-      literal(statement.moduleSpecifier) === './internal-api' &&
-      statement.exportClause &&
-      ts.isNamedExports(statement.exportClause) &&
-      statement.exportClause.elements.some(
-        (item) =>
-          item.name.text === binding[0].entrypoint &&
-          (item.propertyName?.text ?? item.name.text) === 'InternalApi',
-      ),
-  )
-  if (!exported) throw new Error('Missing InternalApi entrypoint export')
-  const internal = parsed.get('apps/api/src/internal-api.ts')
-  const declaration = internal?.statements.find(
-    (statement) => ts.isClassDeclaration(statement) && statement.name?.text === 'InternalApi',
-  )
-  if (
-    !declaration?.heritageClauses?.some((clause) =>
-      clause.types.some((type) => type.expression.getText(internal) === 'WorkerEntrypoint'),
-    )
-  )
-    throw new Error('Invalid InternalApi entrypoint class')
-  const workerSource = {
-    file: 'apps/web/wrangler.jsonc',
-    line:
-      sources['apps/web/wrangler.jsonc'].split('\n').findIndex((line) => line.includes('"API"')) +
-      1,
+  for (const web of [config.config, ...Object.values(config.config.env ?? {})]) {
+    if ((web.services ?? []).length !== 0) throw new Error('Web Service Bindings are forbidden')
   }
-  edge('apps/web/wrangler.jsonc', 'binds-service', 'apps/api/src/internal-api.ts', workerSource, {
-    binding: 'API',
-    service: api.name,
-    entrypoint: 'InternalApi',
-  })
+  if (
+    Object.hasOwn(sources, 'apps/api/src/internal-api.ts') ||
+    [...parsed.values()].some((sf) => {
+      let internal = false
+      visit(sf, (node) => {
+        if (ts.isIdentifier(node) && /^(InternalApi|createInternalApiApp)$/.test(node.text))
+          internal = true
+      })
+      return internal
+    })
+  )
+    throw new Error('Internal API entrypoint is forbidden [ADR-0021]')
   const dbSource = {
     file: 'apps/api/wrangler.toml',
     line:

@@ -11,7 +11,7 @@ import questionMetadataMigration from '../drizzle/migrations/0002_nasty_guardsme
 import { createAnswerDeps } from './dal/answer-repository'
 import { createReviewDeps } from './dal/review-repository'
 import { FIXED_USER_ID } from './fixed-user'
-import { createInternalApiApp, createPublicApiApp } from './index'
+import { createPublicApiApp } from './index'
 import type { PlatformRateLimiter } from './persistent-write-rate-limit'
 import { SrsConflictError } from './services/errors'
 
@@ -84,10 +84,22 @@ const allowingRateLimiters = {
   lessonViews: allowingLimiter,
 }
 
-async function fetchInternal(path: string, init?: RequestInit): Promise<Response> {
-  return await createInternalApiApp({ rateLimiters: allowingRateLimiters }).fetch(
-    new Request(`https://api.internal${path}`, init),
-    env,
+async function fetchPublic(path: string, init?: RequestInit): Promise<Response> {
+  return await createPublicApiApp(async () => undefined, {
+    rateLimiters: allowingRateLimiters,
+  }).fetch(
+    new Request(`https://api.example.com${path}`, {
+      ...init,
+      headers: {
+        ...Object.fromEntries(new Headers(init?.headers)),
+        'Cf-Access-Jwt-Assertion': 'valid-token',
+      },
+    }),
+    {
+      ...env,
+      ACCESS_ISSUER: 'https://team.cloudflareaccess.com',
+      ACCESS_AUDIENCE: 'access-audience',
+    },
   )
 }
 
@@ -113,7 +125,7 @@ describe('core API endpoints', () => {
   })
 
   it('ミドルウェアで確定したユーザーの教材閲覧を記録する [ADR-0003]', async () => {
-    const response = await fetchInternal('/lesson-views', {
+    const response = await fetchPublic('/lesson-views', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ lessonId: 'security-xss-01' }),
@@ -135,7 +147,7 @@ describe('core API endpoints', () => {
   })
 
   it('クライアント指定の userId を拒否し教材閲覧を記録しない [ADR-0003]', async () => {
-    const response = await fetchInternal('/lesson-views', {
+    const response = await fetchPublic('/lesson-views', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -153,7 +165,7 @@ describe('core API endpoints', () => {
   it('grades an answer and atomically records its log and next SRS state for the fixed user [ADR-0002] [ADR-0005]', async () => {
     await seedQuestion('question-1', 2)
 
-    const response = await fetchInternal('/answers', {
+    const response = await fetchPublic('/answers', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -194,7 +206,7 @@ describe('core API endpoints', () => {
   })
 
   it('maps a missing authoritative question to the public 404 error contract [ADR-0002]', async () => {
-    const response = await fetchInternal('/answers', {
+    const response = await fetchPublic('/answers', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ questionId: 'missing-question', selectedIndex: 0 }),
@@ -210,7 +222,7 @@ describe('core API endpoints', () => {
   })
 
   it('rejects a client-provided userId before it can affect the fixed user context [ADR-0003]', async () => {
-    const response = await fetchInternal('/answers', {
+    const response = await fetchPublic('/answers', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -227,21 +239,11 @@ describe('core API endpoints', () => {
   })
 
   it.each([
-    {
-      entrypoint: 'internal',
-      endpoint: '/answers',
-      body: { questionId: 'question-1', selectedIndex: 0 },
-    },
-    { entrypoint: 'internal', endpoint: '/lesson-views', body: { lessonId: 'security-xss-01' } },
-    {
-      entrypoint: 'public',
-      endpoint: '/answers',
-      body: { questionId: 'question-1', selectedIndex: 0 },
-    },
-    { entrypoint: 'public', endpoint: '/lesson-views', body: { lessonId: 'security-xss-01' } },
+    { endpoint: '/answers', body: { questionId: 'question-1', selectedIndex: 0 } },
+    { endpoint: '/lesson-views', body: { lessonId: 'security-xss-01' } },
   ])(
-    'returns the shared 429 contract before a $entrypoint $endpoint D1 write [ADR-0004]',
-    async ({ entrypoint, endpoint, body }) => {
+    'returns the shared 429 contract before a public $endpoint D1 write [ADR-0004]',
+    async ({ endpoint, body }) => {
       const deniedLimiter: PlatformRateLimiter = {
         async limit() {
           return { success: false }
@@ -250,27 +252,18 @@ describe('core API endpoints', () => {
       const rateLimiters = { answers: deniedLimiter, lessonViews: deniedLimiter }
       const request = new Request(`https://api.example.com${endpoint}`, {
         method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          ...(entrypoint === 'public' ? { 'Cf-Access-Jwt-Assertion': 'valid-token' } : {}),
-        },
+        headers: { 'content-type': 'application/json', 'Cf-Access-Jwt-Assertion': 'valid-token' },
         body: JSON.stringify(body),
       })
-      const app =
-        entrypoint === 'public'
-          ? createPublicApiApp(async () => undefined, { rateLimiters })
-          : createInternalApiApp({ rateLimiters })
-      const bindings =
-        entrypoint === 'public'
-          ? {
-              ...env,
-              ACCESS_AUDIENCE: 'access-audience',
-              ACCESS_ISSUER: 'https://team.cloudflareaccess.com',
-              WEB_ORIGIN: 'https://web.example.com',
-            }
-          : env
-
-      const response = await app.fetch(request, bindings)
+      const response = await createPublicApiApp(async () => undefined, { rateLimiters }).fetch(
+        request,
+        {
+          ...env,
+          ACCESS_AUDIENCE: 'access-audience',
+          ACCESS_ISSUER: 'https://team.cloudflareaccess.com',
+          WEB_ORIGIN: 'https://web.example.com',
+        },
+      )
 
       expect(response.status).toBe(429)
       expect(response.headers.get('Retry-After')).toBe('60')
@@ -296,10 +289,10 @@ describe('core API endpoints', () => {
           throw new Error('limiter unavailable')
         },
       }
-      const response = await createInternalApiApp({
+      const response = await createPublicApiApp(async () => undefined, {
         rateLimiters: { answers: unavailableLimiter, lessonViews: unavailableLimiter },
       }).fetch(
-        new Request(`https://api.internal${endpoint}`, {
+        new Request(`http://localhost${endpoint}`, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify(body),
@@ -323,7 +316,7 @@ describe('core API endpoints', () => {
     await seedQuestion('question-1', 2)
 
     for (const selectedIndex of [2, 0]) {
-      const response = await fetchInternal('/answers', {
+      const response = await fetchPublic('/answers', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ questionId: 'question-1', selectedIndex }),
@@ -379,12 +372,12 @@ describe('core API endpoints', () => {
       const info = vi.spyOn(console, 'info').mockImplementation(() => undefined)
       await seedQuestion('question-1', 2)
 
-      const answerResponse = await fetchInternal('/answers', {
+      const answerResponse = await fetchPublic('/answers', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ questionId: 'question-1', selectedIndex: 2 }),
       })
-      const lessonViewResponse = await fetchInternal('/lesson-views', {
+      const lessonViewResponse = await fetchPublic('/lesson-views', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ lessonId: 'security-xss-01' }),
@@ -422,8 +415,8 @@ describe('core API endpoints', () => {
     await seedSrsState('other-user', now - 60_000, 'another-user')
 
     const [queueResponse, countResponse] = await Promise.all([
-      fetchInternal('/review/queue'),
-      fetchInternal('/dashboard/due-count'),
+      fetchPublic('/review/queue'),
+      fetchPublic('/dashboard/due-count'),
     ])
 
     expect(queueResponse.status).toBe(200)
@@ -483,7 +476,7 @@ describe('core API endpoints', () => {
     await seedSrsState('security-2', 1_700_000_000_000, 'another-user', 99)
     await seedSrsState('backend-1', 1_700_000_000_000, FIXED_USER_ID, 21)
 
-    const response = await fetchInternal('/domains')
+    const response = await fetchPublic('/domains')
 
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({
@@ -524,7 +517,7 @@ describe('core API endpoints', () => {
     })
   })
 
-  it('keeps the domains route behind Access and maps repository failures to 500 [ADR-0008]', async () => {
+  it('keeps the domains route behind Access and maps repository failures to 500 [ADR-0008] [ADR-0021]', async () => {
     const publicResponse = await createPublicApiApp().fetch(
       new Request('https://api.example.com/domains'),
       {
@@ -541,17 +534,17 @@ describe('core API endpoints', () => {
         throw new Error('D1 query failed')
       },
     } as unknown as D1Database
-    const internalResponse = await createInternalApiApp().fetch(
-      new Request('https://api.internal/domains'),
+    const failingResponse = await createPublicApiApp(async () => undefined).fetch(
+      new Request('http://localhost/domains'),
       { ...env, DB: failingDb },
     )
-    expect(internalResponse.status).toBe(500)
-    await expect(internalResponse.json()).resolves.toEqual({
+    expect(failingResponse.status).toBe(500)
+    await expect(failingResponse.json()).resolves.toEqual({
       error: { code: 'INTERNAL', message: 'Internal Server Error' },
     })
   })
 
-  it('allows an Access-verified public write and rejects unauthorized writes before D1 changes [ADR-0008]', async () => {
+  it('allows an Access-verified public write and rejects unauthorized writes before D1 changes [ADR-0008] [ADR-0021]', async () => {
     const app = createPublicApiApp(async () => undefined, { rateLimiters: allowingRateLimiters })
     const bindings = {
       ...env,
@@ -597,7 +590,7 @@ describe('core API endpoints', () => {
     })
   })
 
-  it('rejects an unauthorized non-loopback write through the default public Worker before D1 changes [ADR-0008]', async () => {
+  it('rejects an unauthorized non-loopback write through the default public Worker before D1 changes [ADR-0008] [ADR-0021]', async () => {
     const response = await SELF.fetch('https://api.test/answers', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },

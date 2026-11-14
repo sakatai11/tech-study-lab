@@ -1,4 +1,5 @@
 import type { DomainKey } from '@tsl/shared'
+import type { Root } from 'hast'
 
 export type CatalogTopicViewModel = {
   topic: string
@@ -25,7 +26,7 @@ export type TopicViewModel = {
   domain: DomainKey
   topic: string
   title: string
-  overviewMarkdown: string
+  overview: Root
   lessons: LessonSummaryViewModel[]
 }
 
@@ -35,12 +36,19 @@ export type LessonQuestionViewModel = {
   choices: string[]
 }
 
+/** 本文の h2 への目次項目。`id` は h2 の id（ビルド時に振る）。 */
+export type LessonTocItemViewModel = {
+  id: string
+  title: string
+}
+
 export type LessonViewModel = {
   domain: DomainKey
   topic: string
   id: string
   title: string
   estimatedMinutes: number
-  markdownBody: string
+  body: Root
+  toc: LessonTocItemViewModel[]
   questions: LessonQuestionViewModel[]
 }

@@ -129,7 +129,7 @@ pnpm test:hooks           # hook fixture、共通ログ、同期、両ランタ�
 
 ### 7.1 Jevによる設計参照の意味チェック
 
-Codex／Claude Codeは、1Passwordを使うローカル実行では `git jev`（ローカルGit設定の `alias.jev`）を使う。dry-run・helpでは1Passwordを呼ばず、`--execute` 時だけ `op run` で `TYPESAFE_API_KEY` を渡す。実行可否・送信同意・判定結果の扱いは [レビュー規約](../.ai/review-guidelines.md#jev設計参照チェック) に従う。
+Codex／Claude Codeは、1Passwordを使うローカル実行では `git jev`（ローカルGit設定の `alias.jev`）を使う。alias は `.ai/scripts/run-jev-review.sh` を起動し、dry-run・helpでは認証情報を取得しない。`--execute` 時だけ、専用サービスアカウントで取得した `TYPESAFE_API_KEY` を runner に渡す。実行可否・送信判断・判定結果の扱いは [レビュー規約](../.ai/review-guidelines.md#jev設計参照チェック) に従う。
 
 環境変数にキーがない場合も、`git config --get alias.jev >/dev/null`（0: 設定済み、1: 未設定）と `op --version` で利用可否を確認する。未設定なら不足する設定を利用者に確認する。失敗時はCLI・権限・1Password連携の原因を切り分け、キー未登録と断定しない。
 
@@ -139,7 +139,7 @@ Codex／Claude Codeは、1Passwordを使うローカル実行では `git jev`（
 # レビュー対象をコミット後、送信候補をオフラインで確認する
 git jev --base <baseCommit> --head <headCommit> --dry-run
 
-# 送信許可を確認した候補のplanHashで実行する
+# dry-runで送信判断の条件を確認した候補のplanHashで実行する
 git jev --base <baseCommit> --head <headCommit> --execute --approved-plan <planHash>
 ```
 
@@ -152,7 +152,7 @@ JevのCLIは `.env.local` を自動読み込みしない。APIの接続先はHTT
 | 状態・理由 | 対処・確認先 |
 | --- | --- |
 | `no_affected_sources` / `no_references_in_selected_sources` | 対象外。削除した参照元は `deletedSources` に残る |
-| `approval_required` / `approved_plan_mismatch` | 許可範囲とdry-runを再確認 |
+| `approval_required` / `approved_plan_mismatch` | `--approved-plan` の値とdry-runを再確認 |
 | `review_context_dirty` / パス拒否 | 対象head・作業コピー・実パスを確認 |
 | 引数エラー（`unknown_option` など） / `git_failed` | 引数の誤りとGitの失敗を区別。後者は参照commitの取得状況・リポジトリを確認 |
 | `dependency_missing` | `pnpm install --frozen-lockfile` で依存を導入。dry-runは依存なしでも可能 |
@@ -160,13 +160,13 @@ JevのCLIは `.env.local` を自動読み込みしない。APIの接続先はHTT
 | `network_error` / `request_timeout` | proxy・CA・許可ホスト・通信状態を確認 |
 | `http_<status>` | API側の認証・制限・障害を確認 |
 | `invalid_json` / `invalid_response` | 応答形式不正。判定は取得できていない |
-| `request_budget_exhausted` / `context_budget_exceeded` | 要求／文脈予算超過。上限変更には同意範囲の確認が必要 |
+| `request_budget_exhausted` / `context_budget_exceeded` | 要求／文脈予算超過。既定上限を超える変更にはユーザーの確認が必要 |
 | `stopped_after_error` | 先行エラーで後続を未実施 |
 | `local_error` / `needs_confirmation` | 未解決参照、案内表・コード例・文書全体参照など。API送信せずローカルで確認 |
 
 終了コードは対象外・dry-run・実行完了が0、未承認・未実施・APIエラー・未解決参照が2。`completed` でも `needs_confirmation` は未送信で残る。対応するMarkdownはリポジトリのATX見出し、インラインリンク、章番号・ADR番号に限定される。
 
-通常の「このPRをレビューして」という依頼では、AIがdry-runを読み、送信許可がなければ「未承認のため未実施」と通常レビューの結果に記載する。今回の候補を覆う事前許可があれば実行し、出典・判定・元文書の確認結果を報告する。
+通常の「このPRをレビューして」という依頼では、AIがdry-runを読み、レビュー規約の送信判断の条件を満たせば実行して、出典・判定・元文書の確認結果を報告する。条件を満たさなければ、理由とともに「未実施」と通常レビューの結果に記載する。
 
 手動調査と固定fixtureの評価には直接指定CLIを使う。実行結果はGit対象外の `reports/` に保存できる。
 
@@ -188,6 +188,47 @@ pnpm --silent design-ref:check --compare reports/jev-evaluation.json --human-tim
 ```
 
 評価の現状と限界は [調査記録](./investigations/2026-10-17-jev-design-reference-check.md) に残す。
+
+### 7.2 外部レビュー用Claude CLIの認証設定
+
+外部レビュー用の Claude CLI は、1Password の専用保管庫に保存した Claude サブスクリプションの OAuth トークンを使う。実行時の Touch ID 承認を不要にするため、1Password のサービスアカウントで取得する。以下は初回設定と保守の手順であり、AI が実行時に従う規則は [実行互換ルール](../.ai/runtime-compatibility.md#claude-cli-の認証情報) にある。
+
+1. 1Password CLI（`op`）をインストールする。保管庫やサービスアカウントの初回作成にアプリ連携を使う場合は、1Password アプリの「設定 → 開発者」で CLI 連携を有効にする。
+2. 外部レビュー専用の保管庫を作り、Claude の OAuth トークンだけを保存する。組み込みの Personal / Private 保管庫はサービスアカウントに許可できない。新規発行が必要なら、自身のターミナルで `claude setup-token` を実行する。API キーに置き換えず、トークンをチャットや共有ファイルへ貼らない。
+3. 専用保管庫に対する `read_items` 権限だけを持つサービスアカウントを作る。書き込み・共有・保管庫作成の権限は付けない。有効期間は `--expires-in 89d` とし、期限前に新しいサービスアカウントへ更新する。CLI で期限を指定する場合は90日未満にする必要がある。
+4. サービスアカウント用トークンを macOS Keychain に、サービス名 `AI_CLAUDE_REVIEW_1PASSWORD_SERVICE_ACCOUNT_TOKEN`、アカウント名 `tech-study-lab` で保存する。`/usr/bin/security` の読み取りを許可し、すべてのアプリを許可する設定は使わない。トークンをコマンド引数・ログ・平文ファイルへ出さずに登録する。
+5. Claude のトークンを保存したフィールドのシークレット参照（`op://保管庫/項目/フィールド`）をコピーし、リポジトリのルートで次の設定を行う。
+
+```sh
+git config --local ai.claudeOAuthTokenRef 'op://保管庫/項目/フィールド'
+.ai/scripts/run-claude-review.sh auth status
+```
+
+Git 設定に保存するのは参照先だけで、トークン本体は保存しない。環境変数 `AI_CLAUDE_CODE_OAUTH_TOKEN_REF` を指定した場合は、Git 設定より優先される。個人の参照先は共有コードに埋め込まない。
+
+wrapper は `.ai/scripts/load-secrets.sh` を読み込み、Keychain から取得したサービスアカウント用トークンを `op read` のプロセスにだけ渡す。Claude CLI へ渡すのは取得した `CLAUDE_CODE_OAUTH_TOKEN` であり、サービスアカウント用トークンは引き継がない。アプリ連携や継承した別のサービスアカウント・Connect の資格情報には切り替えない。
+
+Claude 用 wrapper は、継承した API キー・認証用 Bearer トークン・別プロバイダー指定を除き、Node.js を使って CLI の認証方式を起動前に確認する。呼び出し時の `--settings`・`--setting-sources` と実行モードも確認に反映する。設定ファイルなどから別の認証が選ばれる場合や、認証方式を確認できない場合はレビューを開始しない。CLI の権限・hook 設定は保持する。この確認は認証方式の選択を検証するもので、トークンの有効性や通信成功の検証ではない。
+
+実行にはログイン用 Keychain がロック解除されている必要がある。Keychain へのアクセスやサービスアカウント認証が失敗した場合は停止し、Touch ID の対話認証へ戻らない。トークンの失効時は更新が必要になる。設定後に `pnpm test:secrets` でローダーのテストを実行できる。
+
+### 7.3 Jevの認証設定
+
+Jev 用の専用保管庫とサービスアカウントを作り、Claude 用とは権限を分ける。保管庫への権限は `read_items` のみ、有効期間は89日とする。初回の作成・移行には利用者の承認が必要だが、設定後の `git jev --execute` は Touch ID 承認なしでキーを取得する。
+
+サービスアカウント用トークンは、macOS Keychain のサービス名 `AI_JEV_1PASSWORD_SERVICE_ACCOUNT_TOKEN`、アカウント名 `tech-study-lab` に安全に保存する。保存時の注意点と `/usr/bin/security` のアクセス許可は Claude 用と同じである。
+
+Jev の API キーを保存したフィールドのシークレット参照だけを、リポジトリのルートで設定する。
+
+```sh
+git config --local ai.jevApiKeyRef 'op://保管庫/項目/フィールド'
+git config --local alias.jev '!sh .ai/scripts/run-jev-review.sh'
+git jev --help
+```
+
+環境変数 `AI_JEV_API_KEY_REF` を指定した場合は Git 設定より優先される。個人の参照先や API キー本体を共有コードに埋め込まない。
+
+Jev wrapper は、共通ローダー `.ai/scripts/load-secrets.sh` の Jev 用設定を使う。サービスアカウント用トークンは `op read` にだけ渡し、runner に引き継がない。認証に失敗した場合は停止し、個人アカウントのアプリ連携や別のキーへ戻らない。ログイン用 Keychain のロック解除と、有効期限前のサービスアカウント更新が必要である。
 
 ## 8. 恒久ルールと権限
 

@@ -196,7 +196,7 @@ test('promotion compares deployable sources while keeping the proof bound to its
   )
 })
 
-test('API and Web cannot bind a resource from the other environment', () => {
+test('API targets its environment and Web rejects service bindings [ADR-0021]', () => {
   const target = getTarget('verification')
   const api = {
     name: target.api,
@@ -207,7 +207,6 @@ test('API and Web cannot bind a resource from the other environment', () => {
   }
   const web = {
     name: target.web,
-    services: [{ binding: 'API', service: target.api, entrypoint: 'InternalApi' }],
     migrations: [],
     workers_dev: true,
     preview_urls: false,
@@ -274,7 +273,16 @@ test('manifest detects tampered SQL, added files, and wrong environment', () => 
 })
 
 test('release applies schema/data/API/Web in order and stops at every failed stage [ADR-0010] [ADR-0016] [ADR-0017]', async () => {
-  const common = ['preflight', 'migrations', 'sync', 'api', 'apiHealth', 'web', 'smoke']
+  const common = [
+    'preflight',
+    'migrations',
+    'sync',
+    'detachWebApi',
+    'api',
+    'apiHealth',
+    'web',
+    'smoke',
+  ]
   assert.deepEqual(releaseStages('production'), [...common, 'record'])
   assert.deepEqual(releaseStages('verification'), [...common, 'performance', 'cpuLogs', 'record'])
   for (const environment of ['verification', 'production']) {

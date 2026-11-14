@@ -22,7 +22,7 @@
 - **使う手段**: 認証済みの `gh` CLI を使って、PR・Issue・レビュー・コメント・レビュースレッドを取得・作成・更新・解決する。開始時に `gh auth status` を確認し、失敗した場合は認証を復旧するまで GitHub を操作しない。
   - Codex App で GitHub コネクタが接続済みの場合は、同等の操作にコネクタを使ってよい。コネクタは `gh` の必須の代替ではない。
   - ローカルの `git fetch` / `git push` / コミットはコネクタの対象外で、ローカル Git の認証・権限に従う。
-- **Sandbox 内で未認証と出たとき**: 認証の確認と外部通信は、別々に診断する。`gh auth status`、`codex login status`、`.ai/scripts/run-claude-review.sh auth status` のいずれかが Sandbox 内で未認証を返しても、すぐにユーザーへ再ログインを求めない。まず同じ状態確認コマンドだけを、正規の承認・権限昇格の経路で再実行する。Sandbox の外で認証済みなら、OS の keyring または認証キャッシュが Sandbox から見えなかったものとして扱う。
+- **Sandbox 内で未認証と出たとき**: 認証の確認と外部通信は、別々に診断する。`gh auth status`、`codex login status`、`.ai/scripts/run-claude-review.sh auth status` のいずれかが Sandbox 内で未認証を返しても、すぐにユーザーへ再ログインを求めない。まず同じ状態確認コマンドだけを、正規の承認・権限昇格の経路で再実行する。Sandbox の外で認証済みなら、Sandbox 内の認証ストアへのアクセスや CLI 連携の問題として扱う。
 - **認証済みなのに通信エラーが出るとき**: API・DNS・接続のエラーなら、対象の読み取りコマンドだけを正規の承認・権限昇格の経路で再実行するか、Codex App の接続済みコネクタを使う。通信の失敗を「未認証」と報告しない。
 - **認証は共有されない**: GitHub コネクタの認証と、`gh` や別モデルレビュー用 CLI（Codex CLI・Claude CLI）の認証は別物である。これらの CLI はコネクタで代替できないので、CLI 自身の認証状態を上記の二段階で確認する。
 
@@ -32,13 +32,15 @@
   - `reviewPolicy: always`: 作業開始時
   - `risk-based`: 実行が必要と判定した時点
   - `never`: 実施しない
-- **ログインを依頼する条件**: Sandbox の外で同じ状態確認をしても未認証だった場合だけ、ユーザーに CLI のログインを依頼する。Sandbox の承認、Keychain が見えないこと、通信の失敗、CLI がないことを「ユーザー認証が必要」と表現しない。
+- **ログインを依頼する条件**: Sandbox の外で同じ状態確認をしても CLI 自体が未認証を返した場合だけ、ユーザーに CLI のログインを依頼する。実行承認、認証ストアへのアクセス、1Password 連携、参照先の設定、通信、CLI 不在の問題を「ユーザー認証が必要」と表現しない。
 - **記録と再利用**: 認証済みなら、CLI 名・バージョン・確認コマンド・時刻・`authReady: true` だけを `<scratchpad>/review-mode-<N>.md` に記録し、同じスキル実行の中で再利用する。トークン、アカウント識別子、認証出力の全文は記録しない。再確認するのは、CLI が auth error を返したとき、CLI の実体が変わったとき、別のスキル実行になったときだけである。
-- **承認を混同しない**: ランタイムのコマンド実行承認、CLI のログイン、private な内容の外部送信への同意は、それぞれ別の判断である。どれか1つで他を代用しない。ランタイムがセッション限定・対象コマンド限定で承認を再利用できる場合に限り、同じスキル実行の read-only レビューに使ってよい。永続的な承認規則や、CLI 全体を許可する広い承認規則は作らない。
+- **承認を混同しない**: ランタイムのコマンド実行承認、CLI のログイン、外部送信の可否は、それぞれ別の判断である。どれか1つで他を代用しない。`issue-dev-orchestrate` が定める範囲の別モデル CLI レビューは、外部送信についてユーザーへの個別確認を要しない。その範囲を超える送信にはユーザーの明示同意が必要である。ランタイムがセッション限定・対象コマンド限定で承認を再利用できる場合に限り、同じスキル実行の read-only レビューに使ってよい。永続的な承認規則や、CLI 全体を許可する広い承認規則は作らない。
 
 ## Claude CLI の認証情報
 
-- Claude CLI で認証確認やレビューを行う場合は、`claude` を直接起動せず、`.ai/scripts/run-claude-review.sh` を使う。この wrapper は同じプロセス内で `.ai/scripts/load-secrets.sh` を source し、macOS Keychain の `AI_CLAUDE_CODE_OAUTH_TOKEN` / `claude` から取得した値を、`CLAUDE_CODE_OAUTH_TOKEN` として環境変数経由で Claude CLI にだけ渡す。
+- **実行入口**: 認証確認は `.ai/scripts/run-claude-review.sh auth status`、レビューも同じ wrapper を使う。`claude` の直接起動や、別の資格情報による代替は行わない。
+- **認証情報の取得**: 1Password からの取得と参照先の選択は `.ai/scripts/load-secrets.sh` に任せ、呼び出し側で再実装しない。
+- **取得できない場合**: ローダーのエラーではレビューを起動せず、参照先・CLI・Keychain・サービスアカウントのどこで失敗したかを報告する。ローダーの失敗だけでトークンの失効や未登録と断定しない。アプリ連携や別の資格情報へ切り替えず、設定の不足は [利用者向けの設定手順](../docs/ai-coding-agents.md#72-外部レビュー用claude-cliの認証設定) を参照し、不足する情報や操作だけを利用者に依頼する。
 - トークンを、コマンド引数・標準入力・ログ・ブリーフ・リポジトリ内のファイルへコピーしない。
 
 ## サブエージェントの起動
@@ -80,7 +82,7 @@
   - 選んだモデル名は、起動時のヘッダーの `model:` と一致することを確かめ、判定に必要なメタ情報としてレビューの記録（PR 本文など）に残す。一致しない場合は「判定: error」とし、その出力を判定に使わない。
 - **観点の分担**: `reviewer` が正確性優先、別モデル CLI が契約準拠優先（`spec-compliance-first`）である（`.ai/review-guidelines.md`）。CLI の出力はオーケストレーターが直接読み、同規約の分類と重要度で判定する。
 - **起動する主体**: 別モデル CLI はサブエージェントからは起動しない。オーケストレーターが継続セッションで直接起動する。
-- **ブリーフ**: `<scratchpad>` のファイルとして渡し、長文を起動プロンプトへ直接貼らない。ブリーフには、対象 Issue・対象機能・受け入れ条件・範囲外の扱い・差分範囲を含め、同意済みの送信範囲と一致させる。
+- **ブリーフ**: `<scratchpad>` のファイルとして渡し、長文を起動プロンプトへ直接貼らない。ブリーフには、対象 Issue・対象機能・受け入れ条件・範囲外の扱い・差分範囲を含め、`issue-dev-orchestrate` が定める送信範囲に収める。
   - Codex CLI にはブリーフを stdin（`-`）で渡す。差分は CLI 自身に `git diff <effective-base>...HEAD` で読ませるので、ブリーフにはこのコマンドとコミット範囲を書く。
   - `codex exec review` サブコマンドは使わない。`--base` と PROMPT（stdin の `-` を含む）を併用できず、ブリーフを渡せないためである（codex-cli 0.160.0 で確認）。
 - **起動前の確認**:
@@ -88,7 +90,7 @@
   - レビュー対象はコミット済みの差分に限る。`git status --short` が空であることと、`committedRange` が実際の差分と一致することを確かめる。
 - **read-only の徹底**:
   - Codex CLI には `-s read-only` を必ず付け、Sandbox を設定ファイルの値に委ねない。起動時のヘッダーに `sandbox: read-only` と表示されることを確かめる。
-  - Claude CLI には `--allowedTools "Read Grep Glob"` と `--disallowedTools "Edit Write NotebookEdit Bash"` を付け、Keychain wrapper 以外には資格情報を渡さない。
+  - Claude CLI には `--allowedTools "Read Grep Glob"` と `--disallowedTools "Edit Write NotebookEdit Bash"` を付け、認証情報は `.ai/scripts/run-claude-review.sh` 経由でだけ渡す。
 - **出力の扱い**: raw の stdout / stderr はファイル・ブリーフ・scratchpad に残さない。永続化する場合は、機密を除き、判定に必要なメタ情報だけにする。
 - **監視と失敗**:
   - 生存中で出力がないプロセスは `running` とし、5分で止めない。10分で進捗を通知し、20分で一度だけ終了して「判定: timeout」とする。

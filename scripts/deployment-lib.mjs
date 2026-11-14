@@ -98,11 +98,7 @@ export function assertTargetConfig(target, api, web) {
   assert.equal(db.database_name, target.database, 'D1 name mismatch')
   assert.equal(db.database_id, target.databaseId, 'D1 ID mismatch')
   assert.equal(web.name, target.web, 'Web Worker mismatch')
-  assert.deepEqual(
-    web.services,
-    [{ binding: 'API', service: target.api, entrypoint: 'InternalApi' }],
-    'API Service Binding mismatch',
-  )
+  assert.deepEqual(web.services ?? [], [], 'Web Service Bindings are forbidden [ADR-0021]')
   assert.deepEqual(
     web.migrations ?? [],
     target.environment === 'production'
@@ -167,7 +163,16 @@ export function validateManifest(directory, manifest, environment, sha) {
   assert.deepEqual(inventory(directory), manifest.files, 'release artifact hash mismatch')
 }
 
-const releaseOrder = ['preflight', 'migrations', 'sync', 'api', 'apiHealth', 'web', 'smoke']
+const releaseOrder = [
+  'preflight',
+  'migrations',
+  'sync',
+  'detachWebApi',
+  'api',
+  'apiHealth',
+  'web',
+  'smoke',
+]
 
 /** 環境ごとの段階。性能測定と CPU ログ照合は検証環境だけで、成功記録の直前に行う（ADR-0016）。 */
 export function releaseStages(environment) {

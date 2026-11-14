@@ -16,5 +16,5 @@ export async function submitAnswer(
     '解答の送信に失敗しました。もう一度お試しください。',
   )
 
-  return parseApiResponse(client, answerResponseSchema, response)
+  return parseApiResponse(answerResponseSchema, response)
 }

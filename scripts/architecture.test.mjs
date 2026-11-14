@@ -131,21 +131,24 @@ for (const [label, file, before, after] of [
   })
 }
 
-test('rejects binding mismatch and missing entrypoint export', () => {
-  for (const [file, before, after] of [
-    ['apps/web/wrangler.jsonc', 'tech-study-lab-api', 'wrong-api'],
-    ['apps/web/wrangler.jsonc', 'InternalApi', 'MissingApi'],
-    ['apps/api/src/index.ts', "export { InternalApi } from './internal-api'", ''],
-    [
-      'apps/api/src/index.ts',
-      "export { InternalApi } from './internal-api'",
-      "export { InternalApi } from './app'",
-    ],
-  ])
+test('rejects Web service bindings and internal entrypoints [ADR-0021]', () => {
+  for (const config of [
+    { services: [{ binding: 'API', service: 'tech-study-lab-api', entrypoint: 'InternalApi' }] },
+    { env: { edge: { services: [{ binding: 'OTHER', service: 'wrong-api' }] } } },
+  ]) {
     assert.throws(
-      () => extract({ ...sources, [file]: sources[file].replace(before, after) }),
-      /binding|entrypoint/i,
+      () => extract({ ...sources, 'apps/web/wrangler.jsonc': JSON.stringify(config) }),
+      /binding/i,
     )
+  }
+  for (const changed of [
+    { 'apps/api/src/internal-api.ts': 'export class InternalApi {}' },
+    {
+      'apps/api/src/index.ts': `${sources['apps/api/src/index.ts']}\nexport { InternalApi } from './app'`,
+    },
+    { 'apps/api/src/app.ts': `${sources['apps/api/src/app.ts']}\nexport class InternalApi {}` },
+  ])
+    assert.throws(() => extract({ ...sources, ...changed }), /internal.*entrypoint/i)
 })
 
 test('rejects unknown relations, dangling edges and invalid provenance', () => {
