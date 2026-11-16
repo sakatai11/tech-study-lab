@@ -161,6 +161,7 @@ API は `http://localhost:8787`、Web は `http://localhost:3000` で起動し�
 | コマンド | 内容 |
 | --- | --- |
 | `pnpm dev` | API と Web を同時に起動 |
+| `pnpm --filter @tsl/web storybook` | UI コンポーネントのカタログ（Storybook）を起動 |
 | `pnpm typecheck` / `pnpm lint` / `pnpm test` / `pnpm build` | 品質ゲート |
 | `pnpm content:validate` | 教材・問題のスキーマ検証 |
 | `pnpm architecture:query '<キーワード>'` | Knowledge Graph から関連するノードを検索 |

@@ -14,6 +14,17 @@ Web（`apps/web`）の見た目・表示文言・画面の振る舞いの規約�
 - **イントロ・演習・結果の状態遷移（URL は変えない）**：演習・復習とも 1 ルート内で `intro → exercise → result` のクライアント状態遷移を持つ（別 URL に切らない。モックの実装モデルに一致）。`intro` は開始前の確認（対象レッスンの概要／due 件数・滞留日数のプレビュー）に専念し、`exercise` は 1 問ずつ即時採点、`result` はスコア・問題ごとの正誤一覧・出し分けアクションを表示する。初回データは、演習（問題・解説）は Server loader で ViewModel 化して props で渡す。`/review` は Server が正解を除いた問題索引を作って props で渡し、Client hook が due queue を取得して索引と結合し、ViewModel 化する（ADR-0019）。状態遷移そのものは Client Component が持つ（設計文書 §5.6 の `QuizInteractive` と同じ設計）。結果表示は `/quiz/[lesson]` と `/review` で共通コンポーネントとして再利用する。
 - **レイアウト（サイドバー / ボトムタブ）**：`/home` 以下の学習画面では、PC は左サイドバー（ロゴ＋テーマトグル＋ホーム／教材／演習／復習（due件数バッジ）／学習分析／学習領域）、本文は右側 1 カラム。SP は上部アプリバー（ロゴ＋ストリーク表示＋テーマトグル）＋下部固定タブバー（**ホーム／教材／演習／復習（dueバッジ）／領域の5項目**）。ナビ名は PC・SP で同じ語にし、SP では「学習領域」だけを「領域」と短縮する。ホームのナビゲーション先は `/home` とする。「演習」は `/quiz` の一覧、「復習」は `/review` に遷移する。SP のタブバーはスペース都合で 5 項目に絞り、「学習分析（`/analytics`）」へはホームの「学習分析を見る」リンクから遷移する。「設定」は将来の公開機能（認証等、設計文書 §1 のスコープ外）向けで、MVP ではナビに置かない。ナビ項目のアイコンは下記「スタイリング」の Material Symbols を使い、ホーム `home`・教材 `menu_book`・演習 `contract_edit`・復習 `event_repeat`・学習分析 `bar_chart`・学習領域／領域 `category` とする（PC・SP で同じアイコン）。SP のストリーク表示は `local_fire_department` を添える。テーマトグルは切り替え先のテーマのアイコン（ダーク表示中は `light_mode`、ライト表示中は `dark_mode`）を表示し、切り替え動作の説明（「ライトテーマに切り替える」等）を読み上げ名にする（`aria-pressed` は併用しない）。アイコンと読み上げ名は、描画前に確定する `html[data-theme]` に応じて CSS で出し分ける `sr-only` テキストで持ち、React の state から補正しない（ライトテーマでも初回描画から一致させる）。
 
+## コンポーネントカタログ（Storybook）
+
+実装済みコンポーネントの見た目と状態は Storybook で一覧する。モックアップが「どう見せるか」の正式版で、Storybook は「実装がいまどう見えるか」を確認する場所とする。Storybook は開発用で、公開環境にはデプロイしない。
+
+- **起動**：`pnpm --filter @tsl/web storybook`（`http://localhost:6006`）。静的ビルドは `pnpm --filter @tsl/web storybook:build`。
+- **対象**：`components/ui` の共通部品はすべて stories を持つ。feature のコンポーネントは、props だけで描画でき、状態の出し分けが多いもの（演習フロー、学習分析、学習領域カードなど）を対象とする。
+- **対象外**：`app/` の `page.tsx`・`layout.tsx` と、`server-only` の loader や content ローダーに依存するコンポーネント。画面全体の確認は dev サーバーで行う。
+- **置き場所**：コンポーネントと同じディレクトリに `<コンポーネント名>.stories.tsx` を置く。タイトルは共通部品を `UI/<名前>`、feature を `Features/<feature>/<名前>` とする。stories も `docs/design.md` の依存方向に従う（`components/ui` の stories から feature を import しない）。
+- **テーマ**：ツールバーの Theme でダーク／ライトを切り替える（`html[data-theme]` を書き換える）。新しい状態を追加したら両テーマで確認する。
+- **アプリとの差**：設定は `apps/web/.storybook/` に置き、アプリの `vite.config.ts`（vinext・Cloudflare プラグイン）は読み込まない。`next/link` は遷移しない表示用の部品に差し替え、フォントは `next/font` の代わりに同梱のフォントで同じ CSS 変数を定義する。API を呼ぶコンポーネントは、stories の中で `fetch` を差し替えて描画する。
+
 ## スタイリング（Tailwind + Dev-Native Neo Flat × Terminal）
 
 ビジュアルモックアップ 5 案（Neumorphism PC/SP → Soft UI Hybrid → Dev-Native Neo Flat → Retro OS）の比較検討を経て、**「Neo Flat の骨格 × ターミナル表現のコンテンツ」** を正式なスタイル方針とする。一次モックは [`docs/mockups/DevPath Unified.html`](./mockups/DevPath%20Unified.html)（検討経緯と各案の位置づけは [`docs/mockups/README.md`](./mockups/README.md)）。旧 Neumorphism 方針は撤回済み。
