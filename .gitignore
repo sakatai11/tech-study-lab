@@ -33,3 +33,6 @@ reports/
 # misc
 .DS_Store
 *.log
+
+# storybook
+storybook-static/
