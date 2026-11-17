@@ -40,21 +40,11 @@
 
 ### 品質ゲート
 
-コミットの前に次を通す。PR CI も同じゲートを実行する。
+コミットの前に、PR CI と同じゲート（`typecheck`・`lint`・`test`・`architecture:check`・`architecture:test`）を通す。ハーネスを変えたら `test:hooks`、`content/` を変えたら `content:validate` も通す。
 
-```bash
-pnpm typecheck
-pnpm lint                 # Biome と dependency-cruiser
-pnpm test
-pnpm architecture:check
-pnpm architecture:test
-```
-
-- **snapshot の更新**: コード・設定・依存を変えた場合は、`pnpm architecture:extract` で `architecture/graph.json` を再生成する。コミットしてよい差分の条件は [`architecture/README.md`](./architecture/README.md#issue-開発での使い方) に従う。
-- **ハーネスを変えたとき**: `.ai/`、`.claude/`、`.codex/`、`.agents/`、`AGENTS.md`、`docs/ai-coding-agents.md` を変えた場合は `pnpm test:hooks` も通す。変更内容ごとの確認は [`docs/ai-coding-agents.md`](./docs/ai-coding-agents.md#9-変更時の完了条件) に従う。
-- **教材を変えたとき**: `content/` を変えた場合は `pnpm content:validate` を通す。D1 を書き換える `content:sync` は検証に使わない。
-- **既存の失敗**: 今回の変更と無関係な既存の失敗は直さない。pass とも報告せず、`fail（ベースライン）` として根拠と一緒に報告する。着手前から `pnpm architecture:check` が失敗する場合は、Knowledge Graph 基盤の不整合として報告し、Issue の修正と混ぜない。
-- **失敗を隠さない**: 実装のバグを隠すためにテストを弱めない。失敗を `|| true` などで握り潰さない。
+- コード・設定・依存を変えたら `architecture:extract` で snapshot を再生成し、変更から説明できる差分だけをコミットする（[`architecture/README.md`](./architecture/README.md#issue-開発での使い方)）。
+- 今回の変更と無関係な既存の失敗は直さず、`fail（ベースライン）` として根拠と一緒に報告する。
+- テストを弱めたり失敗を握り潰したりして、ゲートを通さない。
 
 ### 止めて確認する場面
 
