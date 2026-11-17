@@ -100,3 +100,8 @@ jobs:
       - name: Verify web build artifacts (SSG / SSR / asset boundaries)
         if: steps.changes.outputs.web == 'true'
         run: pnpm --filter @tsl/web verify:build
+
+      # stories と apps/web/.storybook/ の変更も web の変更として検出される（scripts/deployment-changes.mjs）。
+      - name: Build Storybook
+        if: steps.changes.outputs.web == 'true'
+        run: pnpm --filter @tsl/web storybook:build
