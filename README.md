@@ -127,7 +127,7 @@ tech-study-lab/
 ├── packages/
 │   └── shared/        # Zod / Drizzle スキーマ、SRS（SM-2）ロジック
 ├── content/           # Markdown の教材・4択問題
-├── docs/              # 設計文書・補助資料・モックアップ
+├── docs/              # 設計文書・補助資料
 ├── architecture/      # Knowledge Graph（抽出ルールとスナップショット）
 ├── .ai/               # スキル・サブエージェント・hooks・レビュー規約
 ├── .claude/ .codex/   # 各ランタイムの設定（.ai/ へのリンクと配線）
