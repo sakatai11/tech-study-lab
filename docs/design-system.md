@@ -24,6 +24,7 @@ Web（`apps/web`）の見た目・表示文言・画面の振る舞いの規約�
 - **置き場所**：コンポーネントと同じディレクトリに `<コンポーネント名>.stories.tsx` を置く。タイトルは共通部品を `UI/<名前>`、feature を `Features/<feature>/<名前>` とする。stories も `docs/design.md` の依存方向に従う（`components/ui` の stories から feature を import しない）。
 - **テーマ**：ツールバーの Theme でダーク／ライトを切り替える（`html[data-theme]` を書き換える）。新しい状態を追加したら両テーマで確認する。
 - **アプリとの差**：設定は `apps/web/.storybook/` に置き、アプリの `vite.config.ts`（vinext・Cloudflare プラグイン）は読み込まない。`next/link` は遷移しない表示用の部品に差し替え、フォントは `next/font` の代わりに同梱のフォントで同じ CSS 変数を定義する。API を呼ぶコンポーネントは、stories の中で `fetch` を差し替えて描画する。
+- **CI**：`apps/web` の Worker に影響する変更がある PR では、CI が Storybook を静的ビルドする。stories の型エラーは `pnpm typecheck` で検出する。見た目の差分は自動では検出しないため、stories の追加・更新はレビューで確認する（`.ai/review-guidelines.md` のレビュー観点）。
 
 ## スタイリング（Tailwind + Dev-Native Neo Flat × Terminal）
 
