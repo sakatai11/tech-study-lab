@@ -23,13 +23,33 @@
 
 ### レビュー規約
 
-レビュー範囲・観点・重要度・読む文書・レビュープロファイル・Jevの実行条件は [`.ai/review-guidelines.md`](./.ai/review-guidelines.md) を単一ソースとし、本書には再掲しない。
+レビュー範囲・観点・重要度・読む文書・レビュープロファイル・独立レビューと別モデルCLIレビューの実施条件・Jevの実行条件は [`.ai/review-guidelines.md`](./.ai/review-guidelines.md) を単一ソースとし、本書には再掲しない。
 
 ### ブランチ戦略（Git Flow 型）
 
 - `main` は保護。**直接コミットしない**。リリース用ブランチ。
-- `develop` がKnowledge Graph-firstで構造調査する開発系統の統合ブランチ。新しいIssue作業ブランチは `develop` から切る。Issueの具体語でGraph queryを先に行い、コード・設定・関連 ADR・`docs/design.md` で再確認する。Graph対象外・空結果・曖昧な結果の場合だけ通常検索へフォールバックする。
+- `develop` がKnowledge Graph-firstで構造調査する開発系統の統合ブランチ。新しいIssue作業ブランチは、`git fetch origin develop` で取得した最新の `origin/develop` から切る。Issueの具体語でGraph queryを先に行い、コード・設定・関連 ADR・`docs/design.md` で再確認する。Graph対象外・空結果・曖昧な結果の場合だけ通常検索へフォールバックする。
 - 作業ブランチは Conventional Branch 命名: `<種別>/issue-<番号>-<英語スラッグ>`（種別: `feature` / `fix` / `refactor` / `docs` / `test` / `chore`）。
 - 作業ブランチ → `develop` は PR を作成する（**マージは人間**）。`develop` から `main` へ反映する時期・方法は人間が判断する。
 - `gh pr merge` は使わない（マージは常に人間の判断）。
 - エージェントは `main` / `develop` へ直接 push しない。push するのは作業ブランチだけとする。
+- 品質ゲートと独立レビューを通過したら、ユーザーへの個別確認なしで作業ブランチを push し、`develop` 向けPRを作る。本文は `.github/pull_request_template.md` に従い、既存PRがあれば作り直さない。
+- 既存の作業ブランチを続ける場合は、最新の `develop` を通常の merge で取り込む。force push や履歴の書き換えはしない。
+- コミットと作業PRの本文では、Issue を `refs #<N>` で参照し、`closes #<N>` は使わない。Issue を閉じる判断は `develop` → `main` のリリースPRで行う（`release-main-pr` スキル）。
+- 作業開始時の未コミット変更が今回の作業でないなら、stash・破棄・コミットしない。
+
+### 品質ゲート
+
+コミットの前に、PR CI と同じゲート（`typecheck`・`lint`・`test`・`architecture:check`・`architecture:test`）を通す。ハーネスを変えたら `test:hooks`、`content/` を変えたら `content:validate` も通す。
+
+- コード・設定・依存を変えたら `architecture:extract` で snapshot を再生成し、変更から説明できる差分だけをコミットする（[`architecture/README.md`](./architecture/README.md#issue-開発での使い方)）。
+- 今回の変更と無関係な既存の失敗は直さず、`fail（ベースライン）` として根拠と一緒に報告する。
+- テストを弱めたり失敗を握り潰したりして、ゲートを通さない。
+
+### 止めて確認する場面
+
+次の場合は実装を進めず、ユーザーに判断を求める。
+
+- 受け入れ条件・対象範囲・権限を広げる必要が出た。
+- Issue の要求が既存の ADR と矛盾する。
+- 方針が拮抗している、または未確定の事項が実装を左右する。

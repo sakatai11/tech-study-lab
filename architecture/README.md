@@ -116,9 +116,36 @@ Graphは設計契約の本文を持たないのと同様に、契約への**参�
 
 コード変更後は検証とレビューを済ませ、`extract` → `check` でsnapshotを更新する。snapshot再生成だけで不正な設計変更を承認したことにはならない。
 
-## issue-dev-orchestrate との連携
+## Issue 開発での使い方
 
-Issue開発での使い方は `.ai/skills/issue-dev-orchestrate/references/architecture-context.md` にまとめている。調査はIssue内の具体語を使った`query`から始め、結果が空・曖昧・対象外の場合はLSP・`rg`で補う。実装後は`extract`でsnapshotを再生成し、graph差分を確認してから`check`・`architecture:test`を品質ゲートへ含める。
+Graph は設計契約の一次ソースではない。設計契約は ADR（`docs/adr/`）、層と依存方向は `docs/design.md`、現在の構造はコードと設定が一次ソースである。Graph で見つけた候補は、必ずコード・型・テスト・ADR で確かめる。
+
+### 調査
+
+Issue に出てくる endpoint・ファイル・関数・schema などの具体語を起点に query する。
+
+```sh
+pnpm architecture:query '/dashboard/due-count'
+pnpm architecture:query 'load-dashboard.ts'
+```
+
+- **深さ**: 既定の depth 1 から始める。depth 2 でリポジトリの3割前後まで広がるため、深くするより起点を具体的な symbol / file に絞る。
+- **結果が不十分なとき**: 空・曖昧・対象外（教材、UI 文言、文書など）の場合は、LSP や `rg` で補う。空の結果を「関係なし」の証明として扱わない。
+- **import edge**: 実行経路の証明ではない。
+
+### 変更後
+
+コード・設定・依存・抽出器に影響する変更をしたら、snapshot を再生成して差分を確かめる。
+
+```sh
+pnpm architecture:extract
+git diff -- architecture/graph.json
+```
+
+- **コミットしてよい差分**: 変更内容・受け入れ条件・関連 ADR から説明できる差分だけをコミットに含める。
+- **説明できない差分**: 期待しない node / edge の消失、出典の混線、抽出できない新しい構文が出た場合は、原因を解消するまで品質ゲートを通過扱いにしない。
+- **手編集の禁止**: snapshot を手で編集して失敗を隠さない。
+- **最後の確認**: `pnpm architecture:check` と `pnpm architecture:test` を通す。
 
 ## ブラウザで探索する
 
