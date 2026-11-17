@@ -17,7 +17,7 @@
 | 実装状況・残タスク・完了記録 | GitHub Issue / PR。完了済みタスク一覧は本書に残さない |
 | 過去の調査・比較・検証結果・経緯 | [`docs/investigations/`](./investigations/) の日付付きの記録 |
 
-Knowledge Graphの抽出対象・制限・更新方法は [architecture/README.md](../architecture/README.md)、Issue開発での使い方は[Knowledge Graph の使い方](../.ai/skills/issue-dev-orchestrate/references/architecture-context.md)を参照する。Graphで候補を絞った後、コード・型・テストと本書の契約で再確認する。Graph対象外の文書・UI・教材も、仕様確認や通常の検索の対象から外さない。
+Knowledge Graphの抽出対象・制限・更新方法は [architecture/README.md](../architecture/README.md)、Issue開発での使い方は[同書の「Issue 開発での使い方」](../architecture/README.md#issue-開発での使い方)を参照する。Graphで候補を絞った後、コード・型・テストと本書の契約で再確認する。Graph対象外の文書・UI・教材も、仕様確認や通常の検索の対象から外さない。
 
 ## 1. プロダクト方針
 

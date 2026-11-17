@@ -1,6 +1,6 @@
 ---
 name: issue-new
-description: 会話やメモの粗い仕様・タスクを、構造化された GitHub issue に整形して登録するスキル。機能仕様（feature）だけでなく、開発中に発生したバグ修正・リファクタ・ドキュメント・テスト・雑務（task）も登録できる。「これをissueにして」「仕様を登録して」「バグをissueにして」/issue-new で起動。登録後は /issue-dev-orchestrate でそのまま実装パイプラインに乗せられる。
+description: 会話やメモの粗い仕様・タスクを、構造化された GitHub issue に整形して登録するスキル。機能仕様（feature）だけでなく、開発中に発生したバグ修正・リファクタ・ドキュメント・テスト・雑務（task）も登録できる。「これをissueにして」「仕様を登録して」「バグをissueにして」/issue-new で起動。登録後は「issue #N を実装して」でそのまま実装に移れる。
 ---
 
 # 仕様・タスク → GitHub issue 登録
@@ -26,7 +26,7 @@ Codexでは開始直後と完了直前に `./.ai/hooks/log-skill-usage.sh --runt
 | `test` | テスト追加・修正のみ | `[Test]` | `test` |
 | `chore` | ビルド・CI・設定・依存などの雑務 | `[Chore]` | `chore` |
 
-この種別は `/issue-dev-orchestrate` で作業ブランチを切るときの種別（Conventional Branch）にそのまま対応する。
+この種別は、作業ブランチを切るときの種別（`AGENTS.md` のブランチ戦略、Conventional Branch）にそのまま対応する。
 
 ### 2. 内容の構造化
 
@@ -68,11 +68,11 @@ gh issue create --title "<接頭辞> <タイトル>" --label <種別のラベル
 
 issue 番号と URL を報告し、次のアクションを案内する:
 
-> `/issue-dev-orchestrate <番号>` で実装パイプラインを開始できます。
+> 「issue #<番号> を実装して」で実装を始められます。
 
 ## 注意
 
 - 1 issue = 1 つの縦切り機能（教材→出題→解答記録→SRS の Walking Skeleton パターン）または 1 つの独立したタスクに収める。大きすぎる場合は分割を提案する。
-- 受け入れ条件・完了条件に「typecheck / biome / test が通る」のような常設ゲートは書かない（パイプラインが常に実施するため）。機能・タスク固有の条件だけを書く。
-- bug は再現手順が書けない場合、先に再現確認を提案する（再現しない bug issue は実装パイプラインで手戻りになる）。
+- 受け入れ条件・完了条件に「typecheck / biome / test が通る」のような常設ゲートは書かない（`AGENTS.md` の品質ゲートで常に実施するため）。機能・タスク固有の条件だけを書く。
+- bug は再現手順が書けない場合、先に再現確認を提案する（再現しない bug issue は実装で手戻りになる）。
 - 外部リポジトリの issue / PR を参照情報として載せるが、相手側に cross-reference を作らない場合は、完全 URL と `owner/repo#123` 形式を使わない。インラインコードでも抑止できないため、`owner / repo の issue 123` のように区切って記載する。
