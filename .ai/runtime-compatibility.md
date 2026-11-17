@@ -87,7 +87,7 @@
   - `codex exec review` サブコマンドは使わない。`--base` と PROMPT（stdin の `-` を含む）を併用できず、ブリーフを渡せないためである（codex-cli 0.160.0 で確認）。
 - **起動前の確認**:
   - `git merge-base <base> HEAD` で effective base を1つに定め、`git rev-parse --verify <effective-base>^{commit}` で検証する。終了コードが非0、出力が空または複数行、検証失敗のいずれかなら「判定: error」とし、CLI を実行しない。
-  - レビュー対象はコミット済みの差分に限る。`git status --short` が空であることと、`committedRange` が実際の差分と一致することを確かめる。
+  - レビュー対象はコミット済みの差分に限る。`git status --short` が空であることと、`committedRange` が実際の差分と一致することを確かめる。今回の作業でない未コミット変更があって空にならない場合は、それを退避せずに「判定: error」とし、CLI を実行しないで状態を報告する。
 - **read-only の徹底**:
   - Codex CLI には `-s read-only` を必ず付け、Sandbox を設定ファイルの値に委ねない。起動時のヘッダーに `sandbox: read-only` と表示されることを確かめる。
   - Claude CLI には `--allowedTools "Read Grep Glob"` と `--disallowedTools "Edit Write NotebookEdit Bash"` を付け、認証情報は `.ai/scripts/run-claude-review.sh` 経由でだけ渡す。
