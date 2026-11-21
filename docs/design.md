@@ -54,7 +54,7 @@ Knowledge Graphの抽出対象・制限・更新方法は [architecture/README.m
 ### 既知のリスク
 
 - Vinext は Next.js 本体ではなく Vite 上の互換実装であり、未対応 API や挙動差が残り得る。`next/*` の型と互換 API は使い続け、移行可否と検証結果は [Vinext 検証記録](./investigations/2026-10-04-vinext-migration.md) を参照する。これは「Cloudflareを学ぶ」目的の一部として許容する。
-- Workers Free の CPU 上限超過（Issue #220）が認証後画面の連続取得で観測されている。本番 Web の Vinext 切替は、その解消と実環境での連続測定の完了を前提とする（[環境・デプロイ運用](./deployment.md)の「本番 Web の Vinext 切替」）。
+- Workers Free の CPU 上限超過（Issue #220）が、認証後画面の連続取得で観測された。2026-10-28 の本番測定では上限による強制終了は出なかったが、1リクエストの CPU 時間は Free の 10ms 枠を超えることがあった。その後、検証環境での再発を受けて認証後4画面を静的な枠の配信に切り替えた（[ADR-0019](./adr/0019-csr-for-user-specific-screens.md)）。それでも再発しうる。verification のリリースごとに性能試験と CPU ログの照合で確かめる（[ADR-0020](./adr/0020-measure-static-shell-worker-executions.md)、[環境・デプロイ運用](./deployment.md)の「検証環境の性能試験」）。
 
 ## 3. AI駆動開発の基盤
 
