@@ -1,0 +1,5 @@
+/* アプリは next/font で同じ変数を定義する（src/app/layout.tsx）。 */
+:root {
+  --font-inter: "Inter Variable";
+  --font-jetbrains-mono: "JetBrains Mono Variable";
+}

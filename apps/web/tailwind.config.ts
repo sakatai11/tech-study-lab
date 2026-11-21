@@ -1,7 +1,11 @@
 import type { Config } from 'tailwindcss'
 
 const config: Config = {
-  content: ['./src/**/*.{js,ts,jsx,tsx,mdx}'],
+  content: [
+    './src/**/*.{js,ts,jsx,tsx,mdx}',
+    // stories だけが使うクラスをアプリの CSS に含めない。Storybook の起動時は .storybook/main.ts が有効にする。
+    ...(process.env.TSL_STORYBOOK === 'true' ? [] : ['!./src/**/*.stories.{ts,tsx}']),
+  ],
   theme: {
     extend: {
       colors: {

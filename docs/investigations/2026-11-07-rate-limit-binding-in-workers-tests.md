@@ -4,7 +4,7 @@
 
 ## 制約
 
-`apps/api` のテスト基盤 `@cloudflare/vitest-pool-workers@0.8.0` は、内部で Wrangler `4.0.0` を使う。このバージョンは `ratelimits` を未知の top-level field として扱うため、workerd 上の結合テストに実際の Rate Limiting binding を渡せない。本番用の Wrangler は `apps/api/package.json` の `4.103.0` である。
+`apps/api` のテスト基盤 `@cloudflare/vitest-pool-workers@0.8.71`（Issue #305 で 0.8.0 から更新して固定）は、内部で Wrangler `4.35.0` を使う。このバージョンも、結合テストの実行時に `Unexpected fields found in top-level field: "ratelimits"` の警告を出し、 `ratelimits` を未知の top-level field として扱うため、workerd 上の結合テストに実際の Rate Limiting binding を渡せない。本番用の Wrangler は `apps/api/package.json` の `4.103.0` である。
 
 ## 代わりの確認
 

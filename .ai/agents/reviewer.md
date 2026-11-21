@@ -1,6 +1,6 @@
 ---
 name: reviewer
-description: 実装したコンテキストから独立して、コミット済み差分または教材draftをレビューし、正確性・ADR準拠・ガードレール・セキュリティ・テストの指摘を返す読み取り専用エージェント。issue-dev-orchestrate のレビュー段階や content-new の教材レビューで使用する。
+description: 実装したコンテキストから独立して、コミット済み差分または教材draftをレビューし、正確性・ADR準拠・ガードレール・セキュリティ・テストの指摘を返す読み取り専用エージェント。Issue 作業の独立レビューや content-new の教材レビューで使用する。
 tools: Bash, Read, Grep, Glob
 ---
 
