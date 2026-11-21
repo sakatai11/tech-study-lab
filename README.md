@@ -13,7 +13,7 @@
 - **機械で守るガードレール**：TypeScript strict、Zod、Biome、dependency-cruiser による依存境界の検証、エージェント契約の検査をすべて CI の PR ゲートに入れています。
 - **Knowledge Graph による影響範囲の特定**：コードと設定から構造グラフを抽出します。エージェントは全文検索の前にグラフで影響範囲を絞り込みます。
 - **Claude Code と Codex の両対応**：スキル・エージェント定義・hooks を `.ai/` に一元化し、どちらのランタイムからも同じワークフローを使えます。
-- **Cloudflare 構成**：Web と Hono API を別々の Worker としてデプロイし、ブラウザから公開 API を型安全 RPC（`hc`）で呼び出します。Web の開発・ビルド・デプロイ手順は Next.js 互換の Vinext に統一し、本番 Web Worker も Vinext へ移行します。初回切替の条件と手順は [環境・デプロイ運用](./docs/deployment.md#本番-web-の-vinext-切替issue-221) にまとめています。
+- **Cloudflare 構成**：Web と Hono API を別々の Worker としてデプロイし、ブラウザから公開 API を型安全 RPC（`hc`）で呼び出します。Web の開発・ビルド・デプロイは Next.js 互換の Vinext に統一しており、本番 Web Worker も Vinext で稼働しています（[環境・デプロイ運用](./docs/deployment.md#本番-web-の-vinext-切替issue-221)）。
 
 ## 主な機能
 
@@ -111,6 +111,8 @@ flowchart LR
 | `pnpm architecture:test` | Knowledge Graph の抽出・検証ロジックのテスト（develop 向け PR のみ） |
 | `pnpm build` | web（Vinext production build）/ api のビルド |
 | `pnpm --filter @tsl/web verify:build` | SSG の生成物（認証後4画面の静的な枠を含む）、Service Binding の不在、公開成果物への正解データとユーザー固有データの混入を検査 |
+| `pnpm --filter @tsl/web storybook:build` | Storybook の静的ビルド（web に影響する変更がある PR のみ） |
+| Knowledge Graph viewer の build / test | `architecture/viewer` のビルドとサイト表示のテスト（viewer に影響する変更がある PR のみ） |
 
 ## リポジトリ構成
 
@@ -164,9 +166,7 @@ API は `http://localhost:8787`、Web は `http://localhost:3000` で起動し�
 
 ### デプロイ
 
-GitHub Actions による自動デプロイ。環境設定と有効化を済ませると、`develop` への push で検証環境、`main` への push で本番環境へ反映します。
-
-本番の自動デプロイは、検証環境での確認と初回の Vinext 切替を完了してから有効化します。初回切替は Web のみを対象とし、[環境・デプロイ運用の「本番 Web の Vinext 切替」](./docs/deployment.md#本番-web-の-vinext-切替issue-221) の条件と手順に従います。環境設定・有効化・失敗時の再実行・Worker の復旧は [環境・デプロイ運用](./docs/deployment.md) を参照してください。
+GitHub Actions による自動デプロイです。`develop` への push で検証環境、`main` への push で本番環境へ反映します（本番は 2026-10-28 に有効化）。本番へは、配備対象ソースが同じで性能試験まで成功した検証リリースがある場合だけ反映します。環境設定・有効化・失敗時の再実行・Worker の復旧は [環境・デプロイ運用](./docs/deployment.md) を参照してください。
 
 ## 今後の予定
 
