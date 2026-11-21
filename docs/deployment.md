@@ -100,7 +100,7 @@ API 削除後に旧 Web へ rollback する場合は、先に `InternalApi` を�
 
 ### 本番 Web の Vinext 切替（Issue #221）
 
-本番 Web Worker `tech-study-lab-web` は Vinext 成果物で稼働している。OpenNext からの初回切替は、Web だけを「本番への手動デプロイ」の手順4で手動反映して行い、2026-10-28 の本番自動デプロイの有効化（Issue #262）の前に完了した。切替前の条件と確認結果は [運用確認記録](./investigations/2026-10-27-production-deploy-enablement.md) と Issue #262 に残している。Worker の復旧には、Vinext で反映した既知の正常 version を使う。切替前の OpenNext の version は旧構成の binding（Worker 自己参照・R2・Durable Object Queue）を持ち、現行の構成検査と一致しない。
+本番 Web Worker `tech-study-lab-web` は Vinext 成果物で稼働している。OpenNext からの初回切替は、Web だけを「本番への手動デプロイ」の手順4で手動反映して行い、2026-10-28 の本番自動デプロイの有効化（Issue #262）の前に完了した。切替前に確認した内容は [運用確認記録](./investigations/2026-10-27-production-deploy-enablement.md)、切替後の確認と、初回切替の時刻・当時のソース SHA など確定できていない点は Issue #262 に残している。Worker の復旧には、Vinext で反映した既知の正常 version を使う。切替前の OpenNext の version は旧構成の binding（Worker 自己参照・R2・Durable Object Queue）を持ち、現行の構成検査と一致しない。
 
 - 通常リリースは「GitHub Actions による環境別リリース」で実行する。上記コマンドは手動運用・障害調査用として維持する。production も品質検査・環境別 build と変更前の照合が成功したら、人間の追加承認を待たず remote D1 mutation / Worker 更新まで自動実行する。
 - 各ステップの成功を確認するまで後続ステップへ進まない。失敗時はそこで停止し、後続の migration/content sync/API/Web deploy を実行しない。復旧が必要な場合は、稼働中の既知の Worker version を確認してから、対象と影響を明示した承認を得てロールバックする。
