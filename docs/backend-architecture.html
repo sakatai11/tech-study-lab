@@ -1201,9 +1201,8 @@ export const answersRoute = new Hono&lt;AppEnv&gt;().post(
           RPC）と <code>packages/shared/src/schema/api.ts</code>
           の 2 点で共有され、OpenAPI は使いません。web からの呼び出し経路は
           <a href="frontend-architecture.html">frontend-architecture.html</a>
-          の「Worker 構成と接続」を参照してください（Server loader は Service
-          Binding、Client hook は公開 URL。どちらも同じ
-          <code>hc&lt;AppType&gt;</code> です）。
+          の「Worker 構成と接続」を参照してください（API は Client hook がブラウザから公開 URL の
+          <code>hc&lt;AppType&gt;</code> で呼びます。Service Binding は使いません。ADR-0021）。
         </p>
         <div class="note">
           <span class="callout-title">実装の参照先</span>
