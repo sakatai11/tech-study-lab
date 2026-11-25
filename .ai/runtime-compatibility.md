@@ -55,7 +55,7 @@
 
 ### Codex サブエージェントのモデル
 
-`.codex/agents/*.toml` に登録するエージェント自身のモデル設定は、各 TOML の `model` / `model_reasoning_effort` が一次ソースである。TOML の値は親セッションのモデルより優先される。現在は `reviewer` が `gpt-6.1-sol` / `high`、`content-author` が `gpt-6.1-sol` / `medium` である。
+`.codex/agents/*.toml` に登録するエージェント自身のモデル設定は、各 TOML の `model` / `model_reasoning_effort` が一次ソースである。TOML の値は親セッションのモデルより優先される。現在は `reviewer` が `gpt-6.2-sol` / `high`、`content-author` が `gpt-6.2-sol` / `medium` である。
 
 - **固定する理由**: エージェントのモデルを、起動した Codex セッションで選んだモデルに左右させないためである。
 - **更新**: 新しい Sol が出たら、両方の TOML の `model` を揃えて更新する（Issue と PR で行い、`pnpm sync:agents --check` と `pnpm test:hooks` を通す）。モデルを古い方へ戻さないため、次をすべて確かめてから更新する。
