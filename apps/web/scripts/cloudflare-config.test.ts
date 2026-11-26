@@ -34,6 +34,11 @@ function readJsonc(url: URL): WranglerConfig {
   return JSON.parse(source) as WranglerConfig
 }
 
+type HeaderRule = { source: string; headers: Array<{ key: string; value: string }> }
+type VinextHeaderMatcher = {
+  matchHeaders: (pathname: string, rules: HeaderRule[], ctx: object) => HeaderRule['headers']
+}
+
 const productionMigrations = [
   { tag: 'v1', new_sqlite_classes: ['DOQueueHandler'] },
   { tag: 'v2', deleted_classes: ['DOQueueHandler'] },
@@ -110,6 +115,29 @@ describe('Web Worker configuration', () => {
     }
     expect(api.vars).toBeUndefined()
     expect(api.preview_urls).toBe(false)
+  })
+
+  it('adds the minimum security headers to every Worker response path [ADR-0024]', async () => {
+    const rules = (await nextConfig.headers?.()) ?? []
+    // Vinext の照合規則で確かめる。Next.js と違い、Vinext の `/:path*` は `/` に一致しない。
+    const { matchHeaders } = (await import(
+      new URL('../node_modules/vinext/dist/config/config-matchers.js', import.meta.url).href
+    )) as VinextHeaderMatcher
+
+    for (const pathname of ['/', '/home', '/learn/security/web/xss-basics', '/quiz/x', '/404']) {
+      const headers = Object.fromEntries(
+        matchHeaders(pathname, rules, {}).map(({ key, value }) => [key.toLowerCase(), value]),
+      )
+      expect(headers, pathname).toMatchObject({
+        'content-security-policy': "frame-ancestors 'none'",
+        'x-frame-options': 'DENY',
+        'x-content-type-options': 'nosniff',
+        'referrer-policy': 'strict-origin-when-cross-origin',
+      })
+      // スクリプトを制限する CSP と HSTS は付けない（ADR-0024 の境界）。
+      expect(headers['content-security-policy'], pathname).not.toMatch(/script-src|default-src/)
+      expect(headers, pathname).not.toHaveProperty('strict-transport-security')
+    }
   })
 
   it('builds, serves, and deploys through Vinext without OpenNext', () => {

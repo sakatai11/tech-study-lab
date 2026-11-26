@@ -62,3 +62,4 @@
 | [ADR-0021](./0021-public-api-only.md) | Web の API 通信をブラウザからの公開 entrypoint に一本化する | Accepted |
 | [ADR-0022](./0022-lesson-view-requires-active-lesson.md) | 教材の閲覧記録は、同期済みの active な教材だけを受け付ける | Accepted |
 | [ADR-0023](./0023-allowlisted-dependency-install-scripts.md) | 依存のインストールスクリプトは許可リストの依存だけが実行する | Accepted |
+| [ADR-0024](./0024-web-minimum-security-headers.md) | Web Worker のすべての応答に、最低限のセキュリティヘッダを next.config で付ける | Accepted |
