@@ -2,6 +2,9 @@ name = "tech-study-lab-api"
 main = "src/index.ts"
 compatibility_date = "2025-01-09"
 compatibility_flags = ["nodejs_compat"]
+# Web は workers.dev の公開 URL で API を呼ぶ。プレビュー URL は Access の対象外になり得るため無効にする（ADR-0025）。
+workers_dev = true
+preview_urls = false
 
 [[d1_databases]]
 binding = "DB"

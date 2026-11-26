@@ -22,7 +22,7 @@ import { conditionsId } from './performance-lib.mjs'
 const source = fileURLToPath(new URL('../', import.meta.url))
 const verification = getTarget('verification')
 
-test('actual apply CLI records attempts before mutations and refuses invalid releases [ADR-0006] [ADR-0010] [ADR-0016] [ADR-0017] [ADR-0018] [ADR-0012] [ADR-0021]', () => {
+test('actual apply CLI records attempts before mutations and refuses invalid releases [ADR-0006] [ADR-0010] [ADR-0016] [ADR-0017] [ADR-0018] [ADR-0012] [ADR-0021] [ADR-0025]', () => {
   const scenarios = [
     { environment: 'verification', legacyBinding: true },
     { environment: 'production', legacyBinding: true },
@@ -48,6 +48,7 @@ test('actual apply CLI records attempts before mutations and refuses invalid rel
     { environment: 'verification', scope: 'api', failure: 'unsafe-skip' },
     { environment: 'production', sourceDelta: 'docs' },
     { environment: 'production', sourceDelta: 'runtime', failure: 'source-mismatch' },
+    { environment: 'production', failure: 'preview-urls' },
     ...[
       undefined,
       'auth',
@@ -56,6 +57,7 @@ test('actual apply CLI records attempts before mutations and refuses invalid rel
       'database',
       'disabled',
       'sampling',
+      'preview-urls',
       'observability-token',
       'attempt-create',
       'attempt-status',
@@ -158,6 +160,8 @@ test('actual apply CLI records attempts before mutations and refuses invalid rel
         account_id: target.account,
         main: 'index.js',
         no_bundle: true,
+        workers_dev: true,
+        preview_urls: failure === 'preview-urls',
         observability: { enabled: true, head_sampling_rate: 1 },
         d1_databases: [
           {
@@ -425,6 +429,7 @@ if (process.argv.includes('scripts/deploy.mjs') && process.env.FAILURE === 'web-
           'unsafe-skip': 'cannot skip changed web source',
           'bound-web-skipped': 'bound Web must be deployed before removing InternalApi',
           'source-mismatch': 'production source must match',
+          'preview-urls': 'API preview URLs must be disabled',
         }[failure]
         if (reason) assert(result.stderr.includes(reason), result.stderr)
         assert.deepEqual(operation.completed, [])
