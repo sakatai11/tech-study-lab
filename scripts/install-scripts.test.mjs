@@ -6,14 +6,14 @@ import { test } from 'node:test'
 const root = join(import.meta.dirname, '..')
 const read = (path) => readFileSync(join(root, path), 'utf8')
 
-test('pnpm runs dependency build scripts only for the explicit allowlist [ADR-0022]', () => {
+test('pnpm runs dependency build scripts only for the explicit allowlist [ADR-0023]', () => {
   const pnpm = JSON.parse(read('package.json')).pnpm ?? {}
   assert.deepEqual(pnpm.onlyBuiltDependencies, ['esbuild', 'workerd'])
   assert.equal(pnpm.neverBuiltDependencies, undefined)
   assert.doesNotMatch(read('.npmrc'), /^\s*(ignore-scripts|dangerously-allow-all-builds)\s*=/m)
 })
 
-test('architecture/viewer npm installs skip dependency scripts locally and in CI [ADR-0022]', () => {
+test('architecture/viewer npm installs skip dependency scripts locally and in CI [ADR-0023]', () => {
   assert.match(read('architecture/viewer/.npmrc'), /^ignore-scripts=true$/m)
 
   const workflows = join(root, '.github/workflows')
@@ -28,7 +28,7 @@ test('architecture/viewer npm installs skip dependency scripts locally and in CI
   for (const line of installs) assert.equal(ignoreScripts(line), true, line)
 })
 
-test('ignoreScripts reads the effective npm flag value [ADR-0022]', () => {
+test('ignoreScripts reads the effective npm flag value [ADR-0023]', () => {
   assert.equal(ignoreScripts('npm ci --ignore-scripts'), true)
   assert.equal(ignoreScripts('npm ci --ignore-scripts=true'), true)
   assert.equal(ignoreScripts('npm ci'), undefined)
