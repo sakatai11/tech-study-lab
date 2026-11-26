@@ -748,7 +748,7 @@ const { isCorrect, correctIndex } = answerResponseSchema.parse(await response.js
                 </div>
               </section>
 
-              <p class="detail"><strong>ユーザーコンテキスト:</strong> <code>userId</code> はmiddlewareが注入します。重複排除、配送保証、lessonの存在確認は行いません。Web側はmount後にfire-and-forgetで送信し、失敗をUIへ表示しません。</p>
+              <p class="detail"><strong>ユーザーコンテキスト:</strong> <code>userId</code> はmiddlewareが注入します。重複排除と配送保証は行いません。形式が正しい <code>lessonId</code> でも、同期済みの <code>questions</code> に active な問題がなければ 404（<code>LESSON_NOT_FOUND</code>）を返し、記録しません（ADR-0022）。Web側はmount後にfire-and-forgetで送信し、失敗をUIへ表示しません。</p>
             </article>
 
             <article class="endpoint" id="review-queue">
