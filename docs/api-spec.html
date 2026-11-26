@@ -408,6 +408,20 @@
 }</code></pre>
               </figure>
             </article>
+
+            <article class="errorcard">
+              <h3><span class="http">404</span> <span class="code-label">LESSON_NOT_FOUND</span></h3>
+              <p><code>POST /lesson-views</code> のみ。同期済みの <code>questions</code> に、<code>lessonId</code> が一致する active な問題が無い場合に、service のドメインエラーを route が写像します（ADR-0022）。</p>
+              <figure class="sample">
+                <figcaption><span class="wire danger">404 Not Found</span><span class="meta">application/json</span></figcaption>
+                <pre data-lang="json"><code>{
+  "error": {
+    "code": "LESSON_NOT_FOUND",
+    "message": "Lesson not found: security-xss-99"
+  }
+}</code></pre>
+              </figure>
+            </article>
           </div>
         </section>
 
@@ -431,7 +445,7 @@
                   <table class="grid">
                     <thead><tr><th>フィールド</th><th class="nowrap">型</th><th class="nowrap">必須</th><th>制約・意味</th></tr></thead>
                     <tbody>
-                      <tr><td class="nowrap"><code>questionId</code></td><td class="nowrap"><span class="type">string</span></td><td class="nowrap"><span class="req">必須</span></td><td>1文字以上。content 由来の問題ID。</td></tr>
+                      <tr><td class="nowrap"><code>questionId</code></td><td class="nowrap"><span class="type">string</span></td><td class="nowrap"><span class="req">必須</span></td><td>content 由来の問題ID。英小文字・数字・ハイフンのみ、80文字以下（<code>questionIdSchema</code>）。違反は 400。</td></tr>
                       <tr><td class="nowrap"><code>selectedIndex</code></td><td class="nowrap"><span class="type">number</span></td><td class="nowrap"><span class="req">必須</span></td><td>0〜5の整数（<code>choices</code> は最大6）。</td></tr>
                       <tr><td class="nowrap"><code>responseTimeMs</code></td><td class="nowrap"><span class="type">number</span></td><td class="nowrap"><span class="opt">任意</span></td><td>0以上の整数。未送信でも採点は成立します（平均反応時間の集計用）。</td></tr>
                     </tbody>
@@ -602,7 +616,7 @@ const { isCorrect, correctIndex } = answerResponseSchema.parse(await response.js
                   <table class="grid">
                     <thead><tr><th>フィールド</th><th class="nowrap">型</th><th class="nowrap">必須</th><th>制約・意味</th></tr></thead>
                     <tbody>
-                      <tr><td class="nowrap"><code>lessonId</code></td><td class="nowrap"><span class="type">string</span></td><td class="nowrap"><span class="req">必須</span></td><td>1文字以上。strict スキーマのため <code>userId</code> を含む未知のフィールドは拒否します。</td></tr>
+                      <tr><td class="nowrap"><code>lessonId</code></td><td class="nowrap"><span class="type">string</span></td><td class="nowrap"><span class="req">必須</span></td><td>content 由来の教材ID。英小文字・数字・ハイフンのみ、64文字以下（<code>lessonIdSchema</code>）。違反は 400。同期済みの active な教材でなければ 404 を返し、記録しません（ADR-0022）。strict スキーマのため <code>userId</code> を含む未知のフィールドは拒否します。</td></tr>
                     </tbody>
                   </table>
                 </div>
@@ -652,6 +666,7 @@ const { isCorrect, correctIndex } = answerResponseSchema.parse(await response.js
                 <div class="tabs">
                   <input type="radio" name="res-lesson-views" id="res-lesson-views-201" checked /><label for="res-lesson-views-201" class="ok">201</label>
                   <input type="radio" name="res-lesson-views" id="res-lesson-views-400" /><label for="res-lesson-views-400" class="warn">400</label>
+                  <input type="radio" name="res-lesson-views" id="res-lesson-views-404" /><label for="res-lesson-views-404" class="danger">404</label>
                   <input type="radio" name="res-lesson-views" id="res-lesson-views-429" /><label for="res-lesson-views-429" class="danger">429</label>
                   <input type="radio" name="res-lesson-views" id="res-lesson-views-503" /><label for="res-lesson-views-503" class="danger">503</label>
                   <input type="radio" name="res-lesson-views" id="res-lesson-views-500" /><label for="res-lesson-views-500" class="danger">500</label>
@@ -683,6 +698,18 @@ const { isCorrect, correctIndex } = answerResponseSchema.parse(await response.js
 }</code></pre>
                       </figure>
                       <p class="note">この場合 <code>lesson_views</code> には1行も記録されません。</p>
+                    </div>
+                    <div class="panel">
+                      <figure class="sample">
+                        <figcaption><span class="wire danger">404 Not Found</span><span class="meta">LESSON_NOT_FOUND</span></figcaption>
+                        <pre data-lang="json"><code>{
+  "error": {
+    "code": "LESSON_NOT_FOUND",
+    "message": "Lesson not found: security-xss-99"
+  }
+}</code></pre>
+                      </figure>
+                      <p class="note">同期済みの <code>questions</code> に、この <code>lessonId</code> の active な問題がない場合です。<code>lesson_views</code> には記録されません。</p>
                     </div>
                     <div class="panel">
                       <figure class="sample">
