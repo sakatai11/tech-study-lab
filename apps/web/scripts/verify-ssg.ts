@@ -23,6 +23,17 @@ const contentPaths = [
 ]
 const userShellPaths = ['/home', '/review', '/domains', '/analytics']
 const staticPaths = ['/', '/learn', '/quiz', ...userShellPaths, ...contentPaths]
+// Worker が返す静的な枠と SSR（404）の応答に付く最低限のセキュリティヘッダ（ADR-0022）。
+const securityHeaders = {
+  'content-security-policy': "frame-ancestors 'none'",
+  'x-frame-options': 'DENY',
+  'x-content-type-options': 'nosniff',
+  'referrer-policy': 'strict-origin-when-cross-origin',
+}
+const assertSecurityHeaders = (response: Response, label: string) => {
+  for (const [name, value] of Object.entries(securityHeaders))
+    assert.equal(response.headers.get(name), value, `${label} ${name}`)
+}
 const renderedPaths = manifest.routes
   .filter(({ status }) => status === 'rendered')
   .map(({ route, path }) => path ?? route)
@@ -44,6 +55,7 @@ for (const pathname of staticPaths) {
         ?.includes(kind === 'rsc' ? 'text/x-component' : 'text/html'),
     )
     assert.equal(response.headers.get('x-vinext-cache'), 'HIT', `${pathname} ${kind}`)
+    assertSecurityHeaders(response, `${pathname} ${kind}`)
     const body = new Uint8Array(await response.arrayBuffer())
     assert.equal(digest(body), digest(generated), `${pathname} ${kind} differs from build artifact`)
     report.push({
@@ -81,6 +93,7 @@ for (const pathname of [
 ]) {
   const response = await fetch(`${baseUrl}${pathname}`)
   assert.equal(response.status, 404, pathname)
+  assertSecurityHeaders(response, pathname)
   await response.body?.cancel()
   report.push({ pathname, status: 404 })
 }
