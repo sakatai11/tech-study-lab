@@ -13,7 +13,7 @@ import { dashboardRoute } from './routes/dashboard'
 import { domainsRoute } from './routes/domains'
 import { createLessonViewsRoute } from './routes/lesson-views'
 import { reviewRoute } from './routes/review'
-import { QuestionNotFoundError } from './services/errors'
+import { LessonNotFoundError, QuestionNotFoundError } from './services/errors'
 
 export const apiErrorHandler: ErrorHandler<AppEnv> = (error, c) => {
   if (error instanceof QuestionNotFoundError) {
@@ -21,6 +21,18 @@ export const apiErrorHandler: ErrorHandler<AppEnv> = (error, c) => {
       {
         error: {
           code: 'QUESTION_NOT_FOUND',
+          message: error.message,
+        },
+      },
+      404,
+    )
+  }
+
+  if (error instanceof LessonNotFoundError) {
+    return c.json(
+      {
+        error: {
+          code: 'LESSON_NOT_FOUND',
           message: error.message,
         },
       },

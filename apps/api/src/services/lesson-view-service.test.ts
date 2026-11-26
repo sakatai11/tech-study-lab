@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest'
 
+import { LessonNotFoundError } from './errors'
 import { type LessonViewDeps, recordLessonView } from './lesson-view-service'
 
 function createDeps(overrides: Partial<LessonViewDeps> = {}) {
-  const recorded: Parameters<LessonViewDeps['recordLessonView']>[0][] = []
+  const recorded: Parameters<LessonViewDeps['recordLessonViewIfLessonExists']>[0][] = []
   const deps: LessonViewDeps = {
-    recordLessonView: async (params) => {
+    recordLessonViewIfLessonExists: async (params) => {
       recorded.push(params)
+      return true
     },
     ...overrides,
   }
@@ -33,5 +35,19 @@ describe('recordLessonView', () => {
         viewedAt: 1_700_000_000_000,
       },
     ])
+  })
+
+  it('教材が見つからず記録されなかった閲覧を LessonNotFoundError にする [ADR-0022]', async () => {
+    const { deps } = createDeps({
+      recordLessonViewIfLessonExists: async () => false,
+    })
+
+    await expect(
+      recordLessonView(deps, {
+        userId: 'user-1',
+        lessonId: 'missing-lesson-01',
+        now: 1_700_000_000_000,
+      }),
+    ).rejects.toBeInstanceOf(LessonNotFoundError)
   })
 })
