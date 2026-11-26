@@ -25,5 +25,27 @@ test('architecture/viewer npm installs skip dependency scripts locally and in CI
         .filter((line) => /\bnpm\b.*\barchitecture\/viewer\b.*\b(ci|install|i)\b/.test(line)),
     )
   assert.ok(installs.length > 0, 'CI should install the viewer dependencies')
-  for (const line of installs) assert.match(line, /--ignore-scripts\b/)
+  for (const line of installs) assert.equal(ignoreScripts(line), true, line)
 })
+
+test('ignoreScripts reads the effective npm flag value [ADR-0022]', () => {
+  assert.equal(ignoreScripts('npm ci --ignore-scripts'), true)
+  assert.equal(ignoreScripts('npm ci --ignore-scripts=true'), true)
+  assert.equal(ignoreScripts('npm ci'), undefined)
+  assert.equal(ignoreScripts('npm ci --ignore-scripts=false'), false)
+  assert.equal(ignoreScripts('npm ci --ignore-scripts false'), false)
+  assert.equal(ignoreScripts('npm ci --ignore-scripts --no-ignore-scripts'), false)
+})
+
+// npm はブール値の設定を後勝ちで読み、直後の true / false も値として受け取る。
+function ignoreScripts(line) {
+  const args = line.trim().split(/\s+/)
+  let value
+  for (const [i, arg] of args.entries()) {
+    if (arg === '--no-ignore-scripts') value = false
+    else if (arg === '--ignore-scripts') value = args[i + 1] !== 'false'
+    else if (arg.startsWith('--ignore-scripts='))
+      value = arg.slice('--ignore-scripts='.length) === 'true'
+  }
+  return value
+}
