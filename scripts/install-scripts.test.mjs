@@ -35,11 +35,18 @@ test('ignoreScripts reads the effective npm flag value [ADR-0022]', () => {
   assert.equal(ignoreScripts('npm ci --ignore-scripts=false'), false)
   assert.equal(ignoreScripts('npm ci --ignore-scripts false'), false)
   assert.equal(ignoreScripts('npm ci --ignore-scripts --no-ignore-scripts'), false)
+  assert.equal(ignoreScripts('npm ci "--ignore-scripts"'), true)
+  assert.equal(ignoreScripts('npm ci --ignore-scripts "false"'), false)
+  assert.equal(ignoreScripts("npm ci '--ignore-scripts=false'"), false)
 })
 
 // npm はブール値の設定を後勝ちで読み、直後の true / false も値として受け取る。
+// シェルが外す引用符は、npm に渡る引数に揃えるため取り除く。
 function ignoreScripts(line) {
-  const args = line.trim().split(/\s+/)
+  const args = line
+    .trim()
+    .split(/\s+/)
+    .map((arg) => arg.replace(/^(['"])(.*)\1$/, '$2'))
   let value
   for (const [i, arg] of args.entries()) {
     if (arg === '--no-ignore-scripts') value = false
