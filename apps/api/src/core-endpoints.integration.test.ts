@@ -2,7 +2,7 @@ import { SELF, applyD1Migrations, env } from 'cloudflare:test'
 import { drizzle } from 'drizzle-orm/d1'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { DomainKey } from '@tsl/shared'
+import { type DomainKey, LESSON_ID_MAX_LENGTH, QUESTION_ID_MAX_LENGTH } from '@tsl/shared'
 
 import initialMigration from '../drizzle/migrations/0000_flowery_quasar.sql?raw'
 import srsVersionMigration from '../drizzle/migrations/0001_add_srs_version.sql?raw'
@@ -58,6 +58,21 @@ async function seedQuestion(
       metadata.isActive === false ? 0 : 1,
     )
     .run()
+}
+
+async function seedLesson(lessonId: string, isActive = true): Promise<void> {
+  await seedQuestion(`${lessonId}-q1`, 0, {
+    domain: 'security',
+    topic: 'xss',
+    lessonId,
+    isActive,
+  })
+}
+
+async function countPersistentWrites(): Promise<unknown> {
+  return await env.DB.prepare(
+    'SELECT (SELECT COUNT(*) FROM answer_logs) AS answer_logs, (SELECT COUNT(*) FROM lesson_views) AS lesson_views, (SELECT COUNT(*) FROM srs_states) AS srs_states',
+  ).first()
 }
 
 async function seedSrsState(
@@ -125,6 +140,8 @@ describe('core API endpoints', () => {
   })
 
   it('ミドルウェアで確定したユーザーの教材閲覧を記録する [ADR-0003]', async () => {
+    await seedLesson('security-xss-01')
+
     const response = await fetchPublic('/lesson-views', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -159,6 +176,77 @@ describe('core API endpoints', () => {
     expect(response.status).toBe(400)
     await expect(env.DB.prepare('SELECT * FROM lesson_views').all()).resolves.toMatchObject({
       results: [],
+    })
+  })
+
+  it.each([
+    { case: '同期済みの問題がない', seed: async () => undefined },
+    {
+      case: 'content から外れて inactive になった',
+      seed: () => seedLesson('security-xss-01', false),
+    },
+  ])('$case lessonId の閲覧は記録せず 404 を返す [ADR-0022]', async ({ seed }) => {
+    await seed()
+
+    const response = await fetchPublic('/lesson-views', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ lessonId: 'security-xss-01' }),
+    })
+
+    expect(response.status).toBe(404)
+    await expect(response.json()).resolves.toEqual({
+      error: {
+        code: 'LESSON_NOT_FOUND',
+        message: 'Lesson not found: security-xss-01',
+      },
+    })
+    await expect(countPersistentWrites()).resolves.toEqual({
+      answer_logs: 0,
+      lesson_views: 0,
+      srs_states: 0,
+    })
+  })
+
+  it.each([
+    { case: '上限を超える長さの', lessonId: 'a'.repeat(LESSON_ID_MAX_LENGTH + 1) },
+    { case: '大文字を含む', lessonId: 'Security-xss-01' },
+    { case: '許可しない記号を含む', lessonId: "security-xss-01' OR '1'='1" },
+  ])('$case lessonId は検証で拒否し記録しない [ADR-0022]', async ({ lessonId }) => {
+    await seedLesson(lessonId)
+
+    const response = await fetchPublic('/lesson-views', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ lessonId }),
+    })
+
+    expect(response.status).toBe(400)
+    await expect(countPersistentWrites()).resolves.toEqual({
+      answer_logs: 0,
+      lesson_views: 0,
+      srs_states: 0,
+    })
+  })
+
+  it.each([
+    { case: '上限を超える長さの', questionId: 'a'.repeat(QUESTION_ID_MAX_LENGTH + 1) },
+    { case: '大文字を含む', questionId: 'Security-xss-01-q1' },
+    { case: '許可しない記号を含む', questionId: 'security_xss_01_q1' },
+  ])('$case questionId は検証で拒否し解答を記録しない [ADR-0022]', async ({ questionId }) => {
+    await seedQuestion(questionId, 0)
+
+    const response = await fetchPublic('/answers', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ questionId, selectedIndex: 0 }),
+    })
+
+    expect(response.status).toBe(400)
+    await expect(countPersistentWrites()).resolves.toEqual({
+      answer_logs: 0,
+      lesson_views: 0,
+      srs_states: 0,
     })
   })
 
@@ -371,6 +459,7 @@ describe('core API endpoints', () => {
     it('emits a PII-free success event after each persistent write [ADR-0004]', async () => {
       const info = vi.spyOn(console, 'info').mockImplementation(() => undefined)
       await seedQuestion('question-1', 2)
+      await seedLesson('security-xss-01')
 
       const answerResponse = await fetchPublic('/answers', {
         method: 'POST',
@@ -560,6 +649,7 @@ describe('core API endpoints', () => {
       })
 
     await seedQuestion('protected-question', 0)
+    await seedLesson('security-xss-01')
     const [unauthorizedLessonView, unauthorizedAnswer] = await Promise.all([
       app.fetch(lessonViewRequest(), bindings),
       app.fetch(

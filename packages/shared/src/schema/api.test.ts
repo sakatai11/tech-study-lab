@@ -17,6 +17,7 @@ import {
   retentionDistributionSchema,
   reviewQueueResponseSchema,
 } from './api'
+import { LESSON_ID_MAX_LENGTH, QUESTION_ID_MAX_LENGTH } from './content'
 
 describe('answerRequestSchema [ADR-0002] [ADR-0003] [ADR-0005]', () => {
   it('selectedIndex 0 と responseTimeMs なしを受け付ける', () => {
@@ -73,6 +74,28 @@ describe('answerRequestSchema [ADR-0002] [ADR-0003] [ADR-0005]', () => {
       }).success,
     ).toBe(false)
   })
+
+  it('questionId は上限の長さまで受け付け、超えると失敗する [ADR-0022]', () => {
+    expect(
+      answerRequestSchema.safeParse({
+        questionId: 'a'.repeat(QUESTION_ID_MAX_LENGTH),
+        selectedIndex: 1,
+      }).success,
+    ).toBe(true)
+    expect(
+      answerRequestSchema.safeParse({
+        questionId: 'a'.repeat(QUESTION_ID_MAX_LENGTH + 1),
+        selectedIndex: 1,
+      }).success,
+    ).toBe(false)
+  })
+
+  it.each(['Security-xss-01-q1', 'security_xss_01_q1', 'security-xss-01-q1 ', '問題-1'])(
+    '形式に合わない questionId %j だと失敗する [ADR-0022]',
+    (questionId) => {
+      expect(answerRequestSchema.safeParse({ questionId, selectedIndex: 1 }).success).toBe(false)
+    },
+  )
 
   it('responseTimeMs が負数だと失敗する', () => {
     expect(
@@ -153,7 +176,7 @@ describe('answerResponseSchema', () => {
   })
 })
 
-describe('lessonViewRequestSchema [ADR-0003]', () => {
+describe('lessonViewRequestSchema [ADR-0003] [ADR-0022]', () => {
   it('lessonId を受け付ける', () => {
     expect(lessonViewRequestSchema.safeParse({ lessonId: 'security-xss-01' }).success).toBe(true)
   })
@@ -161,6 +184,22 @@ describe('lessonViewRequestSchema [ADR-0003]', () => {
   it('空の lessonId を拒否する', () => {
     expect(lessonViewRequestSchema.safeParse({ lessonId: '' }).success).toBe(false)
   })
+
+  it('lessonId は上限の長さまで受け付け、超えると拒否する', () => {
+    expect(
+      lessonViewRequestSchema.safeParse({ lessonId: 'a'.repeat(LESSON_ID_MAX_LENGTH) }).success,
+    ).toBe(true)
+    expect(
+      lessonViewRequestSchema.safeParse({ lessonId: 'a'.repeat(LESSON_ID_MAX_LENGTH + 1) }).success,
+    ).toBe(false)
+  })
+
+  it.each(['Security-xss-01', 'security_xss_01', 'security/xss/01', ' security-xss-01', '教材-01'])(
+    '形式に合わない lessonId %j を拒否する',
+    (lessonId) => {
+      expect(lessonViewRequestSchema.safeParse({ lessonId }).success).toBe(false)
+    },
+  )
 
   it('クライアント送信の userId を拒否する', () => {
     expect(

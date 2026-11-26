@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { domainKeySchema } from './content'
+import { domainKeySchema, lessonIdSchema, questionIdSchema } from './content'
 
 /**
  * apps/api の入出力契約。
@@ -10,7 +10,8 @@ import { domainKeySchema } from './content'
 
 export const answerRequestSchema = z
   .object({
-    questionId: z.string().min(1),
+    // content の ID 規則（長さ上限・形式）と同じスキーマで検証する。
+    questionId: questionIdSchema,
     // choices は最大6（schema/content の .max(6) と整合）。
     selectedIndex: z.number().int().min(0).max(5),
     responseTimeMs: z.number().int().nonnegative().optional(),
@@ -27,7 +28,8 @@ export type AnswerResponse = z.infer<typeof answerResponseSchema>
 
 export const lessonViewRequestSchema = z
   .object({
-    lessonId: z.string().min(1),
+    // content の ID 規則（長さ上限・形式）と同じスキーマで検証する。存在確認は API が行う（ADR-0022）。
+    lessonId: lessonIdSchema,
   })
   .strict()
 export type LessonViewRequest = z.infer<typeof lessonViewRequestSchema>

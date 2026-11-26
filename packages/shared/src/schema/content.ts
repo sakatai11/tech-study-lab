@@ -23,12 +23,19 @@ export const topicFrontmatterSchema = z.object({
 })
 export type TopicFrontmatter = z.infer<typeof topicFrontmatterSchema>
 
+// ID 命名規則（lessonId = `<domain>-<topic>-<連番2桁>`、questionId = `<lessonId>-q<連番>`）に
+// 十分な余裕を持たせた上限。API の入力契約も同じスキーマを使い、content と食い違わないようにする。
+export const LESSON_ID_MAX_LENGTH = 64
+export const QUESTION_ID_MAX_LENGTH = 80
+
 export const lessonIdSchema = z
   .string()
+  .max(LESSON_ID_MAX_LENGTH)
   .regex(/^[a-z0-9-]+$/, 'lessonId must contain only lowercase letters, numbers, and hyphens')
 
 export const questionIdSchema = z
   .string()
+  .max(QUESTION_ID_MAX_LENGTH)
   .regex(/^[a-z0-9-]+$/, 'questionId must contain only lowercase letters, numbers, and hyphens')
 
 export const mcqQuestionSchema = z.object({
