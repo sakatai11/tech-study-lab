@@ -117,7 +117,7 @@ describe('Web Worker configuration', () => {
     expect(api.preview_urls).toBe(false)
   })
 
-  it('adds the minimum security headers to every Worker response path [ADR-0022]', async () => {
+  it('adds the minimum security headers to every Worker response path', async () => {
     const rules = (await nextConfig.headers?.()) ?? []
     // Vinext の照合規則で確かめる。Next.js と違い、Vinext の `/:path*` は `/` に一致しない。
     const { matchHeaders } = (await import(
@@ -134,7 +134,7 @@ describe('Web Worker configuration', () => {
         'x-content-type-options': 'nosniff',
         'referrer-policy': 'strict-origin-when-cross-origin',
       })
-      // スクリプトを制限する CSP と HSTS は付けない（ADR-0022 の境界）。
+      // スクリプトを制限する CSP と HSTS は付けない（Issue #325 の範囲外）。
       expect(headers['content-security-policy'], pathname).not.toMatch(/script-src|default-src/)
       expect(headers, pathname).not.toHaveProperty('strict-transport-security')
     }
