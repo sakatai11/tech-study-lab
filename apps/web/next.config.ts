@@ -1,9 +1,7 @@
 import type { NextConfig } from 'next'
 
-// Worker が返すすべての応答（静的な枠・SSR・404）に付ける最低限のセキュリティヘッダ（Issue #325）。
-// 静的な枠も Worker が返すため、Worker の応答に効かない静的アセットの `_headers` ではなくここで付ける。
-// script-src などでスクリプトを制限する CSP は、インラインのテーマスクリプトに nonce か hash が要るため含めない。
-// HSTS は HTTPS の強制とあわせて Cloudflare のゾーン設定が持つため、Worker では重ねない。
+// Worker が返すすべての応答（静的な枠・SSR・404）に付ける最低限のセキュリティヘッダ（ADR-0024）。
+// script-src などでスクリプトを制限する CSP と HSTS は含めない（理由と境界は ADR-0024）。
 const securityHeaders = [
   { key: 'Content-Security-Policy', value: "frame-ancestors 'none'" },
   { key: 'X-Frame-Options', value: 'DENY' },

@@ -23,7 +23,7 @@ const contentPaths = [
 ]
 const userShellPaths = ['/home', '/review', '/domains', '/analytics']
 const staticPaths = ['/', '/learn', '/quiz', ...userShellPaths, ...contentPaths]
-// Worker が返す静的な枠と SSR（404）の応答に付く最低限のセキュリティヘッダ（next.config.ts）。
+// Worker が返す静的な枠と SSR（404）の応答に付く最低限のセキュリティヘッダ（ADR-0024）。
 const securityHeaders = {
   'content-security-policy': "frame-ancestors 'none'",
   'x-frame-options': 'DENY',
