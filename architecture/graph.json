@@ -6,8 +6,8 @@
       "lines": 277
     },
     "apps/api/src/app.ts": {
-      "sha256": "00a8be2e471615672fda5835c7fbc2f174164eeb109ed01a790392323d843adf",
-      "lines": 94
+      "sha256": "3375fdea17bbd9a61f2bbdc664c65b43c42d087da855a0a659ecc3bbf36c99b9",
+      "lines": 106
     },
     "apps/api/src/client.ts": {
       "sha256": "7b19181656a919764e930a1893f1735061fa225a98420c9d4b4e17176ac3e0c7",
@@ -38,8 +38,8 @@
       "lines": 42
     },
     "apps/api/src/dal/lesson-view-repository.ts": {
-      "sha256": "5685d2506bfd1a08e11f622589f7affc7d6ff668718b4700c225fd9f7a72ab5d",
-      "lines": 19
+      "sha256": "709b2007713e8ad7784358d9e47e7de05fb795257e44d635924984f0bbb28715",
+      "lines": 38
     },
     "apps/api/src/dal/review-repository.ts": {
       "sha256": "535859cf10b319e2ec8f3cf2a75c6c6d7a064b068048078c079dea91a0ab3d39",
@@ -126,12 +126,12 @@
       "lines": 48
     },
     "apps/api/src/services/errors.ts": {
-      "sha256": "ed990d459b3ed78052d40c2845d706bdac7d7a3ab0b38b99710313120b9b6b56",
-      "lines": 14
+      "sha256": "76c853b19dd042fb2e95fad8e80cdc250deab6296d91a5cc6a972b440023ec1b",
+      "lines": 21
     },
     "apps/api/src/services/lesson-view-service.ts": {
-      "sha256": "75f6efc236175c968ae37356be51da8f60e2ab24516e99f9a8593cfdf742cab2",
-      "lines": 25
+      "sha256": "571e42aac0fa14dd5f2c8ac112c5477d01a7755d10a75b08b95ce21fdd3db4b6",
+      "lines": 35
     },
     "apps/api/src/services/review-service.ts": {
       "sha256": "efc2e7b014c413c74d249c3d8140e30bca88f2124ebcbe78407a5fbdce180614",
@@ -246,12 +246,12 @@
       "lines": 6
     },
     "packages/shared/src/schema/api.ts": {
-      "sha256": "c6b3f1d6f306e8866b55878f82abdb2520d9a7d5b92181ff2d29c79465859f7f",
-      "lines": 344
+      "sha256": "a315dcd7691296e2ab838274f78ea666c1ce522d6cefcebc75974bb11147c19a",
+      "lines": 346
     },
     "packages/shared/src/schema/content.ts": {
-      "sha256": "fff3a444a72dbb360c287fbd064d82449e59f4b963cdbc10215b9748d4d717d9",
-      "lines": 82
+      "sha256": "d830126795eceb851e1b7274f54368d6d75c82548e2569caaf65aef977b131f7",
+      "lines": 89
     },
     "packages/shared/src/srs/sm2.ts": {
       "sha256": "5db38483dbe4545dd8693c5c9ec2a10a7e3d271bc09c3327b5908f0354263c96",
@@ -957,7 +957,7 @@
       "kind": "http-endpoint",
       "source": {
         "file": "apps/api/src/app.ts",
-        "line": 82
+        "line": 94
       },
       "layer": "api-app",
       "method": "GET",
@@ -1124,8 +1124,10 @@
       "symbols": [
         "DOMAIN_LABELS",
         "DomainKey",
+        "LESSON_ID_MAX_LENGTH",
         "LessonFrontmatter",
         "McqQuestion",
+        "QUESTION_ID_MAX_LENGTH",
         "Question",
         "TopicFrontmatter",
         "domainKeySchema",
@@ -1217,7 +1219,7 @@
       "kind": "function",
       "source": {
         "file": "apps/api/src/dal/lesson-view-repository.ts",
-        "line": 7
+        "line": 8
       },
       "layer": "api-dal"
     },
@@ -1505,7 +1507,7 @@
       "kind": "deps-type",
       "source": {
         "file": "apps/api/src/services/lesson-view-service.ts",
-        "line": 1
+        "line": 3
       },
       "layer": "api-service"
     },
@@ -1514,7 +1516,7 @@
       "kind": "function",
       "source": {
         "file": "apps/api/src/services/lesson-view-service.ts",
-        "line": 15
+        "line": 21
       },
       "layer": "api-service"
     },
@@ -1523,7 +1525,7 @@
       "kind": "type",
       "source": {
         "file": "apps/api/src/services/lesson-view-service.ts",
-        "line": 9
+        "line": 15
       },
       "layer": "api-service"
     },
@@ -1766,7 +1768,7 @@
       "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 198
+        "line": 200
       },
       "layer": "shared-schema"
     },
@@ -1775,7 +1777,7 @@
       "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 194
+        "line": 196
       },
       "layer": "shared-schema"
     },
@@ -1784,7 +1786,7 @@
       "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 228
+        "line": 230
       },
       "layer": "shared-schema"
     },
@@ -1793,7 +1795,7 @@
       "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 200
+        "line": 202
       },
       "layer": "shared-schema"
     },
@@ -1802,7 +1804,7 @@
       "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 107
+        "line": 109
       },
       "layer": "shared-schema"
     },
@@ -1811,7 +1813,7 @@
       "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 106
+        "line": 108
       },
       "layer": "shared-schema"
     },
@@ -1820,7 +1822,7 @@
       "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 125
+        "line": 127
       },
       "layer": "shared-schema"
     },
@@ -1829,7 +1831,7 @@
       "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 116
+        "line": 118
       },
       "layer": "shared-schema"
     },
@@ -1838,7 +1840,7 @@
       "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 142
+        "line": 144
       },
       "layer": "shared-schema"
     },
@@ -1847,7 +1849,7 @@
       "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 162
+        "line": 164
       },
       "layer": "shared-schema"
     },
@@ -1856,7 +1858,7 @@
       "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 147
+        "line": 149
       },
       "layer": "shared-schema"
     },
@@ -1865,7 +1867,7 @@
       "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 192
+        "line": 194
       },
       "layer": "shared-schema"
     },
@@ -1874,7 +1876,7 @@
       "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 164
+        "line": 166
       },
       "layer": "shared-schema"
     },
@@ -1883,7 +1885,7 @@
       "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 19
+        "line": 20
       },
       "layer": "shared-schema"
     },
@@ -1901,7 +1903,7 @@
       "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 26
+        "line": 27
       },
       "layer": "shared-schema"
     },
@@ -1910,7 +1912,7 @@
       "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 21
+        "line": 22
       },
       "layer": "shared-schema"
     },
@@ -1919,7 +1921,7 @@
       "kind": "function",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 316
+        "line": 318
       },
       "layer": "shared-schema"
     },
@@ -1928,7 +1930,7 @@
       "kind": "function",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 259
+        "line": 261
       },
       "layer": "shared-schema"
     },
@@ -1937,7 +1939,7 @@
       "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 104
+        "line": 106
       },
       "layer": "shared-schema"
     },
@@ -1946,7 +1948,7 @@
       "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 103
+        "line": 105
       },
       "layer": "shared-schema"
     },
@@ -1955,7 +1957,7 @@
       "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 101
+        "line": 103
       },
       "layer": "shared-schema"
     },
@@ -1964,7 +1966,7 @@
       "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 87
+        "line": 89
       },
       "layer": "shared-schema"
     },
@@ -1973,7 +1975,7 @@
       "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 85
+        "line": 87
       },
       "layer": "shared-schema"
     },
@@ -1982,7 +1984,7 @@
       "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 77
+        "line": 79
       },
       "layer": "shared-schema"
     },
@@ -1991,7 +1993,7 @@
       "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 75
+        "line": 77
       },
       "layer": "shared-schema"
     },
@@ -2000,7 +2002,7 @@
       "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 72
+        "line": 74
       },
       "layer": "shared-schema"
     },
@@ -2009,7 +2011,7 @@
       "kind": "constant",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 127
+        "line": 129
       },
       "layer": "shared-schema"
     },
@@ -2018,7 +2020,7 @@
       "kind": "function",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 129
+        "line": 131
       },
       "layer": "shared-schema"
     },
@@ -2027,7 +2029,7 @@
       "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 33
+        "line": 35
       },
       "layer": "shared-schema"
     },
@@ -2036,7 +2038,7 @@
       "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 28
+        "line": 29
       },
       "layer": "shared-schema"
     },
@@ -2045,7 +2047,7 @@
       "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 38
+        "line": 40
       },
       "layer": "shared-schema"
     },
@@ -2054,7 +2056,7 @@
       "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 35
+        "line": 37
       },
       "layer": "shared-schema"
     },
@@ -2063,7 +2065,7 @@
       "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 313
+        "line": 315
       },
       "layer": "shared-schema"
     },
@@ -2072,7 +2074,7 @@
       "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 290
+        "line": 292
       },
       "layer": "shared-schema"
     },
@@ -2081,7 +2083,7 @@
       "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 343
+        "line": 345
       },
       "layer": "shared-schema"
     },
@@ -2090,7 +2092,7 @@
       "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 327
+        "line": 329
       },
       "layer": "shared-schema"
     },
@@ -2099,7 +2101,7 @@
       "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 46
+        "line": 48
       },
       "layer": "shared-schema"
     },
@@ -2108,7 +2110,7 @@
       "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 40
+        "line": 42
       },
       "layer": "shared-schema"
     },
@@ -2117,7 +2119,7 @@
       "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 54
+        "line": 56
       },
       "layer": "shared-schema"
     },
@@ -2126,7 +2128,7 @@
       "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 48
+        "line": 50
       },
       "layer": "shared-schema"
     },
@@ -2135,7 +2137,7 @@
       "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 251
+        "line": 253
       },
       "layer": "shared-schema"
     },
@@ -2144,7 +2146,7 @@
       "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 243
+        "line": 245
       },
       "layer": "shared-schema"
     },
@@ -2153,7 +2155,7 @@
       "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 230
+        "line": 232
       },
       "layer": "shared-schema"
     },
@@ -2162,7 +2164,7 @@
       "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 257
+        "line": 259
       },
       "layer": "shared-schema"
     },
@@ -2171,7 +2173,7 @@
       "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 253
+        "line": 255
       },
       "layer": "shared-schema"
     },
@@ -2180,7 +2182,7 @@
       "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 241
+        "line": 243
       },
       "layer": "shared-schema"
     },
@@ -2189,7 +2191,7 @@
       "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 235
+        "line": 237
       },
       "layer": "shared-schema"
     },
@@ -2198,7 +2200,7 @@
       "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 288
+        "line": 290
       },
       "layer": "shared-schema"
     },
@@ -2207,7 +2209,7 @@
       "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 263
+        "line": 265
       },
       "layer": "shared-schema"
     },
@@ -2216,7 +2218,7 @@
       "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 114
+        "line": 116
       },
       "layer": "shared-schema"
     },
@@ -2225,7 +2227,7 @@
       "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 109
+        "line": 111
       },
       "layer": "shared-schema"
     },
@@ -2234,7 +2236,7 @@
       "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 70
+        "line": 72
       },
       "layer": "shared-schema"
     },
@@ -2243,7 +2245,7 @@
       "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 58
+        "line": 60
       },
       "layer": "shared-schema"
     },
@@ -2275,11 +2277,20 @@
       "layer": "shared-schema"
     },
     {
+      "id": "symbol:packages/shared/src/schema/content.ts#LESSON_ID_MAX_LENGTH",
+      "kind": "constant",
+      "source": {
+        "file": "packages/shared/src/schema/content.ts",
+        "line": 28
+      },
+      "layer": "shared-schema"
+    },
+    {
       "id": "symbol:packages/shared/src/schema/content.ts#LessonFrontmatter",
       "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/content.ts",
-        "line": 56
+        "line": 63
       },
       "layer": "shared-schema"
     },
@@ -2288,7 +2299,7 @@
       "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/content.ts",
-        "line": 48
+        "line": 55
       },
       "layer": "shared-schema"
     },
@@ -2297,7 +2308,7 @@
       "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/content.ts",
-        "line": 26
+        "line": 31
       },
       "layer": "shared-schema"
     },
@@ -2306,7 +2317,7 @@
       "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/content.ts",
-        "line": 42
+        "line": 49
       },
       "layer": "shared-schema"
     },
@@ -2315,7 +2326,7 @@
       "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/content.ts",
-        "line": 34
+        "line": 41
       },
       "layer": "shared-schema"
     },
@@ -2324,7 +2335,16 @@
       "kind": "type",
       "source": {
         "file": "packages/shared/src/schema/content.ts",
-        "line": 46
+        "line": 53
+      },
+      "layer": "shared-schema"
+    },
+    {
+      "id": "symbol:packages/shared/src/schema/content.ts#QUESTION_ID_MAX_LENGTH",
+      "kind": "constant",
+      "source": {
+        "file": "packages/shared/src/schema/content.ts",
+        "line": 29
       },
       "layer": "shared-schema"
     },
@@ -2333,7 +2353,7 @@
       "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/content.ts",
-        "line": 30
+        "line": 36
       },
       "layer": "shared-schema"
     },
@@ -2342,7 +2362,7 @@
       "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/content.ts",
-        "line": 45
+        "line": 52
       },
       "layer": "shared-schema"
     },
@@ -2369,7 +2389,7 @@
       "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/content.ts",
-        "line": 67
+        "line": 74
       },
       "layer": "shared-schema"
     },
@@ -2378,7 +2398,7 @@
       "kind": "contract-schema",
       "source": {
         "file": "packages/shared/src/schema/content.ts",
-        "line": 59
+        "line": 66
       },
       "layer": "shared-schema"
     },
@@ -2594,7 +2614,7 @@
       "to": "apps/api/src/routes/activity.ts",
       "source": {
         "file": "apps/api/src/app.ts",
-        "line": 64
+        "line": 76
       },
       "prefix": "/activity"
     },
@@ -2604,7 +2624,7 @@
       "to": "apps/api/src/routes/analytics.ts",
       "source": {
         "file": "apps/api/src/app.ts",
-        "line": 63
+        "line": 75
       },
       "prefix": "/analytics"
     },
@@ -2614,7 +2634,7 @@
       "to": "apps/api/src/routes/answers.ts",
       "source": {
         "file": "apps/api/src/app.ts",
-        "line": 58
+        "line": 70
       },
       "prefix": "/answers"
     },
@@ -2624,7 +2644,7 @@
       "to": "apps/api/src/routes/dashboard.ts",
       "source": {
         "file": "apps/api/src/app.ts",
-        "line": 61
+        "line": 73
       },
       "prefix": "/dashboard"
     },
@@ -2634,7 +2654,7 @@
       "to": "apps/api/src/routes/domains.ts",
       "source": {
         "file": "apps/api/src/app.ts",
-        "line": 62
+        "line": 74
       },
       "prefix": "/domains"
     },
@@ -2644,7 +2664,7 @@
       "to": "apps/api/src/routes/lesson-views.ts",
       "source": {
         "file": "apps/api/src/app.ts",
-        "line": 59
+        "line": 71
       },
       "prefix": "/lesson-views"
     },
@@ -2654,7 +2674,7 @@
       "to": "apps/api/src/routes/review.ts",
       "source": {
         "file": "apps/api/src/app.ts",
-        "line": 60
+        "line": 72
       },
       "prefix": "/review"
     },
@@ -2830,7 +2850,7 @@
       "to": "apps/api/src/services/lesson-view-service.ts",
       "source": {
         "file": "apps/api/src/dal/lesson-view-repository.ts",
-        "line": 5
+        "line": 6
       },
       "specifier": "../services/lesson-view-service",
       "typeOnly": true
@@ -2841,7 +2861,7 @@
       "to": "packages/shared/src/index.ts",
       "source": {
         "file": "apps/api/src/dal/lesson-view-repository.ts",
-        "line": 3
+        "line": 4
       },
       "specifier": "@tsl/shared",
       "typeOnly": false
@@ -3951,6 +3971,17 @@
       "typeOnly": true
     },
     {
+      "from": "apps/api/src/services/lesson-view-service.ts",
+      "relation": "imports",
+      "to": "apps/api/src/services/errors.ts",
+      "source": {
+        "file": "apps/api/src/services/lesson-view-service.ts",
+        "line": 1
+      },
+      "specifier": "./errors",
+      "typeOnly": false
+    },
+    {
       "from": "apps/api/wrangler.toml",
       "relation": "binds-database",
       "to": "binding:D1:DB",
@@ -4825,7 +4856,7 @@
       "to": "apps/api/src/app.ts",
       "source": {
         "file": "apps/api/src/app.ts",
-        "line": 82
+        "line": 94
       }
     },
     {
@@ -4995,6 +5026,24 @@
     },
     {
       "from": "packages/shared/src/schema/api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#lessonIdSchema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 3
+      }
+    },
+    {
+      "from": "packages/shared/src/schema/api.ts",
+      "relation": "imports-symbol",
+      "to": "symbol:packages/shared/src/schema/content.ts#questionIdSchema",
+      "source": {
+        "file": "packages/shared/src/schema/api.ts",
+        "line": 3
+      }
+    },
+    {
+      "from": "packages/shared/src/schema/api.ts",
       "relation": "imports",
       "to": "packages/shared/src/schema/content.ts",
       "source": {
@@ -5046,7 +5095,7 @@
       "to": "symbol:apps/api/src/services/lesson-view-service.ts#LessonViewDeps",
       "source": {
         "file": "apps/api/src/dal/lesson-view-repository.ts",
-        "line": 7
+        "line": 8
       }
     },
     {
@@ -5127,7 +5176,7 @@
       "to": "symbol:apps/api/src/services/lesson-view-service.ts#LessonViewDeps",
       "source": {
         "file": "apps/api/src/services/lesson-view-service.ts",
-        "line": 16
+        "line": 22
       }
     },
     {
@@ -5199,7 +5248,7 @@
       "to": "symbol:packages/shared/src/schema/api.ts#analyticsHeatmapDaySchema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 198
+        "line": 200
       }
     },
     {
@@ -5208,7 +5257,7 @@
       "to": "symbol:packages/shared/src/schema/api.ts#analyticsHeatmapResponseSchema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 228
+        "line": 230
       }
     },
     {
@@ -5217,7 +5266,7 @@
       "to": "symbol:packages/shared/src/schema/api.ts#analyticsRequestSchema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 107
+        "line": 109
       }
     },
     {
@@ -5226,7 +5275,7 @@
       "to": "symbol:packages/shared/src/schema/api.ts#analyticsSummaryResponseSchema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 125
+        "line": 127
       }
     },
     {
@@ -5235,7 +5284,7 @@
       "to": "symbol:packages/shared/src/schema/api.ts#analyticsWeeklyDaySchema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 162
+        "line": 164
       }
     },
     {
@@ -5244,7 +5293,7 @@
       "to": "symbol:packages/shared/src/schema/api.ts#analyticsWeeklyResponseSchema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 192
+        "line": 194
       }
     },
     {
@@ -5253,7 +5302,7 @@
       "to": "symbol:packages/shared/src/schema/api.ts#answerRequestSchema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 19
+        "line": 20
       }
     },
     {
@@ -5262,7 +5311,7 @@
       "to": "symbol:packages/shared/src/schema/api.ts#answerResponseSchema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 26
+        "line": 27
       }
     },
     {
@@ -5271,7 +5320,7 @@
       "to": "symbol:packages/shared/src/schema/api.ts#domainsRequestSchema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 104
+        "line": 106
       }
     },
     {
@@ -5280,7 +5329,7 @@
       "to": "symbol:packages/shared/src/schema/api.ts#domainsResponseSchema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 101
+        "line": 103
       }
     },
     {
@@ -5289,7 +5338,7 @@
       "to": "symbol:packages/shared/src/schema/api.ts#domainSummarySchema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 85
+        "line": 87
       }
     },
     {
@@ -5298,7 +5347,7 @@
       "to": "symbol:packages/shared/src/schema/api.ts#dueCountResponseSchema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 75
+        "line": 77
       }
     },
     {
@@ -5307,7 +5356,7 @@
       "to": "symbol:packages/shared/src/schema/api.ts#lessonViewRequestSchema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 33
+        "line": 35
       }
     },
     {
@@ -5316,7 +5365,7 @@
       "to": "symbol:packages/shared/src/schema/api.ts#lessonViewResponseSchema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 38
+        "line": 40
       }
     },
     {
@@ -5325,7 +5374,7 @@
       "to": "symbol:packages/shared/src/schema/api.ts#mistakeItemSchema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 313
+        "line": 315
       }
     },
     {
@@ -5334,7 +5383,7 @@
       "to": "symbol:packages/shared/src/schema/api.ts#mistakesResponseSchema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 343
+        "line": 345
       }
     },
     {
@@ -5343,7 +5392,7 @@
       "to": "symbol:packages/shared/src/schema/api.ts#rateLimitedErrorResponseSchema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 46
+        "line": 48
       }
     },
     {
@@ -5352,7 +5401,7 @@
       "to": "symbol:packages/shared/src/schema/api.ts#rateLimitUnavailableErrorResponseSchema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 55
+        "line": 57
       }
     },
     {
@@ -5361,7 +5410,7 @@
       "to": "symbol:packages/shared/src/schema/api.ts#recentActivityAnswerRecordedSchema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 251
+        "line": 253
       }
     },
     {
@@ -5370,7 +5419,7 @@
       "to": "symbol:packages/shared/src/schema/api.ts#recentActivityItemSchema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 257
+        "line": 259
       }
     },
     {
@@ -5379,7 +5428,7 @@
       "to": "symbol:packages/shared/src/schema/api.ts#recentActivityLessonViewedSchema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 241
+        "line": 243
       }
     },
     {
@@ -5388,7 +5437,7 @@
       "to": "symbol:packages/shared/src/schema/api.ts#recentActivityResponseSchema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 288
+        "line": 290
       }
     },
     {
@@ -5397,7 +5446,7 @@
       "to": "symbol:packages/shared/src/schema/api.ts#retentionDistributionSchema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 114
+        "line": 116
       }
     },
     {
@@ -5406,7 +5455,7 @@
       "to": "symbol:packages/shared/src/schema/api.ts#reviewQueueResponseSchema",
       "source": {
         "file": "packages/shared/src/schema/api.ts",
-        "line": 70
+        "line": 72
       }
     },
     {
@@ -5424,7 +5473,7 @@
       "to": "symbol:packages/shared/src/schema/content.ts#lessonFrontmatterSchema",
       "source": {
         "file": "packages/shared/src/schema/content.ts",
-        "line": 56
+        "line": 63
       }
     },
     {
@@ -5433,7 +5482,7 @@
       "to": "symbol:packages/shared/src/schema/content.ts#mcqQuestionSchema",
       "source": {
         "file": "packages/shared/src/schema/content.ts",
-        "line": 42
+        "line": 49
       }
     },
     {
@@ -5442,7 +5491,7 @@
       "to": "symbol:packages/shared/src/schema/content.ts#questionSchema",
       "source": {
         "file": "packages/shared/src/schema/content.ts",
-        "line": 46
+        "line": 53
       }
     },
     {

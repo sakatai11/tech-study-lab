@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 
 import {
   DOMAIN_LABELS,
+  LESSON_ID_MAX_LENGTH,
+  QUESTION_ID_MAX_LENGTH,
   domainKeySchema,
   lessonIdSchema,
   questionIdSchema,
@@ -94,6 +96,13 @@ describe('lessonIdSchema and questionIdSchema', () => {
       expect(lessonIdSchema.safeParse(id).success).toBe(false)
       expect(questionIdSchema.safeParse(id).success).toBe(false)
     }
+  })
+
+  it('accept ids up to the max length and reject longer ids', () => {
+    expect(lessonIdSchema.safeParse('a'.repeat(LESSON_ID_MAX_LENGTH)).success).toBe(true)
+    expect(lessonIdSchema.safeParse('a'.repeat(LESSON_ID_MAX_LENGTH + 1)).success).toBe(false)
+    expect(questionIdSchema.safeParse('a'.repeat(QUESTION_ID_MAX_LENGTH)).success).toBe(true)
+    expect(questionIdSchema.safeParse('a'.repeat(QUESTION_ID_MAX_LENGTH + 1)).success).toBe(false)
   })
 })
 
