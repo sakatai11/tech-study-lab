@@ -233,7 +233,7 @@ describe('core API endpoints', () => {
     { case: '上限を超える長さの', questionId: 'a'.repeat(QUESTION_ID_MAX_LENGTH + 1) },
     { case: '大文字を含む', questionId: 'Security-xss-01-q1' },
     { case: '許可しない記号を含む', questionId: 'security_xss_01_q1' },
-  ])('$case questionId は検証で拒否し解答を記録しない', async ({ questionId }) => {
+  ])('$case questionId は検証で拒否し解答を記録しない [ADR-0022]', async ({ questionId }) => {
     await seedQuestion(questionId, 0)
 
     const response = await fetchPublic('/answers', {

@@ -38,8 +38,8 @@
       "lines": 42
     },
     "apps/api/src/dal/lesson-view-repository.ts": {
-      "sha256": "e8cbc7d610b5f615c05cb5bd2d7be1dfca370af1d8d16338c429a0fe5c266b70",
-      "lines": 31
+      "sha256": "709b2007713e8ad7784358d9e47e7de05fb795257e44d635924984f0bbb28715",
+      "lines": 38
     },
     "apps/api/src/dal/review-repository.ts": {
       "sha256": "535859cf10b319e2ec8f3cf2a75c6c6d7a064b068048078c079dea91a0ab3d39",
@@ -130,8 +130,8 @@
       "lines": 21
     },
     "apps/api/src/services/lesson-view-service.ts": {
-      "sha256": "3cd82f4b116596aa5597c70aea26e99f87b636ee9e77979597788ca8935fca9f",
-      "lines": 33
+      "sha256": "571e42aac0fa14dd5f2c8ac112c5477d01a7755d10a75b08b95ce21fdd3db4b6",
+      "lines": 35
     },
     "apps/api/src/services/review-service.ts": {
       "sha256": "efc2e7b014c413c74d249c3d8140e30bca88f2124ebcbe78407a5fbdce180614",
@@ -1516,7 +1516,7 @@
       "kind": "function",
       "source": {
         "file": "apps/api/src/services/lesson-view-service.ts",
-        "line": 19
+        "line": 21
       },
       "layer": "api-service"
     },
@@ -1525,7 +1525,7 @@
       "kind": "type",
       "source": {
         "file": "apps/api/src/services/lesson-view-service.ts",
-        "line": 13
+        "line": 15
       },
       "layer": "api-service"
     },
@@ -5176,7 +5176,7 @@
       "to": "symbol:apps/api/src/services/lesson-view-service.ts#LessonViewDeps",
       "source": {
         "file": "apps/api/src/services/lesson-view-service.ts",
-        "line": 20
+        "line": 22
       }
     },
     {

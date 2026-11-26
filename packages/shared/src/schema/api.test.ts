@@ -75,7 +75,7 @@ describe('answerRequestSchema [ADR-0002] [ADR-0003] [ADR-0005]', () => {
     ).toBe(false)
   })
 
-  it('questionId は上限の長さまで受け付け、超えると失敗する', () => {
+  it('questionId は上限の長さまで受け付け、超えると失敗する [ADR-0022]', () => {
     expect(
       answerRequestSchema.safeParse({
         questionId: 'a'.repeat(QUESTION_ID_MAX_LENGTH),
@@ -91,7 +91,7 @@ describe('answerRequestSchema [ADR-0002] [ADR-0003] [ADR-0005]', () => {
   })
 
   it.each(['Security-xss-01-q1', 'security_xss_01_q1', 'security-xss-01-q1 ', '問題-1'])(
-    '形式に合わない questionId %j だと失敗する',
+    '形式に合わない questionId %j だと失敗する [ADR-0022]',
     (questionId) => {
       expect(answerRequestSchema.safeParse({ questionId, selectedIndex: 1 }).success).toBe(false)
     },

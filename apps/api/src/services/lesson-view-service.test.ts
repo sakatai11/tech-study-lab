@@ -4,11 +4,11 @@ import { LessonNotFoundError } from './errors'
 import { type LessonViewDeps, recordLessonView } from './lesson-view-service'
 
 function createDeps(overrides: Partial<LessonViewDeps> = {}) {
-  const recorded: Parameters<LessonViewDeps['recordLessonView']>[0][] = []
+  const recorded: Parameters<LessonViewDeps['recordLessonViewIfLessonExists']>[0][] = []
   const deps: LessonViewDeps = {
-    lessonExists: async () => true,
-    recordLessonView: async (params) => {
+    recordLessonViewIfLessonExists: async (params) => {
       recorded.push(params)
+      return true
     },
     ...overrides,
   }
@@ -37,13 +37,9 @@ describe('recordLessonView', () => {
     ])
   })
 
-  it('存在しない教材の閲覧は記録せず LessonNotFoundError にする [ADR-0022]', async () => {
-    const checkedLessonIds: string[] = []
-    const { deps, recorded } = createDeps({
-      lessonExists: async (lessonId) => {
-        checkedLessonIds.push(lessonId)
-        return false
-      },
+  it('教材が見つからず記録されなかった閲覧を LessonNotFoundError にする [ADR-0022]', async () => {
+    const { deps } = createDeps({
+      recordLessonViewIfLessonExists: async () => false,
     })
 
     await expect(
@@ -53,8 +49,5 @@ describe('recordLessonView', () => {
         now: 1_700_000_000_000,
       }),
     ).rejects.toBeInstanceOf(LessonNotFoundError)
-
-    expect(checkedLessonIds).toEqual(['missing-lesson-01'])
-    expect(recorded).toEqual([])
   })
 })

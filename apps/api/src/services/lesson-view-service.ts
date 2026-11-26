@@ -1,13 +1,15 @@
 import { LessonNotFoundError } from './errors'
 
 export type LessonViewDeps = {
-  /** content から同期した active な教材として存在するかを返す（ADR-0022）。 */
-  lessonExists(lessonId: string): Promise<boolean>
-  recordLessonView(params: {
+  /**
+   * 同期済みの active な教材であれば閲覧を記録し、true を返す。
+   * 照合と記録は1つの書き込みで行い、教材が見つからなければ何も記録せず false を返す（ADR-0022）。
+   */
+  recordLessonViewIfLessonExists(params: {
     userId: string
     lessonId: string
     viewedAt: number
-  }): Promise<void>
+  }): Promise<boolean>
 }
 
 export type RecordLessonViewInput = {
@@ -20,13 +22,13 @@ export async function recordLessonView(
   deps: LessonViewDeps,
   input: RecordLessonViewInput,
 ): Promise<void> {
-  if (!(await deps.lessonExists(input.lessonId))) {
-    throw new LessonNotFoundError(input.lessonId)
-  }
-
-  await deps.recordLessonView({
+  const recorded = await deps.recordLessonViewIfLessonExists({
     userId: input.userId,
     lessonId: input.lessonId,
     viewedAt: input.now,
   })
+
+  if (!recorded) {
+    throw new LessonNotFoundError(input.lessonId)
+  }
 }
