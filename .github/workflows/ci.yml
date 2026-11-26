@@ -85,7 +85,7 @@ jobs:
       - name: Verify Knowledge Graph viewer
         if: steps.changes.outputs.viewer == 'true'
         run: |
-          npm --prefix architecture/viewer ci
+          npm --prefix architecture/viewer ci --ignore-scripts
           npm --prefix architecture/viewer run build
           npm --prefix architecture/viewer run test:sites
 

@@ -38,6 +38,8 @@
 4. `pnpm --filter @tsl/api db:seed:dev`（任意。固定ユーザーの解答ログ・SRS 状態を開発用データへ再投入。「content の同期と開発用 seed」）
 5. `pnpm --filter @tsl/api dev`（`:8787`）と `pnpm --filter @tsl/web dev`（`:3000`）を並走
 
+依存のインストールスクリプトは、ルート `package.json` の `pnpm.onlyBuiltDependencies`（`esbuild`・`workerd`）に載せた依存だけが実行する。依存を追加して `pnpm install` が「build scripts that were ignored」と表示したら、スクリプトの中身を確かめ、実行しないと動かない場合だけ許可リストへ加える（`@biomejs/biome`・`sharp` は配布済みのバイナリで動くため載せない）。`architecture/viewer` の npm 依存は `.npmrc` の `ignore-scripts=true` と CI の `npm ci --ignore-scripts` でスクリプトを実行しない。
+
 web の `dev` は Vinext（Vite）で起動し、`@cloudflare/vite-plugin` が RSC/SSR を workerd 上で実行する。ブラウザが `http://localhost:8787` の API Worker を直接呼ぶ。production build をローカルで確認するときは `pnpm --filter @tsl/web build` の後に `start`（生成された `dist/server/wrangler.json` を `wrangler dev` で `:3000` に起動）を使う。`preview` は両者を続けて実行する。いずれもブラウザの Origin は `http://localhost:3000` であり、API の既定 `WEB_ORIGIN` と一致する。2 つの `wrangler dev` を同時に起動して inspector port が衝突する場合は、片方に `--inspector-port` を指定する。
 
 Cloudflare の型は `pnpm --filter @tsl/web cf-typegen` で `apps/web/wrangler.jsonc` から生成する。生成物は Git 管理しない。Web は API 用の Service Binding を持たない（ADR-0021）。
