@@ -97,6 +97,9 @@ export function assertTargetConfig(target, api, web) {
   assert.equal(db.binding, 'DB')
   assert.equal(db.database_name, target.database, 'D1 name mismatch')
   assert.equal(db.database_id, target.databaseId, 'D1 ID mismatch')
+  // Web は workers.dev の API を呼ぶ。プレビュー URL は Access の対象 hostname の外に出る（ADR-0025）。
+  assert.equal(api.workers_dev, true, 'API workers.dev URL must stay enabled [ADR-0025]')
+  assert.equal(api.preview_urls, false, 'API preview URLs must be disabled [ADR-0025]')
   assert.equal(web.name, target.web, 'Web Worker mismatch')
   assert.deepEqual(web.services ?? [], [], 'Web Service Bindings are forbidden [ADR-0021]')
   assert.deepEqual(

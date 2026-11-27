@@ -30,6 +30,8 @@
 | `ACCESS_AUDIENCE` | var（api） | Cloudflare Access JWT の audience 検証（ADR-0021） | 未設定（両 Access 設定なし＋loopback URL のみ bypass） | API deploy 時に `--var ACCESS_AUDIENCE:<access-audience>` として明示指定 |
 | `NEXT_PUBLIC_API_BASE_URL` | ビルド時 env（web / Client） | Client hook（ADR-0021） | `http://localhost:8787` | web の deploy 時に対象 API Worker の公開 URL `https://<API Worker 名>.<account subdomain>.workers.dev` を環境変数として明示指定。deploy は URL を解析し、ホスト名の Worker 名がデプロイ先の API（production は `tech-study-lab-api`、検証は `tech-study-lab-api-test`）と一致しない URL、http、path 付き URL を拒否する。custom domain へ移行する場合は、先に本表と deploy の検査を更新する |
 
+API Worker は本番・検証の config（`apps/api/wrangler.toml`・`apps/api/wrangler.test.jsonc`）で `workers_dev = true`（Web が呼ぶ公開 URL）と `preview_urls = false` を明示し、GitHub Actions のリリースはどちらかが違えば変更前に停止する（[ADR-0025](./adr/0025-api-preview-urls-disabled.md)）。
+
 ## ローカル開発
 
 1. `pnpm install`

@@ -138,8 +138,8 @@
       "lines": 34
     },
     "apps/api/wrangler.toml": {
-      "sha256": "5467174a7be6dbc59e4d8e2a9170180641c887fbf2c21dfc6794dee9c729798f",
-      "lines": 30
+      "sha256": "6bc6536868ad1236fe1a857ab94bdd8c55cc474508550e3b0134fb825a1832b2",
+      "lines": 33
     },
     "apps/web/src/features/analytics/api/analytics-api.ts": {
       "sha256": "d4f4f896d5676996c17441d9d3d967f473229d59d8e7edf85d8c7a858aef0845",
@@ -870,7 +870,7 @@
       "kind": "worker-binding",
       "source": {
         "file": "apps/api/wrangler.toml",
-        "line": 7
+        "line": 10
       },
       "layer": "config",
       "name": "tech-study-lab"
@@ -3987,7 +3987,7 @@
       "to": "binding:D1:DB",
       "source": {
         "file": "apps/api/wrangler.toml",
-        "line": 7
+        "line": 10
       }
     },
     {

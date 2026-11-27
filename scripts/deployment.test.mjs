@@ -3,6 +3,8 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
+import { parse as parseJsonc } from 'jsonc-parser'
+import { parse as parseToml } from 'smol-toml'
 
 import {
   assertDeploymentProtection,
@@ -201,6 +203,8 @@ test('API targets its environment and Web rejects service bindings [ADR-0021]', 
   const api = {
     name: target.api,
     account_id: target.account,
+    workers_dev: true,
+    preview_urls: false,
     d1_databases: [
       { binding: 'DB', database_name: target.database, database_id: target.databaseId },
     ],
@@ -246,6 +250,48 @@ test('API targets its environment and Web rejects service bindings [ADR-0021]', 
     }),
   )
   assert.throws(() => assertTargetConfig(target, api, { ...web, migrations: [{ tag: 'v1' }] }))
+})
+
+test('API keeps workers.dev and disables preview URLs in every environment [ADR-0025]', () => {
+  const root = new URL('../', import.meta.url)
+  const read = (path) => readFileSync(new URL(path, root), 'utf8')
+  const web = {
+    workers_dev: true,
+    preview_urls: false,
+    observability: { enabled: true, head_sampling_rate: 1 },
+  }
+  for (const environment of ['verification', 'production']) {
+    const target = getTarget(environment)
+    const source = read(target.apiConfig)
+    const errors = []
+    const api = target.apiConfig.endsWith('.toml') ? parseToml(source) : parseJsonc(source, errors)
+    assert.deepEqual(errors, [])
+    // リポジトリの実設定がデプロイ前検査を通ることを確かめる。
+    assert.equal(api.workers_dev, true, environment)
+    assert.equal(api.preview_urls, false, environment)
+    const targetWeb = {
+      ...web,
+      name: target.web,
+      migrations:
+        environment === 'production'
+          ? [
+              { tag: 'v1', new_sqlite_classes: ['DOQueueHandler'] },
+              { tag: 'v2', deleted_classes: ['DOQueueHandler'] },
+            ]
+          : [],
+    }
+    assertTargetConfig(target, api, targetWeb)
+    for (const preview_urls of [true, undefined])
+      assert.throws(
+        () => assertTargetConfig(target, { ...api, preview_urls }, targetWeb),
+        /API preview URLs must be disabled/,
+      )
+    for (const workers_dev of [false, undefined])
+      assert.throws(
+        () => assertTargetConfig(target, { ...api, workers_dev }, targetWeb),
+        /API workers\.dev URL must stay enabled/,
+      )
+  }
 })
 
 test('manifest detects tampered SQL, added files, and wrong environment', () => {
